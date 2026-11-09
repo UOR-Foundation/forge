@@ -32,6 +32,25 @@ or test is added without the other two.
 | `prismpm verify` | an acceptance vector set without the exact guest-allocation boundary | rejected (PP2009) |
 | `audit-bootstrap` | a floating/copied action, mutable SDK tag, changed universal file, narrowed boundary, shallow/credential-retaining checkout, copied project renderer, omitted standards lock, acceptance bypass, deploy-job signing privilege, incomplete release lifecycle, or a bootstrap that drops a native architecture from main or tags, cancels or replaces a main run, or skips runs by path, condition or matrix exclusion | all rejected |
 
+### Forge kernel capability gate, FK-05 to FK-09
+
+The kernel answers `gate ORIGIN EFFECT RECORD GRANTED DENIED` with `allow` or `deny` through `gateAllows` in `app/src/ForgeKernel.lex.tex`. Five theorems in `app/src/ForgeKernelProofs.lex.tex` state that no request breaks deny by default, deny wins, or no preview fetch without a grant. Sixteen acceptance vectors cover allowed, denied and malformed gate requests.
+
+| Gate | Planted defect | Result |
+| --- | --- | --- |
+| Lean, hosted `lexlean verify` (task-59, 79 s) | `gateAllows` admits everything when no grant record exists, the rule Forge's old service worker used (`sw.template.js:165` in hologram-forge) | refused with LLV7002: `noRecordOnlyForgeHolds`, `noRecordNoFetchHolds`, `outsideForgeNeedsGrantHolds`, `previewNoNetworkWithoutGrantHolds`; `denyWinsHolds` still held, as it should |
+| `forge_kernel_fk_07` | `breaksGateDenyWins` tests `denied =? 2`, a condition no request meets | rejected: "the condition of breaksGateDenyWins changed"; 8 passed, 1 failed |
+
+Restored results, 2026-11-09:
+
+- Hosted `lexlean verify`, task-58, 170 s: verified, attestation `09ea4af02fc554df4b471d2ba0e3dda92f2c8a9d51563e0bb907fc0736f2a1dd`.
+- `just vv` in the locked SDK image, under WSL Docker with a 4.5 GB memory cap: passed in 419 s.
+- `prismpm verify` attestation: `627bde120b9106f8d7a956971026a6eb7c87bc1cd9059267d914e2e747d263a5`.
+- The built `Forge kernel.holo` is 23,700 bytes.
+- `forge_kernel` suite: 9 passed.
+
+What is proved: the five gate properties, for every request that decodes. What is tested: parsing of gate requests, through the acceptance vectors replayed against the built guest. What is not covered here: matching a request's origin against a list of granted endpoints. The runner reduces that to the GRANTED and DENIED flags, and it remains unmodeled.
+
 `audit-deferral` reads every crate and `xtask`, including itself. Its token
 construction therefore cannot exempt the very gate in which a deferral could
 otherwise be hidden.

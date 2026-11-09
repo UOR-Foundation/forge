@@ -192,5 +192,116 @@ theorem{
   },
   axioms: [Quot.sound, propext]
 }
+
+definition{
+  name: breaksGateNoRecordOnlyForge,
+  parameters: [request : ForgeKernel::GateRequest],
+  result: Bool,
+  body: ((((project request hasRecord) =? 0) && (not ((project request origin) =? (ForgeKernel::originForge)))) && ((ForgeKernel::gateAllows request) =? 1))
+}
+
+theorem{
+  name: noRecordOnlyForgeHolds,
+  parameters: [request : ForgeKernel::GateRequest],
+  statement: ((breaksGateNoRecordOnlyForge request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::effectFetch,
+      ForgeKernel::gateAllows,
+      ForgeKernel::originForge,
+      breaksGateNoRecordOnlyForge
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksGateNoRecordNoFetch,
+  parameters: [request : ForgeKernel::GateRequest],
+  result: Bool,
+  body: ((((project request hasRecord) =? 0) && ((project request effect) =? (ForgeKernel::effectFetch))) && ((ForgeKernel::gateAllows request) =? 1))
+}
+
+theorem{
+  name: noRecordNoFetchHolds,
+  parameters: [request : ForgeKernel::GateRequest],
+  statement: ((breaksGateNoRecordNoFetch request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::effectFetch,
+      ForgeKernel::gateAllows,
+      ForgeKernel::originForge,
+      breaksGateNoRecordNoFetch
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksGateDenyWins,
+  parameters: [request : ForgeKernel::GateRequest],
+  result: Bool,
+  body: ((((project request hasRecord) =? 1) && ((project request denied) =? 1)) && ((ForgeKernel::gateAllows request) =? 1))
+}
+
+theorem{
+  name: denyWinsHolds,
+  parameters: [request : ForgeKernel::GateRequest],
+  statement: ((breaksGateDenyWins request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::effectFetch,
+      ForgeKernel::gateAllows,
+      ForgeKernel::originForge,
+      breaksGateDenyWins
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksGateOutsideForgeNeedsGrant,
+  parameters: [request : ForgeKernel::GateRequest],
+  result: Bool,
+  body: (((not ((project request origin) =? (ForgeKernel::originForge))) && (not ((project request granted) =? 1))) && ((ForgeKernel::gateAllows request) =? 1))
+}
+
+theorem{
+  name: outsideForgeNeedsGrantHolds,
+  parameters: [request : ForgeKernel::GateRequest],
+  statement: ((breaksGateOutsideForgeNeedsGrant request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::effectFetch,
+      ForgeKernel::gateAllows,
+      ForgeKernel::originForge,
+      breaksGateOutsideForgeNeedsGrant
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksGatePreviewNoNetworkWithoutGrant,
+  parameters: [request : ForgeKernel::GateRequest],
+  result: Bool,
+  body: (((((project request origin) =? (ForgeKernel::originPreview)) && ((project request effect) =? (ForgeKernel::effectFetch))) && (not ((project request granted) =? 1))) && ((ForgeKernel::gateAllows request) =? 1))
+}
+
+theorem{
+  name: previewNoNetworkWithoutGrantHolds,
+  parameters: [request : ForgeKernel::GateRequest],
+  statement: ((breaksGatePreviewNoNetworkWithoutGrant request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::effectFetch,
+      ForgeKernel::gateAllows,
+      ForgeKernel::originForge,
+      ForgeKernel::originPreview,
+      breaksGatePreviewNoNetworkWithoutGrant
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
 \end{semanticmodule}
 \end{lexlean}

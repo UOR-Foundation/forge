@@ -40,6 +40,44 @@ definition{name: answerProved, parameters: [], result: Nat, body: 3}
 
 definition{name: answerPublished, parameters: [], result: Nat, body: 4}
 
+definition{name: originForge, parameters: [], result: Nat, body: 0}
+
+definition{name: originPreview, parameters: [], result: Nat, body: 1}
+
+definition{name: originPublished, parameters: [], result: Nat, body: 2}
+
+definition{name: effectStore, parameters: [], result: Nat, body: 0}
+
+definition{name: effectFetch, parameters: [], result: Nat, body: 1}
+
+definition{name: effectInfer, parameters: [], result: Nat, body: 2}
+
+definition{name: effectBuild, parameters: [], result: Nat, body: 3}
+
+definition{name: effectFrame, parameters: [], result: Nat, body: 4}
+
+definition{name: effectServe, parameters: [], result: Nat, body: 5}
+
+structure{
+  name: GateRequest,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: origin, type: Nat},
+    {name: effect, type: Nat},
+    {name: hasRecord, type: Nat},
+    {name: granted, type: Nat},
+    {name: denied, type: Nat}
+  ]
+}
+
+definition{
+  name: gateAllows,
+  parameters: [request : GateRequest],
+  result: Nat,
+  body: (if ((project request hasRecord) =? 0) then (if ((project request origin) =? (originForge)) then (if ((project request effect) =? (effectFetch)) then 0 else 1) else 0) else (if ((project request denied) =? 1) then 0 else (if ((project request granted) =? 1) then 1 else 0)))
+}
+
 structure{
   name: Request,
   type_parameters: [],
@@ -145,6 +183,84 @@ definition{
 }
 
 definition{
+  name: parseOrigin,
+  parameters: [value : Bytes],
+  result: (Option Nat),
+  body: (if (prim equal value 0x666f726765 : Bool) then (ctor Option.some [Nat] (originForge)) else (if (prim equal value 0x70726576696577 : Bool) then (ctor Option.some [Nat] (originPreview)) else (if (prim equal value 0x7075626c6973686564 : Bool) then (ctor Option.some [Nat] (originPublished)) else (ctor Option.none [Nat]))))
+}
+
+definition{
+  name: parseEffect,
+  parameters: [value : Bytes],
+  result: (Option Nat),
+  body: (if (prim equal value 0x73746f7265 : Bool) then (ctor Option.some [Nat] (effectStore)) else (if (prim equal value 0x6665746368 : Bool) then (ctor Option.some [Nat] (effectFetch)) else (if (prim equal value 0x696e666572 : Bool) then (ctor Option.some [Nat] (effectInfer)) else (if (prim equal value 0x6275696c64 : Bool) then (ctor Option.some [Nat] (effectBuild)) else (if (prim equal value 0x6672616d65 : Bool) then (ctor Option.some [Nat] (effectFrame)) else (if (prim equal value 0x7365727665 : Bool) then (ctor Option.some [Nat] (effectServe)) else (ctor Option.none [Nat])))))))
+}
+
+definition{
+  name: parseFlag,
+  parameters: [value : Bytes],
+  result: (Option Nat),
+  body: (if (prim equal value 0x796573 : Bool) then (ctor Option.some [Nat] 1) else (if (prim equal value 0x6e6f : Bool) then (ctor Option.some [Nat] 0) else (ctor Option.none [Nat])))
+}
+
+definition{
+  name: decodeGate5,
+  parameters: [s : Bytes, start : Nat, origin : Nat, effect : Nat, hasRecord : Nat, granted : Nat],
+  result: (Option GateRequest),
+  body: (let e : Nat := (fieldEnd s start (Foundation.Bytes::byteLength s)); (match (parseFlag (sliceOf s start (prim subtract e start : Nat)))
+    | Option.none => (ctor Option.none [GateRequest])
+    | Option.some denied => (if (e =? (Foundation.Bytes::byteLength s)) then (ctor Option.some [GateRequest] (record GateRequest {origin := origin, effect := effect, hasRecord := hasRecord, granted := granted, denied := denied})) else (ctor Option.none [GateRequest])))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: decodeGate4,
+  parameters: [s : Bytes, start : Nat, origin : Nat, effect : Nat, hasRecord : Nat],
+  result: (Option GateRequest),
+  body: (let e : Nat := (fieldEnd s start (Foundation.Bytes::byteLength s)); (match (parseFlag (sliceOf s start (prim subtract e start : Nat)))
+    | Option.none => (ctor Option.none [GateRequest])
+    | Option.some granted => (if (e <? (Foundation.Bytes::byteLength s)) then (decodeGate5 s (e + 1) origin effect hasRecord granted) else (ctor Option.none [GateRequest])))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: decodeGate3,
+  parameters: [s : Bytes, start : Nat, origin : Nat, effect : Nat],
+  result: (Option GateRequest),
+  body: (let e : Nat := (fieldEnd s start (Foundation.Bytes::byteLength s)); (match (parseFlag (sliceOf s start (prim subtract e start : Nat)))
+    | Option.none => (ctor Option.none [GateRequest])
+    | Option.some hasRecord => (if (e <? (Foundation.Bytes::byteLength s)) then (decodeGate4 s (e + 1) origin effect hasRecord) else (ctor Option.none [GateRequest])))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: decodeGate2,
+  parameters: [s : Bytes, start : Nat, origin : Nat],
+  result: (Option GateRequest),
+  body: (let e : Nat := (fieldEnd s start (Foundation.Bytes::byteLength s)); (match (parseEffect (sliceOf s start (prim subtract e start : Nat)))
+    | Option.none => (ctor Option.none [GateRequest])
+    | Option.some effect => (if (e <? (Foundation.Bytes::byteLength s)) then (decodeGate3 s (e + 1) origin effect) else (ctor Option.none [GateRequest])))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: decodeGate1,
+  parameters: [s : Bytes, start : Nat],
+  result: (Option GateRequest),
+  body: (let e : Nat := (fieldEnd s start (Foundation.Bytes::byteLength s)); (match (parseOrigin (sliceOf s start (prim subtract e start : Nat)))
+    | Option.none => (ctor Option.none [GateRequest])
+    | Option.some origin => (if (e <? (Foundation.Bytes::byteLength s)) then (decodeGate2 s (e + 1) origin) else (ctor Option.none [GateRequest])))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: encodeGate,
+  parameters: [code : Nat],
+  result: Bytes,
+  body: (if (code =? 1) then 0x616c6c6f77 else 0x64656e79)
+}
+
+definition{
   name: rule1,
   parameters: [request : Request],
   result: Bool,
@@ -232,9 +348,11 @@ definition{
   name: dispatch,
   parameters: [value : Bytes],
   result: Bytes,
-  body: (if (64 <? (Foundation.Bytes::byteLength value)) then 0x696e76616c6964 else (match (decodeField1 value 0)
+  body: (if (64 <? (Foundation.Bytes::byteLength value)) then 0x696e76616c6964 else (let head : Nat := (fieldEnd value 0 (Foundation.Bytes::byteLength value)); (if (prim equal (sliceOf value 0 head) 0x67617465 : Bool) then (if (head <? (Foundation.Bytes::byteLength value)) then (match (decodeGate1 value (head + 1))
     | Option.none => 0x696e76616c6964
-    | Option.some request => (encodeAnswer (judge request)))),
+    | Option.some gate => (encodeGate (gateAllows gate))) else 0x696e76616c6964) else (match (decodeField1 value 0)
+    | Option.none => 0x696e76616c6964
+    | Option.some request => (encodeAnswer (judge request)))))),
   axioms: [Quot.sound, propext]
 }
 
@@ -242,7 +360,7 @@ definition{
   name: application,
   parameters: [],
   result: Foundation.View.Text.V1.Model::TextApplication,
-  body: (record Foundation.View.Text.V1.Model::TextApplication {profile := "prismpm/text-application/1", name := "Forge kernel", cargoName := "prism-forge-kernel", cargoVersion := "0.1.0", cargoDescription := "Decide the next build phase of a Hologram Forge app from its current phase and the event that just happened.", cargoRepository := "https://github.com/UOR-Foundation/PrismPM", cargoHomepage := "https://github.com/UOR-Foundation/PrismPM", libraryRoots := (cons "PrismForgeKernel.ForgeKernel.dispatch" (nil String)), acceptanceVectors := (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720636865636b, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b656420617070726f7665, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e6720617474657374, response := 0x70726f766564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f766564207075626c697368, response := 0x7075626c6973686564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f7665642065646974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e67206661696c, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e67207075626c697368, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b656420617474657374, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7075626c69736865642077616974, response := 0x7075626c6973686564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720617070726f7665, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720617474657374, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e67206661696c, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e672065646974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e672077616974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b656420636865636b, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b6564206661696c, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b6564207075626c697368, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b65642065646974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b65642077616974, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e6720636865636b, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e6720617070726f7665, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e67207075626c697368, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e672065646974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e672077616974, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76656420636865636b, response := 0x70726f766564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76656420617070726f7665, response := 0x70726f766564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76656420617474657374, response := 0x70726f766564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0xff, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e67, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720636865636b20636865636b, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e672020636865636b, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x756e6b6e6f776e20636865636b, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720756e6b6e6f776e, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x78787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878, response := 0x696e76616c6964}) (nil Foundation.View.Text.V1.Model::AcceptanceVector)))))))))))))))))))))))))))))))))))))), entryRoot := "PrismForgeKernel.ForgeKernel.dispatch", coreContract := "hologram:guest/core-wasm@1", requestMaximum := (64 : UInt32), responseMaximum := (64 : UInt32), guestAllocationMaximum := (128 : UInt32), capabilitiesEmpty := true, fatArchive := true, primaryLayer := (0 : UInt8), viewLayer := (1 : UInt8), view := (record Foundation.View.Text.V1.Model::TextView {title := "Forge kernel", heading := "Forge kernel", inputLabel := "Request: phase event", submitLabel := "Decide", outputLabel := "Answer", inputError := "Invalid request", responseError := "Invalid response"})})
+  body: (record Foundation.View.Text.V1.Model::TextApplication {profile := "prismpm/text-application/1", name := "Forge kernel", cargoName := "prism-forge-kernel", cargoVersion := "0.1.0", cargoDescription := "Decide the next build phase of a Hologram Forge app, and whether an origin may use an effect.", cargoRepository := "https://github.com/UOR-Foundation/PrismPM", cargoHomepage := "https://github.com/UOR-Foundation/PrismPM", libraryRoots := (cons "PrismForgeKernel.ForgeKernel.dispatch" (nil String)), acceptanceVectors := (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720636865636b, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b656420617070726f7665, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e6720617474657374, response := 0x70726f766564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f766564207075626c697368, response := 0x7075626c6973686564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f7665642065646974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e67206661696c, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e67207075626c697368, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b656420617474657374, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7075626c69736865642077616974, response := 0x7075626c6973686564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720617070726f7665, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720617474657374, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e67206661696c, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e672065646974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e672077616974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b656420636865636b, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b6564206661696c, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b6564207075626c697368, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b65642065646974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x636865636b65642077616974, response := 0x636865636b6564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e6720636865636b, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e6720617070726f7665, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e67207075626c697368, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e672065646974, response := 0x6472616674696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76696e672077616974, response := 0x70726f76696e67}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76656420636865636b, response := 0x70726f766564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76656420617070726f7665, response := 0x70726f766564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x70726f76656420617474657374, response := 0x70726f766564}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0xff, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e67, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720636865636b20636865636b, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e672020636865636b, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x756e6b6e6f776e20636865636b, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6472616674696e6720756e6b6e6f776e, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x78787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520666f7267652073746f7265206e6f206e6f206e6f, response := 0x616c6c6f77}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520666f726765206665746368206e6f206e6f206e6f, response := 0x64656e79}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520707265766965772073746f7265206e6f206e6f206e6f, response := 0x64656e79}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520707265766965772066657463682079657320796573206e6f, response := 0x616c6c6f77}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x67617465207072657669657720666574636820796573206e6f206e6f, response := 0x64656e79}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x676174652070726576696577206665746368207965732079657320796573, response := 0x64656e79}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x67617465207075626c69736865642073657276652079657320796573206e6f, response := 0x616c6c6f77}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x67617465207075626c69736865642073746f7265206e6f20796573206e6f, response := 0x64656e79}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520666f72676520696e66657220796573206e6f206e6f, response := 0x64656e79}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520707265766965772066657463682079657320796573, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x67617465, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520636c6f7564206665746368206e6f206e6f206e6f, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520666f726765206665746368206d61796265206e6f206e6f, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520666f726765206665746368206e6f206e6f206e6f206e6f, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6761746520666f72676520206665746368206e6f206e6f206e6f, response := 0x696e76616c6964}) (nil Foundation.View.Text.V1.Model::AcceptanceVector)))))))))))))))))))))))))))))))))))))))))))))))))))))), entryRoot := "PrismForgeKernel.ForgeKernel.dispatch", coreContract := "hologram:guest/core-wasm@1", requestMaximum := (64 : UInt32), responseMaximum := (64 : UInt32), guestAllocationMaximum := (128 : UInt32), capabilitiesEmpty := true, fatArchive := true, primaryLayer := (0 : UInt8), viewLayer := (1 : UInt8), view := (record Foundation.View.Text.V1.Model::TextView {title := "Forge kernel", heading := "Forge kernel", inputLabel := "Request: phase event, or gate origin effect record granted denied", submitLabel := "Decide", outputLabel := "Answer", inputError := "Invalid request", responseError := "Invalid response"})})
 }
 \end{semanticmodule}
 \end{lexlean}

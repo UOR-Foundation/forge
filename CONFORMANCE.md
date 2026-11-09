@@ -26,6 +26,11 @@ model does not sanction.
 | `FK-02` | `build` | The app never answers published when phase is not proved and phase is not published |
 | `FK-03` | `build` | The app always answers drafting when event is edit |
 | `FK-04` | `build` | The app never answers proving when phase is drafting |
+| `FK-05` | `build` | The gate never admits an origin other than Forge when no grant record exists |
+| `FK-06` | `build` | The gate never admits a fetch when no grant record exists |
+| `FK-07` | `build` | The gate never admits a resource its grant record denies |
+| `FK-08` | `build` | The gate never admits a preview or a published app without a grant |
+| `FK-09` | `build` | The gate never lets a preview fetch without a grant |
 
 ## Cited authorities
 

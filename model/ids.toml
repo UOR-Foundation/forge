@@ -44,3 +44,33 @@ id = "FK-04"
 level = "build"
 suite = "forge_kernel"
 statement = "The app never answers proving when phase is drafting"
+
+[[id]]
+id = "FK-05"
+level = "build"
+suite = "forge_kernel"
+statement = "The gate never admits an origin other than Forge when no grant record exists"
+
+[[id]]
+id = "FK-06"
+level = "build"
+suite = "forge_kernel"
+statement = "The gate never admits a fetch when no grant record exists"
+
+[[id]]
+id = "FK-07"
+level = "build"
+suite = "forge_kernel"
+statement = "The gate never admits a resource its grant record denies"
+
+[[id]]
+id = "FK-08"
+level = "build"
+suite = "forge_kernel"
+statement = "The gate never admits a preview or a published app without a grant"
+
+[[id]]
+id = "FK-09"
+level = "build"
+suite = "forge_kernel"
+statement = "The gate never lets a preview fetch without a grant"

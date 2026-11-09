@@ -2,28 +2,30 @@
   "name": "Forge kernel",
   "shortName": "Forge",
   "live": "https://uor-foundation.github.io/forge/",
-  "purpose": "Decide the next build phase of a Hologram Forge app from its current phase and the event that just happened. Send phase or event, separated by spaces; it answers drafting, checked, proving, proved or published, and invalid request for anything else.",
-  "inputLabel": "Request: phase event",
+  "purpose": "Decide the next build phase of a Hologram Forge app, and whether an origin may use an effect. Send phase and event separated by a space, and it answers drafting, checked, proving, proved or published. Send gate, then origin, effect, whether a grant record exists, whether it grants and whether it denies, and it answers allow or deny. Anything else gets invalid request.",
+  "inputLabel": "Request: phase event, or gate origin effect record granted denied",
   "placeholder": "drafting check",
   "submitLabel": "Decide",
   "outputLabel": "Answer",
   "answers": {
     "positive": [
-      "drafting"
+      "drafting",
+      "allow"
     ],
     "negative": [
       "checked",
       "proving",
       "proved",
-      "published"
+      "published",
+      "deny"
     ],
     "refusal": "invalid request"
   },
   "promise": {
-    "headline": "Says proved only after Lean attests the current rules.",
-    "detail": "Each answer is the next build phase from the current phase and one event. Lean proved four guarantees for every request: no proved without an attestation, no publish before proved, any edit returns to drafting, no proof run on unchecked rules."
+    "headline": "Never says proved without an attestation, and never lets a preview reach the network without a grant.",
+    "detail": "The build phase moves to proved only on an attestation, and to published only from proved. The capability gate denies by default, a denial always wins, and a preview or published app needs an explicit grant for every effect."
   },
-  "claim": "FK-01: the app never answers proved when phase is not proved and event is not attest. FK-02: the app never answers published when phase is not proved and phase is not published. FK-03: the app always answers drafting when event is edit. FK-04: the app never answers proving when phase is drafting.",
+  "claim": "FK-01: the app never answers proved when phase is not proved and event is not attest. FK-02: the app never answers published when phase is not proved and phase is not published. FK-03: the app always answers drafting when event is edit. FK-04: the app never answers proving when phase is drafting. FK-05: the gate never admits an origin other than Forge when no grant record exists. FK-06: the gate never admits a fetch when no grant record exists. FK-07: the gate never admits a resource its grant record denies. FK-08: the gate never admits a preview or a published app without a grant. FK-09: the gate never lets a preview fetch without a grant.",
   "proposition": {
     "name": "judge",
     "text": "judge request :=\n  event is edit → drafting\n  event is check and phase is drafting → checked\n  event is approve and phase is checked → proving\n  event is attest and phase is proving → proved\n  event is fail and phase is proving → checked\n  event is publish and phase is proved → published\n  phase is drafting → drafting\n  phase is checked → checked\n  phase is proving → proving\n  phase is proved → proved\n  otherwise → published",
@@ -53,6 +55,36 @@
       "statement": "no request meets breaksInv004: the app never answers proving when phase is drafting",
       "how": "Proved by linear arithmetic, checked by the Lean kernel on the UOR MCP server and again by prismpm verify in CI",
       "where": "app/src/ForgeKernelProofs.lex.tex"
+    },
+    {
+      "name": "noRecordOnlyForgeHolds",
+      "statement": "no request meets breaksGateNoRecordOnlyForge: the gate never admits an origin other than Forge when no grant record exists",
+      "how": "Proved by linear arithmetic, checked by the Lean kernel on the UOR MCP server and again by prismpm verify in CI",
+      "where": "app/src/ForgeKernelProofs.lex.tex"
+    },
+    {
+      "name": "noRecordNoFetchHolds",
+      "statement": "no request meets breaksGateNoRecordNoFetch: the gate never admits a fetch when no grant record exists",
+      "how": "Proved by linear arithmetic, checked by the Lean kernel on the UOR MCP server and again by prismpm verify in CI",
+      "where": "app/src/ForgeKernelProofs.lex.tex"
+    },
+    {
+      "name": "denyWinsHolds",
+      "statement": "no request meets breaksGateDenyWins: the gate never admits a resource its grant record denies",
+      "how": "Proved by linear arithmetic, checked by the Lean kernel on the UOR MCP server and again by prismpm verify in CI",
+      "where": "app/src/ForgeKernelProofs.lex.tex"
+    },
+    {
+      "name": "outsideForgeNeedsGrantHolds",
+      "statement": "no request meets breaksGateOutsideForgeNeedsGrant: the gate never admits a preview or a published app without a grant",
+      "how": "Proved by linear arithmetic, checked by the Lean kernel on the UOR MCP server and again by prismpm verify in CI",
+      "where": "app/src/ForgeKernelProofs.lex.tex"
+    },
+    {
+      "name": "previewNoNetworkWithoutGrantHolds",
+      "statement": "no request meets breaksGatePreviewNoNetworkWithoutGrant: the gate never lets a preview fetch without a grant",
+      "how": "Proved by linear arithmetic, checked by the Lean kernel on the UOR MCP server and again by prismpm verify in CI",
+      "where": "app/src/ForgeKernelProofs.lex.tex"
     }
   ],
   "pinned": [
@@ -74,6 +106,31 @@
     {
       "name": "forge_kernel_fk_04",
       "what": "FK-04's condition and the theorem that no request meets it. A string-matching test, not a theorem: a planted defect fails it.",
+      "where": "crates/conformance/tests/forge_kernel.rs"
+    },
+    {
+      "name": "forge_kernel_fk_05",
+      "what": "FK-05's condition and the theorem that no request meets it. A string-matching test, not a theorem: a planted defect fails it.",
+      "where": "crates/conformance/tests/forge_kernel.rs"
+    },
+    {
+      "name": "forge_kernel_fk_06",
+      "what": "FK-06's condition and the theorem that no request meets it. A string-matching test, not a theorem: a planted defect fails it.",
+      "where": "crates/conformance/tests/forge_kernel.rs"
+    },
+    {
+      "name": "forge_kernel_fk_07",
+      "what": "FK-07's condition and the theorem that no request meets it. A string-matching test, not a theorem: a planted defect fails it.",
+      "where": "crates/conformance/tests/forge_kernel.rs"
+    },
+    {
+      "name": "forge_kernel_fk_08",
+      "what": "FK-08's condition and the theorem that no request meets it. A string-matching test, not a theorem: a planted defect fails it.",
+      "where": "crates/conformance/tests/forge_kernel.rs"
+    },
+    {
+      "name": "forge_kernel_fk_09",
+      "what": "FK-09's condition and the theorem that no request meets it. A string-matching test, not a theorem: a planted defect fails it.",
       "where": "crates/conformance/tests/forge_kernel.rs"
     }
   ],
@@ -101,7 +158,7 @@
   ],
   "attestations": {
     "proof": {
-      "id": "2ba631ef4c59b4f08406643c7ad26a1803a6e05f69c8f65e5ef70fa35435f244",
+      "id": "09ea4af02fc554df4b471d2ba0e3dda92f2c8a9d51563e0bb907fc0736f2a1dd",
       "url": "https://github.com/UOR-Foundation/forge/actions/workflows/bootstrap.yml"
     },
     "build": {
