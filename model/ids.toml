@@ -321,3 +321,9 @@ id = "FA-37"
 level = "build"
 suite = "canonical-generation-ownership"
 statement = "Generic generation batches cannot overwrite canonical decision sources or their generated rule runtime"
+
+[[id]]
+id = "FA-38"
+level = "build"
+suite = "canonical-build-closure"
+statement = "Decision builds require the canonical module and generated runtime to match the captured specification"
