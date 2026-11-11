@@ -493,6 +493,7 @@ inductive{
   constructors: [
     {name: invalidProjectEdit, fields: []},
     {name: projectEditConflict, fields: []},
+    {name: projectPreviewActive, fields: []},
     {name: projectEditStorageFailed, fields: []},
     {name: projectEditStateInvalid, fields: []},
     {name: projectMutationCancelled, fields: []}
@@ -977,7 +978,16 @@ inductive{
   name: DurableChatQueueError,
   type_parameters: [],
   parameters: [],
-  constructors: [{name: invalidChatQueueCommand, fields: []}, {name: chatQueueUnavailable, fields: []}, {name: chatQueueJournalInvalid, fields: []}, {name: chatQueueConflict, fields: []}, {name: chatQueueMissing, fields: []}, {name: chatQueueStorageFailed, fields: []}, {name: chatQueueLimitExceeded, fields: []}, {name: chatQueueIntentConflict, fields: []}]
+  constructors: [
+    {name: invalidChatQueueCommand, fields: []},
+    {name: chatQueueUnavailable, fields: []},
+    {name: chatQueueJournalInvalid, fields: []},
+    {name: chatQueueConflict, fields: []},
+    {name: chatQueueMissing, fields: []},
+    {name: chatQueueStorageFailed, fields: []},
+    {name: chatQueueLimitExceeded, fields: []},
+    {name: chatQueueIntentConflict, fields: []}
+  ]
 }
 
 definition{
@@ -991,7 +1001,12 @@ inductive{
   name: VersionHistoryError,
   type_parameters: [],
   parameters: [],
-  constructors: [{name: invalidVersionHistory, fields: []}, {name: versionHistoryMissing, fields: []}, {name: versionHistoryStorageFailed, fields: []}, {name: versionHistoryStateInvalid, fields: []}]
+  constructors: [
+    {name: invalidVersionHistory, fields: []},
+    {name: versionHistoryMissing, fields: []},
+    {name: versionHistoryStorageFailed, fields: []},
+    {name: versionHistoryStateInvalid, fields: []}
+  ]
 }
 
 definition{
@@ -999,6 +1014,30 @@ definition{
   parameters: [],
   result: String,
   body: "Renderer version IDs are full lowercase hexadecimal aliases for exact canonical BLAKE3 addresses; this is reversible representation, never a second hash or Git commit claim. Listing validates project existence and history shape. The main branch lists stored history; a known exact version selects just that record without claiming Git ancestry traversal. Metadata requests use imported versionId and return oid, isFavorite and note after one apps-and-versions transaction; concurrent favorite and note changes preserve each other. Missing projects or versions, malformed requests, invalid stored records and storage failure refuse with fixed typed errors. Notes retain at most 10000 UTF-16 code units, matching the imported contract. Differences resolve only a project-owned version, then validate its snapshot and every file identity through the existing SnapshotRestore boundary and compiled core admission, and repeat that validation for its parent. Added, changed and deleted text is computed from those verified files, sorted by path; missing or corrupt objects never become an empty successful diff. The parent returned by snapshot validation is taken from the same captured verified bytes. History metadata is local presentation state and does not change canonical source identity. This boundary does not implement Git branches, version-preview ownership, history garbage collection or cross-origin authorization."
+}
+
+inductive{
+  name: DurableVersionPreviewError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidStoredPreview, fields: []},
+    {name: previewUnavailable, fields: []},
+    {name: previewStorageFailed, fields: []},
+    {name: previewSourceChanged, fields: []},
+    {name: previewMissing, fields: []},
+    {name: previewWindowBusy, fields: []},
+    {name: previewInterestMissing, fields: []},
+    {name: previewOperationConflict, fields: []},
+    {name: previewUnsupportedBranch, fields: []}
+  ]
+}
+
+definition{
+  name: durableVersionPreviewBoundary,
+  parameters: [],
+  result: String,
+  body: "Version-preview window interest requires a live exclusive origin Web Lock and an existing project. The journal binds the app, exact VersionPreview guest state and at most 128 recent operation identities/results. Acquire captures the verified current source; selection verifies a project-owned target snapshot and all files. Guest state, exact files, reference, dependencies and source-bound evidence invalidation commit together with both source and journal compare-and-swap. Only that owner may select, return or restore. Other source-changing operations refuse projectPreviewActive while ownership is active; source-neutral work metadata may still commit. Closing or switching apps returns the original verified source before releasing ownership. A new owner may recover an abandoned journal only while holding the exclusive lock; it preserves both identities, returns the exact original source and then starts a fresh session. Source mismatch refuses automatic restoration. Explicit acceptance of a changed current repository requires independently verified current snapshot/file bytes and an admitted restore transition; checkpoint acceptance creates a canonical child instead. A completed transaction is the only acknowledgement; late abort or project deletion cannot publish a successful state or resurrect a journal. Renderer event and snapshot schemas come from locked imported source, and obsolete actor identities refuse. Imported branch requests support only main; no Git branch management is claimed. The finite operation receipt window prevents duplicate recent effects only when captured operation identity matches. Owner integers and same-origin locks are cooperative ownership, not authentication. This boundary covers source preview/return/restore; chat-message restoration requires its separately modeled transaction and cannot be silently acknowledged here."
 }
 \end{semanticmodule}
 \end{lexlean}

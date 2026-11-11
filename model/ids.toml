@@ -417,3 +417,9 @@ id = "FA-53"
 level = "build"
 suite = "version-preview-model"
 statement = "Version preview transitions preserve exact origin identity and reject stale or conflicting ownership through the Prism guest"
+
+[[id]]
+id = "FA-54"
+level = "build"
+suite = "durable-version-preview"
+statement = "Version preview ownership binds guest transitions to atomic source restoration and exclusive recoverable browser sessions"

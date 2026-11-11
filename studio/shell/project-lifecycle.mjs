@@ -59,7 +59,7 @@ export async function deleteStoredProject(db, appId) {
           };
           mark("apps", appId);
           t.objectStore("apps").delete(appId); t.objectStore("versions").delete(appId);
-          refs.delete(`${appId}:main`); refs.delete(`prism:${appId}`); refs.delete(`events:${appId}`); refs.delete(`interaction:${appId}`); refs.delete(`work:${appId}`);
+          refs.delete(`${appId}:main`); refs.delete(`prism:${appId}`); refs.delete(`events:${appId}`); refs.delete(`interaction:${appId}`); refs.delete(`work:${appId}`); refs.delete(`preview:${appId}`);
           const files = t.objectStore("files").openCursor(IDBKeyRange.bound(`${appId}:`, `${appId};`, false, true));
           files.onsuccess = () => { try { if (files.result) { files.result.delete(); files.result.continue(); } } catch { refuse(); } };
           let maximumChat = 0;

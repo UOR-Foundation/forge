@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {test} from 'node:test';
+import {blake3} from '../../try/vendor/prism-code/src/blake3.mjs';
+import {readPreviewJournal,operateVersionPreview} from '../shell/version-preview-store.mjs';
+import {encodePreviewRequest,previewAddressIdentity} from '../shell/version-preview-codec.mjs';
+import {createVersionPreviewController} from '../shell/version-preview-controller.mjs';
+const vectors=JSON.parse(fs.readFileSync(new URL('../../verification/version-preview-vectors.json',import.meta.url))).vectors;
+const derive=async bytes=>'blake3:'+Buffer.from(blake3(bytes)).toString('hex'),enc=new TextEncoder(),dec=new TextDecoder();
+const named=name=>{const v=vectors.find(x=>x.name===name);assert.ok(v,name);return structuredClone(v);};
+function fixture(row=named('acquire')){
+ const oid=previewAddressIdentity(row.input.command.target),current={oid,name:'fixture',files:[['a.txt','exact']],objects:[]};let raw=row.input.state.active?{...readPreviewJournal(undefined,1),state:structuredClone(row.input.state)}:undefined,writes=0;
+ const source={name:'fixture',reference:row.input.state.active?previewAddressIdentity(row.input.state.current):oid,files:[['a.txt','exact']],dependencies:[]};
+ const boundary={read:async()=>readPreviewJournal(raw,1),capture:async()=>({source:structuredClone(source),expected:structuredClone(raw)}),derive,prepare:async id=>({...current,oid:id}),resolve:async id=>id,prepareChild:async(_snapshot,parent)=>({...current,parent}),guest:{dispatch:async bytes=>{assert.equal(dec.decode(bytes),row.request);return enc.encode(row.response);}},commit:async(_captured,_prepared,j)=>{writes++;raw=structuredClone(j);}};
+ return {boundary,source,get writes(){return writes;},get raw(){return raw;},set raw(v){raw=v;},request:{appId:1,kind:row.input.command.kind,owner:row.input.command.owner}};
+}
+test('journal captures exact owner and full identities and rejects corrupt persisted state',()=>{
+ const j=readPreviewJournal(undefined,1);assert.equal(j.state.active,0);
+ for(const raw of [{...j,appId:2},{...j,extra:true},{...j,state:{...j.state,owner:7}},{...j,state:{...j.state,current:[1,...Array(7).fill(0)]}},{...j,receipts:[{operationId:'x',identity:'unbound'}]}])assert.throws(()=>readPreviewJournal(raw,1),{code:'invalidStoredPreview'});
+});
+test('captured acquire commits guest state and exact duplicate cannot perform effects twice',async()=>{
+ const f=fixture(),request={...f.request,operationId:'acquire'};const pending=operateVersionPreview(request,f.boundary);request.owner=99;
+ const answer=await pending;assert.equal(f.writes,1);assert.equal(answer.journal.state.owner,7);assert.equal(answer.result.repositoryOutcome,'unchanged');
+ assert.equal((await operateVersionPreview({...f.request,operationId:'acquire'},f.boundary)).replayed,true);assert.equal(f.writes,1);
+ await assert.rejects(()=>operateVersionPreview({...f.request,kind:3,operationId:'acquire'},f.boundary),{code:'previewOperationConflict'});
+});
+test('changed files identity dependencies and guest failure refuse before source commit',async()=>{
+ for(const mode of ['files','dependencies','name','guest']){const f=fixture();if(mode==='files')f.source.files=[['a.txt','changed']];if(mode==='dependencies')f.source.dependencies=['other'];if(mode==='name')f.source.name='changed';if(mode==='guest')f.boundary.guest.dispatch=async()=>enc.encode('previewWrongOwner');await assert.rejects(()=>operateVersionPreview(f.request,f.boundary),{code:mode==='guest'?'previewWrongOwner':'previewSourceChanged'});assert.equal(f.writes,0);}
+});
+test('late commit refusal cannot become an acknowledged preview and invalid input never calls guest',async()=>{
+ const f=fixture();f.boundary.commit=async()=>{throw Object.assign(Error(),{code:'previewStorageFailed'});};await assert.rejects(()=>operateVersionPreview(f.request,f.boundary),{code:'previewStorageFailed'});
+ for(const patch of [{owner:0},{appId:0},{kind:8},{kind:1,versionId:'unused'},{mode:'accept'},{operationId:''},{expectedHeadOid:'wrong'}])await assert.rejects(()=>operateVersionPreview({...f.request,...patch},f.boundary),{code:'invalidPreviewCommand'});
+});
+test('window lock refuses competing ownership and missing interest cannot acknowledge a selection',async()=>{
+ const f=fixture();let held=false;const locks={async request(_name,_opts,fn){if(held)return fn(null);held=true;try{return await fn({name:'lock'});}finally{held=false;}}};
+ const make=()=>createVersionPreviewController({locks,store:()=>f.boundary,mintOwner:()=>7,validateEvent:event=>({success:true,data:event}),publish:()=>{}}),a=make(),b=make();
+ assert.deepEqual(await a.acquire(1),{acquired:true});assert.deepEqual(await b.acquire(1),{acquired:false});assert.equal(a.snapshot(1).state.type,'browsing');
+ await assert.rejects(()=>b.dispatch(1,{type:'SELECT_VERSION',operationId:'select',versionId:'x'}),{code:'previewInterestMissing'});await assert.rejects(()=>a.dispatch(1,{type:'SWITCH_BRANCH',branch:'other',operationId:'branch'}),{code:'previewUnsupportedBranch'});a.dispose();b.dispose();
+});
+test('request encoding retains original ownership and return targets from literal proof corpus',async()=>{
+ for(const row of vectors.filter(x=>x.input&&typeof x.expected==='object'))assert.equal(dec.decode(encodePreviewRequest(row.input)),row.request);
+ const f=fixture();f.boundary.derive=async()=>{throw Error('private');};await assert.rejects(()=>operateVersionPreview({...f.request,operationId:'identity'},f.boundary),{code:'previewUnavailable'});
+});

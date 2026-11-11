@@ -1,7 +1,7 @@
 {
   "profile": "foundry/imported-chat-contracts/1",
   "compiler": "0.25.9",
-  "generatorSha256": "d1ab2c9976f607d196ebbf65440a44fc4da164bea8ee458a9b5f6bf53827d778",
+  "generatorSha256": "e34294382b4d62bf19b85cc1e6b8aa6c095b79c8c9c187e08b984a9be9467275",
   "packageLockSha256": "8cf7dcd27fd83fd4871f455a1becb280d1c0eab105c3f3f669d091537d712ed8",
   "licenseSha256": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
   "inputs": [
@@ -350,13 +350,21 @@
       "sha256": "d077de8eb08c705d06c9deda23dccca254a10473594abdb90ae565cf52c0ae54"
     },
     {
+      "path": "src/shared/git_refs.ts",
+      "sha256": "11868d12812fda756c0631af1795c87874a91f5a8a040cfe9ad6586ee763cda4"
+    },
+    {
       "path": "src/state_machines/invocation_ref.ts",
       "sha256": "357eca84319c14761f15a5334b4eb2864d1b8220354c0f8d0441f4b068517ef9"
+    },
+    {
+      "path": "src/version_preview/transport.ts",
+      "sha256": "97c73efac96a0a4d92ead069ae1eebef85b14a91be83f2ecba97c2321e27d20b"
     }
   ],
   "output": {
     "path": "chat-contracts.mjs",
-    "sha256": "c54d690052de4b278cffd33d3873d73f1b23e7ae2d3b2cb62bb0ab46dd6d9eb7",
-    "bytes": 347913
+    "sha256": "2a3b7cf64c002f1e5c4123743c3979ef8906b0acc0beac1e4a542876dfc7f1fb",
+    "bytes": 352094
   }
 }

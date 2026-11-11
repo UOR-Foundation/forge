@@ -150,6 +150,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-40` | `build` | Guest-admitted events commit to a source-bound durable queue and remain pending until ordered acknowledgement |
 
+## durable-version-preview
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-54` | `build` | Version preview ownership binds guest transitions to atomic source restoration and exclusive recoverable browser sessions |
+
 ## event-admission
 
 | ID | Level | Statement |
