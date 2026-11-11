@@ -53,3 +53,19 @@ The earlier local log contained that same refusal; it was incorrectly summarized
 as passing because a following shell command masked its exit status. This receipt
 supersedes that statement. Runtime tests were unaffected; full feature CI must
 rerun with the corrected inventory.
+
+## The site's Featherless relay
+
+A visitor without a Featherless key of their own is answered through the site's relay
+(`studio/relay/featherless`, a Cloudflare Worker holding the site's key as a Worker secret). The
+adapter's `featherlessSite` route sends no credential and refuses one; concurrency retries apply as
+for Featherless. Before this, the deploy wrote the site's keys into a served `warmup.json`.
+
+The relay forwards only streamed chat completions from the site's origin for offered models, at
+most 2 MiB, with the answer length capped, unknown fields dropped and a per-visitor rate limit. Its
+ten Node tests use a stand-in for Featherless; removing its origin check fails two of them. The
+adapter's ninth test checks the relay endpoint, the absent credential and `paidGenerateOnce`'s
+route choice; sending a credential to the relay fails it. In Cloudflare's local runtime
+(`wrangler dev`) the relay answered the site's preflight, refused another origin and another
+model, kept a rejected key's details private, and refused the 21st request in a minute. It has not
+been checked against Featherless with the real key until it is deployed.

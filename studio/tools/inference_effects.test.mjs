@@ -76,3 +76,19 @@ test("the actual paidGenerate adapter delegates transport and records validated 
   const result = await context.paidGenerate({ model: "openrouter/model" });
   assert.equal(captured.bytes, '{}'); assert.equal(result.text, "answer"); assert.equal(result.rec.ttftMs, 12); assert.equal(result.rec.rederivable, false);
 });
+test("the site's Featherless relay gets no credential, keeps concurrency retries and refuses a key", async () => {
+  const calls = [];
+  const result = await cloudCompletion({ ...request, provider: "featherlessSite", key: "" }, { retryMs: 0, fetch: async (url, options) => { calls.push({ url, options }); return calls.length === 1 ? new Response("concurrency limit", { status: 429 }) : response(valid); } });
+  assert.equal(result.text, "hello 🌱"); assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, "https://prism-featherless.trinity-03d.workers.dev/v1/chat/completions");
+  assert.equal(calls[0].options.headers.Authorization, undefined); assert.equal(calls[0].options.headers["HTTP-Referer"], undefined);
+  await assert.rejects(cloudCompletion({ ...request, provider: "featherlessSite" }, { fetch: async () => response(valid) }), code("invalidInferenceRequest"));
+  const source = fs.readFileSync(new URL("../shell/inference.js", import.meta.url), "utf8");
+  const start = source.indexOf("async function paidGenerateOnce"), end = source.indexOf("// ---- the route:", start);
+  let captured;
+  const context = { SITE_RELAY: "site-relay", providerOf: () => "featherless", paidId: m => m.replace("featherless/", ""), coreReady: async () => ({ run: () => ({ bytes: '{"usage":{},"reasoning":{},"provider":{},"stream":true}' }) }), keyFor: async () => "site-relay", viewReady: async () => ({}), location: { origin: "https://foundry.test" }, cloudCompletion: async input => { captured = input; return { text: "answer", finish: "stop", ttftMs: 1, last: { id: "r", usage: {} } }; } };
+  vm.createContext(context); vm.runInContext(source.slice(start, end), context);
+  await context.paidGenerateOnce({ model: "featherless/zai-org/GLM-5.3-Flash" });
+  assert.equal(captured.provider, "featherlessSite"); assert.equal(captured.key, "");
+  assert.deepEqual(JSON.parse(captured.bytes), { stream: true, stream_options: { include_usage: true } });
+});
