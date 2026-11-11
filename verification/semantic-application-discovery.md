@@ -38,8 +38,5 @@ the complete mutation run now rejects all six and restores passing controls.
 
 The mandatory browser journey exercises actual IPC, ambiguous/unsupported
 requests with zero writes, changed review refusal, native edit invalidation,
-canonical creation, guest navigation and state after reload. Its execution
-requires the routing-capable signed guest; it is not yet accepted against the
-previous installed guest. Signed runtime qualification, final SDK/Studio checks
-and independent review remain pending. This feature does not complete all
+canonical creation, guest navigation and state after reload. It passes against the signed 177-case routing guest from SDK build 43099200049: three admitted profiles, five refused intents, stale review with zero writes, native edit invalidation, atomic creation, reload state and zero page exceptions. Final locked-SDK/Studio checks and independent review remain pending. This feature does not complete all
 product command semantics or remove the production release holds.
