@@ -29,3 +29,10 @@ This initial source revision requires signed SDK compilation and installation of
 the resulting guest before runtime integration can be accepted. Existing kernel
 artifact receipts still describe the earlier installed guest. No event-delivery
 or whole-conversion claim is made by source/model availability alone.
+
+Supplementary diagnostic verification passed all 13 modules with attestation
+`f7914549e6343f158d48b4e94bac76d78bf833023cd510575cb9c7508203597e`.
+All 191 Node controls and local Rust/Clippy pass. The newly required actual
+browser corpus fails against the previous guest at `event: natural`, as expected;
+this is retained evidence that old executable bytes cannot satisfy the new gate.
+Signed SDK build source is `3cc266da289becc4b3aef8a332ff4509e5df8cc8`.

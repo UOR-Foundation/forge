@@ -139,3 +139,8 @@ FA-31 is in PR #66; exact-head Studio 43051703705, Try-page 43051704071
 and codespace 43051703928 passed, with full SDK pending. FA-32 brings the
 existing browser compiler into a locked independently checked local closure
 and adds initialization recovery; see `local-browser-compiler.md`.
+
+FA-31 (#66) has now passed full SDK 43051703625 as well as Studio, Try-page
+and codespace gates. FA-32 is in #67 with full acceptance pending. FA-33's
+event protocol source is in #68; its generated-guest installation and browser
+acceptance are pending. Pure event admission is distinct from durable delivery.

@@ -1,3 +1,4 @@
+import { admitEventWithGuest } from "./event-codec.mjs";
 import { loadBrowserCompiler } from "./browser-compiler.mjs";
 import { browserSettings, assertBrowserSettingsPatch } from "./privacy-policy.mjs";
 import { prepareProjectImport } from "./project-import.mjs";
@@ -867,6 +868,7 @@ handlers.set("forge:compose", async (input) => {
   return admitWithGuest(await kernelReady, input.policy, input.features);
 });
 handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
+handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input));
 const PHASES = ["drafting", "checked", "proving", "proved", "published"];
 async function nextPhase(phase, event) {
   const answer = await (await kernelReady).ask(phase + " " + event);
