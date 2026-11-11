@@ -10,6 +10,14 @@
   opacity: 0.85; transition: opacity 0.15s, transform 0.15s;
 }
 .appearance:hover { opacity: 1; transform: translateY(1px) scale(1.04); }
+.appearance:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; opacity: 1; }
+/* Full screen sits at the far right, the sun 8 px to its left (appearance.js draws it only where a page can
+   fill the screen). The build screen on a phone (data-holo-pane) has a bottom bar whose right slot is the
+   sun's; full screen keeps out of it there. */
+.has-fullscreen .appearance:not(.fullscreen) { right: 52px; }
+:root[data-holo-pane] .fullscreen { display: none; }
+:root[data-holo-pane].has-fullscreen .appearance:not(.fullscreen) { right: 14px; }
+@media (prefers-reduced-motion: reduce) { .appearance { transition: none; } .appearance:hover { transform: none; } }
 .popover {
   position: fixed; top: 42px; right: 14px; z-index: 61; width: 320px; padding: 16px; border-radius: calc(var(--radius) + 8px);
   border: 1px solid var(--border); background: var(--popover); color: var(--popover-foreground);
@@ -110,6 +118,31 @@
 [data-testid="home-chat-input-container"] div.justify-between > div .w-1\.5 { display: none; }
 [data-testid="home-chat-input-container"] button[aria-label="Send message"] { grid-row: 3; grid-column: 4; margin: 0 !important; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
   border-radius: calc(var(--radius) + 2px); background: color-mix(in srgb, var(--foreground) 9%, transparent); color: var(--primary) !important; }
+/* One row on any width: attach, then the app chosen (which takes the room left and cuts its name short),
+   then the model and send at the right. Nothing in the row can push the box past the screen: on a phone
+   the model drops its Cloud/Local tag and takes at most 40% of the width, so the app's name keeps room. */
+[data-testid="home-chat-input-container"] > div.rounded-2xl { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+[data-testid="home-chat-input-container"] div.justify-between > div,
+[data-testid="home-chat-input-container"] div.justify-between > div > div.flex { display: contents; }
+[data-testid="home-chat-input-container"] [data-testid="model-picker"] { grid-row: 3; grid-column: 3; min-width: 0; max-width: min(240px, 52vw); height: 34px; }
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { grid-row: 3; grid-column: 2; justify-self: start; min-width: 0; max-width: 100%;
+  height: 34px; margin: 0 !important; padding: 0 10px; border-radius: 999px; gap: 6px; }
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] > span { min-width: 0; }
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] > svg { flex-shrink: 0; }
+@media (max-width: 480px) {
+  [data-testid="home-chat-input-container"] [data-testid="model-picker"] { max-width: 40vw; }
+  [data-testid="home-chat-input-container"] [data-testid="model-picker"] > span + span { display: none; }
+}
+/* On a phone the box runs to the page's 16 px gutter, as the inset's other content does, and the app
+   picker, with no app chosen, is a round folder button beside attach (its words kept for screen readers);
+   once an app is chosen it shows the app's name. */
+@media (max-width: 639px) {
+  [data-testid="home-chat-input-container"] { padding-inline: 0; }
+  [data-testid="home-chat-input-container"] [data-testid="home-app-selector"]:not(:has([data-testid="home-app-selector-clear"])) {
+    width: 34px; padding: 0; justify-content: center; border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent); }
+  [data-testid="home-chat-input-container"] [data-testid="home-app-selector"]:not(:has([data-testid="home-app-selector-clear"])) > span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 
 /* Glass for every pop-up: dialogs, alert dialogs, menus, popovers, selects, context menus, sheets and this
    theme panel. One surface, from the brand's own tokens, readable over any photo in any look: the popover
