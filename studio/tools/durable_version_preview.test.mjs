@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import {test} from 'node:test';
 import {blake3} from '../../try/vendor/prism-code/src/blake3.mjs';
 import {readPreviewJournal,operateVersionPreview} from '../shell/version-preview-store.mjs';
@@ -15,6 +16,7 @@ function fixture(row=named('acquire')){
  return {boundary,source,get writes(){return writes;},get raw(){return raw;},set raw(v){raw=v;},request:{appId:1,kind:row.input.command.kind,owner:row.input.command.owner}};
 }
 test('journal captures exact owner and full identities and rejects corrupt persisted state',()=>{
+ const host=fs.readFileSync(new URL('../shell/host.js',import.meta.url),'utf8');assert.ok(!host.includes('return { successMessage: "Reverted" }'));assert.ok(host.includes('purpose!=="preview"'));
  const j=readPreviewJournal(undefined,1);assert.equal(j.state.active,0);
  for(const raw of [{...j,appId:2},{...j,extra:true},{...j,state:{...j.state,owner:7}},{...j,state:{...j.state,current:[1,...Array(7).fill(0)]}},{...j,receipts:[{operationId:'x',identity:'unbound'}]}])assert.throws(()=>readPreviewJournal(raw,1),{code:'invalidStoredPreview'});
 });
@@ -27,7 +29,15 @@ test('captured acquire commits guest state and exact duplicate cannot perform ef
 test('changed files identity dependencies and guest failure refuse before source commit',async()=>{
  for(const mode of ['files','dependencies','name','guest']){const f=fixture();if(mode==='files')f.source.files=[['a.txt','changed']];if(mode==='dependencies')f.source.dependencies=['other'];if(mode==='name')f.source.name='changed';if(mode==='guest')f.boundary.guest.dispatch=async()=>enc.encode('previewWrongOwner');await assert.rejects(()=>operateVersionPreview(f.request,f.boundary),{code:mode==='guest'?'previewWrongOwner':'previewSourceChanged'});assert.equal(f.writes,0);}
 });
-test('late commit refusal cannot become an acknowledged preview and invalid input never calls guest',async()=>{
+test('direct command results and late commit refusal preserve real preview acknowledgement',async()=>{
+ const host=fs.readFileSync(new URL('../shell/host.js',import.meta.url),'utf8'),handlers=new Map(),events=[],result={repositoryOutcome:'target-applied',notification:null,runtimeAction:'restart',affectedChatId:null,createdChatId:null};
+ const versionPreview={acquire:async()=>({acquired:true}),dispatch:async(appId,event)=>{events.push({appId,...event});return result;}};
+ for(const channel of ['checkout-version','revert-version']){const start=host.indexOf(`handlers.set("${channel}"`),end=host.indexOf('\n});',start)+4;vm.runInNewContext(host.slice(start,end),{handlers,versionPreview,crypto,previewFailure:code=>Object.assign(Error(code),{code})});}
+ assert.equal(await handlers.get('checkout-version')({appId:1,purpose:'preview',versionId:'a'.repeat(64)}),result);assert.equal(events.at(-1).type,'SELECT_VERSION');
+ assert.equal(await handlers.get('checkout-version')({appId:1,purpose:'return',branch:'main'}),result);assert.equal(events.at(-1).type,'CLOSE');
+ assert.equal(await handlers.get('revert-version')({appId:1,previousVersionId:'b'.repeat(64)}),result);assert.equal(events.at(-1).type,'RESTORE');
+ await assert.rejects(()=>handlers.get('checkout-version')({appId:1,purpose:'return',branch:'other'}),{code:'previewUnsupportedBranch'});
+ versionPreview.acquire=async()=>({acquired:false});await assert.rejects(()=>handlers.get('checkout-version')({appId:1,purpose:'preview',versionId:'a'.repeat(64)}),{code:'previewWindowBusy'});
  const f=fixture();f.boundary.commit=async()=>{throw Object.assign(Error(),{code:'previewStorageFailed'});};await assert.rejects(()=>operateVersionPreview(f.request,f.boundary),{code:'previewStorageFailed'});
  for(const patch of [{owner:0},{appId:0},{kind:8},{kind:1,versionId:'unused'},{mode:'accept'},{operationId:''},{expectedHeadOid:'wrong'}])await assert.rejects(()=>operateVersionPreview({...f.request,...patch},f.boundary),{code:'invalidPreviewCommand'});
 });
@@ -46,6 +56,7 @@ test('selection return restore and abandoned recovery preserve literal guest sou
   const answer=await operateVersionPreview({...f.request,...([2,4].includes(row.input.command.kind)?{versionId:requested}:{})},f.boundary);
   assert.deepEqual(answer.journal.state,row.expected.state,name);assert.equal(committed.options.writeRequested,row.expected.writeRequested,name);
   if(row.expected.writeRequested)assert.equal(committed.prepared.oid,previewAddressIdentity(row.expected.target),name);
+  if(name==='selectSame')assert.equal(answer.result.runtimeAction,'none');
   if(name==='restorePrepared')assert.equal(parent,previewAddressIdentity(row.input.state.origin));
  }
  const f=fixture();f.boundary.derive=async()=>{throw Error('private');};await assert.rejects(()=>operateVersionPreview({...f.request,operationId:'identity'},f.boundary),{code:'previewUnavailable'});

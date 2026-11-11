@@ -764,9 +764,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "checkout-version",
-      "feature": "lifecycle",
+      "feature": "durable-version-preview",
       "version": 1,
-      "owner": "FoundrySpecification.projectLifecycleBoundary",
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",
@@ -2784,9 +2784,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "revert-version",
-      "feature": "lifecycle",
+      "feature": "durable-version-preview",
       "version": 1,
-      "owner": "FoundrySpecification.projectLifecycleBoundary",
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",

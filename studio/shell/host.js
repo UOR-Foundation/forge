@@ -358,8 +358,13 @@ async function restore(appId, oid, revert = false) {
     },
   }, revert);
 }
-handlers.set("checkout-version", async ({ appId, versionId }) => { await restore(appId, versionId); });
-handlers.set("revert-version", async ({ appId, previousVersionId }) => { await restore(appId, previousVersionId, true); return { successMessage: "Reverted" }; });
+handlers.set("checkout-version", async ({ appId, purpose, versionId, branch }) => {
+  if(purpose==="return"){if(branch!=="main")throw previewFailure("previewUnsupportedBranch");return versionPreview.dispatch(appId,{type:"CLOSE",operationId:crypto.randomUUID()});}
+  if(purpose!=="preview")throw previewFailure("invalidPreviewCommand");if(!(await versionPreview.acquire(appId)).acquired)throw previewFailure("previewWindowBusy");return versionPreview.dispatch(appId,{type:"SELECT_VERSION",versionId,operationId:crypto.randomUUID()});
+});
+handlers.set("revert-version", async ({appId,previousVersionId,expectedHeadOid,currentChatMessageId,targetBranchName}) => {
+  if(currentChatMessageId)throw previewFailure("invalidPreviewCommand");if(targetBranchName!==undefined&&targetBranchName!=="main")throw previewFailure("previewUnsupportedBranch");if(!(await versionPreview.acquire(appId)).acquired)throw previewFailure("previewWindowBusy");return versionPreview.dispatch(appId,{type:"RESTORE",versionId:previousVersionId,...(expectedHeadOid?{expectedHeadOid}:{}),operationId:crypto.randomUUID()});
+});
 
 // ---- chats as records; the stream is the next slice
 handlers.set("get-chats", async (appId) => (await all("chats")).filter((c) => appId == null || c.appId === appId).map((c) => chatRow(c)));

@@ -44,7 +44,7 @@ export async function operateVersionPreview(raw,boundary){
  if(answer.writeRequested&&previewAddressIdentity(answer.target)!==prepared.oid)throw previewFailure('invalidStoredPreview');
  journal.state=answer.state;if(request.operationId!==undefined){journal.receipts.push({operationId:request.operationId,identity:operationIdentity});if(journal.receipts.length>128)journal.receipts.shift();}
  const next=readPreviewJournal(journal,request.appId);await boundary.commit(captured,prepared,next,{writeRequested:answer.writeRequested,recordVersion});
- return {journal:next,result:result(answer.writeRequested),replayed:false,createdVersion:recordVersion?prepared.oid:null};
+ return {journal:next,result:result(answer.writeRequested&&prepared.oid!==captured.source.reference),replayed:false,createdVersion:recordVersion?prepared.oid:null};
 }
 export function previewProjectStore(db,appId,model){
  id(appId);return {
