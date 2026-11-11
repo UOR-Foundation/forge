@@ -1,3 +1,6 @@
+import {interactionPreset, interactionModule, validateInteractionDocument, interactionFailure} from "./interaction-application.mjs";
+import {runStoredInteraction} from "./interaction-state.mjs";
+import {mountInteractionApplications, openInteractionApplication} from "./interaction-ui.mjs";
 import { admitEventWithGuest } from "./event-codec.mjs";
 import { loadBrowserCompiler } from "./browser-compiler.mjs";
 import { browserSettings, assertBrowserSettingsPatch } from "./privacy-policy.mjs";
@@ -5,8 +8,8 @@ import { prepareProjectImport } from "./project-import.mjs";
 import { withBuildModules } from "./build-modules.mjs";
 import { captureBuildSource, assertBuildSourceCurrent, requiresRulePublication } from "./build-source.mjs";
 import { applyStoredProjectPatch, assertGenerationActive } from "./generation-patch.mjs";
-import { editStoredProject, captureProjectSource } from "./project-edit.mjs";
-import { loadProjectScaffold, prepareNewProject, createStoredProject, createStoredChat } from "./project-creation.mjs";
+import { editStoredProject, captureProjectSource, commitPreparedProject } from "./project-edit.mjs";
+import { loadProjectScaffold, prepareExistingProject, prepareNewProject, createStoredProject, createStoredChat } from "./project-creation.mjs";
 import { storageRequest } from "./storage-request.mjs";
 import { executeWorkWithGuest } from "./work-codec.mjs";
 import { validateProviderKey } from "./provider-key-validation.mjs";
@@ -176,6 +179,18 @@ handlers.set("create-app", async ({ name, initialChatMode }) => {
 handlers.set("read-app-file", async ({ appId, filePath }) => { const c = await get("files", appId + ":" + filePath); if (c === undefined) throw new Error("no file " + filePath); return c; });
 handlers.set("edit-app-file", async (input) => {
   await coreReady;
+  if (input?.filePath === "prism/interaction.json") {
+    const edit = structuredClone(input), source = await captureProjectSource(await dbReady, edit.appId);
+    const document = await validateInteractionDocument(edit.content, kernelReady);
+    const files = Object.fromEntries(source.files);
+    files["prism/interaction.json"] = JSON.stringify(document, null, 2) + "\n";
+    files["prism/Application.lex.tex"] = interactionModule(document.graph);
+    files["prism/InteractionModel.lex.tex"] = await loadInteractionModelSource();
+    const prepared = await prepareExistingProject({name:source.name,files}, {core,derive:kappa}, source.reference);
+    const oid = await commitPreparedProject(await dbReady, edit.appId, ["prism/interaction.json", "prism/Application.lex.tex", "prism/InteractionModel.lex.tex"], source, prepared);
+    emit("version-created", {appId:edit.appId,oid});return {};
+  }
+  if (["prism/Application.lex.tex", "prism/InteractionModel.lex.tex"].includes(input?.filePath) && await get("files", input.appId + ":prism/interaction.json") !== undefined) throw interactionFailure("interactionApplicationMismatch");
   if (canonicalEditPath(input?.filePath)) {
     const source = await captureProjectSource(await dbReady, input.appId);
     const plan = planCanonicalEdit(input, source, { lexlean, prism });
@@ -699,6 +714,11 @@ handlers.set("distributed-machine:dispatch", async (envelope) => {
     const op = type === "START" ? "run" : type === "RESTART" ? (encodedEvent.operation === "rebuild" ? "rebuild" : "restart") : "reload";
     // An app with rules is projected, not built: the live frame already shows it, so a start, restart
     // or reload keeps the frame (no epoch bump, no reload) and resends the rules.
+    if(await get("files",appId+":prism/interaction.json")!==undefined){
+      try{const opened=await openInteractionApplication(appId,{run:input=>handlers.get("forge:interaction-run")(input),probe:input=>executeInteraction(kernelReady,input)});if(!opened.current)throw interactionFailure("interactionApplicationMismatch");}
+      catch(error){return receipt(publish(appId,{phase:"errored",operation:null,operationError:{message:error.message}}));}
+      return receipt(publish(appId,{phase:"stopped",operation:null,url:null,lastSettlement:{operationId:encodedEvent.operationId||messageId,kind:"run",outcome:"succeeded"}}));
+    }
     if (await hasRules(appId)) {
       try { await showLive(appId); await refreshLive(appId); }
       catch (e) { const m = publish(appId, { phase: "errored", operation: null, operationError: { message: String((e && e.message) || e) } }); return receipt(m); }
@@ -886,6 +906,24 @@ handlers.set("forge:compose", async (input) => {
 handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
 handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input));
 handlers.set("forge:interact", input => executeInteraction(kernelReady, input));
+let interactionModelSource;
+async function loadInteractionModelSource(){
+  if(interactionModelSource!==undefined)return interactionModelSource;
+  try{const response=await fetch(new URL("interaction-model.lex.tex",BASE),{credentials:"omit",redirect:"error"});if(!response.ok)throw Error();const text=await response.text();if(text.length>131072||!text.startsWith("\\begin{lexlean}{InteractionModel}"))throw Error();interactionModelSource=text;return text;}catch{throw interactionFailure("interactionApplicationMismatch");}
+}
+handlers.set("forge:interaction-create", async raw => {
+  const input=structuredClone(raw);
+  if(!input || Object.keys(input).sort().join()!=="kind,name" || typeof input.name!=="string" || !input.name.trim() || input.name.length>120)throw interactionFailure("invalidInteractionApplication");
+  const document=await validateInteractionDocument(JSON.stringify(interactionPreset(input.kind)),kernelReady);
+  await coreReady;
+  const modelSource=await loadInteractionModelSource();
+  const files={"prism/interaction.json":JSON.stringify(document,null,2)+"\n","prism/Application.lex.tex":interactionModule(document.graph),"prism/InteractionModel.lex.tex":modelSource,"README.md":"# "+document.title+"\nOpen this project using Foundry Interactive apps. Edit prism/interaction.json to author its canonical profile.\n"};
+  const prepared=await prepareNewProject({name:input.name,files},{core,derive:kappa});
+  const created=await createStoredProject(await dbReady,prepared,nulls);
+  emit("version-created",{appId:created.app.id,oid:created.oid});return {app:withDates(created.app),chatId:created.chatId};
+});
+handlers.set("forge:interaction-run", async input => {const copied=structuredClone(input);await coreReady;return runStoredInteraction(await dbReady,kernelReady,kappa,copied,await loadInteractionModelSource());});
+
 async function eventDeliveryCommand(operation, raw) {
   const input=copyEventCommand(operation,raw);
   const db=await dbReady;
@@ -1553,3 +1591,10 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("sw.j
     location.reload();
   } catch (e) {}
 })();
+
+mountInteractionApplications({
+  create:input=>handlers.get("forge:interaction-create")(input),
+  list:async()=>{const apps=[];for(const app of await all("apps"))if(await get("files",app.id+":prism/interaction.json")!==undefined)apps.push(app);return apps;},
+  run:input=>handlers.get("forge:interaction-run")(input),
+  probe:input=>executeInteraction(kernelReady,input),
+});

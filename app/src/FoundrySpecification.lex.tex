@@ -816,5 +816,25 @@ definition{
   result: String,
   body: "Typed browser event commands retain a source-bound durable queue in the project transaction. Configuration submits a non-delivered probe to the generated event guest and binds its accepted policy, feature contracts, event contract, generation and initial sequence to the captured source. It cannot replace a queue with pending events and replacement must increase the generation. Delivery copies input before awaiting, uses only stored configuration and current sequence, asks the generated guest and atomically records the envelope with its returned next sequence. At most 256 pending envelopes and one MiB of serialized journal state are retained; overflow refuses without dropping work. Readers can recover pending events after reload even when the source is stale. Explicit project deletion removes its event journal in the same deletion transaction. New deliveries refuse changed source. Ordered acknowledgement requires the head sequence, generation and declared consumer; repeating the most recent acknowledgement is idempotent. Source and prior journal comparisons are in the same storage transaction, so competing writers cannot both consume one sequence. Acknowledgement records local consumer receipt, not execution of arbitrary effects or exactly-once delivery. Same-origin caller authentication, autonomous consumers and whole-domain behavior remain distinct obligations."
 }
+
+inductive{
+  name: InteractionJourneyError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidInteractionApplication, fields: []},
+    {name: interactionApplicationMismatch, fields: []},
+    {name: interactionStateChanged, fields: []},
+    {name: interactionStateStale, fields: []},
+    {name: interactionAudioUnavailable, fields: []}
+  ]
+}
+
+definition{
+  name: interactionJourneyBoundary,
+  parameters: [],
+  result: String,
+  body: "Gallery and garden application documents contain a bounded interaction profile and text-only screen and control descriptions. The canonical Application module is reconstructed exactly from the profile; mismatched source refuses execution. Every transition and current frame is evaluated by the generated interaction guest. Persistent state is bound to the exact semantic profile and updated with source and prior-state comparisons in the existing atomic project transaction. Reload recovers that state. A changed profile requires explicit reset; unrelated presentation edits retain state. Generic generated batches cannot overwrite interaction authority. Direct authoring of the interaction document regenerates its canonical module atomically. Audio is off on every open and reload, starts only after explicit gesture, and is stopped on revocation, close or hidden document. Reduced motion is passed to the guest. Rendering uses closed illustrations and text nodes, native keyboard controls and guest-selected frame outputs. The local receipt binds model identity and project source; it does not establish arbitrary code compilation, authentication of same-origin callers, sensory quality or whole-release qualification."
+}
 \end{semanticmodule}
 \end{lexlean}

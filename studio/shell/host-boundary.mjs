@@ -42,6 +42,7 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if (["invalidInteractionModel", "invalidInteractionState", "unknownInteractionEvent", "malformedInteraction", "interactionTooLarge", "interactionRuntimeFailed", "invalidInteractionResponse", "invalidInteractionApplication", "interactionApplicationMismatch", "interactionStateChanged", "interactionStateStale", "interactionAudioUnavailable"].includes(error?.code)) return refusal(error.code, channel, "validation", "Interaction application was refused");
     if (["invalidEventDelivery", "eventDeliveryUnconfigured", "eventDeliveryConflict", "eventDeliverySourceChanged", "eventDeliveryPending", "eventDeliveryLimitExceeded", "eventDeliveryAcknowledgementRefused"].includes(error?.code)) return refusal(error.code, channel, "validation", "Event delivery was refused");
     if (["previewPermissionChanged", "invalidPreviewPermission", "previewPermissionDenied", "previewPermissionExpired", "previewPermissionOffline", "previewPermissionUnavailable", "previewPermissionStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "validation", "Preview permission was not granted or could not be changed");
     if (error?.code === "canonicalBuildMismatch") return refusal("canonicalBuildMismatch", channel, "validation", "Build source does not match its canonical model projections");
