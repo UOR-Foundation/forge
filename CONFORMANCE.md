@@ -132,6 +132,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-46` | `build` | Portable builds execute under guest-admitted durable ownership and retain source-bound completed artifacts or resumable reservations |
 
+## durable-chat-queue
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-51` | `build` | Actual chat queue commands atomically bind guest transitions to durable payloads and exclusive recoverable execution |
+
 ## durable-event-delivery
 
 | ID | Level | Statement |

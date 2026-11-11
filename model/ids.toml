@@ -399,3 +399,9 @@ id = "FA-50"
 level = "build"
 suite = "chat-queue-model"
 statement = "Bounded chat queues preserve unique pending work and reject stale revisions owners and stop policies through guest transitions"
+
+[[id]]
+id = "FA-51"
+level = "build"
+suite = "durable-chat-queue"
+statement = "Actual chat queue commands atomically bind guest transitions to durable payloads and exclusive recoverable execution"

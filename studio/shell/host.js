@@ -1,3 +1,6 @@
+import {createChatQueueController} from "./chat-queue-controller.mjs";
+import {readStoredChatQueue,commitStoredChatQueue,bindQueuePayload,chatQueueFailure} from "./chat-queue-store.mjs";
+import {ChatStreamIntentEventSchema,SerializableChatTurnIntentSchema,serializeImmutableChatTurnPayload} from "./chat-contracts.mjs";
 import {queueWithGuest} from "./chat-queue-codec.mjs";
 import {createDiscovery} from "./application-discovery.mjs";
 import {mountApplicationDiscovery} from "./discovery-ui.mjs";
@@ -837,8 +840,10 @@ window.__chat = { parseDyadTags, applyDyadTags };
 // chunk events to the message it renders. The model is OpenRouter with the visitor's own key; the
 // prompt is the renderer's text tag build prompt, so the answer carries <dyad-write> blocks the host applies
 // to the project, seals as a version, and the renderer then reloads the preview by itself.
+const chatActorEpoch=crypto.randomUUID();
+const chatActorId=chatId=>"web-chat_stream-"+chatId+"-"+chatActorEpoch;
 const chatMachines = new Map(); // chatId -> { revision, state, abort }
-const idleChat = (chatId) => ({ schemaVersion: 1, chatId, revision: 0, phase: "idle", invocationRef: null, error: null, queueRevision: 0, queuePaused: false, queuePauseReason: null, queue: [], stopPolicyVersion: 0, capabilities: { canSubmit: true, canCancel: false, canPauseQueue: true, canResumeQueue: false }, lastAcceptance: null, lastCompletion: null, lastQueueMutation: null });
+const idleChat = (chatId) => ({ schemaVersion: 1, chatId, revision: 0, phase: "idle", invocationRef: null, error: null, queueRevision: 0, queue: [], queuePaused: false, queuePauseReason: null, stopPolicyVersion: 0, capabilities: { canSubmit: true, canCancel: false, canPauseQueue: true, canResumeQueue: false }, lastAcceptance: null, lastCompletion: null, lastQueueMutation: null });
 function chatMachineOf(chatId) { if (!chatMachines.has(chatId)) chatMachines.set(chatId, { revision: 0, state: idleChat(chatId), abort: null }); return chatMachines.get(chatId); }
 function publishChat(chatId, patch) {
   const m = chatMachineOf(chatId);
@@ -846,7 +851,7 @@ function publishChat(chatId, patch) {
   const phase = patch.phase || m.state.phase;
   const queuePaused = patch.queuePaused === undefined ? m.state.queuePaused : patch.queuePaused;
   m.state = { ...m.state, ...patch, revision: m.revision, capabilities: { canSubmit: true, canCancel: phase === "admitting" || phase === "streaming", canPauseQueue: !queuePaused, canResumeQueue: queuePaused } };
-  emit("distributed-machine:snapshot", { protocolVersion: 1, machineId: "chat_stream", encodedKey: { chatId }, actorInstanceId: "web-chat_stream-" + chatId, revision: m.revision, encodedState: m.state });
+  emit("distributed-machine:snapshot", { protocolVersion: 1, machineId: "chat_stream", encodedKey: { chatId }, actorInstanceId: chatActorId(chatId), revision: m.revision, encodedState: m.state });
   // shellUpdate is declared below and read here before it exists while the host starts: var, and checked.
   if (shellUpdate && shellUpdate.waiting && !turnRunning()) setTimeout(reloadIfIdle, 1500);
   return m;
@@ -1075,7 +1080,7 @@ async function approveTurn(chatId, appId, messages, userId, ref, intentId) {
   try { started = await approveRules(appId); } catch (e) { started = { text: `<dyad-output type="error" message="${String((e && e.message) || e).replace(/"/g, "'")}"></dyad-output>` }; }
   await show(started.text);
   if (started.prove) {
-    const abort = new AbortController(); m.abort = abort;
+    const abort = new AbortController(); m.abort = abort; if(m.queueSignal?.aborted){abort.abort();assertGenerationActive(abort.signal);}
     const proof = started.prove((s) => { if (!abort.signal.aborted) show(started.text + `\n\nLean is working, ${s} s.`); });
     const stopped = new Promise((res) => abort.signal.addEventListener("abort", () => res("stopped")));
     const result = await Promise.race([proof, stopped]);
@@ -1088,7 +1093,7 @@ async function approveTurn(chatId, appId, messages, userId, ref, intentId) {
     }
   }
   publishChat(chatId, { phase: "finalizing", error: null, lastCompletion: { intentId, invocationRef: ref, outcome: "completed", updatedFiles: false, suppressAutoReview: true, targetAppId: appId } });
-  publishChat(chatId, { phase: "idle", invocationRef: null, queuePaused: false, queuePauseReason: null });
+  publishChat(chatId, { phase: "idle", invocationRef: null });
   emit("chat:stream:end", { chatId });
 }
 handlers.set("prism:status", async ({ appId }) => (await rulesOf(appId)) || null);
@@ -1111,7 +1116,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   };
   const finish = () => {
     publishChat(chatId, { phase: "finalizing", error: null, lastCompletion: { intentId, invocationRef: ref, outcome: "completed", updatedFiles: false, suppressAutoReview: true, targetAppId: appId } });
-    publishChat(chatId, { phase: "idle", invocationRef: null, queuePaused: false, queuePauseReason: null });
+    publishChat(chatId, { phase: "idle", invocationRef: null });
     emit("chat:stream:end", { chatId });
   };
   const rules = await rulesOf(appId);
@@ -1125,7 +1130,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   const spec = rules.spec;
   const head = `**Publishing ${spec.title}** with the Prism SDK on GitHub Actions, as \`npx prism-code\` builds it. The repository is public, so anyone can read its rules and LexLean model.`;
   let links = "", observing = true;
-  const abort = new AbortController(); m.abort = abort;
+  const abort = new AbortController(); m.abort = abort; if(m.queueSignal?.aborted){abort.abort();assertGenerationActive(abort.signal);}
   const step = (word, detail, extra) => {
     if (extra && extra.runs) links = `\n\n[Build run](${extra.runs["pages.yml"]}) · [Lean gate](${extra.runs["bootstrap.yml"]})`;
     if (observing && !abort.signal.aborted) show(`${head}\n\n${word}: ${detail}.${links}`);
@@ -1168,7 +1173,9 @@ window.__prism = { rulesAfterTurn, approveRules, rulesOf, nextPhase, check: pris
 
 async function chatTurn(chatId, intent) {
   const m = chatMachineOf(chatId);
+  assertGenerationActive(m.queueSignal);
   const chat = await get("chats", chatId);
+  if(!chat)throw chatQueueFailure("chatQueueMissing");
   const appId = chat.appId;
   const ref = intent.invocationRef;
   const settings = (await get("settings", "user")) || DEFAULT_SETTINGS;
@@ -1194,7 +1201,7 @@ async function chatTurn(chatId, intent) {
   await saveMessages(chatId, messages);
   emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   let full = "", lastSent = "", updatedFiles = false, summary, error = null;
-  const abort = new AbortController(); m.abort = abort;
+  const abort = new AbortController(); m.abort = abort; if(m.queueSignal?.aborted){abort.abort();assertGenerationActive(abort.signal);}
   let provenance = null;
   const committed = [];
   const onCommit = (oid) => { committed.push(oid); updatedFiles = true; emit("version-created", { appId, oid }); };
@@ -1331,36 +1338,39 @@ async function chatTurn(chatId, intent) {
   const outcome = abort.signal.aborted ? "cancelled" : error ? "errored" : "completed";
   const completion = { intentId: intent.intentId, invocationRef: ref, outcome, updatedFiles, suppressAutoReview: true, targetAppId: appId, ...(summary ? { chatSummary: summary } : {}), ...(error ? { error } : {}), ...(provenance && provenance.cut ? { warningMessages: ["The model ran out of room before it finished; an unfinished file was not written."] } : {}), ...(provenance && provenance.receipt ? { warningMessages: [(provenance.warm ? V.warmupLabel + " · " : "") + (provenance.served ? V.servedLabel : V.sealedLabel) + " · " + provenance.receipt.replace(/^blake3:/, "").slice(0, 12) + "…"] } : {}) };
   publishChat(chatId, { phase: "finalizing", error, lastCompletion: completion });
-  publishChat(chatId, { phase: outcome === "errored" ? "errored" : "idle", invocationRef: null, queuePaused: false, queuePauseReason: null });
+  publishChat(chatId, { phase: outcome === "errored" ? "errored" : "idle", invocationRef: null });
   emit("chat:stream:end", { chatId });
 }
-const chatSubscribe = ({ machineId, encodedKey }) => { const m = chatMachineOf(encodedKey.chatId); return { protocolVersion: 1, machineId, encodedKey, actorInstanceId: "web-chat_stream-" + encodedKey.chatId, revision: m.revision, encodedState: m.state }; };
-function chatDispatch({ encodedKey, messageId, expectedActorInstanceId, encodedEvent }) {
-  const chatId = encodedKey.chatId, m = chatMachineOf(chatId), type = encodedEvent && encodedEvent.type;
-  const aid = "web-chat_stream-" + chatId;
-  if (expectedActorInstanceId && expectedActorInstanceId !== aid) return { kind: "rejected", messageId, reason: "stale-actor" };
-  const applied = () => ({ kind: "applied", actorInstanceId: aid, revision: m.revision, transactionSequence: m.revision, messageId });
-  if (type === "SUBMIT") {
-    const intent = encodedEvent.intent;
-    if (m.state.phase === "admitting" || m.state.phase === "streaming") return { kind: "ignored", actorInstanceId: aid, revision: m.revision, transactionSequence: m.revision, messageId, reason: "not-active" };
-    publishChat(chatId, { phase: "admitting", invocationRef: intent.invocationRef, error: null, queuePaused: false, queuePauseReason: null });
-    chatTurn(chatId, intent).catch((e) => { console.error("[host] chat turn", e); publishChat(chatId, { phase: "errored", invocationRef: null, error: String((e && e.message) || e) }); });
-    return applied();
-  }
-  if (type === "CANCEL") {
-    if (m.abort) m.abort.abort();
-    publishChat(chatId, { phase: m.abort ? "cancelling" : m.state.phase, stopPolicyVersion: m.state.stopPolicyVersion + 1 });
-    return applied();
-  }
-  if (type === "REPORT_ERROR") { publishChat(chatId, { error: encodedEvent.error }); return applied(); }
-  if (["PAUSE_QUEUE", "RESUME_QUEUE", "CLEAR_QUEUE", "EDIT_QUEUE_ENTRY", "REORDER_QUEUE_ENTRY", "REMOVE_QUEUE_ENTRY"].includes(type)) {
-    publishChat(chatId, { queuePaused: type === "PAUSE_QUEUE", queuePauseReason: type === "PAUSE_QUEUE" ? "manual" : null, queueRevision: m.state.queueRevision + 1, lastQueueMutation: { mutationId: encodedEvent.mutationId, outcome: "applied" } });
-    return applied();
-  }
-  return { kind: "ignored", actorInstanceId: aid, revision: m.revision, transactionSequence: m.revision, messageId, reason: "unknown intent " + type };
+const queueChannel=typeof BroadcastChannel==="function"?new BroadcastChannel("foundry:chat-queues:v1"):null;
+const queueBoundary={validate:value=>SerializableChatTurnIntentSchema.safeParse(value),validateEvent:value=>ChatStreamIntentEventSchema.safeParse(value),serialize:serializeImmutableChatTurnPayload,derive:kappa};
+const chatQueue=createChatQueueController({
+  guest:kernelReady,boundary:async()=>queueBoundary,locks:queueChannel?navigator.locks:null,
+  store:{read:async chatId=>readStoredChatQueue(await dbReady,chatId),commit:async(expected,journal)=>commitStoredChatQueue(await dbReady,expected,journal)},
+  mintOwner:()=>{let owner=0;while(!owner)owner=crypto.getRandomValues(new Uint32Array(1))[0];return owner;},
+  notify:message=>queueChannel?.postMessage(message),
+  publish:(chatId,snapshot,extra)=>{
+    const m=chatMachineOf(chatId),patch={...(snapshot||{})};
+    if(extra.journal&&!m.queueRunning){const active=extra.journal.entries.find(e=>e.id===extra.journal.state.active);patch.phase=active?"streaming":"idle";patch.invocationRef=active?.intent.invocationRef||null;}
+    if(extra.acceptance)patch.lastAcceptance=extra.acceptance;if(extra.error)patch.error=extra.error;if(extra.reportedError)patch.error=extra.reportedError;publishChat(chatId,patch);
+  },
+  run:async(chatId,intent,signal)=>{
+    const m=chatMachineOf(chatId);m.queueRunning=true;m.queueSignal=signal;const cancel=()=>m.abort?.abort();signal.addEventListener("abort",cancel);
+    publishChat(chatId,{phase:"admitting",invocationRef:intent.invocationRef,error:null});
+    try{assertGenerationActive(signal);await chatTurn(chatId,intent);return m.state.lastCompletion?.intentId===intent.intentId?m.state.lastCompletion:{outcome:"errored"};}
+    finally{signal.removeEventListener("abort",cancel);m.queueRunning=false;m.queueSignal=null;m.abort=null;if(m.state.lastCompletion?.intentId!==intent.intentId){publishChat(chatId,{phase:"finalizing",lastCompletion:{intentId:intent.intentId,invocationRef:intent.invocationRef,outcome:signal.aborted?"cancelled":"errored",targetAppId:intent.appId??null,updatedFiles:false,suppressAutoReview:true}});emit("chat:stream:end",{chatId});}}
+  },
+});
+queueChannel?.addEventListener("message",event=>{const chatId=event.data?.chatId;if(Number.isSafeInteger(chatId)&&chatId>0)void chatQueue.refresh(chatId).catch(()=>{});});
+window.addEventListener("pagehide",()=>{chatQueue.dispose();queueChannel?.close();},{once:true});
+const chatSubscribe=async({machineId,encodedKey})=>{await chatQueue.snapshot(encodedKey.chatId);const m=chatMachineOf(encodedKey.chatId);return {protocolVersion:1,machineId,encodedKey,actorInstanceId:chatActorId(encodedKey.chatId),revision:m.revision,encodedState:m.state};};
+async function chatDispatch(raw){
+  const {encodedKey,messageId,expectedActorInstanceId,encodedEvent}=structuredClone(raw),chatId=encodedKey?.chatId;
+  if(!Number.isSafeInteger(chatId)||chatId<1||typeof messageId!=="string"||!messageId||messageId.length>256)throw chatQueueFailure("invalidChatQueueCommand");
+  const aid=chatActorId(chatId);if(expectedActorInstanceId&&expectedActorInstanceId!==aid)return {kind:"rejected",messageId,reason:"stale-actor"};
+  await chatQueue.dispatch(chatId,encodedEvent);const m=chatMachineOf(chatId);return {kind:"applied",actorInstanceId:aid,revision:m.revision,transactionSequence:m.revision,messageId};
 }
-handlers.set("chat:observe-submission-stop-policy", (chatId) => chatMachineOf(chatId).state.stopPolicyVersion);
-handlers.set("chat:cancel", (chatId) => { const m = chatMachineOf(chatId); if (m.abort) m.abort.abort(); });
+handlers.set("chat:observe-submission-stop-policy",async chatId=>(await readStoredChatQueue(await dbReady,chatId)).journal.state.stopPolicy);
+handlers.set("chat:cancel",chatId=>chatQueue.cancelCurrent(chatId));
 
 // ---- the typed host boundary (FoundrySpecification.hostResponseBoundary)
 function dispatch(channel, args) {
@@ -1586,9 +1596,9 @@ window.electron = {
   if (!first || !first.prompt) return;
   const name = ("app-" + first.prompt.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")).slice(0, 40) || "app";
   const created = await handlers.get("create-app")({ name });
-  const intent = { intentId: "first-" + Date.now(), chatId: created.chatId, invocationRef: { kind: "chat-stream", entityKey: created.chatId, operationId: "first-" + Date.now() }, prompt: first.prompt, redo: false, selectedComponents: [], requestedChatMode: "build" };
-  publishChat(created.chatId, { phase: "admitting", invocationRef: intent.invocationRef, error: null });
-  chatTurn(created.chatId, intent).catch((e) => console.error("[host] first turn", e));
+  const intentId="first-"+crypto.randomUUID();
+  const intent=await bindQueuePayload({schemaVersion:1,intentId,appId:created.app.id,chatId:created.chatId,invocationRef:{kind:"chat-stream",entityKey:created.chatId,operationId:intentId},prompt:first.prompt,redo:false,selectedComponents:[],requestedChatMode:"build"},serializeImmutableChatTurnPayload);
+  await chatDispatch({encodedKey:{chatId:created.chatId},messageId:intentId,encodedEvent:{type:"SUBMIT",intent,observedStopPolicyVersion:0}});
   const base = new URL(document.baseURI).pathname;
   history.replaceState(null, "", base + "chat?id=" + created.chatId + "&appId=" + created.app.id);
   dispatchEvent(new PopStateEvent("popstate"));

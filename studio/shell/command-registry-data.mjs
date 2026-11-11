@@ -286,6 +286,21 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Finite queue transitions; durable payload and actor integration are separately qualified."
+    },
+    {
+      "id": "durable-chat",
+      "version": 1,
+      "owner": "FoundrySpecification.durableChatQueueBoundary",
+      "effects": [
+        "storage",
+        "network",
+        "execution"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Queue admission grants no effect permission; inference, build and publication boundaries remain mandatory."
     }
   ],
   "commands": [
@@ -641,9 +656,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "chat:cancel",
-      "feature": "actor",
+      "feature": "durable-chat",
       "version": 1,
-      "owner": "FoundrySpecification.currentMainIntegrationBoundary",
+      "owner": "FoundrySpecification.durableChatQueueBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -661,9 +676,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "chat:observe-submission-stop-policy",
-      "feature": "actor",
+      "feature": "durable-chat",
       "version": 1,
-      "owner": "FoundrySpecification.currentMainIntegrationBoundary",
+      "owner": "FoundrySpecification.durableChatQueueBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -1131,9 +1146,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "distributed-machine:dispatch",
-      "feature": "actor",
+      "feature": "durable-chat",
       "version": 1,
-      "owner": "FoundrySpecification.currentMainIntegrationBoundary",
+      "owner": "FoundrySpecification.durableChatQueueBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -1141,9 +1156,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "distributed-machine:subscribe",
-      "feature": "actor",
+      "feature": "durable-chat",
       "version": 1,
-      "owner": "FoundrySpecification.currentMainIntegrationBoundary",
+      "owner": "FoundrySpecification.durableChatQueueBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",

@@ -50,6 +50,8 @@ jobs:
           cache-dependency-path: studio/vendor/dyad/package-lock.json
       - name: Install locked renderer contracts for boundary verification
         run: npm ci --prefix vendor/dyad --ignore-scripts --no-audit --no-fund
+      - name: Reproduce the imported chat schemas from locked sources
+        run: node tools/chat_contracts_projection.mjs --check
       - name: Install the locked browser compiler archive
         run: npm ci --prefix runtime --ignore-scripts --no-audit --no-fund
       - name: Build the renderer and stage its complete closure before projection
@@ -101,6 +103,7 @@ jobs:
           node tools/semantic_application_discovery_browser.mjs
           node tools/chat_queue_runtime.mjs
           node tools/chat_queue_browser.mjs
+          node tools/durable_chat_queue_browser.mjs
           node tools/rules_source_browser.mjs
           node tools/inference_effects_browser.mjs
           node tools/inference_consent_browser.mjs
