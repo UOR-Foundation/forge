@@ -8,4 +8,4 @@ Local evidence: 332 Node controls, workspace Rust tests, Clippy, formatting and 
 
 The two-module specification diagnostic verifies with receipt `6fab11dd0292c69a6cf1049dad7124f873fc93003a80421cf5734f9f216a2ebf`. This host-tool diagnostic does not substitute for the locked SDK.
 
-Draft acceptance: the mandatory actual-host browser journey covers source+chat fork, chat-only fork, exact replay, truncation and actual late abort. It requires the signed 245-case preview guest; that build remains in progress. Actual browser qualification, exact-SDK CI and completeness review remain required. Production dependency/factory/quality/release holds remain unchanged.
+Draft acceptance: the mandatory actual-host browser journey covers source+chat fork, chat-only fork, exact replay, truncation and actual late abort. The signed 245-case preview guest now passes this journey against the actual host, core and IndexedDB: source fork, chat-only fork, exact replay, truncation and late-abort rollback, with zero page exceptions. Exact-SDK CI and completeness review remain required. Production dependency/factory/quality/release holds remain unchanged.
