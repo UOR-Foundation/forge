@@ -5,6 +5,7 @@ import { webcrypto } from "node:crypto";
 import { test } from "node:test";
 import * as prism from "../shell/prism.js";
 import * as live from "../shell/live/project.mjs";
+import * as lexlean from "../shell/live/lexlean.mjs";
 import { applyOps, createEditor } from "../shell/live/edit.mjs";
 import { assertGenerationActive } from "../shell/generation-patch.mjs";
 const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
@@ -20,7 +21,7 @@ async function revise(spec, before) {
   const source = { files: [["prism/spec.json", JSON.stringify(initial)], ["src/pages/Index.tsx", "import '@/lib/prism'"]] };
   const run = fn("rulesAfterTurn", "// Lean proves", {
     assertGenerationActive, coreReady: Promise.resolve(), core: {}, dbReady: Promise.resolve({}),
-    captureProjectSource: async () => source, prism, live, rulesSnapshotOf: async () => ({ state: before, expected: before }),
+    captureProjectSource: async () => source, prism, live, lexlean, rulesSnapshotOf: async () => ({ state: before, expected: before }),
     enc: new TextEncoder(), kappa: async bytes => live.kappaOfValue([...bytes]),
     nextPhase: async (phase, event) => event === "reword" ? phase : event === "check" ? "checked" : "drafting",
     applyStoredProjectPatch: async (_, id, patch, options) => { batch = { patch, options }; saved = options.rulesUpdate?.state; return { changed: patch.writes.length, source: { ...source, reference: "new" } }; },

@@ -249,3 +249,81 @@ id = "FA-27"
 level = "build"
 suite = "bounded-build-modules"
 statement = "Portable builds fetch only bounded approved-origin modules and retain exact module-byte receipts"
+
+[[id]]
+id = "FK-12"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never answers within when a journey's measure is over its budget"
+
+[[id]]
+id = "FK-13"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never answers over when a journey's measure is within its budget"
+
+[[id]]
+id = "FK-14"
+level = "build"
+suite = "forge_kernel"
+statement = "The mobile INP budget is never above 500 ms"
+
+[[id]]
+id = "FK-15"
+level = "build"
+suite = "forge_kernel"
+statement = "No route's JS budget is below the first load's"
+
+[[id]]
+id = "FK-16"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never answers split when the width is under 768 px"
+
+[[id]]
+id = "FK-17"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never answers tabs when the width is 768 px or more"
+
+[[id]]
+id = "FK-18"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never allows motion when reduced motion is asked"
+
+[[id]]
+id = "FK-19"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never allows motion longer than 200 ms"
+
+[[id]]
+id = "FK-20"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never answers ok for a tap target under 44 px"
+
+[[id]]
+id = "FK-21"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never counts as this week what is older than 7 days"
+
+[[id]]
+id = "LL-01"
+level = "build"
+suite = "live-lexlean"
+statement = "Every guarantee holds on every request in the bounds when every local obligation passes"
+
+[[id]]
+id = "LL-02"
+level = "build"
+suite = "live-lexlean"
+statement = "Every guarantee of the Verdant Resonance fixture holds on every request in its bounds"
+
+[[id]]
+id = "FA-28"
+level = "build"
+suite = "app-covers"
+statement = "App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules"

@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+    # Forge (studio/) is not read by the try page, the frame, the identity page or the try codespace: a pull
+    # request that changes only Forge does not wait for them.
+    paths-ignore:
+      - "studio/**"
   workflow_dispatch:
 
 permissions:
@@ -25,7 +29,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Install Node 22
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22
       - name: Install the devcontainer CLI

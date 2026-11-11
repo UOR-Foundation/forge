@@ -18,6 +18,12 @@ The three honesty levels (R2):
 `cargo xtask audit-limits` fails if any code path returns an error the
 model does not sanction.
 
+## app-covers
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-28` | `build` | App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules |
+
 ## application-authority
 
 | ID | Level | Statement |
@@ -117,6 +123,16 @@ model does not sanction.
 | `FK-09` | `build` | The gate never lets a preview fetch without a grant |
 | `FK-10` | `build` | The app always answers proved when event is reword and phase is proved |
 | `FK-11` | `build` | The app always answers published when event is reword and phase is published |
+| `FK-12` | `build` | The kernel never answers within when a journey's measure is over its budget |
+| `FK-13` | `build` | The kernel never answers over when a journey's measure is within its budget |
+| `FK-14` | `build` | The mobile INP budget is never above 500 ms |
+| `FK-15` | `build` | No route's JS budget is below the first load's |
+| `FK-16` | `build` | The kernel never answers split when the width is under 768 px |
+| `FK-17` | `build` | The kernel never answers tabs when the width is 768 px or more |
+| `FK-18` | `build` | The kernel never allows motion when reduced motion is asked |
+| `FK-19` | `build` | The kernel never allows motion longer than 200 ms |
+| `FK-20` | `build` | The kernel never answers ok for a tap target under 44 px |
+| `FK-21` | `build` | The kernel never counts as this week what is older than 7 days |
 
 ## host-input-boundary
 
@@ -135,6 +151,13 @@ model does not sanction.
 | ID | Level | Statement |
 | --- | --- | --- |
 | `FA-11` | `build` | Cloud inference bounds requests and streamed responses and refuses cancellation, malformed data and provider failures explicitly |
+
+## live-lexlean
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `LL-01` | `build` | Every guarantee holds on every request in the bounds when every local obligation passes |
+| `LL-02` | `build` | Every guarantee of the Verdant Resonance fixture holds on every request in its bounds |
 
 ## proposal-admission
 

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useMatchRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useAtomValue, useSetAtom } from "jotai";
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 
 import { selectedAppIdAtom } from "@/atoms/appAtoms";
 import { selectedChatIdAtom } from "@/atoms/chatAtoms";
@@ -54,6 +54,7 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 // The product's name: the build's word transform (vite.shell.config.mts) writes the product's name for
@@ -102,6 +103,15 @@ function useIsActive() {
 
 export function AppSidebar() {
   const isActive = useIsActive();
+  // On a phone the sidebar is the kit's Sheet over the page: a choice in it (a link, an app, a chat) closes
+  // it, so the page the visitor asked for is what they see.
+  const { isMobile, setOpenMobile } = useSidebar();
+  const href = useLocation({ select: (l) => l.href });
+  useEffect(() => { if (isMobile) setOpenMobile(false); }, [href, isMobile, setOpenMobile]);
+  // A tooltip names an item of the collapsed rail. In the Sheet it is never shown, but the kit still opens it
+  // when the Sheet focuses its first item, and the first Escape then closed that invisible tooltip, not the
+  // Sheet. On a phone the items carry none.
+  const tip = (label: string) => (isMobile ? undefined : label);
   const navigate = useNavigate();
   const setHelpDialog = useSetAtom(helpDialogAtom);
   const setSelectedAppId = useSetAtom(selectedAppIdAtom);
@@ -118,10 +128,11 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip={TITLE}>
+            {/* Collapsed to icons, the header is the mark alone, centred over the icons below it. */}
+            <SidebarMenuButton asChild size="lg" tooltip={tip(TITLE)} className="group-data-[collapsible=icon]:justify-center">
               <Link to="/" onClick={newApp}>
                 <PrismMark className="size-6 shrink-0" />
-                <span className="font-display text-base font-semibold">{TITLE}</span>
+                <span className="font-display text-base font-semibold group-data-[collapsible=icon]:hidden">{TITLE}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -133,7 +144,7 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  tooltip="New app"
+                  tooltip={tip("New app")}
                   onClick={newApp}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
                 >
@@ -145,7 +156,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {NAV.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.to, item.exact)}>
+                  <SidebarMenuButton asChild tooltip={tip(item.title)} isActive={isActive(item.to, item.exact)}>
                     <Link to={item.to}>
                       <item.icon />
                       <span>{item.title}</span>
@@ -161,7 +172,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings" isActive={isActive("/settings")}>
+            <SidebarMenuButton asChild tooltip={tip("Settings")} isActive={isActive("/settings")}>
               <Link to="/settings">
                 <Settings />
                 <span>Settings</span>
@@ -169,7 +180,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Help" onClick={() => setHelpDialog({ open: true })}>
+            <SidebarMenuButton tooltip={tip("Help")} onClick={() => setHelpDialog({ open: true })}>
               <HelpCircle />
               <span>Help</span>
             </SidebarMenuButton>

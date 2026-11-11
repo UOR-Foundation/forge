@@ -15,6 +15,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request makes its earlier run moot: that run is cancelled. Runs on main all finish.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('studio-pr-{0}', github.event.pull_request.number) || format('studio-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lane:
     runs-on: ubuntu-24.04
@@ -31,11 +36,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       - name: Cache the lane work directory (PrismPM at the pinned commit, its built LexLean, the Lean toolchain)
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cache/hologram-forge-lane
@@ -47,7 +52,7 @@ jobs:
         run: ./scripts/lane.sh
       - name: Byte identity corpus
         run: python3 tools/corpus.py
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
           cache: npm
@@ -73,6 +78,7 @@ jobs:
           node tools/inference_effects_browser.mjs
           node tools/exact_representation_browser.mjs
           node tools/provider_key_browser.mjs
+          node tools/covers_browser.mjs
       - name: The site's Featherless relay takes only the site's offered, bounded chat requests, and keeps its key private
         run: node --test relay/featherless/worker.test.mjs
       - name: Every shell script parses the way the browser parses it
@@ -83,6 +89,8 @@ jobs:
         run: |
           node tools/kernel.mjs --check
           node tools/kernel_browser.mjs
+      - name: The Experience gate, the stylesheet held to the kernel's answers (FK-16 to FK-21)
+        run: node tools/experience.mjs --check
       - name: The Prism journey in the shell is prism-code's, byte for byte
         run: node tools/prism_journey.mjs --check
       - name: The commit Forge makes on a template instance is prism-code's, byte for byte
@@ -95,5 +103,13 @@ jobs:
         run: node tools/live_table.mjs --check
       - name: Every word on the live screen is edited in the spec, and only there
         run: node tools/live_edit.mjs --check
+      - name: An app's canonical LexLean module is its source, and its obligations agree with the table
+        run: node tools/live_lexlean.mjs --check
+      - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
+        run: |
+          node tools/live_proof.mjs --check
+          export PATH="$HOME/.elan/bin:$PATH"
+          cd proof && lake build && lake env lean PrismLive/Axioms.lean | tee axioms.txt
+          test "$(grep -c 'depends on axioms: \[propext, Quot.sound\]' axioms.txt)" = 2
       - name: Nothing in this repository names Forge's old home
         run: node tools/self_contained.mjs

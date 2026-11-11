@@ -1,0 +1,79 @@
+# Forge's mobile journeys, measured on the pull request that changes Forge, not after it merged.
+# Project content, not universal policy.
+#
+# The Performance gate has two arms (studio/tools/perf_budget.mjs). Its static arm, the JS each route needs
+# against the kernel's budgets, is exact and runs in pages.yml before a deploy. Its browser arm measures
+# time (cold and warm LCP, INP, Enter to the first token) in Chromium at 390x844 with the CPU slowed 4x and
+# Slow 4G; a measurement of time belongs where its author sees it, on the pull request, not between main
+# and the site, where it stopped a deploy for everyone. Forge is built exactly as pages.yml builds it.
+name: forge performance
+
+on:
+  pull_request:
+    paths:
+      - "studio/**"
+      - ".github/workflows/forge-perf.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forge-perf-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  journeys:
+    name: Forge's mobile journeys inside the kernel's budgets
+    if: github.repository != 'UOR-Foundation/template'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: studio
+    steps:
+      - name: Check out the exact event revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/hologram-forge-lane
+            ~/.elan
+          key: lane-${{ hashFiles('studio/PRISMPM_REV', 'studio/lean-toolchain') }}
+      - name: The lane, which projects the page from the verified core and builds the wasm the page loads
+        run: ./scripts/lane.sh
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: studio/vendor/dyad/package-lock.json
+      - name: The vendored renderer, built beside the shell as pages.yml builds it
+        run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --prefer-offline --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py
+      - name: The journeys' browser, kept by its version
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.1-chromium
+      - name: Forge's mobile journeys inside the kernel's budgets (FK-12 to FK-15)
+        env:
+          PERF_ARTIFACTS: ${{ runner.temp }}/forge-perf
+        run: |
+          npm install --no-audit --no-fund --global playwright@1.56.1
+          playwright install --with-deps chromium
+          node tools/perf_budget.mjs --browser
+      - name: Keep what the journeys saw when they failed
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: forge-perf
+          path: ${{ runner.temp }}/forge-perf
+          if-no-files-found: ignore

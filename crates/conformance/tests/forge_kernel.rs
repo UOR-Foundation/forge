@@ -154,3 +154,103 @@ fn forge_kernel_fk_11() {
         "rewordKeepsPublishedHolds",
     );
 }
+
+/// `FK-12`: The kernel never answers within when a journey's measure is over its budget
+#[test]
+fn forge_kernel_fk_12() {
+    pinned(
+        "breaksBudgetOverWithin",
+        "body: (((ForgeKernel::budgetOf (project request journey)) <? (project request value)) && ((ForgeKernel::budgetWithin request) =? 1))",
+        "budgetOverWithinHolds",
+    );
+}
+
+/// `FK-13`: The kernel never answers over when a journey's measure is within its budget
+#[test]
+fn forge_kernel_fk_13() {
+    pinned(
+        "breaksBudgetWithinOver",
+        "body: ((not ((ForgeKernel::budgetOf (project request journey)) <? (project request value))) && ((ForgeKernel::budgetWithin request) =? 0))",
+        "budgetWithinOverHolds",
+    );
+}
+
+/// `FK-14`: The mobile INP budget is never above 500 ms
+#[test]
+fn forge_kernel_fk_14() {
+    pinned(
+        "breaksInpBudgetBound",
+        "body: (((project request journey) =? 2) && (500 <? (ForgeKernel::budgetOf (project request journey))))",
+        "inpBudgetBoundHolds",
+    );
+}
+
+/// `FK-15`: No route's JS budget is below the first load's
+#[test]
+fn forge_kernel_fk_15() {
+    pinned(
+        "breaksRouteBelowFirstLoad",
+        "body: (((4 <? (project request journey)) && ((project request journey) <? 11)) && ((ForgeKernel::budgetOf (project request journey)) <? (ForgeKernel::budgetOf 4)))",
+        "routeBelowFirstLoadHolds",
+    );
+}
+
+/// `FK-16`: The kernel never answers split when the width is under 768 px
+#[test]
+fn forge_kernel_fk_16() {
+    pinned(
+        "breaksNarrowSplit",
+        "body: (((project request width) <? 768) && ((ForgeKernel::layoutTabs request) =? 0))",
+        "narrowSplitHolds",
+    );
+}
+
+/// `FK-17`: The kernel never answers tabs when the width is 768 px or more
+#[test]
+fn forge_kernel_fk_17() {
+    pinned(
+        "breaksWideTabs",
+        "body: ((not ((project request width) <? 768)) && ((ForgeKernel::layoutTabs request) =? 1))",
+        "wideTabsHolds",
+    );
+}
+
+/// `FK-18`: The kernel never allows motion when reduced motion is asked
+#[test]
+fn forge_kernel_fk_18() {
+    pinned(
+        "breaksReducedMotion",
+        "body: (((project request reduced) =? 1) && ((ForgeKernel::motionAllows request) =? 1))",
+        "reducedMotionHolds",
+    );
+}
+
+/// `FK-19`: The kernel never allows motion longer than 200 ms
+#[test]
+fn forge_kernel_fk_19() {
+    pinned(
+        "breaksLongMotion",
+        "body: ((200 <? (project request duration)) && ((ForgeKernel::motionAllows request) =? 1))",
+        "longMotionHolds",
+    );
+}
+
+/// `FK-20`: The kernel never answers ok for a tap target under 44 px
+#[test]
+fn forge_kernel_fk_20() {
+    pinned(
+        "breaksSmallTarget",
+        "body: (((project request size) <? 44) && ((ForgeKernel::targetOk request) =? 1))",
+        "smallTargetHolds",
+    );
+}
+
+/// `FK-21`: The kernel never counts as this week what is older than 7 days
+#[test]
+fn forge_kernel_fk_21() {
+    pinned(
+        "breaksOldRecent",
+        "body: ((604800 <? (project request age)) && ((ForgeKernel::recentYes request) =? 1))",
+        "oldRecentHolds",
+    );
+}
