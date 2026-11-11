@@ -17,7 +17,16 @@ definition{
   name: previewEncodeResult,
   parameters: [value : (Result VersionPreview::PreviewTransition VersionPreview::PreviewError)],
   result: Bytes,
-  body: (match value | Result.ok transition => (previewEncodeTransition transition) | Result.error error => (match error | VersionPreview::PreviewError.invalidPreviewState => 0x696e76616c6964507265766965775374617465 | VersionPreview::PreviewError.invalidPreviewCommand => 0x696e76616c696450726576696577436f6d6d616e64 | VersionPreview::PreviewError.previewRevisionConflict => 0x707265766965775265766973696f6e436f6e666c696374 | VersionPreview::PreviewError.previewRevisionExhausted => 0x707265766965775265766973696f6e457868617573746564 | VersionPreview::PreviewError.previewAlreadyOwned => 0x70726576696577416c72656164794f776e6564 | VersionPreview::PreviewError.previewInactive => 0x70726576696577496e616374697665 | VersionPreview::PreviewError.previewWrongOwner => 0x7072657669657757726f6e674f776e6572))
+  body: (match value
+    | Result.ok transition => (previewEncodeTransition transition)
+    | Result.error error => (match error
+      | VersionPreview::PreviewError.invalidPreviewState => 0x696e76616c6964507265766965775374617465
+      | VersionPreview::PreviewError.invalidPreviewCommand => 0x696e76616c696450726576696577436f6d6d616e64
+      | VersionPreview::PreviewError.previewRevisionConflict => 0x707265766965775265766973696f6e436f6e666c696374
+      | VersionPreview::PreviewError.previewRevisionExhausted => 0x707265766965775265766973696f6e457868617573746564
+      | VersionPreview::PreviewError.previewAlreadyOwned => 0x70726576696577416c72656164794f776e6564
+      | VersionPreview::PreviewError.previewInactive => 0x70726576696577496e616374697665
+      | VersionPreview::PreviewError.previewWrongOwner => 0x7072657669657757726f6e674f776e6572))
 }
 
 definition{
@@ -39,7 +48,12 @@ inductive{
   name: PreviewWireError,
   type_parameters: [],
   parameters: [],
-  constructors: [{name: malformedPreviewRequest, fields: []}, {name: previewRequestTooLarge, fields: []}, {name: previewRuntimeFailed, fields: []}, {name: invalidPreviewResponse, fields: []}]
+  constructors: [
+    {name: malformedPreviewRequest, fields: []},
+    {name: previewRequestTooLarge, fields: []},
+    {name: previewRuntimeFailed, fields: []},
+    {name: invalidPreviewResponse, fields: []}
+  ]
 }
 
 definition{

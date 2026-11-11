@@ -7,14 +7,29 @@ structure{
   name: PreviewAddress,
   type_parameters: [],
   parameters: [],
-  fields: [{name: w0, type: Nat}, {name: w1, type: Nat}, {name: w2, type: Nat}, {name: w3, type: Nat}, {name: w4, type: Nat}, {name: w5, type: Nat}, {name: w6, type: Nat}, {name: w7, type: Nat}]
+  fields: [
+    {name: w0, type: Nat},
+    {name: w1, type: Nat},
+    {name: w2, type: Nat},
+    {name: w3, type: Nat},
+    {name: w4, type: Nat},
+    {name: w5, type: Nat},
+    {name: w6, type: Nat},
+    {name: w7, type: Nat}
+  ]
 }
 
 structure{
   name: PreviewState,
   type_parameters: [],
   parameters: [],
-  fields: [{name: revision, type: Nat}, {name: active, type: Nat}, {name: owner, type: Nat}, {name: origin, type: PreviewAddress}, {name: current, type: PreviewAddress}]
+  fields: [
+    {name: revision, type: Nat},
+    {name: active, type: Nat},
+    {name: owner, type: Nat},
+    {name: origin, type: PreviewAddress},
+    {name: current, type: PreviewAddress}
+  ]
 }
 
 structure{
@@ -28,14 +43,26 @@ structure{
   name: PreviewTransition,
   type_parameters: [],
   parameters: [],
-  fields: [{name: state, type: PreviewState}, {name: writeRequested, type: Bool}, {name: target, type: PreviewAddress}]
+  fields: [
+    {name: state, type: PreviewState},
+    {name: writeRequested, type: Bool},
+    {name: target, type: PreviewAddress}
+  ]
 }
 
 inductive{
   name: PreviewError,
   type_parameters: [],
   parameters: [],
-  constructors: [{name: invalidPreviewState, fields: []}, {name: invalidPreviewCommand, fields: []}, {name: previewRevisionConflict, fields: []}, {name: previewRevisionExhausted, fields: []}, {name: previewAlreadyOwned, fields: []}, {name: previewInactive, fields: []}, {name: previewWrongOwner, fields: []}]
+  constructors: [
+    {name: invalidPreviewState, fields: []},
+    {name: invalidPreviewCommand, fields: []},
+    {name: previewRevisionConflict, fields: []},
+    {name: previewRevisionExhausted, fields: []},
+    {name: previewAlreadyOwned, fields: []},
+    {name: previewInactive, fields: []},
+    {name: previewWrongOwner, fields: []}
+  ]
 }
 
 definition{

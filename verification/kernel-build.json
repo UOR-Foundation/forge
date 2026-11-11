@@ -1,15 +1,15 @@
 {
   "schema": "prism/remote-build/1",
   "repository": "UOR-Foundation/foundry",
-  "sha": "8baef63680ba67b8608a0e750aceba4ef8b5073a",
-  "run_id": 43075425831,
-  "run_url": "https://github.com/UOR-Foundation/foundry/actions/runs/43075425831",
-  "workflow_ref": "UOR-Foundation/foundry/.github/workflows/build.yml@refs/heads/prism/build/stateful-application",
+  "sha": "f3aa9460a8204edc263fd86e6688a1d9f230f81b",
+  "run_id": 43099516534,
+  "run_url": "https://github.com/UOR-Foundation/foundry/actions/runs/43099516534",
+  "workflow_ref": "UOR-Foundation/foundry/.github/workflows/build.yml@refs/heads/prism/build/chat-queue-symbol",
   "event": "push",
-  "ref": "refs/heads/prism/build/stateful-application",
+  "ref": "refs/heads/prism/build/chat-queue-symbol",
   "project": "app",
-  "build": "9d232c11651524a43cbee6df7cbd10c11620eeaf5aedec94bf1a26e2acfbb0de",
+  "build": "602dbeac9d3de2ea67732d2964fa934e4478ac6199df147cad6c6721fa561cce",
   "holo": "Forge kernel.holo",
-  "fingerprint": "b46ffbaf7edeb696dcd73481423776a30fd33705af80d8eee8b156d351145653",
-  "holo_sha256": "470470068748a71fd28a22ef39f87d90db6fdfac8091a574b7f0a48753b79d0e"
+  "fingerprint": "edc10818eaf1f0751d9d28cfa97da430c577496c708c76ba4a96526fa1740be9",
+  "holo_sha256": "40dc6013ce18cf421f8146f0449b32bd2baff7ede0e5783f1cb49b405f9640a5"
 }
