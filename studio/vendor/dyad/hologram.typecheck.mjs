@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { toRadix } from "./hologram.radix.mjs";
-import { screenSource } from "./hologram.screens.mjs";
+import { screenSource, unapplied } from "./hologram.screens.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // Files the shell's build replaces with ours (vite.shell.config.mts resolveId): their errors do not ship.
@@ -24,7 +24,10 @@ function program(configName, rewrite) {
   if (rewrite) {
     const get = host.getSourceFile.bind(host);
     host.getSourceFile = (file, lang, onError, fresh) => {
-      if (slash(file) === slash(path.join(here, "src/lib/settingsSearchIndex.ts"))) { const text = ts.sys.readFile(file); if (text !== undefined) return ts.createSourceFile(file, screenSource(file, text), lang, true); }
+      if (slash(file).startsWith(src) && /\.ts$/.test(file) && !file.endsWith(".d.ts")) {
+        const text = ts.sys.readFile(file);
+        if (text !== undefined) return ts.createSourceFile(file, screenSource(file, text), lang, true);
+      }
       if (slash(file).startsWith(src) && /\.tsx$/.test(file)) {
         const text = ts.sys.readFile(file);
         if (text !== undefined && slash(file).includes("/components/ui/")) return ts.createSourceFile(file, screenSource(file, text), lang, true);
@@ -61,6 +64,8 @@ for (const d of shell.errors.filter(shipped)) {
   else extra.push(d);
 }
 const ms = Math.round(performance.now() - t0);
+// Every patch must have met its file in the program; one that did not was never checked.
+for (const m of unapplied()) shell.problems.push("patch never applied: " + m);
 if (extra.length || shell.problems.length) {
   console.log(`typecheck refused: ${extra.length} errors the shell's build adds, ${shell.problems.length} calls not rewritten`);
   for (const p of shell.problems) console.log("  not rewritten: " + p);

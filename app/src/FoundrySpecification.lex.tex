@@ -1113,5 +1113,12 @@ definition{
   result: String,
   body: "Working-tree list and file-diff queries capture app, current reference and files in one completed read transaction. The captured reference is independently reconstructed through the snapshot identity, file identity and core-admission boundary; missing or corrupt objects never become empty successful history. Results describe the captured source, not a later mutable head. Paths are relative, unique and bounded; each side permits at most 1000 UTF-8 files and 48 MiB. Added, modified and deleted paths have exact before and after text; renames appear as addition and deletion. Empty files retain presence identity. Line counts use minimum insertion/deletion distance over newline-preserving lines after common-prefix/suffix elimination, with at most 100000 lines per file and a shared four-million-cell comparison budget; exhaustion refuses rather than returning approximate counts. Requests validate positive safe app identities and captured paths before effects. No source mutation or Git process occurs. Missing or invalid project capture and snapshot verification retain their existing typed boundary failures."
 }
+
+definition{
+  name: applicationIntegrationBoundary,
+  parameters: [],
+  result: String,
+  body: "The application integration binds current main revision 6ebb5a3 to the complete FA-01 through FA-58 feature stack. The combined guest retains preview, chat queue, semantic proposal, interaction, event, work and composition protocols plus current-main experience budget, layout, motion, tap-target and recent-age decisions. Its acceptance list retains all 245 application cases and 42 experience cases, and responses retain the 4096-byte protocol bound. Current-main appearance and renderer improvements preserve local editor/compiler ownership and privacy projection. Verified complete shell activation and version-bound renderer/scaffold bytes remain authoritative; partial installation or an unverified shared asset cache cannot replace them. Full Studio gates and canonical PR-only cancellation remain required. The combined source must obtain its own exact-SDK signed executable, provenance, independent reproduction and document/worker and browser acceptance; inherited artifacts and earlier release evidence do not establish combined acceptance. Main's packaging and deployment automation remain subject to independent production closure and release qualification."
+}
 \end{semanticmodule}
 \end{lexlean}

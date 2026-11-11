@@ -24,6 +24,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-01` | `build` | The application authority model rejects missing or competing product authorities and unchecked external boundaries |
 
+## application-main-integration
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-59` | `build` | Current-main experience rules and renderer improvements coexist with complete application protocols and verified private offline closure |
+
 ## atomic-generation-patch
 
 | ID | Level | Statement |
@@ -201,6 +207,16 @@ model does not sanction.
 | `FK-09` | `build` | The gate never lets a preview fetch without a grant |
 | `FK-10` | `build` | The app always answers proved when event is reword and phase is proved |
 | `FK-11` | `build` | The app always answers published when event is reword and phase is published |
+| `FK-12` | `build` | The kernel never answers within when a journey's measure is over its budget |
+| `FK-13` | `build` | The kernel never answers over when a journey's measure is within its budget |
+| `FK-14` | `build` | The mobile INP budget is never above 500 ms |
+| `FK-15` | `build` | No route's JS budget is below the first load's |
+| `FK-16` | `build` | The kernel never answers split when the width is under 768 px |
+| `FK-17` | `build` | The kernel never answers tabs when the width is 768 px or more |
+| `FK-18` | `build` | The kernel never allows motion when reduced motion is asked |
+| `FK-19` | `build` | The kernel never allows motion longer than 200 ms |
+| `FK-20` | `build` | The kernel never answers ok for a tap target under 44 px |
+| `FK-21` | `build` | The kernel never counts as this week what is older than 7 days |
 
 ## github-publication-permission
 

@@ -195,13 +195,8 @@ jobs:
           ' "$FINGERPRINT" "$ATTESTATION_URL"
           node bootstrap/page.mjs site
           node bootstrap/precache.mjs site
-      - name: Lighthouse at 100 on mobile, before anything is deployed
-        if: steps.reuse.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm install --no-audit --no-fund --global @lhci/cli@0.15.1
-          lhci autorun --config=lighthouserc.json
+      # Lighthouse at 100 on mobile runs on the pull request that changes the page (prism-page.yml), where its
+      # author sees it, not here after the merge, where a slower page stopped every deploy until traced.
       - name: The screens' browser, kept by its version
         if: steps.reuse.outputs.cache-hit != 'true'
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
@@ -307,8 +302,22 @@ jobs:
         run: node tools/renderer_boundary.mjs
       - name: Every screen calls the kit's shadcn/ui components as Radix takes them (the build above refuses Base UI or a Dyad copy in the bundle)
         run: cd vendor/dyad && node hologram.typecheck.mjs
+      - name: The Experience gate, the stylesheet's hit area, durations and reduced-motion rule held to the kernel's answers
+        run: node tools/experience.mjs --check
+      - name: The Performance gate's static arm, the JS each route needs inside the kernel's budgets (FK-12, FK-15)
+        # Exact, from the build's chunk graph. The browser arm measures time, so it runs on the pull request that
+        # changes Forge (forge-perf.yml), not here, where a slower runner would stop the deploy for everyone.
+        run: node tools/perf_budget.mjs
       - name: The served site names nothing outside this repository
         run: node tools/self_contained.mjs shell
+      # The site carries no provider key. Keys written into warmup.json were public to every visitor (see
+      # PAGES-CONTAINMENT.md on containment/foundry-clean-pages-e7d); a visitor's own key, kept on their
+      # device, is the only key the page uses. A warmup.json anywhere in the site refuses the deploy.
+      - name: No provider key in the site
+        run: |
+          set -euo pipefail
+          found=$(find shell -name warmup.json -print -quit)
+          if [[ -n $found ]]; then printf 'refused: %s would publish a provider key\n' "$found" >&2; exit 1; fi
       - name: Keep Forge's site, deployed at the root
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

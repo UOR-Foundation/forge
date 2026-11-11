@@ -98,3 +98,63 @@ test("the actual guest preserves work through suspension, transfer and completio
   }
   assert.deepEqual(result.state, { owner: 9, revision: 8, capacity: 20, spent: 10, reserved: 0, checkpoint: 8, remaining: 0, phase: 3 });
 });
+
+// The composition boundary vectors: an accepted request of 30,008 bytes and a malformed one at the 32,776-byte
+// request maximum. They are the kernel's own (compositionBoundaryVectors in
+// app/src/ForgeKernel.lex.tex, built from CompositionFixtures), kept out of the application's acceptance
+// list because every acceptance vector ships inside app.holo, which the Prism page verifies on its main
+// thread: these two were 190 KB of a 385 KB archive. The request one past the maximum stays in the shipped
+// list: PrismPM requires an exact allocation-boundary vector there (PP2009). Here they are read from the model itself, each request
+// assembled as the model writes it, and replayed through the pinned guest.
+test("the kernel's composition boundary vectors replay through the pinned guest", async () => {
+  const kernel = fs.readFileSync(new URL("../../app/src/ForgeKernel.lex.tex", import.meta.url), "utf8");
+  const fixtures = fs.readFileSync(new URL("../../app/src/CompositionFixtures.lex.tex", import.meta.url), "utf8");
+  const wires = new Map([...fixtures.matchAll(/name: (wire[0-9a-f]{16}),\s*parameters: \[\],\s*result: Bytes,\s*body: 0x([0-9a-f]*)\s*\}/g)].map(m => [m[1], Buffer.from(m[2], "hex")]));
+  const at = kernel.indexOf("  name: compositionBoundaryVectors,");
+  assert.ok(at > 0, "compositionBoundaryVectors is declared");
+  const body = kernel.slice(at, kernel.indexOf("\n}\n", at));
+  // The expression forms the model uses for a request: a hex literal, a fixture, or two of them appended.
+  function evaluate(text) {
+    let i = 0;
+    const space = () => { while (/\s/.test(text[i])) i++; };
+    const expect = (word) => { space(); assert.equal(text.slice(i, i + word.length), word, `expected ${word} at ${i}`); i += word.length; };
+    function value() {
+      space();
+      if (text.startsWith("0x", i)) { const m = /^0x([0-9a-f]*)/.exec(text.slice(i)); i += m[0].length; return Buffer.from(m[1], "hex"); }
+      expect("(");
+      space();
+      if (text.startsWith("CompositionFixtures::", i)) {
+        const m = /^CompositionFixtures::(wire[0-9a-f]{16})\)/.exec(text.slice(i)); assert.ok(m && wires.has(m[1]), "a known fixture"); i += m[0].length; return wires.get(m[1]);
+      }
+      expect("prim append"); const a = value(); const b = value(); expect(": Bytes"); expect(")");
+      return Buffer.concat([a, b]);
+    }
+    const out = value(); space(); assert.equal(i, text.length, "nothing follows the request"); return out;
+  }
+  const vectors = [];
+  const marker = "(record Foundation.View.Text.V1.Model::AcceptanceVector {request := ";
+  for (let from = body.indexOf(marker); from >= 0; from = body.indexOf(marker, from + 1)) {
+    const start = from + marker.length, end = body.indexOf(", response := 0x", start);
+    const response = /^, response := 0x([0-9a-f]*)\}/.exec(body.slice(end));
+    vectors.push([evaluate(body.slice(start, end)), Buffer.from(response[1], "hex").toString()]);
+  }
+  assert.deepEqual(vectors.map(([r, a]) => [r.length, a]), [[30008, "accepted"], [32776, "malformedComposition"]]);
+  // The guest's own answer, through its core-wasm ABI, as kernel.js replays a vector; the page's kernel.js
+  // refuses the oversized request before the guest is asked, and that refusal is checked too.
+  const module = await WebAssembly.compile(originalBytes);
+  const run = async (request) => {
+    const { exports } = await WebAssembly.instantiate(module, {});
+    const ptr = exports.holo_alloc(request.length);
+    new Uint8Array(exports.memory.buffer, ptr, request.length).set(request);
+    const packed = BigInt.asUintN(64, BigInt(exports.holo_run(ptr, request.length)));
+    return Buffer.from(new Uint8Array(exports.memory.buffer, Number(packed >> 32n), Number(packed & 0xffffffffn))).toString();
+  };
+  for (const [request, response] of vectors) assert.equal(await run(request), response, `${request.length} bytes`);
+  const guest = await load();
+  assert.equal(await guest.ask(vectors[0][0].toString("latin1")), "accepted");
+  await assert.rejects(guest.ask(vectors[1][0].toString("latin1") + "x".repeat(8)), code("kernelRequestTooLarge"));
+  // And they are not in the shipped acceptance list any more: the one shipped request over 8 KB is the exact
+  // allocation boundary PrismPM requires.
+  const large = originalMeta.vectors.map(([request]) => Buffer.from(request, "base64").length).filter((n) => n > 8192);
+  assert.deepEqual(large, [originalMeta.limits.guestAllocation], "only the allocation-boundary vector is over 8 KB");
+});
