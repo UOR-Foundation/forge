@@ -267,3 +267,9 @@ id = "FA-30"
 level = "build"
 suite = "browser-telemetry-isolation"
 statement = "The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings"
+
+[[id]]
+id = "FA-31"
+level = "build"
+suite = "local-editor-closure"
+statement = "The editor loads only from integrity-checked locked package bytes inside the active shell closure"

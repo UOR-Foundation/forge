@@ -15,3 +15,6 @@ shell/manifest.json
 shell/provenance.json
 shell/v1/
 shell/warmup.json
+
+# Generated from the integrity-checked locked editor package.
+shell/editor/

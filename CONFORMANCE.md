@@ -142,6 +142,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-11` | `build` | Cloud inference bounds requests and streamed responses and refuses cancellation, malformed data and provider failures explicitly |
 
+## local-editor-closure
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-31` | `build` | The editor loads only from integrity-checked locked package bytes inside the active shell closure |
+
 ## proposal-admission
 
 | ID | Level | Statement |

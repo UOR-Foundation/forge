@@ -6,7 +6,7 @@
   const fail = code => Object.assign(new Error(`Shell installation refused: ${code}`), { code });
   const exact = (value, keys) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join() === keys;
   const excluded = new Set(["manifest.json", "provenance.json", "warmup.json", "sw.js", "sw.template.js"]);
-  const required = ["index.html", "host.js", "core.wasm", "assets/index.js", "assets/index.css", "scaffold/files.json"];
+  const required = ["index.html", "host.js", "core.wasm", "assets/index.js", "assets/index.css", "scaffold/files.json", "editor/vs/loader.js", "editor/package.json"];
   const pathOK = path => typeof path === "string" && path.length <= 1024 && /^[A-Za-z0-9_.@+ /-]+$/.test(path) && path.split("/").every(part => part && part !== "." && part !== "..");
   async function prepare(base, expected, { fetchFn = globalThis.fetch, digest = bytes => crypto.subtle.digest("SHA-256", bytes), signal, timeoutMs = 120000 } = {}) {
     let origin;

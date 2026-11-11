@@ -28,16 +28,6 @@ try {
   page.on("pageerror", error => errors.push(error.message));
   await context.route("**/*", route => {
     const url = new URL(route.request().url()); if (url.origin === origin) return route.continue(); external.push(url.href);
-    // The Settings editor is an existing separate CDN dependency. Replay its exact
-    // installed package bytes so this privacy test does not depend on CDN access.
-    const prefix = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/";
-    if (url.href.startsWith(prefix)) {
-      const relative = url.pathname.split("/min/vs/")[1];
-      if (relative && !relative.split("/").includes("..")) {
-        const file = fileURLToPath(new URL("../vendor/dyad/node_modules/monaco-editor/min/vs/" + relative, import.meta.url));
-        if (fs.existsSync(file)) return route.fulfill({ body: fs.readFileSync(file), contentType: types[path.extname(file)] || "application/octet-stream" });
-      }
-    }
     return route.abort();
   });
   await context.addInitScript(() => { if (window === top) { localStorage.setItem("dyadTelemetryConsent", "opted_in"); localStorage.setItem("dyadTelemetryUserId", "legacy-private-fixture"); } });
@@ -57,7 +47,7 @@ try {
   if (errors.length) console.error(JSON.stringify({ errors, external }));
   assert.deepEqual(errors, []);
   // The declared decorative background is a separate product request.
-  const unexpected = external.filter(url => !url.startsWith("https://uor-foundation.github.io/template/frame/backdrops/") && !url.startsWith("https://images.unsplash.com/") && !url.startsWith("https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/"));
+  const unexpected = external.filter(url => !url.startsWith("https://uor-foundation.github.io/template/frame/backdrops/") && !url.startsWith("https://images.unsplash.com/"));
   assert.deepEqual(unexpected, []);
   console.log(JSON.stringify({ renderer: "actual-built-shell", legacyConsent: "refused", settings: "privacy-disclosed", enableControl: "absent", typedEnableRefusal: result.code, unexpectedExternalRequests: 0, pageExceptions: 0 }));
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

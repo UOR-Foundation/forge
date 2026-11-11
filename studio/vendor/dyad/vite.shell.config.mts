@@ -28,6 +28,7 @@ const mark = path.resolve(__dirname, "../../shell/mark.svg");
 const picker = path.resolve(__dirname, "hologram.ModelPicker.tsx");
 const githubIntegration = path.resolve(__dirname, "hologram.GitHubIntegration.tsx");
 const importDialog = path.resolve(__dirname, "hologram.ImportAppDialog.tsx");
+const editor = path.resolve(__dirname, "hologram.editor.ts").split(path.sep).join("/");
 const contracts = path.resolve(__dirname, "hologram.contracts.ts").split(path.sep).join("/");
 const theme = fs.readFileSync(path.resolve(__dirname, "hologram.theme.css"), "utf8");
 const arbitrary: Record<string, string> = JSON.parse(fs.readFileSync(path.resolve(__dirname, "hologram.arbitrary.json"), "utf8"));
@@ -141,7 +142,8 @@ const hologramWords: Plugin = {
     if (file.endsWith("/preview_panel/PreviewIframe.tsx")) out = out.replace("{userBudget ? (", "{true ? (");
     // The contracts are published to the page so the host can check its own answers against them
     // (see hologram.contracts.ts). First import in the entry, before anything renders.
-    if (file.endsWith("/renderer.tsx")) out = `import ${JSON.stringify(contracts)};
+    if (file.endsWith("/renderer.tsx")) out = `import ${JSON.stringify(editor)};
+import ${JSON.stringify(contracts)};
 ` + out;
     for (const [hex, role] of Object.entries(arbitrary)) out = out.split(`text-[${hex}]`).join(`text-${role}`).split(`bg-[${hex}]`).join(`bg-${role}`).split(`border-[${hex}]`).join(`border-${role}`);
     return out === code ? null : { code: out, map: null };

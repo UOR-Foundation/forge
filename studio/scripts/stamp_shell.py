@@ -44,3 +44,8 @@ app.write_text(app.read_text(encoding="utf-8").replace("<BrowserRouter>", "<Brow
 files = sorted(str(p.relative_to(dst)).replace("\\", "/") for p in (dst / "src").rglob("*") if p.is_file())
 (dst / "files.json").write_text(json.dumps(files), encoding="utf-8", newline="\n")
 print(f"staged {len(files)} scaffold files")
+
+# Exact locked editor bytes join the shell before its manifest is projected.
+from editor_assets import stage_editor_assets
+editor = stage_editor_assets(root)
+print(f"staged {len(editor['files'])} locked editor assets and licenses")
