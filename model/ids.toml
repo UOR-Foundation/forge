@@ -321,3 +321,9 @@ id = "LL-02"
 level = "build"
 suite = "live-lexlean"
 statement = "Every guarantee of the Verdant Resonance fixture holds on every request in its bounds"
+
+[[id]]
+id = "FA-28"
+level = "build"
+suite = "app-covers"
+statement = "App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules"

@@ -78,6 +78,7 @@ jobs:
           node tools/inference_effects_browser.mjs
           node tools/exact_representation_browser.mjs
           node tools/provider_key_browser.mjs
+          node tools/covers_browser.mjs
       - name: Every shell script parses the way the browser parses it
         run: node tools/shell_parse.mjs
       - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone

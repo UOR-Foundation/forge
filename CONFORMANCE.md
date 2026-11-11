@@ -18,6 +18,12 @@ The three honesty levels (R2):
 `cargo xtask audit-limits` fails if any code path returns an error the
 model does not sanction.
 
+## app-covers
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-28` | `build` | App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules |
+
 ## application-authority
 
 | ID | Level | Statement |
