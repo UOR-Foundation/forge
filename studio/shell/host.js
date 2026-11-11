@@ -31,6 +31,8 @@ import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
 import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
 import * as lexlean from "./live/lexlean.mjs";
+import { canonicalEditPath, planCanonicalEdit } from "./canonical-edits.mjs";
+import { copyGenerationInput, assertCanonicalGeneration } from "./canonical-generation.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
@@ -171,9 +173,18 @@ handlers.set("create-app", async ({ name, initialChatMode }) => {
 handlers.set("read-app-file", async ({ appId, filePath }) => { const c = await get("files", appId + ":" + filePath); if (c === undefined) throw new Error("no file " + filePath); return c; });
 handlers.set("edit-app-file", async (input) => {
   await coreReady;
+  if (canonicalEditPath(input?.filePath)) {
+    const source = await captureProjectSource(await dbReady, input.appId);
+    const plan = planCanonicalEdit(input, source, { lexlean, prism });
+    if (plan) {
+      await rulesAfterTurn(input.appId, plan.text, [], { source, onCommit: oid => emit("version-created", { appId: input.appId, oid }) });
+      await refreshLive(input.appId);
+      return plan.warning === null ? {} : { warning: plan.warning };
+    }
+  }
   const oid = await editStoredProject(await dbReady, input, { core, derive: kappa });
   emit("version-created", { appId: input.appId, oid });
-  return { success: true, warning: null };
+  return {};
 });
 handlers.set("delete-app", async ({ appId }) => { await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); });
 handlers.set("rename-app", async (input) => {
@@ -559,7 +570,7 @@ function refuse(appId, key, message) {
   for (const [win, app] of liveWindows) if (app === appId && !win.closed) win.postMessage({ type: "live/refused", app: String(appId), key, message }, "*");
 }
 async function saveSpec(appId, spec, options = {}) {
-  const result = await rulesAfterTurn(appId, "<dyad-spec>" + JSON.stringify(spec) + "</dyad-spec>", [], { onCommit: (oid) => emit("version-created", { appId, oid }), ...options });
+  const result = await rulesAfterTurn(appId, "<dyad-spec>" + JSON.stringify(spec).replaceAll("<", "\\u003c") + "</dyad-spec>", [], { onCommit: (oid) => emit("version-created", { appId, oid }), ...options });
   await refreshLive(appId);
   return result;
 }
@@ -757,9 +768,12 @@ function parseDyadTags(text) {
   return { writes, deletes, renames, deps };
 }
 async function applyDyadTags(appId, tags, options = {}) {
+  const copied = copyGenerationInput(tags, options.source), { signal, onCommit } = options;
   await coreReady;
-  const result = await applyStoredProjectPatch(await dbReady, appId, tags, { core, derive: kappa, ...options });
-  return result;
+  assertGenerationActive(signal);
+  const source = copied.source || await captureProjectSource(await dbReady, appId);
+  assertCanonicalGeneration(source, copied.tags, lexlean);
+  return applyStoredProjectPatch(await dbReady, appId, copied.tags, { core, derive: kappa, source, signal, onCommit });
 }
 window.__chat = { parseDyadTags, applyDyadTags };
 
@@ -860,7 +874,9 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   assertGenerationActive(options.signal);
   await coreReady;
   const source = options.source || await captureProjectSource(await dbReady, appId);
-  const files = new Map(source.files), writes = [];
+  const files = new Map(source.files), writes = [], deletes = [];
+  let previousCanonicalPath = null;
+  try { previousCanonicalPath = `prism/${lexlean.canonicalSource(JSON.parse(files.get("prism/spec.json"))).name}.lex.tex`; } catch {}
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
   // A LexLean module, when the model wrote one, carries the rules: the spec is read from it, keeping the
   // screen's words (purpose, view, meanings) the spec already had, since the module holds only the logic.
@@ -869,7 +885,7 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   if (lex) {
     let words = {};
     try { const prev = JSON.parse(files.get("prism/spec.json") || "{}"); words = Object.fromEntries(["purpose", "view", "meanings"].filter((k) => prev[k] !== undefined).map((k) => [k, prev[k]])); } catch (e) {}
-    text = "<dyad-spec>" + JSON.stringify({ ...lex.spec, ...words }) + "</dyad-spec>";
+    text = "<dyad-spec>" + JSON.stringify({ ...lex.spec, ...words }).replaceAll("<", "\\u003c") + "</dyad-spec>";
   }
   const tag = prism.parseSpecTag(text);
   if (tag && tag.spec) stage("prism/spec.json", JSON.stringify(tag.spec, null, 2) + "\n");
@@ -877,13 +893,17 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   // model's JSON, a click or an agent's patch): the same meaning is always the same module bytes. It is
   // staged with the spec, so both land in the one source transaction.
   if (files.get("prism/spec.json")) {
-    try { const c = lexlean.canonicalSource(JSON.parse(files.get("prism/spec.json"))); stage(`prism/${c.name}.lex.tex`, c.source); } catch (e) {}
+    try {
+      const c = lexlean.canonicalSource(JSON.parse(files.get("prism/spec.json"))), path = `prism/${c.name}.lex.tex`;
+      stage(path, c.source);
+      if (previousCanonicalPath && previousCanonicalPath !== path && files.has(previousCanonicalPath)) { files.delete(previousCanonicalPath); deletes.push({ path: previousCanonicalPath }); }
+    } catch (e) {}
   }
   const current = files.get("prism/spec.json"), snapshot = await rulesSnapshotOf(appId), before = snapshot.state;
   if (!current) return { changed: 0, source, card: tag && tag.error ? `**Rules** · not checked\n\n- ${tag.error}\n\nAsk me to fix the rules.` : null };
   const specKappa = await kappa(enc.encode(current));
   const proofKey = spec => live.kappaOfValue({ name: spec.name, logic: live.logicOf(spec) });
-  if (before && before.specKappa === specKappa && writes.length === 0) return { changed: 0, source, card: tag ? prism.card(before) : null };
+  if (before && before.specKappa === specKappa && writes.length === 0 && deletes.length === 0) return { changed: 0, source, card: tag ? prism.card(before) : null };
   let phase = before ? await nextPhase(before.phase, "edit") : "drafting";
   let logicKappa = null, retained = false;
   let checked;
@@ -905,7 +925,7 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   if (retained && before.phase === "published" && before.specKappa !== specKappa) state.publicationCurrent = false;
   // Compare the captured lifecycle and install its successor in the source transaction.
   // A completed proof wins over this stale edit; no deleted-status interval is exposed.
-  const applied = await applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, ...options, source, rulesUpdate: { expected: snapshot.expected, state } });
+  const applied = await applyStoredProjectPatch(await dbReady, appId, { writes, deletes, renames: [], deps: [] }, { core, derive: kappa, ...options, source, rulesUpdate: { expected: snapshot.expected, state } });
   assertGenerationActive(options.signal);
   return { changed: applied.changed, source: applied.source, card: prism.card(state) };
 }

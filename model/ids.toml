@@ -309,3 +309,15 @@ id = "FA-35"
 level = "build"
 suite = "canonical-module-boundary"
 statement = "The canonical decision-module reader refuses ambiguous or discarded semantics before authoring"
+
+[[id]]
+id = "FA-36"
+level = "build"
+suite = "canonical-model-edits"
+statement = "Direct canonical edits atomically update the decision source, projections and source-bound rules state"
+
+[[id]]
+id = "FA-37"
+level = "build"
+suite = "canonical-generation-ownership"
+statement = "Generic generation batches cannot overwrite canonical decision sources or their generated rule runtime"
