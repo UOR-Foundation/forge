@@ -32,6 +32,7 @@ import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
 import * as lexlean from "./live/lexlean.mjs";
 import { canonicalEditPath, planCanonicalEdit } from "./canonical-edits.mjs";
+import { copyEventCommand, readEventJournal, updateEventJournal } from "./event-delivery.mjs";
 import { authorizePreview, commitPreviewPermission, previewPermissionFailure, mountPreviewPermissions } from "./preview-permissions.mjs";
 import { copyGenerationInput, assertCanonicalGeneration } from "./canonical-generation.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
@@ -883,6 +884,16 @@ handlers.set("forge:compose", async (input) => {
 });
 handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
 handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input));
+async function eventDeliveryCommand(operation, raw) {
+  const input=copyEventCommand(operation,raw);
+  const db=await dbReady;
+  if(operation==="pending")return readEventJournal(db,input.appId);
+  return updateEventJournal(db,await kernelReady,input.appId,operation,input.context ?? input.envelope ?? input.receipt);
+}
+handlers.set("forge:event-configure", input => eventDeliveryCommand("configure", input));
+handlers.set("forge:event-deliver", input => eventDeliveryCommand("deliver", input));
+handlers.set("forge:event-pending", input => eventDeliveryCommand("pending", input));
+handlers.set("forge:event-acknowledge", input => eventDeliveryCommand("acknowledge", input));
 const PHASES = ["drafting", "checked", "proving", "proved", "published"];
 async function nextPhase(phase, event) {
   const answer = await (await kernelReady).ask(phase + " " + event);

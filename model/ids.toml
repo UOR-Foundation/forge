@@ -333,3 +333,9 @@ id = "FA-39"
 level = "build"
 suite = "preview-permissions"
 statement = "Networked previews require explicit source-bound permission with persistent revocation controls"
+
+[[id]]
+id = "FA-40"
+level = "build"
+suite = "durable-event-delivery"
+statement = "Guest-admitted events commit to a source-bound durable queue and remain pending until ordered acknowledgement"
