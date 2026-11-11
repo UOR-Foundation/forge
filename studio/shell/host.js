@@ -216,7 +216,7 @@ handlers.set("edit-app-file", async (input) => {
   emit("version-created", { appId: input.appId, oid });
   return {};
 });
-handlers.set("delete-app", async ({ appId }) => { await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); });
+handlers.set("delete-app", async ({ appId }) => { const deletedChats=(await all("chats")).filter(chat=>chat.appId===appId).map(chat=>chat.id); await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); for(const chatId of deletedChats){queueChannel?.postMessage({chatId});await chatQueue.refresh(chatId).catch(()=>{});} });
 handlers.set("rename-app", async (input) => {
   await coreReady;
   await renameStoredProject(await dbReady, input, { core, derive: kappa, onCommit: oid => emit("version-created", { appId: input.appId, oid }) });
@@ -365,7 +365,7 @@ const chatRow = (c) => ({ id: c.id, appId: c.appId, title: c.title, createdAt: n
 handlers.set("get-chat-metadata", async (id) => { const c = await get("chats", id); return c ? chatRow(c) : null; });
 handlers.set("create-chat", async (appId) => createStoredChat(await dbReady, appId, now()));
 handlers.set("update-chat", async ({ chatId, title }) => { if (title) await updateStoredChat(await dbReady, chatId, { title }); });
-handlers.set("delete-chat", async (id) => { await deleteStoredChat(await dbReady, id); });
+handlers.set("delete-chat", async (id) => { await deleteStoredChat(await dbReady, id); queueChannel?.postMessage({chatId:id}); await chatQueue.refresh(id).catch(()=>{}); });
 // The sidebar's search: a chat matches by title or by the text of one of its messages, and the line
 // that matched is what the renderer shows under it.
 handlers.set("search-chats", async (q) => {
