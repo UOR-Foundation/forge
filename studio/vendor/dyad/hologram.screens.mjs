@@ -213,6 +213,135 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
   return (
     <PanelGroup autoSaveId="persistence" direction="horizontal">`,
   },
+  // Home's one entry point is the composer: importing an app is an item in its + menu, not a button above it.
+  {
+    file: "src/pages/home.tsx",
+    from: `            <div className="mt-4 flex justify-center">
+              <ImportAppButton
+                className="px-0 pb-0"
+                variant="outline"
+                size="sm"
+              />
+            </div>
+`,
+    to: ``,
+  },
+  {
+    file: "src/pages/home.tsx",
+    from: `import { ImportAppButton } from "@/components/ImportAppButton";\n`,
+    to: ``,
+  },
+  {
+    file: "src/components/chat/HomeChatInput.tsx",
+    from: `<AuxiliaryActionsMenu onFileSelect={handleFileSelect} />`,
+    to: `<AuxiliaryActionsMenu onFileSelect={handleFileSelect} showImport />`,
+  },
+  // The + menu's submenus open in a portal: inside the menu (which scrolls, and transforms as it animates in)
+  // they were clipped to its box, so their items could not be seen. A long list scrolls within the screen.
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";`,
+    to: `  DropdownMenuItem,
+  DropdownMenuPortal,
+} from "@/components/ui/dropdown-menu";
+import { Upload } from "lucide-react";
+import { ImportAppDialog } from "@/components/ImportAppDialog";`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `  onGenerateImage?: () => void;
+}`,
+    to: `  onGenerateImage?: () => void;
+  showImport?: boolean;
+}`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `  onGenerateImage,
+}: AuxiliaryActionsMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);`,
+    to: `  onGenerateImage,
+  showImport,
+}: AuxiliaryActionsMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);`,
+  },
+  // The + sits at the composer's left: the menu opens under the composer, clear of the screen's edge.
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `<DropdownMenuContent align="end">`,
+    to: `<DropdownMenuContent align="start" collisionPadding={8}>`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `            <DropdownMenuSubContent>
+              <FileAttachmentDropdown
+                onFileSelect={onFileSelect}
+                closeMenu={() => setIsOpen(false)}
+              />
+            </DropdownMenuSubContent>`,
+    to: `            <DropdownMenuPortal>
+              <DropdownMenuSubContent className="max-h-(--radix-dropdown-menu-content-available-height) overflow-y-auto">
+                <FileAttachmentDropdown
+                  onFileSelect={onFileSelect}
+                  closeMenu={() => setIsOpen(false)}
+                />
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                onClick={() => handleThemeSelect(null)}`,
+    to: `            <DropdownMenuPortal>
+            <DropdownMenuSubContent className="max-h-(--radix-dropdown-menu-content-available-height) overflow-y-auto">
+              <DropdownMenuItem
+                onClick={() => handleThemeSelect(null)}`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `              </>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+`,
+    to: `              </>
+            </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+
+          {showImport && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsOpen(false);
+                  setImportOpen(true);
+                }}
+                className="py-2 px-3"
+                data-testid="import-app-menu-item"
+              >
+                <Upload size={16} className="mr-2" />
+                Import app
+              </DropdownMenuItem>
+            </>
+          )}
+`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `      </Dialog>
+    </>
+  );
+}`,
+    to: `      </Dialog>
+
+      {showImport && <ImportAppDialog isOpen={importOpen} onClose={() => setImportOpen(false)} />}
+    </>
+  );
+}`,
+  },
 ];
 
 // A retag patch: the one JSX element whose opening tag is exactly `retag` becomes `to`, its closing tag
