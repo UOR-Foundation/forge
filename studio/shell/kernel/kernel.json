@@ -2,11 +2,11 @@
  "spec": "hologram-forge/kernel/1",
  "application": "Forge kernel",
  "source": "https://uor-foundation.github.io/foundry/app/app.holo",
- "digest": "blake3:f48b9506bf4aee648369e494f1b1f03f80a20eecfd99945b5e0a350bebb3cb92",
+ "digest": "blake3:00a88a724583f68c19da3fb7cf6f531d82f89fb323405f729e7be65d917ebe53",
  "guest": {
   "path": "kernel/guest.wasm",
-  "sha256": "4c9bad167a824367fbf61f8c1dfedcdfb78f439887578a58b0393afc2ddee4ef",
-  "bytes": 3902
+  "sha256": "35ceee63d4225aad48a959089e64670dee1cc35888a5c49d9436a0410c07de45",
+  "bytes": 3917
  },
  "limits": {
   "request": 64,
@@ -121,6 +121,26 @@
   [
    "cHJvdmVkIGF0dGVzdA==",
    "cHJvdmVk"
+  ],
+  [
+   "ZHJhZnRpbmcgcmV3b3Jk",
+   "ZHJhZnRpbmc="
+  ],
+  [
+   "Y2hlY2tlZCByZXdvcmQ=",
+   "Y2hlY2tlZA=="
+  ],
+  [
+   "cHJvdmluZyByZXdvcmQ=",
+   "cHJvdmluZw=="
+  ],
+  [
+   "cHJvdmVkIHJld29yZA==",
+   "cHJvdmVk"
+  ],
+  [
+   "cHVibGlzaGVkIHJld29yZA==",
+   "cHVibGlzaGVk"
   ],
   [
    "",

@@ -64,6 +64,53 @@
 @keyframes spectrum-drift { to { background-position: 200% 0; } }
 @media (prefers-reduced-motion: reduce) { :is([data-testid="home-chat-input-container"], [data-testid="chat-input-container"]) > div.rounded-2xl::before { animation: none; } }
 
+/* The home composer: the words on top, one row of controls under them (attach on the left; the model and
+   send on the right). The writing zone is the control band times the golden ratio (a 44 px band: 34 px
+   controls and the 10 px edge under them; 71 px of writing), on a near opaque ground of the page's own
+   surface, so the box reads as one solid object over any photo. Its edge is a neutral hairline; the
+   spectrum stays as light gathered at the top and bottom centre, the ring faded out towards the sides and
+   a soft glow falling below the box. No shadow. */
+[data-testid="home-chat-input-container"] > div.rounded-2xl {
+  --band: 44px; --zone: calc(var(--band) * 1.618);
+  display: grid; grid-template-columns: auto 1fr auto auto; grid-template-rows: auto minmax(var(--zone), auto) 34px; align-items: center; column-gap: 6px;
+  padding: 0 10px 10px; border-radius: calc(var(--radius) + 12px);
+  border: 1px solid color-mix(in srgb, var(--foreground) 11%, transparent) !important;
+  background: color-mix(in srgb, var(--background-lighter) 94%, transparent) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 6%, transparent) !important;
+}
+[data-testid="home-chat-input-container"] > div.rounded-2xl:is(:hover, :focus-within) { border-color: color-mix(in srgb, var(--foreground) 18%, transparent) !important; }
+/* The ring, masked to a band that fades out by 12% from either side. */
+[data-testid="home-chat-input-container"] > div.rounded-2xl::before {
+  opacity: 1;
+  -webkit-mask: linear-gradient(90deg, transparent 12%, black 50%, transparent 88%), linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
+  -webkit-mask-composite: source-in, xor;
+  mask: linear-gradient(90deg, transparent 12%, black 50%, transparent 88%), linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
+  mask-composite: intersect, exclude;
+}
+[data-testid="home-chat-input-container"] > div.rounded-2xl:is(:hover, :focus-within)::before { opacity: 1; }
+/* The glow: the same spectrum, blurred, clipped to fall only below the edge. */
+[data-testid="home-chat-input-container"] > div.rounded-2xl::after {
+  content: ""; position: absolute; left: 22%; right: 22%; bottom: -2px; height: 3px; border-radius: 999px; pointer-events: none;
+  background-image: var(--spectrum); background-size: 200% 100%; animation: spectrum-drift 24s linear infinite;
+  filter: blur(7px); opacity: 0.9; clip-path: inset(2px -60px -60px -60px); transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) { [data-testid="home-chat-input-container"] > div.rounded-2xl::after { animation: none; } }
+[data-testid="home-chat-input-container"] > div.rounded-2xl > :is(div.flex.items-end, div.justify-between) { display: contents; }
+[data-testid="home-chat-input-container"] > div.rounded-2xl > :not(div.flex.items-end, div.justify-between) { grid-column: 1 / -1; }
+/* The words: the full width, the zone's height before they grow. */
+[data-testid="home-chat-input-container"] div.relative.flex-1 { grid-column: 1 / -1; grid-row: 2; margin: 0 -10px; }
+[data-testid="home-chat-input-container"] div.relative.flex-1 > div:first-child { min-height: var(--zone); padding: 18px 20px 6px; font-size: 16px; line-height: 1.5; }
+[data-testid="home-chat-input-container"] div.relative.flex-1 div.absolute { top: 18px; left: 20px; font-size: 16px; line-height: 1.5; }
+/* The controls: attach (an outlined circle) first, then the model, then send (a soft square). */
+[data-testid="home-chat-input-container"] div.justify-between > button { grid-row: 3; grid-column: 1; width: 34px; height: 34px; margin: 0 !important;
+  background: transparent !important; color: var(--foreground); border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent); }
+[data-testid="home-chat-input-container"] div.justify-between > button:hover { background: color-mix(in srgb, var(--foreground) 8%, transparent) !important; }
+[data-testid="home-chat-input-container"] div.justify-between > div { grid-row: 3; grid-column: 3; height: 34px; }
+[data-testid="home-chat-input-container"] div.justify-between > div .w-1\.5 { display: none; }
+[data-testid="home-chat-input-container"] button[aria-label="Send message"] { grid-row: 3; grid-column: 4; margin: 0 !important; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: calc(var(--radius) + 2px); background: color-mix(in srgb, var(--foreground) 9%, transparent); color: var(--primary) !important; }
+
 /* Glass for every pop-up: dialogs, alert dialogs, menus, popovers, selects, context menus, sheets and this
    theme panel. One surface, from the brand's own tokens, readable over any photo in any look: the popover
    colour at 82% (so a busy background reads as a soft field, never as detail behind the words), a 28 px blur

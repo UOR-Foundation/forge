@@ -52,6 +52,8 @@ jobs:
           node-version: "24"
       - name: Every shell script parses the way the browser parses it
         run: node tools/shell_parse.mjs
+      - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone
+        run: node tools/build_look.mjs
       - name: The kernel in the shell is the holo KERNEL_REV pins, and every vector replays
         run: node tools/kernel.mjs --check
       - name: The Prism journey in the shell is prism-code's, byte for byte
@@ -62,5 +64,9 @@ jobs:
         run: (cd live-src && npm ci --no-audit --no-fund) && node tools/live_components.mjs --check
       - name: The live preview draws the spec, and only the spec
         run: node tools/live_preview.mjs --check
+      - name: The decision table decides as the rules do, on every request
+        run: node tools/live_table.mjs --check
+      - name: Every word on the live screen is edited in the spec, and only there
+        run: node tools/live_edit.mjs --check
       - name: Nothing in this repository names Forge's old home
         run: node tools/self_contained.mjs

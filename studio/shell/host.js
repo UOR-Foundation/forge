@@ -14,6 +14,7 @@ import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
 import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
+import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
 
 const MARKER = "dyad-ipc-envelope-v1";
@@ -198,7 +199,7 @@ handlers.set("create-app", async ({ name, initialChatMode }) => {
   const app = { id, name, path: name, createdAt: now, updatedAt: now, ...nulls };
   await put("apps", id, app);
   await putMany("files", Object.entries(await loadScaffold()).map(([p, src]) => [id + ":" + p, src]));
-  const oid = await seal(id, "Init Hologram app");
+  const oid = await seal(id, "Init Prism app");
   const chatId = await nextId("chats");
   await put("chats", chatId, { id: chatId, appId: id, title: name, createdAt: now, messages: [], initialCommitHash: oid, dbTimestamp: null, chatMode: initialChatMode || "build", modelSelection: null, referencedApps: [] });
   return { app: withDates(app), chatId };
@@ -250,6 +251,56 @@ handlers.set("app:get-current-commit-hash", async ({ appId }) => (await get("ref
 handlers.set("app:list-screenshots", () => ({ screenshots: [] }));
 handlers.set("app:list-thumbnails", () => ({ thumbnails: [] }));
 handlers.set("appCollections:list", () => []);
+
+// ---- moving in. A browser keeps this store per origin, so apps made on the site Forge was served from
+// before stay there; its moved page writes them to a file (hologram-forge/export/1) and Import App on the
+// home page hands that file here. Ids are renumbered past the ones in use, so nothing here is replaced;
+// a name already taken gets " (moved)". The file carries apps, their files, chats, versions, rules state
+// and the objects those versions name; it never carries settings (keys), the audit, seals, grants or
+// installed holos, and anything else in it is ignored. An object is kept only when its bytes derive to
+// its address. Everything is written in one transaction: a failure leaves the store as it was.
+const EXPORT_SCHEMA = "hologram-forge/export/1";
+handlers.set("forge:import", async (input) => {
+  const doc = typeof input === "string" ? JSON.parse(input) : input;
+  if (!doc || doc.schema !== EXPORT_SCHEMA || !Array.isArray(doc.apps)) throw new Error("This is not a Forge export file (" + EXPORT_SCHEMA + ").");
+  const objects = new Map();
+  let refused = 0;
+  const keep = async (k, bytes) => { if ((await kappa(bytes)) === k) objects.set(k, bytes); else refused += 1; };
+  for (const [k, text] of Object.entries(doc.objects || {})) { let bytes = null; try { bytes = unb64(String(text)); } catch (e) { refused += 1; continue; } await keep(k, bytes); }
+  const taken = new Set((await all("apps")).map((a) => a.name));
+  let appId = await nextId("apps"), chatId = await nextId("chats");
+  const writes = [], apps = [];
+  for (const entry of doc.apps) {
+    const a = entry && entry.app;
+    if (!a || typeof a.name !== "string" || !a.name) throw new Error("An app in the file has no name.");
+    let name = a.name;
+    if (taken.has(name)) { name = a.name + " (moved)"; for (let n = 2; taken.has(name); n += 1) name = a.name + " (moved " + n + ")"; }
+    taken.add(name);
+    const id = appId++, at = new Date().toISOString();
+    writes.push(["apps", id, { ...nulls, ...a, id, name, path: name, createdAt: a.createdAt || at, updatedAt: a.updatedAt || at }]);
+    const files = Object.entries(entry.files || {}).filter(([, text]) => typeof text === "string");
+    for (const [path, text] of files) { writes.push(["files", id + ":" + path, text]); const bytes = enc.encode(text); objects.set(await kappa(bytes), bytes); }
+    if (Array.isArray(entry.versions)) writes.push(["versions", id, entry.versions]);
+    if (typeof entry.main === "string" && entry.main) writes.push(["refs", id + ":main", entry.main]);
+    if (entry.rules && typeof entry.rules === "object") writes.push(["refs", "prism:" + id, entry.rules]);
+    const chats = [];
+    for (const c of Array.isArray(entry.chats) ? entry.chats : []) {
+      if (!c || typeof c !== "object") continue;
+      const cid = chatId++;
+      writes.push(["chats", cid, { ...c, id: cid, appId: id, messages: Array.isArray(c.messages) ? c.messages : [], referencedApps: [] }]);
+      chats.push(cid);
+    }
+    apps.push({ id, name, from: a.name, chats, files: files.length });
+  }
+  for (const [k, bytes] of objects) writes.push(["objects", k, bytes]);
+  const db = await dbReady;
+  await new Promise((res, rej) => {
+    const t = db.transaction(["apps", "chats", "files", "objects", "refs", "versions"], "readwrite");
+    for (const [store, key, value] of writes) t.objectStore(store).put(value, key);
+    t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error("the import was aborted"));
+  });
+  return { apps, objects: objects.size, refused };
+});
 
 // ---- versions: a branch is a name pointing at an address; rollback restores the object at an
 // address only when its bytes re-derive to it (the core's restore rule).
@@ -459,21 +510,31 @@ function sendLive(appId) {
   const latest = liveLatest.get(appId);
   if (!latest) return;
   const p = live.project(latest.raw);
-  const message = { type: "live/projection", app: appId, root: p.root, logic: p.logic, logicKappa: p.logicKappa, nodes: p.nodes, trust: latest.trust, theme: themeOf() };
+  const message = { type: "live/projection", app: String(appId), root: p.root, logic: p.logic, logicKappa: p.logicKappa, nodes: p.nodes, trust: latest.trust, theme: themeOf(), edit: !!latest.edit };
   for (const [win, app] of liveWindows) { if (win.closed) liveWindows.delete(win); else if (app === appId) win.postMessage(message, "*"); }
 }
 // Coalesced to one projection per animation frame: a model streams far faster than a screen draws.
-function pushLive(appId, raw, trust) {
-  liveLatest.set(appId, { raw, trust });
+function pushLive(appId, raw, trust, edit = false) {
+  liveLatest.set(appId, { raw, trust, edit });
+  // An edit is one change a person just made: it goes now, not at the next frame, so the frame can paint
+  // it on its own next frame. Only a model's stream, many changes a frame, is coalesced.
+  if (edit) { livePending.delete(appId); sendLive(appId); return; }
   if (livePending.has(appId)) return;
   livePending.add(appId);
   requestAnimationFrame(() => { livePending.delete(appId); sendLive(appId); });
 }
 window.addEventListener("message", (e) => {
   const m = e.data;
-  if (!m || (m.type !== "live/hello" && m.type !== "live/painted") || !isLiveFrame(e.source)) return;
-  if (m.type === "live/hello") { liveWindows.set(e.source, m.app); if (liveLatest.has(m.app)) sendLive(m.app); else refreshLive(m.app); }
-  else if (m.changed) { liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift(); }
+  if (!m || typeof m.type !== "string" || !m.type.startsWith("live/") || !isLiveFrame(e.source)) return;
+  // The frame reads its app from the address (a string); the host keys apps as the store does (a number).
+  if (m.type === "live/hello") { const app = /^[0-9]+$/.test(String(m.app)) ? Number(m.app) : m.app; liveWindows.set(e.source, app); if (liveLatest.has(app)) sendLive(app); else refreshLive(app); return; }
+  if (m.type === "live/painted") { if (m.changed) { liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift(); } return; }
+  // Everything else acts on an app: the one this frame was shown, never the one the message names.
+  const appId = liveWindows.get(e.source);
+  if (!appId) return;
+  if (m.type === "live/patch" && Array.isArray(m.ops)) patchSpec(appId, m.ops, { author: "user", key: m.key || null });
+  else if (m.type === "live/undo" || m.type === "live/redo") stepSpec(appId, m.type === "live/undo" ? "undo" : "redo");
+  else if (m.type === "live/point") { if (livePointed.get(appId)?.key === m.key) livePointed.delete(appId); else livePointed.set(appId, { key: m.key, kind: m.kind, edit: m.edit || {}, text: String(m.text || "").slice(0, 200) }); }
 });
 new MutationObserver(() => { for (const appId of liveLatest.keys()) pushLive(appId, liveLatest.get(appId).raw, liveLatest.get(appId).trust); }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 // The rules as they stand: the checked spec at its kernel phase, else what the model wrote, as a draft.
@@ -481,17 +542,93 @@ async function refreshLive(appId) {
   const json = await get("files", appId + ":prism/spec.json");
   if (!json) return;
   const state = await rulesOf(appId);
-  if (state && state.spec) return pushLive(appId, state.spec, state.phase);
-  try { pushLive(appId, JSON.parse(json), "draft"); } catch (e) {}
+  // The spec as written is drawn, not the checker's normalised copy: every edit path on the screen is a
+  // path in this spec, so a click patches exactly what the model or the user wrote.
+  try { pushLive(appId, JSON.parse(json), state && state.spec ? state.phase : "draft"); } catch (e) {}
+}
+
+// ---- the one write path. A click on the screen and a patch the agent writes arrive here alike, as
+// spec patches (shell/live/edit.mjs). Each is drawn at once (optimistic), then checked by Forge's
+// checker in milliseconds; a patch that does not check is refused, the last good spec is drawn again,
+// and the reason is shown on the node that was edited. A patch that checks is saved through the same
+// path as a chat turn (rulesAfterTurn: the kernel's phase, the rule module) and sealed as a version.
+// Patches to one app run one at a time, in order, so the user and the agent never race.
+const liveEditors = new Map(); // appId -> its edit history
+const livePointed = new Map(); // appId -> the node the user points the agent at
+const liveQueue = new Map();
+const checkForEdit = (spec) => { try { const c = prism.checkSpec(spec); return { ok: !!c.ok, issues: c.issues || [] }; } catch (e) { return { ok: false, issues: [String((e && e.message) || e)] }; } };
+async function editorOf(appId) {
+  const json = await get("files", appId + ":prism/spec.json");
+  if (!json) return null;
+  const spec = JSON.parse(json);
+  let ed = liveEditors.get(appId);
+  if (!ed) { ed = createEditor(spec, checkForEdit); liveEditors.set(appId, ed); } else ed.sync(spec);
+  return ed;
+}
+const liveBusy = new Map(); // appId -> jobs queued or running
+function inOrder(appId, job) {
+  liveBusy.set(appId, (liveBusy.get(appId) || 0) + 1);
+  const run = () => Promise.resolve().then(job).finally(() => { const n = liveBusy.get(appId) - 1; if (n) liveBusy.set(appId, n); else liveBusy.delete(appId); });
+  const next = (liveQueue.get(appId) || Promise.resolve()).then(run, run);
+  liveQueue.set(appId, next.catch(() => {}));
+  return next;
+}
+function refuse(appId, key, message) {
+  for (const [win, app] of liveWindows) if (app === appId && !win.closed) win.postMessage({ type: "live/refused", app: String(appId), key, message }, "*");
+}
+async function saveSpec(appId, spec, summary) {
+  const result = await rulesAfterTurn(appId, "<dyad-spec>" + JSON.stringify(spec) + "</dyad-spec>", []);
+  if (result.changed) await seal(appId, summary);
+  await refreshLive(appId);
+  return result;
+}
+async function patchSpec(appId, ops, { author = "user", key = null } = {}) {
+  // Optimistic, before anything is awaited: with the app's history already in memory and nothing ahead of
+  // it in the queue, the patched spec is drawn now, then checked.
+  const cached = liveEditors.get(appId);
+  let drawn = false;
+  if (cached && !liveBusy.has(appId)) { try { pushLive(appId, applyOps(cached.spec, ops), "draft", true); drawn = true; } catch (e) { if (!(e instanceof PatchError)) throw e; } }
+  return inOrder(appId, async () => {
+    const ed = await editorOf(appId);
+    if (!ed) return { ok: false, issues: ["This app has no rules yet."] };
+    const before = ed.spec, trust = ((await rulesOf(appId)) || {}).phase || "draft";
+    try { if (!drawn) pushLive(appId, applyOps(before, ops), "draft", true); }
+    catch (e) { if (!(e instanceof PatchError)) throw e; refuse(appId, key, e.message); return { ok: false, issues: [e.message] }; }
+    const result = ed.apply(ops);
+    if (!result.ok) { pushLive(appId, before, trust); refuse(appId, key, result.issues[0]); return result; }
+    await saveSpec(appId, result.spec, `${author === "agent" ? "The agent" : "You"} changed ${ops.map((o) => o.path.join(".")).join(", ")}`);
+    return result;
+  });
+}
+async function stepSpec(appId, way) {
+  return inOrder(appId, async () => {
+    const ed = liveEditors.get(appId) || (await editorOf(appId));
+    if (!ed || !(way === "undo" ? ed.canUndo : ed.canRedo)) return;
+    const spec = way === "undo" ? ed.undo() : ed.redo();
+    pushLive(appId, spec, "draft", true);
+    await saveSpec(appId, spec, way === "undo" ? "Undo" : "Redo");
+  });
+}
+// What the user points at, said to the agent with the request, so "make this cheaper" has a "this".
+function pointedNote(appId) {
+  const p = livePointed.get(appId);
+  if (!p) return "";
+  const paths = Object.entries(p.edit).filter(([, v]) => Array.isArray(v)).map(([slot, v]) => `${slot} at ${JSON.stringify(v)}`).join("; ");
+  return `\n\n(The user is pointing at the ${p.kind} "${p.text}" on the screen${paths ? ": " + paths : ""}. To change it, write a <dyad-spec-patch>.)`;
 }
 // Point the app's preview at the live frame. The iframe loads once: after this, the address it shows
 // never changes for this app, so the preview never reloads.
 async function showLive(appId) {
+  liveShown.add(appId);
   liveFrameUrl = await liveFrame();
   const appUrl = liveFrameUrl + "#" + encodeURIComponent(appId);
   const m = machineOf(appId);
   if (m.state.phase === "ready" && m.state.url && m.state.url.appUrl === appUrl) return appUrl;
-  publish(appId, { phase: "ready", operation: null, startedAt: Date.now(), operationError: null, exit: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: m.state.previewReloadEpoch + 1 });
+  // The renderer keeps the route the preview was on when the new address shares its origin (it expects
+  // a dev server per app), and every preview here shares this origin; so a preview already showing
+  // another page is first announced as restarting, the renderer's own signal to forget that route.
+  if (m.state.url) publish(appId, { phase: "starting", operation: "restart", invocationRef: { kind: "app-run", entityKey: appId, operationId: "live-" + appId + "-" + Date.now() }, startedAt: Date.now(), operationError: null, exit: null });
+  publish(appId, { phase: "ready", operation: null, invocationRef: null, startedAt: Date.now(), operationError: null, exit: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: m.state.previewReloadEpoch + 1 });
   return appUrl;
 }
 const hasRules = async (appId) => !!(await get("files", appId + ":prism/spec.json"));
@@ -512,7 +649,7 @@ function warmLive() {
   }).catch(() => {});
 }
 (window.requestIdleCallback || ((fn) => setTimeout(fn, 1500)))(warmLive, { timeout: 4000 });
-window.__live = { liveFrame, showLive, pushLive, refreshLive, times: liveTimes, project: live.project };
+window.__live = { liveFrame, showLive, pushLive, refreshLive, patchSpec, stepSpec, pointed: livePointed, times: liveTimes, project: live.project };
 
 handlers.set("distributed-machine:subscribe", async ({ machineId, encodedKey }) => {
   if (machineId === "chat_stream") return chatSubscribe({ machineId, encodedKey });
@@ -541,6 +678,9 @@ handlers.set("distributed-machine:dispatch", async (envelope) => {
     (async () => {
       try {
         const { appUrl } = await buildPreview(appId);
+        // A build that finishes after the app's rules took the preview (a model began writing a spec
+        // while it ran) is about a page the app no longer shows: the live frame stays.
+        if (liveShown.has(appId)) return;
         const cur = machineOf(appId);
         publish(appId, { phase: "ready", operation: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: cur.state.previewReloadEpoch + 1, lastSettlement: { operationId: encodedEvent.operationId || messageId, kind: "run", outcome: "succeeded" } });
       } catch (e) {
@@ -699,8 +839,36 @@ function publishChat(chatId, patch) {
   const queuePaused = patch.queuePaused === undefined ? m.state.queuePaused : patch.queuePaused;
   m.state = { ...m.state, ...patch, revision: m.revision, capabilities: { canSubmit: true, canCancel: phase === "admitting" || phase === "streaming", canPauseQueue: !queuePaused, canResumeQueue: queuePaused } };
   emit("distributed-machine:snapshot", { protocolVersion: 1, machineId: "chat_stream", encodedKey: { chatId }, actorInstanceId: "web-chat_stream-" + chatId, revision: m.revision, encodedState: m.state });
+  // shellUpdate is declared below and read here before it exists while the host starts: var, and checked.
+  if (shellUpdate && shellUpdate.waiting && !turnRunning()) setTimeout(reloadIfIdle, 1500);
   return m;
 }
+// ---- never cut a turn short. A turn (a build, a proof, a publish) runs in this page; reloading the page
+// ends it here while a cloud model may go on generating its answer, holding the shared plan's one slot
+// for minutes. So: a newer shell waits until no turn runs (the worker announces it, see sw.template.js);
+// leaving the page while one runs asks first; and a turn a reload did cut is marked as cut, not left as a
+// silent half message.
+function turnRunning() { return [...chatMachines.values()].some((m) => ["admitting", "streaming", "finalizing", "cancelling"].includes(m.state.phase)); }
+var shellUpdate = { waiting: false };
+function reloadIfIdle() { if (shellUpdate.waiting && !turnRunning()) location.reload(); }
+if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "shell-updated") { shellUpdate.waiting = true; reloadIfIdle(); }
+});
+addEventListener("beforeunload", (e) => { if (turnRunning()) { e.preventDefault(); e.returnValue = ""; } });
+// A turn a reload cut: the last message of a chat left as an open reasoning block or empty. Nothing runs
+// when the page starts, so such a message is never a live turn.
+const CUT = "\n\n<dyad-output type=\"warning\" message=\"This answer was interrupted: the page reloaded before it finished. Ask again.\"></dyad-output>";
+async function markInterruptedTurns() {
+  for (const chat of await all("chats")) {
+    const last = chat && chat.messages && chat.messages[chat.messages.length - 1];
+    if (!last || last.role !== "assistant" || last.content.includes("<dyad-output")) continue;
+    const open = /^<think>/.test(last.content) && !last.content.includes("</think>");
+    if (!open && last.content.trim()) continue;
+    last.content = (open ? last.content + "</think>" : last.content) + CUT;
+    await put("chats", chat.id, chat);
+  }
+}
+markInterruptedTurns().catch((e) => console.warn("[host] marking interrupted turns", e));
 const djb2 = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; return h; };
 const now = () => new Date().toISOString();
 async function messagesOf(chatId) { const c = await get("chats", chatId); return c ? c.messages : []; }
@@ -746,6 +914,22 @@ async function rulesAfterTurn(appId, text, written = []) {
   if (!current) return { changed, card: tag && tag.error ? `**Rules** · not checked\n\n- ${tag.error}\n\nAsk me to fix the rules.` : null };
   const specKappa = await kappa(enc.encode(current));
   if (before && before.specKappa === specKappa) return { changed, card: tag ? prism.card(before) : null };
+  // The proof is about the logic (fields, rules, answers, guarantees), so it is keyed by the logic kappa,
+  // not by the bytes of the file. An edit that leaves the logic kappa as it was (a word, a label, the
+  // view) is a reword: the kernel keeps the phase (FK-10, FK-11, proved by Lean), and the proof stands.
+  let parsed = null;
+  try { parsed = JSON.parse(current); } catch (e) {}
+  const logicKappa = parsed ? live.project(parsed).logicKappa : null;
+  if (before && before.spec && before.logicKappa && logicKappa === before.logicKappa) {
+    const kept = await rewordPhase(before.phase);
+    const reworded = kept ? prism.checkSpec(parsed) : null;
+    if (reworded && reworded.ok) {
+      if ((await get("files", appId + ":src/lib/prism.ts")) !== reworded.module) { await put("objects", await kappa(enc.encode(reworded.module)), enc.encode(reworded.module)); await put("files", appId + ":src/lib/prism.ts", reworded.module); changed++; }
+      const state = { ...before, phase: kept, specKappa, logicKappa, spec: reworded.spec, issues: reworded.issues, notes: reworded.notes || [], vectors: reworded.vectors || 0, updated: now() };
+      await saveRules(appId, state);
+      return { changed, card: prism.card(state) };
+    }
+  }
   let phase = before ? await nextPhase(before.phase, "edit") : "drafting";
   let checked;
   try { checked = prism.checkSpec(JSON.parse(current)); } catch (e) { checked = { ok: false, issues: ["The rules are not valid JSON: " + e.message] }; }
@@ -761,23 +945,30 @@ async function rulesAfterTurn(appId, text, written = []) {
     }
   }
   const notes = [...(tag && tag.repaired ? ["Forge repaired the JSON syntax the model wrote. Read the rules before you approve them."] : []), ...(checked.notes || [])];
-  const state = { phase, specKappa, spec: checked.spec || null, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: null, updated: now() };
+  const state = { phase, specKappa, logicKappa, spec: checked.spec || null, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: null, updated: now() };
   await saveRules(appId, state);
   return { changed, card: prism.card(state) };
 }
+// The kernel's answer to a reword. A kernel guest older than the event (KERNEL_REV pins the guest the page
+// runs) answers invalid; the edit is then decided as an edit, by the kernel's own answer to that, and the
+// proof is dropped as before. Nothing here decides a phase.
+async function rewordPhase(phase) {
+  try { return await nextPhase(phase, "reword"); } catch (e) { return null; }
+}
 // Lean proves the rules on the hosted verifier; the kernel moves the phase on its attestation or its
-// refusal. A proof of rules that changed meanwhile is dropped: it is about other rules. Resolves the
-// prover's result, or null when the rules changed under it.
-async function proveRules(appId, specKappa, onWait) {
+// refusal. A proof whose logic changed meanwhile is dropped: it is about other rules. A reword meanwhile
+// keeps it, since the logic kappa is the same. Resolves the prover's result, or null when the logic
+// changed under it.
+async function proveRules(appId, logicKey, onWait) {
   const state = await rulesOf(appId);
   const result = await prism.prove(state.spec, { onWait }).catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
   const latest = await rulesOf(appId);
-  if (!latest || latest.specKappa !== specKappa || latest.phase !== "proving") return null;
+  if (!latest || (latest.logicKappa || latest.specKappa) !== logicKey || latest.phase !== "proving") return null;
   const phase = await nextPhase("proving", result.ok ? "attest" : "fail");
   // The axiom sets Lean settled on are kept: the model the SDK builds must be the model Lean proved.
   await saveRules(appId, { ...latest, phase, proof: result.ok ? result.record : null, axioms: result.ok ? result.axioms || {} : null, proofError: result.ok ? null : result.error, updated: now() });
   refreshLive(appId);
-  await put("audit", Date.now() + ":prism:" + appId, { timestamp_millis: Date.now(), principal: "app:" + appId, operation: "prism.rules.prove", resource: specKappa, outcome: result.ok ? "proved" : "refused" });
+  await put("audit", Date.now() + ":prism:" + appId, { timestamp_millis: Date.now(), principal: "app:" + appId, operation: "prism.rules.prove", resource: logicKey, outcome: result.ok ? "proved" : "refused" });
   return result;
 }
 // "approve" is the user's yes to the guarantees on the card: no model is asked. The answer is a
@@ -791,7 +982,7 @@ async function approveRules(appId) {
   const phase = await nextPhase("checked", "approve");
   await saveRules(appId, { ...state, phase, approved: now() });
   refreshLive(appId);
-  return { text: prism.provingMessage(state.spec), spec: state.spec, prove: (onWait) => proveRules(appId, state.specKappa, onWait) };
+  return { text: prism.provingMessage(state.spec), spec: state.spec, prove: (onWait) => proveRules(appId, state.logicKappa || state.specKappa, onWait) };
 }
 // The approve turn stays open while Lean works, as a build turn stays open while the model writes:
 // the renderer shows it working, the message counts the seconds, and the result completes it.
@@ -926,7 +1117,7 @@ async function chatTurn(chatId, intent) {
       { role: "user", content: "This is my codebase. " + (await codebaseOf(appId)) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
-      { role: "user", content: intent.prompt },
+      { role: "user", content: intent.prompt + pointedNote(appId) },
     ];
     // The route table decides who answers: a sealed answer to the same request is served without
     // running anything; the device runs the Q engine; a paid model answers with the visitor's key;
@@ -1024,6 +1215,13 @@ async function chatTurn(chatId, intent) {
     const tags = parseDyadTags(full);
     let changed = await applyDyadTags(appId, tags);
     const spec = await rulesAfterTurn(appId, full, tags.writes.map((w) => w.path));
+    // A patch the agent wrote goes through the same write path as a click: checked, or refused.
+    for (const m of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
+      let ops = null; try { ops = JSON.parse(m[1].trim()); } catch (e) {}
+      const r = ops ? await patchSpec(appId, Array.isArray(ops) ? ops : [ops], { author: "agent" }) : { ok: false, issues: ["The patch is not JSON."] };
+      if (!r.ok) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + r.issues[0];
+      else spec.changed += 1;
+    }
     changed += spec.changed;
     if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshLive(appId); }
     updatedFiles = changed > 0;

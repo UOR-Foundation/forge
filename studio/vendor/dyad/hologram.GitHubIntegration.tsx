@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useSettings } from "@/hooks/useSettings";
 
 const NEW_TOKEN =
-  "https://github.com/settings/personal-access-tokens/new?name=Hologram%20Forge&description=Builds%20Prism%20apps%20on%20GitHub%20Actions";
+  "https://github.com/settings/personal-access-tokens/new?name=Prism%20AI%20Foundry&description=Builds%20Prism%20apps%20on%20GitHub%20Actions";
 
 export function GitHubIntegration() {
   const { settings, updateSettings } = useSettings();

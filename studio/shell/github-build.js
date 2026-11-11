@@ -58,7 +58,7 @@ async function commitApp(gh, repository, head, { spec, axioms, attestation, temp
   const entries = [...files.map((f) => ({ path: f.path, mode: "100644", type: "blob", content: f.content })), ...remove.map((path) => ({ path, mode: "100644", type: "blob", sha: null }))];
   const made = await gh.post(`/repos/${repository}/git/trees`, { base_tree: base.tree.sha, tree: entries });
   if (made.sha === base.tree.sha) return { sha: head, changed: false, files: files.length };
-  const commit = await gh.post(`/repos/${repository}/git/commits`, { message: `${spec.title}: the app, its claims and its page, from Hologram Forge`, tree: made.sha, parents: [head] });
+  const commit = await gh.post(`/repos/${repository}/git/commits`, { message: `${spec.title}: the app, its claims and its page, from Prism AI Foundry`, tree: made.sha, parents: [head] });
   await gh.patch(`/repos/${repository}/git/refs/heads/main`, { sha: commit.sha });
   return { sha: commit.sha, changed: true, files: files.length, removed: remove.length };
 }

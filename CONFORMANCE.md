@@ -31,6 +31,8 @@ model does not sanction.
 | `FK-07` | `build` | The gate never admits a resource its grant record denies |
 | `FK-08` | `build` | The gate never admits a preview or a published app without a grant |
 | `FK-09` | `build` | The gate never lets a preview fetch without a grant |
+| `FK-10` | `build` | The app always answers proved when event is reword and phase is proved |
+| `FK-11` | `build` | The app always answers published when event is reword and phase is published |
 
 ## Cited authorities
 
