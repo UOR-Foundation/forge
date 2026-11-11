@@ -35,9 +35,12 @@ workspace tests and Clippy pass. Six codec mutations reject list-bound removal,
 uint validation removal, delayed caller capture, trailing output, invalid active
 ownership and runtime error substitution; restoration passes.
 
-Full-graph diagnostic verification, semantic mutations, signed artifact
-construction/reproduction, actual guest/browser execution and final exact-head
-SDK/Studio acceptance remain pending. Durable prompt/payload storage, actor
+The 19-module executable graph diagnostic verifies with receipt
+`c27cd6b73dfd05c32a8661346a5fcab25497baa8a9db5b1757571d6dda1d512d`.
+Four semantic mutations remove revision, owner, Stop-policy and active-item
+checks; each fails its concrete Lean obligation and the restored model verifies.
+Signed artifact construction/reproduction, actual guest/browser execution and
+final exact-head SDK/Studio acceptance remain pending. Durable prompt/payload storage, actor
 integration, actual queue dispatch/cancellation and crash recovery remain a
 separate required implementation; existing renderer acknowledgements are not
 claimed complete by this component. Neither production release hold is removed.
