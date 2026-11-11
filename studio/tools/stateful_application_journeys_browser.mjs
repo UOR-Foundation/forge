@@ -41,7 +41,7 @@ try {
   await page.getByRole('button',{name:'Close',exact:true}).click();
   await page.reload();await page.waitForFunction(()=>!!window.__host&&!!window.electron);
   await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
-  await page.getByRole('button',{name:'Journey gallery',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'Journey gallery',exact:true}).click();
   await page.getByRole('heading',{name:'Night sky',exact:true}).waitFor();
   await page.getByRole('button',{name:'Close',exact:true}).click();
   const report=await page.evaluate(async()=>{

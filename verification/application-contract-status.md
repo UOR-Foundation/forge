@@ -186,3 +186,7 @@ non-decision and multidomain applications, authenticated work ownership,
 remaining effects and production dependency/release closure are still open.
 Production Pages performance and maintainer release holds remain in force.
 The factory prerequisite above remains unchanged; no host substitute was added.
+
+### Stateful application journeys (FA-42)
+
+`FoundrySpecification.interactionJourneyBoundary` now binds actual stored gallery and garden applications to the generated interaction guest. Canonical instance authoring, model-bound revisioned state, transactional races and rollback, reload, keyboard navigation, audio consent/revocation and reduced motion have executed browser controls. The production audio adapter yields the guest-selected 440 Hz spectrum and silence without consent in an independent sample analysis. This finite interaction profile does not close routing, all-command ownership, full effect permissions, authenticated work execution, production dependencies, release retrieval, human quality or factory-consumer obligations. See `verification/stateful-application-journeys.md`; full final-head SDK/Studio qualification remains required.

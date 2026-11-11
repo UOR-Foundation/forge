@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 #[test]
-fn stateful_application_journeys_fa_41() {
+fn stateful_application_journeys_fa_42() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(2)
