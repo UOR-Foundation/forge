@@ -10,6 +10,14 @@
   opacity: 0.85; transition: opacity 0.15s, transform 0.15s;
 }
 .appearance:hover { opacity: 1; transform: translateY(1px) scale(1.04); }
+.appearance:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; opacity: 1; }
+/* Full screen sits at the far right, the sun 8 px to its left (appearance.js draws it only where a page can
+   fill the screen). The build screen on a phone (data-holo-pane) has a bottom bar whose right slot is the
+   sun's; full screen keeps out of it there. */
+.has-fullscreen .appearance:not(.fullscreen) { right: 52px; }
+:root[data-holo-pane] .fullscreen { display: none; }
+:root[data-holo-pane].has-fullscreen .appearance:not(.fullscreen) { right: 14px; }
+@media (prefers-reduced-motion: reduce) { .appearance { transition: none; } .appearance:hover { transform: none; } }
 .popover {
   position: fixed; top: 42px; right: 14px; z-index: 61; width: 320px; padding: 16px; border-radius: calc(var(--radius) + 8px);
   border: 1px solid var(--border); background: var(--popover); color: var(--popover-foreground);
