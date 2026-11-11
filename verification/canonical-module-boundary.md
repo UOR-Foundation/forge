@@ -63,3 +63,11 @@ Generation cancellation, stale-source isolation, and proof/reword races before
 and after commit pass, as do the independent rules-source browser controls.
 Supplementary verification of c1424e5's 13 model modules produced attestation
 0d2d7348a9023d5e216c9a8d4b9909f25005d091b3b781eba509acb4ab0416c1.
+
+With the header draft and complete-admission split, the actual Verdant browser
+replay passes the unchanged budgets: 30 ms to first pixel, 8.5 ms maximum patch
+work, and 61 ms to checked rules. It stores the same 46,960-byte module byte for
+byte, uses one frame load and reports no page errors. The 3,131,000-request table
+builds off the main thread. This finite local run does not erase the earlier
+failed run or qualify production Pages performance. The source/transaction
+controls pass with the real reader dependency restored to their harness.
