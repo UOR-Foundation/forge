@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useMatchRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useAtomValue, useSetAtom } from "jotai";
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 
 import logo from "../../assets/logo.svg";
 import { selectedAppIdAtom } from "@/atoms/appAtoms";
@@ -55,6 +55,7 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 // The product's name: the build's word transform (vite.shell.config.mts) writes the product's name for
@@ -90,6 +91,11 @@ function useIsActive() {
 
 export function AppSidebar() {
   const isActive = useIsActive();
+  // On a phone the sidebar is the kit's Sheet over the page: a choice in it (a link, an app, a chat) closes
+  // it, so the page the visitor asked for is what they see.
+  const { isMobile, setOpenMobile } = useSidebar();
+  const href = useLocation({ select: (l) => l.href });
+  useEffect(() => { if (isMobile) setOpenMobile(false); }, [href, isMobile, setOpenMobile]);
   const navigate = useNavigate();
   const setHelpDialog = useSetAtom(helpDialogAtom);
   const setSelectedAppId = useSetAtom(selectedAppIdAtom);

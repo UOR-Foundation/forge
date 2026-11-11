@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { LEAN } from "./hologram.lean.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const slash = (p) => p.replace(/\\/g, "/");
@@ -22,7 +23,7 @@ export const SCREENS = {
 // its description and its actions, not a second title.
 const PAGE = "w-full overflow-y-auto px-4 py-4 md:py-6 lg:px-6";
 
-export const PATCHES = [
+const SCREEN_PATCHES = [
   {
     file: "src/pages/settings.tsx",
     from: `    <section
@@ -190,6 +191,9 @@ export const PATCHES = [
   },
 ];
 
+// The screens' patches, then the ones that keep the first load lean (hologram.lean.mjs).
+export const PATCHES = [...SCREEN_PATCHES, ...LEAN];
+
 // A retag patch: the one JSX element whose opening tag is exactly `retag` becomes `to`, its closing tag
 // renamed with it (found by the parser, so the children are kept whole).
 function retag(code, rel, p) {
@@ -221,9 +225,17 @@ export function screenSource(file, code) {
   let out = code.replace(/\r\n/g, "\n");
   for (const p of PATCHES) {
     if (p.file !== rel) continue;
-    if (p.retag) { out = retag(out, rel, p); continue; }
+    if (p.retag) { out = retag(out, rel, p); applied.add(p); continue; }
     if (!out.includes(p.from)) throw new Error(`${rel}: the passage the shell patches was not found:\n${p.from.split("\n")[0]}`);
     out = out.replace(p.from, p.to);
+    applied.add(p);
   }
   return out;
+}
+
+// A patch whose file the build never read did nothing, silently: the build and the typecheck ask for these
+// once every file is read, and refuse when any is left.
+const applied = new Set();
+export function unapplied() {
+  return PATCHES.filter((p) => !applied.has(p)).map((p) => `${p.file}: ${(p.from ?? p.retag).split("\n")[0]}`);
 }

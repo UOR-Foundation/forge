@@ -38,6 +38,10 @@ const put = (store, key, value) => tx(store, "readwrite", (s) => s.put(value, ke
 const del = (store, key) => tx(store, "readwrite", (s) => s.delete(key));
 const all = (store) => tx(store, "readonly", (s) => s.getAll());
 const keys = (store) => tx(store, "readonly", (s) => s.getAllKeys());
+// One transaction for many writes: creating an app wrote 62 files one transaction at a time.
+async function putMany(store, pairs) { const db = await dbReady; return new Promise((res, rej) => { const t = db.transaction(store, "readwrite"); const s = t.objectStore(store); for (const [k, v] of pairs) s.put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); }
+// An app's files are the keys "<id>:<path>": read by key range instead of walking every app's keys.
+const appRange = (appId) => IDBKeyRange.bound(appId + ":", appId + ":￿");
 
 // ---- settings
 const DEFAULT_SETTINGS = {
@@ -139,7 +143,9 @@ handlers.set("get-custom-themes", () => []);
 handlers.set("user-input:get-pending", () => []);
 handlers.set("get-app-upgrades", () => []);
 handlers.set("get-app-env-vars", () => []);
-handlers.set("get-templates", () => []);
+// One template is implemented here, the scaffold every app is created from (selectedTemplateId "react"):
+// the Templates page lists it rather than nothing. Its picture is the shell's own mark, not a remote image.
+handlers.set("get-templates", () => [{ id: "react", title: "React.js Template", description: "Uses React.js, Vite, Shadcn, Tailwind and TypeScript.", imageUrl: new URL("mark.svg", BASE).href, isOfficial: true }]);
 handlers.set("check-problems", () => ({ problems: [], totalErrors: 0, totalWarnings: 0 }));
 
 // ---- apps and files. A file is stored under "<appId>:<path>"; the app record carries no files,
@@ -148,12 +154,15 @@ const nextId = async (store) => { const ks = await keys(store); return ks.length
 const nulls = { githubOrg: null, githubRepo: null, githubBranch: null, supabaseProjectId: null, supabaseParentProjectId: null, supabaseOrganizationSlug: null, neonProjectId: null, neonDevelopmentBranchId: null, neonPreviewBranchId: null, neonActiveBranchId: null, selectedDatabaseBranchType: null, vercelProjectId: null, vercelProjectName: null, vercelDeploymentUrl: null, vercelTeamId: null, installCommand: null, startCommand: null, chatContext: null, isFavorite: false, testingEnabled: false, collectionId: null };
 const withDates = (a) => ({ ...a, createdAt: new Date(a.createdAt), updatedAt: new Date(a.updatedAt), resolvedPath: a.path });
 async function filesOf(appId) {
-  const ks = (await keys("files")).filter((k) => k.startsWith(appId + ":")).map((k) => k.slice(String(appId).length + 1)).sort();
+  const ks = (await tx("files", "readonly", (s) => s.getAllKeys(appRange(appId)))).map((k) => k.slice(String(appId).length + 1)).sort();
   return ks;
 }
 async function entriesOf(appId) {
+  const db = await dbReady;
+  const [ks, vs] = await new Promise((res, rej) => { const t = db.transaction("files", "readonly"); const s = t.objectStore("files"); const a = s.getAllKeys(appRange(appId)), b = s.getAll(appRange(appId)); t.oncomplete = () => res([a.result, b.result]); t.onerror = () => rej(t.error); });
+  const rows = ks.map((k, i) => [k.slice(String(appId).length + 1), vs[i]]).sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
   const out = [];
-  for (const path of await filesOf(appId)) { const bytes = enc.encode(await get("files", appId + ":" + path)); out.push({ path, kappa: await kappa(bytes), bytes: bytes.length }); }
+  for (const [path, text] of rows) { const bytes = enc.encode(text); out.push({ path, kappa: await kappa(bytes), bytes: bytes.length }); }
   return out;
 }
 async function seal(appId, message) {
@@ -188,7 +197,7 @@ handlers.set("create-app", async ({ name, initialChatMode }) => {
   const now = new Date().toISOString();
   const app = { id, name, path: name, createdAt: now, updatedAt: now, ...nulls };
   await put("apps", id, app);
-  for (const [p, src] of Object.entries(await loadScaffold())) await put("files", id + ":" + p, src);
+  await putMany("files", Object.entries(await loadScaffold()).map(([p, src]) => [id + ":" + p, src]));
   const oid = await seal(id, "Init Hologram app");
   const chatId = await nextId("chats");
   await put("chats", chatId, { id: chatId, appId: id, title: name, createdAt: now, messages: [], initialCommitHash: oid, dbTimestamp: null, chatMode: initialChatMode || "build", modelSelection: null, referencedApps: [] });
@@ -946,6 +955,12 @@ async function chatTurn(chatId, intent) {
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = full; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
+    // A model streams far faster than a screen draws, and every onText walks the whole answer and redraws the
+    // message: deltas are coalesced to one onText per animation frame. The final text is delivered by onText
+    // itself after the stream, and drops whatever frame is still pending.
+    let pendingText = null, frame = 0;
+    const onTextSoon = (t) => { pendingText = t; if (!frame) frame = requestAnimationFrame(() => { frame = 0; const next = pendingText; pendingText = null; if (next !== null) onText(next); }); };
+    const settleText = () => { if (frame) cancelAnimationFrame(frame); frame = 0; pendingText = null; };
     // Warm up: the local model is chosen but not resident yet; a held key (the visitor's, or the
     // site's) answers through OpenRouter meanwhile, and the local model starts loading for the next turn.
     const warm = route === "Local" && !engine.instance && core.run({ op: "warmup", localReady: !!engine.instance, keyPresent: !!(await inference.keyGet()), online: navigator.onLine }).warmup;
@@ -958,15 +973,17 @@ async function chatTurn(chatId, intent) {
       const warmHit = await lookup(warmBody);
       if (warmHit.hit) { await onText(warmHit.text); provenance = { receipt: warmHit.receipt, served: true, fingerprint: warmHit.fingerprint, warm: true }; }
       else {
-        const { text, rec } = await paidGenerate(warmBody, (t) => { onText(t); }, abort.signal);
+        const { text, rec } = await paidGenerate(warmBody, onTextSoon, abort.signal);
+        settleText();
         await onText(text);
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
       // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
-      const thinking = (r) => onText("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
-      const { text, rec } = await paidGenerate(body, (t) => { onText(t); }, abort.signal, thinking);
+      const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
+      const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
+      settleText();
       await onText(text);
       // An answer cut at the token limit is not sealed, so the same request is never served it again.
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
@@ -991,7 +1008,8 @@ async function chatTurn(chatId, intent) {
       // No repetition penalty: rules are JSON, which repeats its keys by nature, and a penalty pushes a
       // small model off valid syntax. The receipt records the penalty used, so the answer stays re-derivable.
       const maxNew = Math.min(held.model.cap, room);
-      const res = await withEngine(() => inst.generate(ids, { maxNew, repPenalty: 1, onToken: ({ text }) => { if (!abort.signal.aborted) onText(text); } }));
+      const res = await withEngine(() => inst.generate(ids, { maxNew, repPenalty: 1, onToken: ({ text }) => { if (!abort.signal.aborted) onTextSoon(text); } }));
+      settleText();
       const text = prism.withoutThinking(res.text);
       window.__prism.lastDevice = res.text || "";
       messages[messages.length - 1].model = "webgpu:" + held.model.fam; // the model that wrote the rules
@@ -1100,7 +1118,10 @@ handlers.set("__seal-files", null); handlers.delete("__seal-files");
 const rawEdit = handlers.get("edit-app-file");
 handlers.set("edit-app-file", async (input) => { await originalPut("objects", await kappa(enc.encode(input.content)), enc.encode(input.content)); return rawEdit(input); });
 const rawCreate = handlers.get("create-app");
-handlers.set("create-app", async (input) => { for (const src of Object.values(await loadScaffold())) { const b = enc.encode(src); await originalPut("objects", await kappa(b), b); } return rawCreate(input); });
+// The scaffold's objects are the same bytes for every app: stored once per page, in one transaction.
+let scaffoldObjects = null;
+const storeScaffoldObjects = () => (scaffoldObjects ??= (async () => { const pairs = []; for (const src of Object.values(await loadScaffold())) { const b = enc.encode(src); pairs.push([await kappa(b), b]); } await putMany("objects", pairs); })().catch((e) => { scaffoldObjects = null; throw e; }));
+handlers.set("create-app", async (input) => { await storeScaffoldObjects(); return rawCreate(input); });
 
 
 // ---- publish: a version becomes a Hologram application. The View is the project's built page with
@@ -1321,6 +1342,22 @@ window.electron = {
 })();
 window.__host = { handlers, emit, seen, get, put, all, kappa, core: () => core, coreReady, view: () => coreReady.then((c) => c.run({ op: "view" })), publish: () => lastPublish };
 if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("sw.js", BASE)).catch(() => {});
+// The worker installs only what a first paint needs; once this page has loaded and is idle it is asked to
+// fill the rest of the closure (the engine, the chat app, the photos), so offline use follows soon after.
+if ("serviceWorker" in navigator) {
+  const idle = (fn) => (self.requestIdleCallback ? requestIdleCallback(fn, { timeout: 10000 }) : setTimeout(fn, 3000));
+  addEventListener("load", () => idle(() => navigator.serviceWorker.ready.then((r) => r.active && r.active.postMessage("fill")).catch(() => {})), { once: true });
+}
+// After a deployment a page can run an entry that names a chunk the origin no longer serves: the worker has
+// already revalidated the entry, so one reload runs the new build whole.
+addEventListener("vite:preloadError", (event) => {
+  const key = "holo.chunk.reloaded";
+  if (sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, "1");
+  event.preventDefault();
+  location.reload();
+});
+addEventListener("load", () => setTimeout(() => sessionStorage.removeItem("holo.chunk.reloaded"), 10000), { once: true });
 // Applications installed before the kernel's gate held no grant record, and the gate refuses to
 // serve without one: each gets the grant install now writes, served with no network.
 (async () => {

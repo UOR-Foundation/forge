@@ -19,6 +19,9 @@
 #   ./scripts/plant.sh rolled    # a screen imports Base UI itself: the renderer's build must refuse the bundle
 #   ./scripts/plant.sh rewrite   # a screen calls a ui component in a way the Radix rewrite cannot convert: the typecheck must refuse
 #   ./scripts/plant.sh passage   # Dyad changes a passage the shell patches: the shell's screens must refuse rather than skip it
+#   ./scripts/plant.sh unapplied # a patch names a file the build never reads: the build must refuse rather than skip it
+#   ./scripts/plant.sh heavy     # home imports the chat page itself, un-split: the Performance gate must refuse
+#                                # (rebuild the renderer after it: the plant leaves its build in shell/assets)
 # `hole` runs the Contract gate, which bundles the vendored contracts with the renderer's own esbuild,
 # so run it where those dependencies were installed for this platform -- otherwise esbuild refuses to
 # start and the gate looks like it fired when it never ran.
@@ -136,7 +139,19 @@ EOF
     sed -i 's/<SubscriptionStatusBanner \/>/<SubscriptionStatusBanner compact \/>/' vendor/dyad/src/app/layout.tsx
     expect_fail bash -c 'cd vendor/dyad && node hologram.typecheck.mjs'
     cp /tmp/plant-layout.tsx vendor/dyad/src/app/layout.tsx ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage" >&2; exit 2 ;;
+  unapplied)
+    # A patch aimed at a module the build never reads did nothing, silently, before the build asked.
+    cp vendor/dyad/hologram.lean.mjs /tmp/plant-lean.mjs
+    sed -i 's#\["src/routes/apps.ts", #["src/routes/apps.mts", #' vendor/dyad/hologram.lean.mjs
+    expect_fail bash -c 'cd vendor/dyad && MSYS_NO_PATHCONV=1 npx vite build --config vite.shell.config.mts --base /foundry/ --outDir /tmp/plant-dist --emptyOutDir'
+    cp /tmp/plant-lean.mjs vendor/dyad/hologram.lean.mjs ;;
+  heavy)
+    # The heaviest page pulled into the first load by one static import: what the route split exists to stop.
+    cp vendor/dyad/src/pages/home.tsx /tmp/plant-home.tsx
+    sed -i '1i import ChatPage from "./chat"; console.log(ChatPage);' vendor/dyad/src/pages/home.tsx
+    expect_fail bash -c 'cd vendor/dyad && MSYS_NO_PATHCONV=1 npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py && cd ../.. && node tools/perf_budget.mjs'
+    cp /tmp/plant-home.tsx vendor/dyad/src/pages/home.tsx ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|unapplied|heavy" >&2; exit 2 ;;
 esac
 restore
 echo "restored"

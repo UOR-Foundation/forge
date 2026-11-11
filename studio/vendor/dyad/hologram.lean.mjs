@@ -1,0 +1,237 @@
+// hologram-forge (ours, not Dyad's; see VENDORED.md): what the shell leaves out of the first load. Each entry
+// is a patch in hologram.screens.mjs's form (one exact passage of a Dyad file, refused when it is gone), so the
+// build and the typecheck apply them together. The measurements that chose them are in studio/PERFORMANCE.md.
+//
+// The first load is the home page and the composer; everything else arrives when it is asked for:
+//  - every route but home is its own chunk, fetched on intent (a hover or touch of a link preloads it);
+//  - the preview panel's Code, Publish, Configure, Security, Tests, Plan and Problems panels are chunks of
+//    their own, behind a named loading state;
+//  - the code highlighter's eighteen grammars load with the first highlighted block, not with the page;
+//  - a language other than English loads when it is chosen;
+//  - Monaco is fetched when an editor is first drawn, not at import (it was fetched on every page load).
+
+// Routes whose page is a chunk of its own: [route file, import line, component name, module].
+const ROUTES = [
+  ["src/routes/apps.ts", `import AppsPage from "../pages/apps";`, "AppsPage", "../pages/apps"],
+  ["src/routes/plugins.ts", `import PluginsPage from "../pages/plugins";`, "PluginsPage", "../pages/plugins"],
+  ["src/routes/templates.ts", `import TemplatesPage from "../pages/templates";`, "TemplatesPage", "../pages/templates"],
+  ["src/routes/app-details.tsx", `import AppDetailsPage from "../pages/app-details";`, "AppDetailsPage", "../pages/app-details"],
+  ["src/routes/chat.tsx", `import ChatPage from "../pages/chat";`, "ChatPage", "../pages/chat"],
+  ["src/routes/settings.tsx", `import SettingsPage from "../pages/settings";`, "SettingsPage", "../pages/settings"],
+  ["src/routes/library.ts", `import LibraryHomePage from "@/pages/library-home";`, "LibraryHomePage", "@/pages/library-home"],
+  ["src/routes/media.ts", `import MediaPage from "@/pages/media";`, "MediaPage", "@/pages/media"],
+  ["src/routes/prompts.ts", `import LibraryPage from "@/pages/library";`, "LibraryPage", "@/pages/library"],
+  ["src/routes/themes.ts", `import ThemesPage from "@/pages/themes";`, "ThemesPage", "@/pages/themes"],
+];
+const routePatches = ROUTES.flatMap(([file, line, name, mod]) => [
+  { file, from: line, to: `import { lazyRouteComponent } from "@tanstack/react-router";` },
+  { file, from: `  component: ${name},`, to: `  component: lazyRouteComponent(() => import(${JSON.stringify(mod)})),` },
+]);
+
+// The panels the preview panel switches between, each a named export of its own file.
+const PANELS = [
+  ["CodeView", "./CodeView", `<CodeView loading={loading} app={app ?? null} />`, "the code"],
+  ["ConfigurePanel", "./ConfigurePanel", `<ConfigurePanel />`, "the configuration"],
+  ["PublishPanel", "./PublishPanel", `<PublishPanel />`, "publishing"],
+  ["SecurityPanel", "./SecurityPanel", `<SecurityPanel />`, "the security review"],
+  ["TestsPanel", "./TestsPanel", `<TestsPanel />`, "the tests"],
+  ["PlanPanel", "./PlanPanel", `<PlanPanel />`, "the plan"],
+  ["Problems", "./Problems", `<Problems />`, "the problems"],
+];
+const PANEL_FILE = "src/components/preview_panel/PreviewPanel.tsx";
+const panelPatches = [
+  {
+    file: PANEL_FILE,
+    from: `import { useCallback, useEffect, useRef, useState } from "react";`,
+    to: `import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+// A panel is fetched when it is first shown; until then the panel says what it is getting.
+function PanelLoading({ label }: { label: string }) {
+  return (
+    <div role="status" aria-live="polite" className="flex h-full flex-col gap-3 p-4">
+      <span className="text-sm text-muted-foreground">Loading {label}…</span>
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="min-h-40 w-full flex-1" />
+    </div>
+  );
+}
+// The panels a visitor opens next are fetched once the page is idle, so the first switch waits on nothing.
+(window.requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 2000)))(() => {
+  void import("./CodeView");
+  void import("./PublishPanel");
+  void import("./ConfigurePanel");
+});`,
+  },
+  ...PANELS.map(([name, mod]) => ({
+    file: PANEL_FILE,
+    from: `import { ${name} } from "${mod}";`,
+    to: `const ${name} = lazy(() => import("${mod}").then((m) => ({ default: m.${name} })));`,
+  })),
+  ...PANELS.map(([, , el, label]) => ({
+    file: PANEL_FILE,
+    from: el,
+    to: `<Suspense fallback={<PanelLoading label=${JSON.stringify(label)} />}>${el}</Suspense>`,
+  })),
+];
+
+// Shiki's grammars: each becomes a module of its own, loaded by the highlighter when it is first made.
+const LANGS = ["astro", "css", "graphql", "html", "java", "javascript", "json", "jsx", "less", "markdown", "python", "sass", "scss", "shell", "sql", "tsx", "typescript", "vue"];
+const shikiPatches = [
+  {
+    file: "src/components/chat/CodeHighlight.tsx",
+    from: "// common languages\n" + LANGS.map((l) => `import ${l} from "@shikijs/langs/${l}";`).join("\n") + "\n",
+    to: "",
+  },
+  {
+    file: "src/components/chat/CodeHighlight.tsx",
+    from: "      langs: [\n" + LANGS.map((l) => `        ${l},`).join("\n") + "\n      ],",
+    to: "      langs: [\n" + LANGS.map((l) => `        () => import("@shikijs/langs/${l}"),`).join("\n") + "\n      ],",
+  },
+];
+
+// Locales: English is in the first load; another language is fetched when it is chosen, before the switch.
+const OTHER = [["zhCN", "zh-CN"], ["ptBR", "pt-BR"], ["es", "es"], ["ko", "ko"]];
+const NS = ["Common", "Settings", "Chat", "Home", "Errors"];
+const NAMES = { zhCN: "Chinese Simplified", ptBR: "Brazilian Portuguese", es: "Spanish", ko: "Korean" };
+const i18nPatches = [
+  {
+    file: "src/i18n/index.ts",
+    from: OTHER.map(([id, dir]) => `// ${NAMES[id]}\n` + NS.map((n) => `import ${id}${n} from "./locales/${dir}/${n.toLowerCase()}.json";`).join("\n")).join("\n\n") + "\n",
+    to: "",
+  },
+  {
+    file: "src/i18n/index.ts",
+    from: OTHER.map(([id, dir]) => `  ${/-/.test(dir) ? JSON.stringify(dir) : dir}: {\n` + NS.map((n) => `    ${n.toLowerCase()}: ${id}${n},`).join("\n") + "\n  },").join("\n") + "\n};",
+    to: "};",
+  },
+  {
+    file: "src/i18n/index.ts",
+    from: "export default i18n;",
+    to: `const NAMESPACES = ["common", "settings", "chat", "home", "errors"] as const;
+const LOCALES: Record<string, () => Promise<{ default: Record<string, unknown> }[]>> = {
+${OTHER.map(([, dir]) => `  ${JSON.stringify(dir)}: () => Promise.all([${NS.map((n) => `import("./locales/${dir}/${n.toLowerCase()}.json")`).join(", ")}]),`).join("\n")}
+};
+const loaded = new Set(["en"]);
+async function loadLanguage(lng: string) {
+  const load = LOCALES[lng];
+  if (loaded.has(lng) || !load) return;
+  (await load()).forEach((mod, i) => i18n.addResourceBundle(lng, NAMESPACES[i], mod.default, true, true));
+  loaded.add(lng);
+}
+const changeLanguage = i18n.changeLanguage.bind(i18n);
+i18n.changeLanguage = (async (lng?: string, ...rest: unknown[]) => {
+  if (lng) await loadLanguage(lng);
+  return (changeLanguage as (...a: unknown[]) => ReturnType<typeof changeLanguage>)(lng, ...rest);
+}) as typeof i18n.changeLanguage;
+
+export default i18n;`,
+  },
+];
+
+// Monaco: its loader fetched the editor (some 750 KB from a CDN) when this module was imported, which the
+// chat's message tree does on every page. The themes are now defined on the first init an editor asks for.
+const monacoPatches = [
+  {
+    file: "src/components/chat/monaco.ts",
+    from: `if (!IS_VITEST) {
+  loader.init().then((monaco) => {`,
+    to: `if (!IS_VITEST) {
+  const init = loader.init.bind(loader);
+  let themed = false;
+  loader.init = () => {
+    const ready = init();
+    if (!themed) { themed = true; void ready.then((monaco) => {`,
+  },
+  {
+    file: "src/components/chat/monaco.ts",
+    from: `      noSemanticValidation: true,
+    });
+  });
+}`,
+    to: `      noSemanticValidation: true,
+    });
+  }); }
+    return ready;
+  };
+}`,
+  },
+];
+
+// The router preloads a route's chunk on intent, and names what it is loading when a chunk is slow.
+const routerPatches = [
+  {
+    file: "src/router.ts",
+    from: `  defaultErrorComponent: ErrorBoundary,`,
+    to: `  defaultErrorComponent: ErrorBoundary,
+  defaultPreload: "intent",
+  defaultPreloadDelay: 40,
+  defaultPendingMs: 150,
+  defaultPendingMinMs: 200,
+  defaultPendingComponent: () =>
+    React.createElement("div", { role: "status", "aria-live": "polite", className: "p-6 text-sm text-muted-foreground" }, "Loading the page…"),`,
+  },
+];
+
+// The chat page on a phone: chat and preview as the kit's two tabs, each the whole width, both kept mounted
+// so a switch keeps scroll, the stream and the preview's state. Side by side they were 95 px each at 390 px.
+// The panels no longer animate their width (a layout property); a collapse or expand is immediate.
+const CHAT = "src/pages/chat.tsx";
+const chatPatches = [
+  {
+    file: CHAT,
+    from: `const DEFAULT_CHAT_PANEL_SIZE = 50;`,
+    to: `import React, { useSyncExternalStore } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const DEFAULT_CHAT_PANEL_SIZE = 50;
+
+// Narrow is the kit's mobile breakpoint (its use-mobile hook): under 768 px.
+const NARROW = "(max-width: 767px)";
+function useNarrow() {
+  return useSyncExternalStore(
+    (change) => { const q = matchMedia(NARROW); q.addEventListener("change", change); return () => q.removeEventListener("change", change); },
+    () => matchMedia(NARROW).matches,
+    () => false,
+  );
+}
+
+function NarrowChat({ chatId }: { chatId: React.ComponentProps<typeof ChatPanel>["chatId"] }) {
+  const [pane, setPane] = useState("chat");
+  return (
+    <Tabs value={pane} onValueChange={setPane} className="h-full w-full min-w-0 gap-0">
+      <TabsList className="mx-3 mt-2 grid h-11 w-auto shrink-0 grid-cols-2">
+        <TabsTrigger value="chat">Chat</TabsTrigger>
+        <TabsTrigger value="preview">Preview</TabsTrigger>
+      </TabsList>
+      <TabsContent value="chat" forceMount className="min-h-0 flex-1 data-[state=inactive]:hidden">
+        <ChatPanel chatId={chatId} isPreviewOpen={pane === "preview"} onTogglePreview={() => setPane(pane === "chat" ? "preview" : "chat")} />
+      </TabsContent>
+      <TabsContent value="preview" forceMount className="min-h-0 flex-1 data-[state=inactive]:hidden">
+        <PreviewPanel />
+      </TabsContent>
+    </Tabs>
+  );
+}`,
+  },
+  {
+    file: CHAT,
+    from: `  return (
+    <PanelGroup autoSaveId="persistence" direction="horizontal">`,
+    to: `  const narrow = useNarrow();
+  if (narrow) return <NarrowChat chatId={chatId} />;
+  return (
+    <PanelGroup autoSaveId="persistence" direction="horizontal">`,
+  },
+  // Two identical passages, the chat panel's and the preview panel's: each patch takes the first left.
+  { file: CHAT, from: `className={cn(!isResizing && "transition-all duration-100 ease-in-out")}`, to: `className={cn("min-w-0", isResizing && "select-none")}` },
+  { file: CHAT, from: `className={cn(!isResizing && "transition-all duration-100 ease-in-out")}`, to: `className={cn("min-w-0", isResizing && "select-none")}` },
+];
+
+// The first prompt waited 2,000 ms on Home after the stream had started before it opened the chat ("settle"),
+// time Dyad's desktop backend takes to accept a stream. This host accepts the submit as it is made, and the
+// state machine still waits for its own acceptance and the preview decision; Dyad's own test mode runs it at 0.
+const settlePatches = [
+  { file: "src/app/layout.tsx", from: `settleDelayMs={settings?.isTestMode ? 0 : 2_000}`, to: `settleDelayMs={0}` },
+];
+
+export const LEAN = [...settlePatches,...routePatches, ...panelPatches, ...shikiPatches, ...i18nPatches, ...monacoPatches, ...routerPatches, ...chatPatches];
