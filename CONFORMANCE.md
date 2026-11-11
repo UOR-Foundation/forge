@@ -166,6 +166,12 @@ model does not sanction.
 | `FK-10` | `build` | The app always answers proved when event is reword and phase is proved |
 | `FK-11` | `build` | The app always answers published when event is reword and phase is published |
 
+## github-publication-permission
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-45` | `build` | Public GitHub writes require explicit repository and source-bound approval rechecked before each mutation |
+
 ## host-input-boundary
 
 | ID | Level | Statement |
@@ -208,6 +214,12 @@ model does not sanction.
 | ID | Level | Statement |
 | --- | --- | --- |
 | `FA-31` | `build` | The editor loads only from integrity-checked locked package bytes inside the active shell closure |
+
+## portable-build-permission
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-44` | `build` | Portable builds require revocable source-bound consent before package retrieval or generated-code execution |
 
 ## preview-permissions
 

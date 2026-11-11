@@ -91,6 +91,8 @@ jobs:
           node tools/durable_event_delivery_browser.mjs
           node tools/stateful_application_journeys_browser.mjs
           node tools/command_ownership_registry_browser.mjs
+          node tools/portable_build_permission_browser.mjs
+          node tools/github_publication_permission_browser.mjs
           node tools/rules_source_browser.mjs
           node tools/inference_effects_browser.mjs
           node tools/inference_consent_browser.mjs

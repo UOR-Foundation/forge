@@ -357,3 +357,15 @@ id = "FA-43"
 level = "build"
 suite = "command-ownership-registry"
 statement = "Every imported and browser command is classified by canonical ownership and dispatch refuses missing or changed bindings"
+
+[[id]]
+id = "FA-44"
+level = "build"
+suite = "portable-build-permission"
+statement = "Portable builds require revocable source-bound consent before package retrieval or generated-code execution"
+
+[[id]]
+id = "FA-45"
+level = "build"
+suite = "github-publication-permission"
+statement = "Public GitHub writes require explicit repository and source-bound approval rechecked before each mutation"

@@ -22,8 +22,8 @@ export function describePreview(input) {
 }
 export function previewPermissionRecord(permission, at = Date.now()) {
   if (!Number.isFinite(at) || !Number.isFinite(permission?.expires) || permission.expires <= at || permission.expires > at + 300000) throw previewPermissionFailure("previewPermissionExpired");
-  const d = describePreview(permission.disclosure);
-  return { serve: true, network: { endpoints: [...d.endpoints], denied: [] }, previewConsent: { profile: "foundry/preview-consent/1", id: d.id, source: d.source, grantedAt: at } };
+  const d = describePreview(permission.disclosure), expires = permission.expires;
+  return { serve: true, network: { endpoints: [...d.endpoints], denied: [] }, previewConsent: { profile: "foundry/preview-consent/1", id: d.id, source: d.source, grantedAt: at, ...(permission.purpose === "portable-build" ? { purpose: "portable-build", expires } : {}) } };
 }
 export async function commitPreviewPermission(db, id, permission, expected) {
   const record = previewPermissionRecord(permission), expires = permission.expires;

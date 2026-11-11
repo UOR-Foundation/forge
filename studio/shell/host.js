@@ -1,3 +1,5 @@
+import {authorizeGitHubPublication, bindPublicationSource} from "./github-publication-permission.mjs";
+import {withPortableBuildPermission, portablePermissionFailure} from "./portable-build-permission.mjs";
 import {commandRegistry, invokeBoundCommand} from "./command-registry.mjs";
 import {interactionPreset, interactionModule, validateInteractionDocument, interactionFailure} from "./interaction-application.mjs";
 import {runStoredInteraction} from "./interaction-state.mjs";
@@ -1120,7 +1122,11 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   };
   const stopped = new Promise((res) => abort.signal.addEventListener("abort", () => res("stopped")));
   const t0 = Date.now();
-  const build = buildOnGitHub({ token, spec, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: prism.templateCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
+  const authorize = async request => {
+    const permission=await authorizeGitHubPublication(request,{signal:abort.signal});
+    return bindPublicationSource(permission,rules,()=>rulesOf(appId));
+  };
+  const build = buildOnGitHub({ token, spec, source:rules.specKappa, authorize, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: prism.templateCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
     .catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
   const result = await Promise.race([build, stopped]);
   observing = false;
@@ -1367,6 +1373,7 @@ function dispatch(channel, args) {
 async function buildPortable(appId, captured) {
   await coreReady;
   const source = captured || await verifiedBuildSource(appId);
+  return withPortableBuildPermission({id:"portable-"+crypto.randomUUID(),source:source.reference}, async lease => {
   const t0 = performance.now();
   const files = new Map(source.files);
   const pkg = await (await fetch(new URL("scaffold/package.json", BASE))).json();
@@ -1432,10 +1439,16 @@ async function buildPortable(appId, captured) {
   // rendered it yet; the compile is then judged by the rendered page: no class in use without a rule.
   const candidates = [...new Set((js + " " + css).match(/[A-Za-z][A-Za-z0-9_\-:\/\.\[\]#%!]*/g) || [])].filter((t) => t.length < 120).join(" ");
   const compilePage = head + ` tailwind = { config: ${tailwindConfig} };<\/script>\n<script src="https://cdn.tailwindcss.com"><\/script>\n<div hidden id="tw-candidates" class="${candidates.replace(/"/g, "")}"></div>\n` + body;
-  const tailwindCss = await compileTailwind(compilePage);
+  const tailwindCss = await compileTailwind(compilePage, lease);
   const html = head + `<\/script>\n<style>${tailwindCss}</style>\n` + body;
   await assertBuildSourceCurrent(await dbReady, appId, source);
   return { html, sourceReference: source.reference, modules: remote.count, jsBytes: js.length, cssBytes: css.length, tailwindBytes: tailwindCss.length, ms: Math.round(performance.now() - t0) };
+  }, {signal:lease.signal,fetch:async(url,init)=>{await lease.check();return fetch(url,init);}});
+  }, {
+    assertSource:async()=>assertBuildSourceCurrent(await dbReady, appId, source),
+    grant:async(id,permission)=>grantPreview(id,permission.disclosure.endpoints,permission,undefined),
+    readGrant:id=>get("refs","capabilities:"+id),
+    revoke:id=>del("refs","capabilities:"+id),
   });
 }
 // Runs inside the compile frame. The frame is a preview address, so the worker serves it in a CSP
@@ -1449,16 +1462,17 @@ function tailwindReporter() {
     const root = document.getElementById("root");
     const all = sheets.join("\n");
     const used = new Set([...document.querySelectorAll("[class]")].filter((e) => e.id !== "tw-candidates").flatMap((e) => String(e.className.baseVal ?? e.className).split(/\s+/).filter(Boolean)));
-    parent.postMessage({ tailwindReport: true, sheet: sheets.find((t) => t.includes("--tw-")) || "", rendered: !!(root && root.childElementCount), missing: [...used].filter((c) => !all.includes("." + escapeClass(c))) }, "*");
+    parent.postMessage({ tailwindReport: true, sheet: sheets.find((t) => t.includes("--tw-")) || "", rendered: !!(root && (root.childElementCount || root.textContent.trim())), missing: [...used].filter((c) => !all.includes("." + escapeClass(c))) }, "*");
   }, 250);
 }
 
-async function compileTailwind(page) {
-  const id = "tw-" + Date.now().toString(36);
+async function compileTailwind(page, lease) {
+  await lease.check();
+  const id = lease.id;
   const path = new URL("p/" + id + "/index.html", BASE).pathname;
   const at = page.lastIndexOf("</body>");
   const reporting = page.slice(0, at) + `<script>(${tailwindReporter})();<\/script>` + page.slice(at);
-  await grantPreview(id, ["https://cdn.tailwindcss.com"]);
+  await lease.check();
   const cache = await caches.open("previews");
   await cache.put(path, new Response(reporting, { headers: { "content-type": "text/html; charset=utf-8" } }));
   const frame = document.createElement("iframe");
@@ -1467,27 +1481,31 @@ async function compileTailwind(page) {
   const listen = (e) => { if (e.source === frame.contentWindow && e.data && e.data.tailwindReport) report = e.data; };
   window.addEventListener("message", listen);
   frame.src = path;
-  document.body.append(frame);
+  const removeFrame = () => frame.remove();
+  lease.signal.addEventListener("abort", removeFrame, {once:true});
   try {
+    await lease.check();
+    document.body.append(frame);
     const t0 = performance.now();
     let last = "", stable = 0;
     while (performance.now() - t0 < 30000) {
       await new Promise((r) => setTimeout(r, 250));
+      await lease.check();
       if (!report || !report.sheet || !report.rendered) continue;
       // Converged when the rendered page uses no class the compiled sheet (or the project's own CSS) lacks.
       // The sheet is inlined into a <style> element of the published page, so it may not close that element.
       const sheet = String(report.sheet).replace(/<\/style/gi, "<\\/style");
       const missing = Array.isArray(report.missing) ? report.missing.map(String) : [];
       const key = sheet.length + ":" + missing.join(",");
-      if (key === last) { stable += 1; if (stable >= 3 && missing.length === 0) return sheet; if (stable >= 12) return sheet; } else { last = key; stable = 0; }
+      if (key === last) { stable += 1; if (stable >= 3 && missing.length === 0) return sheet; if (stable >= 12) throw portablePermissionFailure("portableBuildStyleIncomplete"); } else { last = key; stable = 0; }
     }
     if (last) throw new Error("tailwind did not converge on the page");
     throw new Error("tailwind did not compile the page");
   } finally {
     window.removeEventListener("message", listen);
+    lease.signal.removeEventListener("abort", removeFrame);
     frame.remove();
     await cache.delete(path);
-    await del("refs", "capabilities:" + id);
   }
 }
 window.__portable = buildPortable;
@@ -1570,6 +1588,13 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("sw.j
 // serve without one: each gets the grant install now writes, served with no network.
 (async () => {
   await coreReady;
+  for (const key of await keys("refs")) {
+    if(typeof key!=="string"||!key.startsWith("capabilities:portable-"))continue;
+    const record=await get("refs",key);
+    if(record?.previewConsent?.purpose==="portable-build"&&(!Number.isFinite(record.previewConsent.expires)||Date.now()>=record.previewConsent.expires)){
+      const id=key.slice(13);await del("refs",key);await (await caches.open("previews")).delete(new URL("p/"+id+"/index.html",BASE).pathname);
+    }
+  }
   for (const ref of await installed()) {
     const id = core.run({ op: "holo-path", kappa: ref.kappa }).path.split("/").filter(Boolean).pop();
     if (!(await get("refs", "capabilities:" + id))) await put("refs", "capabilities:" + id, { serve: true, network: { endpoints: [], denied: [] } });
