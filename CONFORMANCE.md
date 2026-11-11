@@ -114,6 +114,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-24` | `build` | Current live editing and reword flows retain source-bound commits and the complete compiled kernel protocols |
 
+## durable-event-delivery
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-40` | `build` | Guest-admitted events commit to a source-bound durable queue and remain pending until ordered acknowledgement |
+
 ## event-admission
 
 | ID | Level | Statement |
