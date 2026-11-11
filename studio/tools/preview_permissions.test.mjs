@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import fs from "node:fs";
+import vm from "node:vm";
 import {invokeHost} from "../shell/host-boundary.mjs";
 import {describePreview,previewPermissionRecord,authorizePreview,mountPreviewPermissions} from "../shell/preview-permissions.mjs";
 const request={id:"preview-id",source:"blake3:"+"a".repeat(64),endpoints:["https://esm.sh","https://cdn.tailwindcss.com"]};
@@ -31,5 +32,15 @@ test("actual host binds approval before compilation and grant after source compa
  assert.ok(body.indexOf("await authorizePreview(")>0);assert.ok(body.indexOf("await authorizePreview(")<body.indexOf("await esbuild()"));assert.ok(body.indexOf("await grantPreview(")>body.indexOf("await assertBuildSourceCurrent("));assert.match(body,/permission\.disclosure\.endpoints/);
  for(const code of ["invalidPreviewPermission","previewPermissionDenied","previewPermissionExpired","previewPermissionOffline","previewPermissionUnavailable","previewPermissionStorageFailed","previewPermissionChanged"]){const reply=await invokeHost("preview",[],()=>{throw Object.assign(Error("private content"),{code});},null);assert.equal(reply.error.code,code);assert.ok(!JSON.stringify(reply).includes("private content"));}
  assert.match(host,/mountPreviewPermissions\(/);assert.match(host,/previewPermissionStorageFailed/);
+ const worker=fs.readFileSync(new URL("../shell/sw.template.js",import.meta.url),"utf8"),begin=worker.indexOf("function previewGrantValid("),end=worker.indexOf("function policyOf(",begin);
+ assert.ok(begin>=0&&end>begin,"missing worker consent boundary");
+ const valid=vm.runInNewContext(worker.slice(begin,end)+";previewGrantValid");
+ const record=previewPermissionRecord({disclosure:describePreview(request),expires:Date.now()+1000});
+ assert.equal(valid(record,request.id),true);assert.equal(valid({...record,previewConsent:undefined},request.id),false);assert.equal(valid(record,"wrong-id"),false);assert.equal(valid({serve:true,network:{endpoints:[]}},request.id),true);
+ const policyStart=worker.indexOf("async function policyFor("),policyEnd=worker.indexOf("function untrusted(",policyStart);
+ const policy=(record)=>vm.runInNewContext(worker.slice(policyStart,policyEnd)+";policyFor",{ENDPOINT_FORM:vm.runInNewContext(worker.match(/const ENDPOINT_FORM = (.+);/)[1]),grants:async()=>record,gate:async(_origin,_effect,exists,granted,denied)=>exists&&granted&&!denied,audit:async()=>{},policyOf:endpoints=>JSON.stringify(endpoints),previewGrantValid:valid});
+ assert.equal(await policy({...record,previewConsent:undefined})("p",request.id),null);
+ assert.equal(await policy(record)("p",request.id),JSON.stringify(request.endpoints));
+ assert.match(worker,/previewGrantValid\(record, who.id\)/);assert.match(worker,/previewGrantValid\(record, id\)/);
  const model=fs.readFileSync(new URL("../../app/src/FoundrySpecification.lex.tex",import.meta.url),"utf8");assert.match(model,/name: previewPermissionBoundary/);
 });

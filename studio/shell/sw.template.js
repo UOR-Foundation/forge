@@ -124,6 +124,12 @@ async function principalOf(e) {
 // endpoints it allows enter the policy. No record means no grant: the kernel refuses to serve.
 const SANDBOX = "sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads allow-pointer-lock allow-presentation allow-orientation-lock";
 const ENDPOINT_FORM = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:[0-9]{1,5})?$/;
+function previewGrantValid(record, id) {
+  const endpoints = record?.network?.endpoints;
+  if (!Array.isArray(endpoints)) return false;
+  if (endpoints.length === 0) return true;
+  return record?.previewConsent?.profile === "foundry/preview-consent/1" && record.previewConsent.id === id && /^blake3:[0-9a-f]{64}$/.test(record.previewConsent.source);
+}
 function policyOf(endpoints) {
   const named = (head) => (endpoints.length ? head + " " + endpoints.join(" ") : head);
   return [SANDBOX, "default-src 'none'", named("script-src 'unsafe-inline' 'wasm-unsafe-eval' blob: data:"), named("style-src 'unsafe-inline' blob: data:"),
@@ -140,7 +146,7 @@ async function policyFor(kind, id) {
   const record = await grants(id);
   const network = (record && record.network) || {};
   const denied = new Set(Array.isArray(network.denied) ? network.denied : []);
-  const served = await gate(origin, "serve", !!record, !!(record && record.serve === true), false);
+  const served = await gate(origin, "serve", !!record, !!(record && record.serve === true && (kind !== "p" || previewGrantValid(record, id))), false);
   await audit({ principal: kind + ":" + id, operation: "kernel.gate.serve", resource: id, outcome: served ? "granted" : "refused" });
   if (!served) return null;
   const allowed = [];
@@ -243,7 +249,7 @@ self.addEventListener("fetch", (event) => {
     // A frame this worker still controls under p/ or holo/: the kernel's gate decides each request.
     const record = await grants(who.id);
     const network = (record && record.network) || {};
-    const granted = Array.isArray(network.endpoints) && network.endpoints.includes(url.origin);
+    const granted = Array.isArray(network.endpoints) && network.endpoints.includes(url.origin) && (who.kind !== "p" || previewGrantValid(record, who.id));
     const denied = Array.isArray(network.denied) && network.denied.includes(url.origin);
     let allowed = false;
     try { allowed = await gate(who.kind === "p" ? "preview" : "published", "fetch", !!record, granted, denied); } catch (error) { allowed = false; }

@@ -22,9 +22,9 @@ existing path. This does not grant portable-build or publication effects.
 The registered ID, scenario and missing-oracle Rust failure preceded
 implementation. Initial Node execution failed on the missing module. All 236
 combined Node controls, local Rust workspace tests, Clippy, formatting and shell
-parsing pass. Six restored mutations are rejected: duplicate destinations,
+parsing pass. Seven restored mutations are rejected: duplicate destinations,
 expired approval, offline admission, mutable disclosure, skipped revocation and
-missing grant comparison. The last mutation fails actual browser acceptance.
+missing grant comparison and legacy consent bypass. The grant-comparison mutation fails actual browser acceptance.
 
 Real Chromium runs the actual host and browser compiler. Denial stores no grant;
 approval stores exactly the two disclosed origins. After reload, revocation
@@ -35,5 +35,9 @@ import/restore build regression also retains its twelve refusals. Local shell
 provenance is diagnostic; full exact-head immutable SDK/Studio acceptance is
 required before readiness.
 
-The boundary does not authenticate arbitrary same-origin scripts, retrofit
-legacy external grants, or establish all-effect privacy and release acceptance.
+The worker refuses legacy networked preview grants without source-bound consent
+metadata on both serving and subsequent requests. A negative test first failed
+on the missing worker boundary; valid, missing-metadata, wrong-ID and network-free
+controls cover it. The extracted worker policy harness initially lacked its endpoint-regex binding; adding the actual worker constant restored the baseline before the legacy mutation was rerun. Existing previews require fresh approval to regain network
+access. The boundary does not authenticate arbitrary same-origin scripts or
+establish all-effect privacy and release acceptance.
