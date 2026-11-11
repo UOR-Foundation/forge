@@ -1,0 +1,51 @@
+/* The brand kit's variables (shell/brand.css, inlined before this sheet in the frame) on Tailwind's theme
+   slots, as the kit's own showcase maps them (brand/showcase/src/styles.css). No colour is named here. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--brand-foreground);
+  --color-success: var(--success, var(--foreground));
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.35;
+  --animate-flash: flash 0.7s ease-out;
+  @keyframes flash {
+    from { box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 35%, transparent); }
+    to { box-shadow: 0 0 0 3px transparent; }
+  }
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+  ::selection { background: var(--brand); color: var(--brand-foreground); }
+}
+
+.dark [class*="shadow"] { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

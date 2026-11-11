@@ -16,6 +16,12 @@ if not dist.is_dir():
 if assets.exists():
     shutil.rmtree(assets)
 shutil.copytree(dist, assets)
+# The app covers' capture library (shell/covers.mjs): the renderer's own locked html-to-image, the build Dyad
+# injects into previews too, placed beside the renderer so the host can add it to each preview it builds.
+library = root / "vendor" / "dyad" / "node_modules" / "html-to-image" / "dist" / "html-to-image.js"
+if not library.is_file():
+    raise SystemExit(f"{library} is missing: run npm ci in vendor/dyad first")
+shutil.copy(library, assets / "html-to-image.js")
 for stale in ("app",):
     if (root / "shell" / stale).exists():
         shutil.rmtree(root / "shell" / stale)
@@ -31,12 +37,12 @@ shutil.copytree(src / "src", dst / "src")
 for name in ("package.json", "tailwind.config.ts", "index.html", "AI_RULES.md"):
     if (src / name).exists():
         shutil.copy(src / name, dst / name)
-# The product is Hologram: the staged scaffold's words say so (the badge, the link); the vendored tree is untouched.
+# The product is Prism AI Foundry: the staged scaffold's words say so (the badge, the link); the vendored tree is untouched.
 WORD = re.compile(r"\bDyad\b")
 for p in dst.rglob("*"):
     if p.is_file() and p.suffix in (".tsx", ".ts", ".md", ".html", ".json"):
         text = p.read_text(encoding="utf-8")
-        new = WORD.sub("Hologram", text).replace("https://www.dyad.sh/", "https://gethologram.ai/")
+        new = WORD.sub("Prism", text).replace("https://www.dyad.sh/", "https://uor-foundation.github.io/foundry/")
         if new != text:
             p.write_text(new, encoding="utf-8", newline="\n")
 # Every app built here wears the Hologram brand kit (the host adds shell/scaffold-brand.css to its page), so

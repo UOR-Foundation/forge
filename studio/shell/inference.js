@@ -1,3 +1,4 @@
+import { cloudCompletion } from "./inference-effects.mjs";
 // Inference on the page, shared by the landing page (shell.js) and the builder's host (host.js).
 // Adapters only: the rules are in core.wasm, generated from the Lean verified model (the route table,
 // the preimages, the OpenAI wire, the OpenRouter request); the engine is Hologram Q's snapshot under
@@ -306,54 +307,36 @@ let gpuBusy = Promise.resolve();
 export function withEngine(fn) { const run = gpuBusy.then(fn, fn); gpuBusy = run.catch(() => {}); return run; }
 
 // ---- the paid route: OpenRouter with the visitor's key. The request bytes are the model's encoder.
-const OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
-const FEATHERLESS = "https://api.featherless.ai/v1/chat/completions";
 // A reasoning model (GLM 5.3 Flash) streams its reasoning in `delta.reasoning` for minutes before the
 // answer starts; onReasoning receives it so the chat can show the work instead of an empty message.
+const GLM_LOCK = "forge-featherless-glm";
 export async function paidGenerate(body, onDelta, signal, onReasoning) {
+  // One GLM request per browser: this browser's tabs and turns queue for it in order (Web Locks), rather
+  // than racing each other for the shared plan's one slot.
+  if (providerOf(body.model) !== "featherless" || !(navigator.locks && navigator.locks.request)) return paidGenerateOnce(body, onDelta, signal, onReasoning);
+  const run = () => paidGenerateOnce(body, onDelta, signal, onReasoning);
+  const first = await navigator.locks.request(GLM_LOCK, { ifAvailable: true }, async (lock) => (lock ? { done: await run() } : null));
+  if (first) return first.done;
+  if (onReasoning) onReasoning("Waiting for this browser's other GLM 5.3 Flash request to finish…");
+  return navigator.locks.request(GLM_LOCK, signal ? { signal } : {}, run);
+}
+async function paidGenerateOnce(body, onDelta, signal, onReasoning) {
   const provider = providerOf(body.model);
   const c = await coreReady(); const key = await keyFor(body.model); const V = await viewReady();
   let bytes = c.run({ op: "encode-openrouter-request", model: paidId(body.model), request: body, stream: true }).bytes;
   // Featherless speaks plain OpenAI chat completions: the core's request without the three fields only
   // OpenRouter reads (usage.include, reasoning, provider), and the standard usage option in their place.
   if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; bytes = JSON.stringify(j); }
-  const headers = provider === "featherless" ? { Authorization: "Bearer " + key, "content-type": "application/json" } : { Authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": location.origin, "X-Title": "hologram-forge" };
-  // A shared Featherless plan runs one GLM request at a time; another visitor's request answers 429
-  // "concurrency limit". That is a queue, not a failure: wait for the slot (about five minutes at most),
-  // saying so where the reasoning shows.
-  let r;
-  for (let attempt = 0; ; attempt++) {
-    r = await fetch(provider === "featherless" ? FEATHERLESS : OPENROUTER, { method: "POST", signal, headers, body: bytes });
-    if (!(provider === "featherless" && r.status === 429) || attempt >= 60) break;
-    const said = await r.text().catch(() => "");
-    if (!/concurren/i.test(said)) { r = new Response(said, { status: 429 }); break; }
-    if (onReasoning) onReasoning(`Waiting for a free slot on the shared Featherless plan (another request is running), ${attempt * 5} s…`);
-    await new Promise((res, rej) => { const t = setTimeout(res, 5000); if (signal) signal.addEventListener("abort", () => { clearTimeout(t); rej(new DOMException("aborted", "AbortError")); }, { once: true }); });
+  let result;
+  try { result = await cloudCompletion({ provider, key, bytes, origin: location.origin, signal, onDelta, onReasoning }); }
+  catch (error) {
+    if (error.code === "inferenceUnauthorized") error.message = V.noKeyLabel;
+    if (error.code === "inferencePaymentRequired") error.message = V.noCreditLabel;
+    throw error;
   }
-  if (!r.ok) {
-    let msg = ""; try { msg = (await r.json()).error.message; } catch (e) {}
-    const word = r.status === 401 ? V.noKeyLabel : r.status === 402 ? V.noCreditLabel : V.providerBusyLabel;
-    throw Object.assign(new Error(word), { status: r.status, detail: msg });
-  }
-  const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "", text = "", thought = "", finish = null, last = null, first = null;
-  const t0 = performance.now();
-  for (;;) {
-    const { value, done } = await reader.read(); if (done) break; buf += dec.decode(value, { stream: true });
-    let i; while ((i = buf.indexOf("\n")) >= 0) {
-      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
-      let j; try { j = JSON.parse(line.slice(6)); } catch (e) { continue; }
-      if (j.error) throw new Error(V.providerBusyLabel);
-      last = j; const ch = (j.choices && j.choices[0]) || {}; const delta = ch.delta || {}; const d = delta.content;
-      if (ch.finish_reason) finish = ch.finish_reason;
-      const rs = delta.reasoning || delta.reasoning_content;
-      if (rs && !text) { thought += rs; if (onReasoning) onReasoning(thought); }
-      if (d) { if (first === null) first = performance.now() - t0; text += d; if (onDelta) onDelta(text); }
-    }
-  }
-  if (!text.trim()) throw new Error(V.providerBusyLabel);
+  const { last, text, finish, ttftMs } = result;
   const usage = (last && last.usage) || {};
-  const rec = { kind: provider, id: last && last.id, model: (last && last.model) || paidId(body.model), provider: last && last.provider, fingerprint: (last && last.system_fingerprint) || "", usage: { prompt: usage.prompt_tokens || 0, completion: usage.completion_tokens || 0 }, cost: String(usage.cost ?? ""), text: text.trim(), rederivable: false, ttftMs: Math.round(first || 0), finish };
+  const rec = { kind: provider, id: last && last.id, model: (last && last.model) || paidId(body.model), provider: last && last.provider, fingerprint: (last && last.system_fingerprint) || "", usage: { prompt: usage.prompt_tokens || 0, completion: usage.completion_tokens || 0 }, cost: String(usage.cost ?? ""), text: text.trim(), rederivable: false, ttftMs, finish };
   return { text: rec.text, rec };
 }
 

@@ -147,12 +147,14 @@
   --docs-bg: #282624;
 }
 
-/* Immersive: the photo, unfaded, behind a transparent main surface; glass on the panels that carry text. */
-:root[data-holo-immersive="on"] body { background: transparent; }
-:root[data-holo-immersive="on"] body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--holo-wallpaper, none) center / cover no-repeat, var(--background); }
+/* Immersive: the photo, unfaded, inside the workspace window (the inset panel, clipped to its corners), behind a
+   transparent main surface; glass on the panels that carry text. The sidebar and the margin round the workspace
+   are the page's solid ground, as in every other look. */
+:root[data-holo-immersive="on"] body { background: var(--sidebar); }
+:root[data-holo-immersive="on"] [data-slot="sidebar-inset"] { background: var(--holo-wallpaper, none) center / cover no-repeat, var(--background-darker); }
 :root[data-holo-immersive="on"], :root[data-holo-immersive="on"].dark {
   --background: rgb(21 19 18 / 0);
-  --sidebar: rgb(30 28 27 / 0.62);
+  --sidebar: rgb(30 28 27 / 1);
   --card: rgb(30 28 27 / 0.74);
   --popover: rgb(30 28 27 / 0.94);
   --muted: rgb(40 38 36 / 0.7);
@@ -162,7 +164,7 @@
   --border: #ffffff1a;
   --sidebar-border: #ffffff1a;
 }
-:root[data-holo-immersive="on"] [data-slot="sidebar-inner"], :root[data-holo-immersive="on"] [data-slot="sidebar"] > div, :root[data-holo-immersive="on"] .popover { -webkit-backdrop-filter: blur(24px) saturate(1.2); backdrop-filter: blur(24px) saturate(1.2); }
+:root[data-holo-immersive="on"] .popover { -webkit-backdrop-filter: blur(24px) saturate(1.2); backdrop-filter: blur(24px) saturate(1.2); }
 
 /* Type: the display face for titles, the interface face for everything else, the mono face for addresses; nothing under 14px. */
 body { font-family: var(--font-sans); }

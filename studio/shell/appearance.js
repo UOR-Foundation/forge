@@ -34,14 +34,34 @@ const isBuiltIn = (photo) => BUILT_IN.some((p) => p.id === photo.id);
 const fullOf = (photo) => (isBuiltIn(photo) ? `${FRAME_HOST}backdrops/${photo.id}.jpg` : `${PROXY}image?${new URLSearchParams({ src: photo.image, w: "2400" })}`);
 const thumbOf = (photo) => (isBuiltIn(photo) ? `${FRAME_HOST}backdrops/${photo.id}-thumb.jpg` : `${PROXY}image?${new URLSearchParams({ src: photo.image, w: "240", h: "150" })}`);
 
-function readTheme() { try { return JSON.parse(localStorage.getItem(KEY) || "null") || {}; } catch (e) { return {}; } }
+// The build screen (the renderer's chat route: chat beside the live preview) keeps its own look, Dark until
+// one is chosen there, kept under BUILD_KEY; every other screen keeps the home look under KEY. The photo,
+// wallpaper and recent picks are one set, shared by both. The pre paint script in index.html reads the same.
+const BUILD_KEY = "holo.theme.build.v1";
+const onBuild = () => /\/chat\/?$/.test(location.pathname);
+function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch (e) { return null; } }
+function readTheme() {
+  const home = readJson(KEY) || {};
+  if (!onBuild()) return home;
+  const b = readJson(BUILD_KEY) || { palette: "dark", immersive: false };
+  return { ...home, palette: b.palette === "light" ? "light" : "dark", immersive: !!b.immersive };
+}
+// A choice: kept for the screen it was made on, then shown.
 function applyTheme(s) {
+  try {
+    if (onBuild()) {
+      localStorage.setItem(KEY, JSON.stringify({ ...(readJson(KEY) || {}), look: 3, wallpaper: s.wallpaper, photo: s.photo, recent: s.recent }));
+      localStorage.setItem(BUILD_KEY, JSON.stringify({ palette: s.palette === "light" ? "light" : "dark", immersive: !!s.immersive }));
+    } else localStorage.setItem(KEY, JSON.stringify({ look: 3, ...s }));
+  } catch (e) {}
+  showTheme(s);
+}
+function showTheme(s) {
   const palette = s.palette === "light" ? "light" : "dark";
   root.setAttribute("data-holo-palette", palette);
   root.setAttribute("data-holo-immersive", s.immersive ? "on" : "off");
   root.style.setProperty("color-scheme", palette);
   if (s.wallpaper) root.style.setProperty("--holo-wallpaper", `url(${JSON.stringify(s.wallpaper)})`);
-  try { localStorage.setItem(KEY, JSON.stringify({ look: 3, ...s })); } catch (e) {}
   // the renderer's theme follows the palette: its provider reads the class it set and its stored choice.
   if (!root.classList.contains(palette)) { root.classList.remove("light", "dark"); root.classList.add(palette); }
   try { localStorage.setItem("theme", palette); } catch (e) {}
@@ -147,7 +167,21 @@ $("appearance").onclick = (e) => {
 document.addEventListener("click", (e) => { if (!$("popover").contains(e.target)) close(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("popover").hidden) close(); });
 for (const b of document.querySelectorAll("#popover .mode")) b.onclick = () => setMode(b.dataset.mode);
-applyTheme({ ...readTheme() });
+showTheme(readTheme());
+
+// The renderer moves between screens without loading a page (pushState, replaceState, back and forward), so
+// the look follows the route: entering or leaving the build screen shows that screen's look.
+let wasBuild = onBuild();
+function routed() {
+  if (onBuild() === wasBuild) return;
+  wasBuild = onBuild();
+  showTheme(readTheme());
+}
+for (const name of ["pushState", "replaceState"]) {
+  const move = history[name];
+  history[name] = function (...args) { const r = move.apply(this, args); routed(); return r; };
+}
+addEventListener("popstate", routed);
 
 // When the renderer's own settings switch its theme class, the palette follows (and Immersive, which is a
 // dark look, steps aside for Light).
@@ -157,3 +191,34 @@ new MutationObserver(() => {
   if (!rtheme || rtheme === (s.palette === "light" ? "light" : "dark")) return;
   applyTheme({ ...s, palette: rtheme, immersive: rtheme === "light" ? false : s.immersive });
 }).observe(root, { attributes: true, attributeFilter: ["class"] });
+
+// Full screen: a second round button, to the right of the sun. It is drawn only where the browser lets a page
+// fill the screen (desktop browsers and Android; Safari on iPhone does not), and its icon and label follow the
+// state, however full screen was entered or left (the button, Escape, or the browser's own control).
+const FULL_ON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>';
+const FULL_OFF = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"></path></svg>';
+const fullElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+if (document.fullscreenEnabled || document.webkitFullscreenEnabled) {
+  const full = document.createElement("button");
+  full.type = "button"; full.id = "fullscreen"; full.className = "appearance fullscreen";
+  const show = () => {
+    const on = !!fullElement();
+    full.innerHTML = on ? FULL_OFF : FULL_ON;
+    full.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+    full.title = on ? "Exit full screen" : "Full screen";
+    full.setAttribute("aria-pressed", String(on));
+  };
+  full.onclick = async (e) => {
+    e.stopPropagation();
+    try {
+      if (fullElement()) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else await (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: "hide" });
+    } catch { /* refused by the browser (for example inside a frame); the button keeps its state */ }
+    show();
+  };
+  document.addEventListener("fullscreenchange", show);
+  document.addEventListener("webkitfullscreenchange", show);
+  show();
+  $("appearance").after(full);
+  root.classList.add("has-fullscreen");
+}

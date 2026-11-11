@@ -36,33 +36,72 @@ async function readManifest() {
   return r.json();
 }
 
+// What a first paint needs is fetched at install; the closure's large parts (the Q engine, the chat app,
+// the photos, the Prism code, the live frame: some 14 MB of 15.5) are filled after the page has loaded and
+// asks for them (the "fill" message), or when first requested. Installing all of it first kept the worker
+// from activating for the length of that download and took the link from the page while it loaded.
+const LATER = /^(q|ui|wallpapers|prism-code|live)\//;
+const shellCache = () => caches.open("shell-" + CLOSURE);
+let manifestOnce = null;
+const closureManifest = () => (manifestOnce ??= (async () => (await caches.match(BASE + "manifest.json")) || fetch("manifest.json", { cache: "no-store" }))().then((r) => r.clone().json()).catch((e) => { manifestOnce = null; throw e; }));
+const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+// A file fetched after install joins the closure only if its bytes are the ones the manifest lists: a
+// newer deployment's file is served to the page that asked but never kept under this closure's name.
+async function fillOne(path) {
+  const m = await closureManifest();
+  const row = m.files.find((f) => f.path === path);
+  if (!row) return null;
+  const cache = await shellCache();
+  const hit = await cache.match(BASE + path);
+  if (hit) return hit;
+  const r = await fetch(new Request(BASE + path, { cache: "reload", priority: "low" }));
+  if (!r.ok) return r;
+  const bytes = await r.clone().arrayBuffer();
+  if (hex(await crypto.subtle.digest("SHA-256", bytes)) === row.sha256) await cache.put(BASE + path, r.clone());
+  return r;
+}
+async function fillRest() {
+  const m = await closureManifest();
+  for (const f of m.files) if (LATER.test(f.path)) { try { await fillOne(f.path); } catch (e) {} }
+}
+self.addEventListener("message", (event) => { if (event.data === "fill") event.waitUntil(fillRest()); });
+
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const m = await readManifest();
     if (m.closure !== CLOSURE) throw new Error("manifest closure does not match this worker");
-    const cache = await caches.open("shell-" + CLOSURE);
-    // Fetch every shell file fresh at install: the HTTP cache must not hand an older byte into a
+    const cache = await shellCache();
+    // Fetch every first-paint file fresh at install: the HTTP cache must not hand an older byte into a
     // closure whose digest says otherwise.
-    await cache.addAll(m.files.map((f) => f.path).concat(["manifest.json", "provenance.json"]).map((p) => new Request(p, { cache: "reload" })));
+    await cache.addAll(m.files.map((f) => f.path).filter((p) => !LATER.test(p)).concat(["manifest.json", "provenance.json"]).map((p) => new Request(p, { cache: "reload" })));
+    // The renderer's entry and stylesheet too (outside the closure, revalidated on every use), so the second
+    // visit paints from the cache although the first page fetched them before this worker controlled it.
+    await (await caches.open("assets")).addAll(["assets/index.js", "assets/index.css"].map((p) => new Request(p, { cache: "no-cache" })));
     await self.skipWaiting();
   })());
 });
 
 self.addEventListener("activate", (event) => {
+  // Only a worker that replaces an older shell reloads pages: a first visit's page already runs this closure.
+  const older = caches.keys().then((names) => names.some((n) => n.startsWith("shell-") && n !== "shell-" + CLOSURE));
   event.waitUntil((async () => {
     const keep = "shell-" + CLOSURE;
+    await older;
     for (const name of await caches.keys()) if (name.startsWith("shell-") && name !== keep) await caches.delete(name);
     await self.clients.claim();
   })());
   // A page that loaded under the previous worker may hold files of two closures (the page from the
-  // network, a script from the old cache): every open page of the shell is reloaded once, so what runs
-  // is one closure. Preview and application frames are left alone. This is deliberately outside
+  // network, a script from the old cache): every open page of the shell is told a newer shell took over,
+  // and reloads once, when no turn runs, so what runs is one closure. Preview and application frames are left alone. This is deliberately outside
   // waitUntil and never awaited: a navigation waits for the worker to be active, so waiting on it here
   // would leave this worker activating for ever and every page on the shell it already had.
   (async () => {
+    if (!(await older)) return;
+    // The page decides when: it reloads at once if no turn runs, else as soon as the running turn ends
+    // (host.js), so a build, a proof or a publish is never cut short by a deploy.
     for (const client of await self.clients.matchAll({ type: "window" })) {
       const path = new URL(client.url).pathname.slice(BASE.length);
-      if (client.url.startsWith(self.registration.scope) && !/^(p|holo|ui)\//.test(path)) { try { client.navigate(client.url).catch(() => {}); } catch (e) {} }
+      if (client.url.startsWith(self.registration.scope) && !/^(p|holo|ui)\//.test(path)) { try { client.postMessage({ type: "shell-updated", closure: CLOSURE }); } catch (e) {} }
     }
   })();
 });
@@ -205,9 +244,27 @@ self.addEventListener("fetch", (event) => {
     if (path === "app" || path.startsWith("app/")) return;
     // The chat app under ui/ routes on the client: every navigation there is its one page, from the closure first.
     if (path.startsWith("ui/") && event.request.mode === "navigate") { event.respondWith((async () => (await caches.match(BASE + "ui/index.html")) || fetch(new Request(BASE + "ui/index.html")))()); return; }
-    // The renderer's files under assets/ keep fixed names outside the closure: always revalidated
-    // with the origin (a conditional request, 304 when unchanged), never served stale from the HTTP cache.
-    if (path.startsWith("assets/")) { event.respondWith(fetch(event.request, { cache: "no-cache" }).catch(() => caches.match(event.request))); return; }
+    // The renderer's files under assets/ sit outside the closure. A chunk is named by its content hash, so a
+    // name is an address: kept for good once fetched. The entry and its stylesheet keep fixed names (the
+    // projected page names them): served from the cache at once and revalidated behind the answer, so a
+    // repeat visit paints with no network wait and the next visit runs what the origin serves now. A page
+    // whose entry names a chunk the origin no longer has reloads once (host.js, vite:preloadError).
+    if (path.startsWith("assets/")) {
+      event.respondWith((async () => {
+        const cache = await caches.open("assets");
+        const hit = await cache.match(event.request, { ignoreSearch: true });
+        if (/-[A-Za-z0-9_-]{8}\.(js|css)$/.test(path)) {
+          if (hit) return hit;
+          const r = await fetch(event.request);
+          if (r.ok) await cache.put(event.request, r.clone());
+          return r;
+        }
+        const fresh = fetch(event.request, { cache: "no-cache" }).then(async (r) => { if (r.ok) await cache.put(event.request, r.clone()); return r; });
+        if (hit) { event.waitUntil(fresh.catch(() => {})); return hit; }
+        return fresh;
+      })());
+      return;
+    }
     // The hash list is the staleness oracle: the page compares the closure it was projected with
     // against the one this origin serves now, so it is never answered from a cache while the network
     // can answer. Offline, the cached copy is the truth.
@@ -215,6 +272,12 @@ self.addEventListener("fetch", (event) => {
     event.respondWith((async () => {
       const hit = await caches.match(event.request, { ignoreSearch: true });
       if (hit) return hit;
+      // A closure file filled after install is fetched, checked against the manifest and kept.
+      if (LATER.test(path)) { try { const r = await fillOne(path); if (r) return r; } catch (e) {} }
+      // Every route of the renderer is its one page (Pages answers them with 404.html, a copy): served
+      // from the closure, so a navigation paints without waiting for the network. The page compares its
+      // closure with the published one and reloads once when a newer shell is out (host.js).
+      if (event.request.mode === "navigate" && !path.includes(".")) { const page = await caches.match(BASE + "index.html"); if (page) return page; }
       try {
         return await fetch(event.request);
       } catch (error) {

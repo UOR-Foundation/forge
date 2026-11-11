@@ -1,7 +1,7 @@
 <a id="top"></a>
 
 <p align="center">
-  <img src=".github/banner.svg" alt="Prism AI Foundry" width="100%">
+  <img src=".github/banner.png" alt="Prism AI Foundry" width="100%">
 </p>
 
 # Prism AI Foundry

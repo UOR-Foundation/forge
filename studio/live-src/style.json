@@ -1,0 +1,9 @@
+{
+  "style": "new-york-v4",
+  "kit": "f14a9d8cfe6bce14fc8a6ff09ac0f99b01e300be",
+  "registry": "brand/vendor/shadcn-ui/registry",
+  "ui": "new-york-v4/ui",
+  "lib": "new-york-v4/lib/utils.ts",
+  "components": ["badge", "button", "card", "input", "label", "select", "separator", "toggle", "toggle-group"],
+  "vendor": ["new-york-v4/ui", "new-york-v4/lib", "new-york-v4/hooks"]
+}

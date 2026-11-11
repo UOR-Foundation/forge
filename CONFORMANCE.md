@@ -18,6 +18,96 @@ The three honesty levels (R2):
 `cargo xtask audit-limits` fails if any code path returns an error the
 model does not sanction.
 
+## app-covers
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-28` | `build` | App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules |
+
+## application-authority
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-01` | `build` | The application authority model rejects missing or competing product authorities and unchecked external boundaries |
+
+## atomic-generation-patch
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-23` | `build` | Generated file batches commit against captured project source and cancellation prevents uncommitted project writes |
+
+## atomic-project-creation
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-21` | `build` | Project creation commits its files, objects, initial version and chat atomically with transaction-local identifiers |
+
+## atomic-project-edit
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-22` | `build` | File edits atomically commit a source-bound snapshot or refuse concurrent project changes without partial writes |
+
+## atomic-project-lifecycle
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-25` | `build` | Project rename, deletion, checkout and revert commit coherent state and refuse stale sources |
+
+## authoring-projection
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-02` | `build` | The authoring boundary checks every generated Studio module and export root without rewriting drift |
+
+## bounded-build-modules
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-27` | `build` | Portable builds fetch only bounded approved-origin modules and retain exact module-byte receipts |
+
+## capability-availability
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-15` | `build` | Unimplemented browser queries return typed unsupported errors rather than fabricated resource status or empty findings |
+
+## composition-host-runtime
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-10` | `build` | The browser host composes features only through its pinned and replayed generated kernel |
+
+## composition-protocol
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-07` | `build` | The generated guest decodes bounded composition requests and returns the model admission result |
+
+## current-main-integration
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-24` | `build` | Current live editing and reword flows retain source-bound commits and the complete compiled kernel protocols |
+
+## event-admission
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-19` | `build` | Typed event admission binds exact feature routes to current composition policy, generation, sequence and bounded payloads |
+
+## exact-representation
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-14` | `build` | Byte representations verify original, payload, decoder specification and optional basis identities before returning exact reconstructed bytes |
+
+## feature-composition
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-06` | `build` | The LexLean composition model rejects duplicate identity, missing dependencies, conflicts, incompatible inputs, ungranted effects and excess budgets |
+
 ## forge_kernel
 
 | ID | Level | Statement |
@@ -31,6 +121,103 @@ model does not sanction.
 | `FK-07` | `build` | The gate never admits a resource its grant record denies |
 | `FK-08` | `build` | The gate never admits a preview or a published app without a grant |
 | `FK-09` | `build` | The gate never lets a preview fetch without a grant |
+| `FK-10` | `build` | The app always answers proved when event is reword and phase is proved |
+| `FK-11` | `build` | The app always answers published when event is reword and phase is published |
+| `FK-12` | `build` | The kernel never answers within when a journey's measure is over its budget |
+| `FK-13` | `build` | The kernel never answers over when a journey's measure is within its budget |
+| `FK-14` | `build` | The mobile INP budget is never above 500 ms |
+| `FK-15` | `build` | No route's JS budget is below the first load's |
+| `FK-16` | `build` | The kernel never answers split when the width is under 768 px |
+| `FK-17` | `build` | The kernel never answers tabs when the width is 768 px or more |
+| `FK-18` | `build` | The kernel never allows motion when reduced motion is asked |
+| `FK-19` | `build` | The kernel never allows motion longer than 200 ms |
+| `FK-20` | `build` | The kernel never answers ok for a tap target under 44 px |
+| `FK-21` | `build` | The kernel never counts as this week what is older than 7 days |
+
+## host-input-boundary
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-12` | `build` | Imported renderer input contracts validate browser commands before any handler effect |
+
+## host-response-boundary
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-03` | `build` | The browser host refuses unsupported channels and invalid contracted responses with typed errors |
+
+## inference-effect-boundary
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-11` | `build` | Cloud inference bounds requests and streamed responses and refuses cancellation, malformed data and provider failures explicitly |
+
+## live-lexlean
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `LL-01` | `build` | Every guarantee holds on every request in the bounds when every local obligation passes |
+| `LL-02` | `build` | Every guarantee of the Verdant Resonance fixture holds on every request in its bounds |
+
+## proposal-admission
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-18` | `build` | Router proposals resolve exact registered feature versions and cannot bypass ambiguity, registry revision or composition admission |
+
+## provider-key-validation
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-16` | `build` | Provider credential validation rejects unsupported providers and requires a bounded authenticated response before success |
+
+## publication-cancellation
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-04` | `build` | Cancelling publication prevents subsequent browser requests and bounded requests return typed failures |
+
+## publication-identity
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-05` | `build` | Publication requires exact canonical archive identity and complete nonempty runtime acceptance |
+
+## rules-source-binding
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-09` | `build` | Rule status and asynchronous proof or publication completion remain bound to the current rule source |
+
+## snapshot-bound-builds
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-26` | `build` | Preview and portable publication consume one verified snapshot and cannot bypass rule publication through an absent cache |
+
+## snapshot-restore
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-08` | `build` | Snapshot restoration validates every referenced object before atomically replacing files and the main reference |
+
+## storage-commit-boundary
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-20` | `build` | Host storage requests report success only after transaction completion and refuse aborted or invalid operations |
+
+## work-ownership
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-13` | `build` | The Prism work model reserves capacity before execution and preserves spending and checkpoints across suspension with owner and revision checks |
+
+## work-protocol
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-17` | `build` | The generated guest executes bounded work ownership requests and returns exact state or typed refusal |
 
 ## Cited authorities
 
