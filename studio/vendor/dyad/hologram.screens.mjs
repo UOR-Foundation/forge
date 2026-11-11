@@ -231,6 +231,12 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     from: `import { ImportAppButton } from "@/components/ImportAppButton";\n`,
     to: ``,
   },
+  // On a phone the page keeps the inset's 16 px gutter instead of 32 px, so the composer has the room.
+  {
+    file: "src/pages/home.tsx",
+    from: `max-w-3xl w-full m-auto p-8 relative`,
+    to: `max-w-3xl w-full m-auto px-4 py-8 sm:p-8 relative`,
+  },
   {
     file: "src/components/chat/HomeChatInput.tsx",
     from: `<AuxiliaryActionsMenu onFileSelect={handleFileSelect} />`,

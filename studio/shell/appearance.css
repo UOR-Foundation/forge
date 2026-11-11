@@ -110,6 +110,31 @@
 [data-testid="home-chat-input-container"] div.justify-between > div .w-1\.5 { display: none; }
 [data-testid="home-chat-input-container"] button[aria-label="Send message"] { grid-row: 3; grid-column: 4; margin: 0 !important; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
   border-radius: calc(var(--radius) + 2px); background: color-mix(in srgb, var(--foreground) 9%, transparent); color: var(--primary) !important; }
+/* One row on any width: attach, then the app chosen (which takes the room left and cuts its name short),
+   then the model and send at the right. Nothing in the row can push the box past the screen: on a phone
+   the model drops its Cloud/Local tag and takes at most 40% of the width, so the app's name keeps room. */
+[data-testid="home-chat-input-container"] > div.rounded-2xl { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+[data-testid="home-chat-input-container"] div.justify-between > div,
+[data-testid="home-chat-input-container"] div.justify-between > div > div.flex { display: contents; }
+[data-testid="home-chat-input-container"] [data-testid="model-picker"] { grid-row: 3; grid-column: 3; min-width: 0; max-width: min(240px, 52vw); height: 34px; }
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { grid-row: 3; grid-column: 2; justify-self: start; min-width: 0; max-width: 100%;
+  height: 34px; margin: 0 !important; padding: 0 10px; border-radius: 999px; gap: 6px; }
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] > span { min-width: 0; }
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] > svg { flex-shrink: 0; }
+@media (max-width: 480px) {
+  [data-testid="home-chat-input-container"] [data-testid="model-picker"] { max-width: 40vw; }
+  [data-testid="home-chat-input-container"] [data-testid="model-picker"] > span + span { display: none; }
+}
+/* On a phone the box runs to the page's 16 px gutter, as the inset's other content does, and the app
+   picker, with no app chosen, is a round folder button beside attach (its words kept for screen readers);
+   once an app is chosen it shows the app's name. */
+@media (max-width: 639px) {
+  [data-testid="home-chat-input-container"] { padding-inline: 0; }
+  [data-testid="home-chat-input-container"] [data-testid="home-app-selector"]:not(:has([data-testid="home-app-selector-clear"])) {
+    width: 34px; padding: 0; justify-content: center; border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent); }
+  [data-testid="home-chat-input-container"] [data-testid="home-app-selector"]:not(:has([data-testid="home-app-selector-clear"])) > span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 
 /* Glass for every pop-up: dialogs, alert dialogs, menus, popovers, selects, context menus, sheets and this
    theme panel. One surface, from the brand's own tokens, readable over any photo in any look: the popover
