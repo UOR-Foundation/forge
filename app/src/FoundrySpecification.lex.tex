@@ -977,7 +977,16 @@ inductive{
   name: DurableChatQueueError,
   type_parameters: [],
   parameters: [],
-  constructors: [{name: invalidChatQueueCommand, fields: []}, {name: chatQueueUnavailable, fields: []}, {name: chatQueueJournalInvalid, fields: []}, {name: chatQueueConflict, fields: []}, {name: chatQueueMissing, fields: []}, {name: chatQueueStorageFailed, fields: []}, {name: chatQueueLimitExceeded, fields: []}, {name: chatQueueIntentConflict, fields: []}]
+  constructors: [
+    {name: invalidChatQueueCommand, fields: []},
+    {name: chatQueueUnavailable, fields: []},
+    {name: chatQueueJournalInvalid, fields: []},
+    {name: chatQueueConflict, fields: []},
+    {name: chatQueueMissing, fields: []},
+    {name: chatQueueStorageFailed, fields: []},
+    {name: chatQueueLimitExceeded, fields: []},
+    {name: chatQueueIntentConflict, fields: []}
+  ]
 }
 
 definition{
@@ -991,7 +1000,12 @@ inductive{
   name: VersionHistoryError,
   type_parameters: [],
   parameters: [],
-  constructors: [{name: invalidVersionHistory, fields: []}, {name: versionHistoryMissing, fields: []}, {name: versionHistoryStorageFailed, fields: []}, {name: versionHistoryStateInvalid, fields: []}]
+  constructors: [
+    {name: invalidVersionHistory, fields: []},
+    {name: versionHistoryMissing, fields: []},
+    {name: versionHistoryStorageFailed, fields: []},
+    {name: versionHistoryStateInvalid, fields: []}
+  ]
 }
 
 definition{
