@@ -77,10 +77,11 @@ not substituted for this gate.
 | Current main/live reword integration | #54 | 43035670738, passed |
 | Atomic project lifecycle | #55 | 43036503589, passed |
 | Snapshot-bound builds | #56 | 43037443366, passed |
+| Bounded portable modules | #58 | 43039476228, passed |
 
 ## Review disposition
 
-PRs #22–32, #34, #35, #37–39, #41, #42, #45 and #48–52 and #54–56 passed their recorded full gates and are ready for review. Author completeness reviews are not independent approval. This branch retains FA-01 through FA-26 and adds FA-27 bounded portable module loading; its full feature gate is recorded separately at its revision.
+PRs #22–32, #34, #35, #37–39, #41, #42, #45 and #48–52 and #54–56 and #58 passed their recorded full gates and are ready for review. Author completeness reviews are not independent approval. This branch retains FA-01 through FA-27 and adds FA-28 verified project import; its full feature gate is recorded separately at its revision.
 No PR merge into main, deployment, factory migration, or whole-application
 completion is claimed.
 

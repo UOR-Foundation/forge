@@ -586,5 +586,28 @@ definition{
   result: String,
   body: "Portable browser builds retrieve external module text only from https://esm.sh with no URL credentials or fragment and at most 8192 URL characters. Every request is GET with redirects refused, credentials omitted and cache disabled. Only status 200 and JavaScript or CSS media types are accepted. One deadline of at most 120 seconds covers the module operation and callback completion, including stalled headers and bodies. At most 512 distinct URLs, 8 MiB per module and 64 MiB total are admitted. UTF8 decoding is fatal and byte roundtrip exact, including BOM. Each completed module retains its requested URL, media type, exact bytes, whole-file SHA256 and an archive path derived from that digest. Repeated requests share one in-flight operation. The portable view carries a sorted foundry/build-module-closure/1 receipt and those exact module sources. Errors and cancellation abort outstanding fetches and prevent return of a successful closure; errors have fixed public messages and never expose provider bodies. These are retrieved-byte receipts, not prior authenticity guarantees, a transitive NPM lock, compiler/toolchain closure, remote package availability, proof of browser compiler preservation or termination of already running physical work."
 }
+
+inductive{
+  name: ProjectImportError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidProjectImport, fields: []},
+    {name: projectImportLimitExceeded, fields: []},
+    {name: projectImportIdentityMismatch, fields: []},
+    {name: projectImportMissingObject, fields: []},
+    {name: projectImportSourceMismatch, fields: []},
+    {name: projectImportHistoryInvalid, fields: []},
+    {name: projectImportTimedOut, fields: []},
+    {name: projectImportCancelled, fields: []}
+  ]
+}
+
+definition{
+  name: projectImportBoundary,
+  parameters: [],
+  result: String,
+  body: "Import accepts the existing hologram-forge/export/1 profile, snapshots relevant primitive inputs before asynchronous work, and validates the complete supplied object identities and referenced snapshot/file/history closure before any write. At most 64 apps, 1000 files per app, 16 MiB per file or object, 128 MiB aggregate prepared bytes, 8192 objects, 4096 historical snapshots, 4096 chats and 16384 messages are accepted; message text is at most 2 MiB each and 32 MiB total. One preparation deadline of at most 120 seconds bounds asynchronous identity and core checks; timeout or cancellation returns no prepared import. Source file bytes and app name must match an existing main snapshot. History parent cycles and missing or corrupt objects refuse. An export without a main reference receives an initial generated-core snapshot. A collision rename creates a child snapshot with the renamed app and exact files, preserving prior history. Direct dependency metadata must agree with a snapshot declaration; unbound legacy dependency requests refuse. Only validated names, dates, direct dependencies, version annotations and renderer-compatible chat/message fields survive normalization. Imported permissions, grants, keys, provider selection, cached rule/proof state and cross-app references never grant authority. Existing insert-only atomic import and persistent allocation guards commit the prepared data. Invalid input, limits, identity, missing object, source mismatch, history, timeout and cancellation have fixed typed public errors; existing snapshot/core/preparation errors remain typed. A preparation or commit failure leaves storage unchanged. This qualifies local import integrity and authority isolation, not export authenticity, external credential ownership, package authenticity, or whole-application conversion."
+}
 \end{semanticmodule}
 \end{lexlean}

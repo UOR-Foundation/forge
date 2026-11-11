@@ -64,6 +64,7 @@ jobs:
           node tools/snapshot_restore_browser.mjs
           node tools/storage_request_browser.mjs
           node tools/project_creation_browser.mjs
+          node tools/verified_project_import_browser.mjs
           node tools/project_edit_browser.mjs
           node tools/project_lifecycle_browser.mjs
           node tools/build_source_browser.mjs

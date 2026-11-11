@@ -1,3 +1,4 @@
+import { prepareProjectImport } from "./project-import.mjs";
 import { withBuildModules } from "./build-modules.mjs";
 import { captureBuildSource, assertBuildSourceCurrent, requiresRulePublication } from "./build-source.mjs";
 import { applyStoredProjectPatch, assertGenerationActive } from "./generation-patch.mjs";
@@ -222,29 +223,23 @@ handlers.set("app:get-current-commit-hash", async ({ appId }) => (await get("ref
 // home page hands that file here. Ids are renumbered past the ones in use, so nothing here is replaced;
 // a name already taken gets " (moved)". The file carries apps, their files, chats, versions, rules state
 // and the objects those versions name; cached rule/proof status is ignored and must be rechecked. It never carries settings (keys), the audit, seals, grants or
-// installed holos, and anything else in it is ignored. An object is kept only when its bytes derive to
-// its address. Everything is written in one transaction: a failure leaves the store as it was.
+// installed holos, and anything else in it is ignored. Every object must derive to its address and
+// every referenced snapshot must have complete closure; any defect refuses the whole import. Everything is written in one transaction: a failure leaves the store as it was.
 const EXPORT_SCHEMA = "hologram-forge/export/1";
 handlers.set("forge:import", async (input) => {
-  const doc = typeof input === "string" ? JSON.parse(input) : input;
-  if (!doc || doc.schema !== EXPORT_SCHEMA || !Array.isArray(doc.apps)) throw new Error("This is not a Forge export file (" + EXPORT_SCHEMA + ").");
-  const objects = new Map();
-  let refused = 0;
-  const keep = async (k, bytes) => { if ((await kappa(bytes)) === k) objects.set(k, bytes); else refused += 1; };
-  for (const [k, text] of Object.entries(doc.objects || {})) { let bytes = null; try { bytes = unb64(String(text)); } catch (e) { refused += 1; continue; } await keep(k, bytes); }
-  const taken = new Set((await all("apps")).map((a) => a.name));
+  await coreReady;
+  const { apps: entries, objects } = await prepareProjectImport(input, {
+    core, derive: kappa,
+    admit: (derived, expected) => core.run({ op: "restore", derived, expected }).decision === "Accept",
+  }, { takenNames: (await all("apps")).map(a => a.name) });
   let appId = await nextId("apps"), chatId = await nextId("chats");
   const writes = [], apps = [];
-  for (const entry of doc.apps) {
-    const a = entry && entry.app;
-    if (!a || typeof a.name !== "string" || !a.name) throw new Error("An app in the file has no name.");
-    let name = a.name;
-    if (taken.has(name)) { name = a.name + " (moved)"; for (let n = 2; taken.has(name); n += 1) name = a.name + " (moved " + n + ")"; }
-    taken.add(name);
+  for (const entry of entries) {
+    const a = entry.app, name = a.name;
     const id = appId++, at = new Date().toISOString();
     writes.push(["apps", id, { ...nulls, ...a, id, name, path: name, createdAt: a.createdAt || at, updatedAt: a.updatedAt || at }]);
-    const files = Object.entries(entry.files || {}).filter(([, text]) => typeof text === "string");
-    for (const [path, text] of files) { writes.push(["files", id + ":" + path, text]); const bytes = enc.encode(text); objects.set(await kappa(bytes), bytes); }
+    const files = Object.entries(entry.files);
+    for (const [path, text] of files) writes.push(["files", id + ":" + path, text]);
     if (Array.isArray(entry.versions)) writes.push(["versions", id, entry.versions]);
     if (typeof entry.main === "string" && entry.main) writes.push(["refs", id + ":main", entry.main]);
     const chats = [];
@@ -254,7 +249,7 @@ handlers.set("forge:import", async (input) => {
       writes.push(["chats", cid, { ...c, id: cid, appId: id, messages: Array.isArray(c.messages) ? c.messages : [], referencedApps: [] }]);
       chats.push(cid);
     }
-    apps.push({ id, name, from: a.name, chats, files: files.length });
+    apps.push({ id, name, from: entry.from, chats, files: files.length });
   }
   for (const [k, bytes] of objects) writes.push(["objects", k, bytes]);
   const db = await dbReady;
@@ -279,7 +274,7 @@ handlers.set("forge:import", async (input) => {
       for (const store of ["apps", "chats"]) { const q = t.objectStore("refs").get(`allocation:${store}`); q.onsuccess = () => { marks.set(store, q.result === undefined ? 0 : q.result); commit(); }; }
     } catch { if (t) { try { t.abort(); } catch {} } refuse(); }
   });
-  return { apps, objects: objects.size, refused };
+  return { apps, objects: objects.size, refused: 0 };
 });
 
 // ---- versions: a branch is a name pointing at an address; rollback restores the object at an
