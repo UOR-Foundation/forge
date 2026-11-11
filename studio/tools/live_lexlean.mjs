@@ -187,23 +187,24 @@ let proveWord = "";
 try { await prism.prove(spec); } catch (e) { proveWord = e.message; }
 claim("cap: proving an app over 24 rules is refused, and says why", /24 rules/.test(proveWord) && /605/.test(proveWord), proveWord);
 
-// What real models got wrong (Haiku and Sonnet on Foundry's prompt, four apps each): the reader names the
-// mistake so the model can fix it, and reads what is unambiguous. Each case is the prompt's own example,
-// changed the way a model changed its module.
+// FoundrySpecification.canonicalModuleBoundary requires exact canonical declaration
+// reconstruction and fixed typed refusals. The older permissive reader's detailed
+// diagnostics and normalization are not admission authority for this profile.
 const ex = example ? example[1] : "";
-const refusal = (text) => { try { lex.readLexLean(text.trim() + "\n"); return ""; } catch (e) { return e.message; } };
+const refusal = text => { try { lex.readLexLean(text.trim() + "\n"); return null; } catch (e) { return {code:e.code,message:e.message}; } };
+const fixedRefusal = value => value?.code === "invalidCanonicalModule" && value.message === "The canonical decision module is invalid or unsupported";
 const exSpec = example ? lex.readLexLean(ex.trim() + "\n") : null;
-const sameAsExample = (text) => { try { const s = lex.readLexLean(text.trim() + "\n"); return same(semantic(logicOf(s)), semantic(logicOf(exSpec))) && JSON.stringify(s.properties) === JSON.stringify(exSpec.properties); } catch (e) { return false; } };
 const extra = refusal(ex.replace("<? 3))", "<? 3)))"));
-claim("errors: one \")\" too many is named, with where", /^inBounds: one "\)" too many, after/.test(extra), extra);
+claim("errors: excess closing parenthesis has a fixed typed refusal", fixedRefusal(extra), JSON.stringify(extra));
 const missing = refusal(ex.replace("(answerStandard))))", "(answerStandard)))"));
-claim("errors: a \")\" missing is named", /^judge: 1 "\)" missing/.test(missing), missing);
+claim("errors: missing closing parenthesis has a fixed typed refusal", fixedRefusal(missing), JSON.stringify(missing));
 const several = refusal(ex.replaceAll("<? 3))", "<? 3)))"));
-claim("errors: every unbalanced declaration is named at once", /^2 declarations have unbalanced parentheses: inBounds: .*; breaksInv001: /.test(several), several);
+claim("errors: multiple malformed declarations cannot leak source diagnostics", fixedRefusal(several), JSON.stringify(several));
 const misnamed = refusal(ex.replaceAll("vehicleTruck", "typeTruck"));
-claim("errors: a value named after anything but its field is told its name", /typeTruck .*vehicleTruck$/.test(misnamed), misnamed);
-claim("reads: `x <? N` bounds a number as `x <=? N - 1`", sameAsExample(ex.replaceAll("(project request hours) <=? 24)", "(project request hours) <? 25)")));
-claim("reads: a guarantee may name inBounds and its rule, and leave its outer pair off", sameAsExample(ex.replace(/(name: breaksInv001,[\s\S]*?body: )[^\n]*/, "$1((inBounds request) && (rule1 request)) && ((judge request) =? (answerPremium))")));
+claim("errors: unowned choice constants cannot disappear", fixedRefusal(misnamed), JSON.stringify(misnamed));
+claim("canonical profile: alternate numeric bounds require canonical reconstruction", fixedRefusal(refusal(ex.replaceAll("(project request hours) <=? 24)", "(project request hours) <? 25)"))));
+claim("canonical profile: unexpanded guarantees cannot bypass declaration comparison", fixedRefusal(refusal(ex.replace(/(name: breaksInv001,[\s\S]*?body: )[^\n]*/, "$1((inBounds request) && (rule1 request)) && ((judge request) =? (answerPremium))"))));
+claim("canonical profile: canonical reconstruction retains the example decisions", same(semantic(logicOf(lex.readLexLean(lex.toLexLean(exSpec)))), semantic(logicOf(exSpec))));
 
 // one repair turn, with the reader's words
 const brokenTurn = "Here are the rules.\n<prism-lexlean>\n" + ex.replace("<? 3))", "<? 3)))").trim() + "\n</prism-lexlean>";
@@ -211,7 +212,7 @@ const fixed = "<prism-lexlean>\n" + ex.trim() + "\n</prism-lexlean>";
 const asked = [];
 const afterRepair = await lex.withRepair(brokenTurn, async (p) => { asked.push(p); return fixed; });
 const repairedSpec = lex.specFromTurn(afterRepair);
-claim("repair: a module that does not read is asked for once, with the reader's words, and the answer is read", asked.length === 1 && asked[0].includes('inBounds: one ")" too many') && !!repairedSpec && !repairedSpec.error && repairedSpec.name === "ParkingFee", asked[0] ? asked[0].split("\n")[0] : "never asked");
+claim("repair: a module that does not read is asked for once, with the fixed refusal, and the canonical answer is read", asked.length === 1 && asked[0].includes("The canonical decision module is invalid or unsupported") && !!repairedSpec && !repairedSpec.error && repairedSpec.name === "ParkingFee", asked[0] ? asked[0].split("\n")[0] : "never asked");
 const untouched = [];
 const good = await lex.withRepair(fixed, async (p) => { untouched.push(p); return ""; });
 claim("repair: a module that reads is never sent back", untouched.length === 0 && good === fixed);
