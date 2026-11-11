@@ -1,0 +1,2441 @@
+{
+  "profile": "foundry/finite-routing-qualification/1",
+  "scope": "Author-curated typed-concept cases withheld from relation declarations and proof/wire fixtures; independent literal judgments, not independent human evaluation or natural-language generalization.",
+  "thresholds": {
+    "exactJudgments": 12,
+    "falseAdmissions": 0,
+    "dependencyMismatches": 0,
+    "normalP95Milliseconds": 100,
+    "maximumCaseMilliseconds": 1000,
+    "trials": 25
+  },
+  "cases": [
+    {
+      "name": "imageAliasWithDecisionContext",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            102
+          ],
+          "context": [
+            301
+          ]
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": true,
+        "code": "accepted",
+        "selected": [
+          10,
+          11
+        ]
+      }
+    },
+    {
+      "name": "audioMotionWithImageContext",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            201,
+            202
+          ],
+          "context": [
+            101
+          ]
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": true,
+        "code": "accepted",
+        "selected": [
+          10,
+          14,
+          12
+        ]
+      }
+    },
+    {
+      "name": "relatedAudioAndDirectMotion",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            203,
+            202
+          ],
+          "context": []
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": true,
+        "code": "accepted",
+        "selected": [
+          10,
+          14,
+          12
+        ]
+      }
+    },
+    {
+      "name": "twoImageConcepts",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            101,
+            102
+          ],
+          "context": []
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": true,
+        "code": "accepted",
+        "selected": [
+          10,
+          11
+        ]
+      }
+    },
+    {
+      "name": "crossDomainAliases",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            102,
+            203
+          ],
+          "context": []
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": false,
+        "code": "unresolvedAmbiguity",
+        "selected": [
+          10,
+          11
+        ]
+      }
+    },
+    {
+      "name": "blockedMultidomain",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            201,
+            202
+          ],
+          "context": []
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": false,
+        "code": "compositionRejected",
+        "selected": [
+          10,
+          14,
+          12
+        ]
+      }
+    },
+    {
+      "name": "unknownWithRelatedContext",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            777
+          ],
+          "context": [
+            102
+          ]
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": false,
+        "code": "unresolvedConstraint",
+        "selected": []
+      }
+    },
+    {
+      "name": "partlyUnderstoodDecision",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            301,
+            777
+          ],
+          "context": []
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": false,
+        "code": "unresolvedConstraint",
+        "selected": [
+          10,
+          13
+        ]
+      }
+    },
+    {
+      "name": "twoDirectDomains",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            101,
+            301
+          ],
+          "context": []
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": false,
+        "code": "unresolvedAmbiguity",
+        "selected": [
+          10,
+          11
+        ]
+      }
+    },
+    {
+      "name": "renamedFeatureIdentity",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 1,
+          "registryRevision": 1,
+          "concepts": [
+            102
+          ],
+          "context": [
+            301
+          ]
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 400,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": true,
+        "code": "accepted",
+        "selected": [
+          10,
+          400
+        ]
+      }
+    },
+    {
+      "name": "renamedCatalogRevision",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 73,
+        "intent": {
+          "id": 1,
+          "registryRevision": 73,
+          "concepts": [
+            203,
+            202
+          ],
+          "context": []
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": true,
+        "code": "accepted",
+        "selected": [
+          10,
+          14,
+          12
+        ]
+      }
+    },
+    {
+      "name": "staleRelatedIntent",
+      "input": {
+        "expectedIntent": 1,
+        "registryRevision": 1,
+        "intent": {
+          "id": 9,
+          "registryRevision": 1,
+          "concepts": [
+            102
+          ],
+          "context": []
+        },
+        "relations": [
+          {
+            "fromConcept": 102,
+            "toConcept": 101,
+            "weight": 900
+          },
+          {
+            "fromConcept": 203,
+            "toConcept": 201,
+            "weight": 900
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 101,
+            "weight": 500
+          },
+          {
+            "fromConcept": 100,
+            "toConcept": 201,
+            "weight": 500
+          }
+        ],
+        "catalog": [
+          {
+            "key": 10,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              900
+            ],
+            "outputs": [
+              7
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 11,
+            "version": 1,
+            "cpu": 2,
+            "memory": 1,
+            "vocabulary": [
+              101
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 10,
+                  "version": 1
+                },
+                "schema": 7
+              }
+            ]
+          },
+          {
+            "key": 14,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              901
+            ],
+            "outputs": [
+              8
+            ],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [
+              9
+            ],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [],
+            "inputs": []
+          },
+          {
+            "key": 12,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              201,
+              202
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": [
+              {
+                "producer": {
+                  "key": 14,
+                  "version": 1
+                },
+                "schema": 8
+              }
+            ]
+          },
+          {
+            "key": 13,
+            "version": 1,
+            "cpu": 1,
+            "memory": 1,
+            "vocabulary": [
+              301
+            ],
+            "outputs": [],
+            "state": [],
+            "events": [],
+            "errors": [],
+            "effects": [],
+            "conflicts": [],
+            "targets": [
+              1
+            ],
+            "accessibility": [],
+            "quality": [],
+            "needs": [
+              {
+                "key": 10,
+                "version": 1
+              }
+            ],
+            "inputs": []
+          }
+        ],
+        "policy": {
+          "cpu": 100,
+          "memory": 100,
+          "grants": [
+            9
+          ],
+          "targets": [
+            1
+          ],
+          "evidence": []
+        }
+      },
+      "expected": {
+        "ok": false,
+        "code": "staleIntent",
+        "selected": [
+          10,
+          11
+        ]
+      }
+    }
+  ]
+}

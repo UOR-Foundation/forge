@@ -46,7 +46,7 @@ test("every independent corpus vector is embedded in the generated guest accepta
   }
   assert.ok(kernel.includes('\\importmodule{WorkProtocol}'));
   assert.ok(kernel.includes('WorkProtocol::dispatchWork'));
-  assert.ok(kernel.includes('responseMaximum := (128 : UInt32)'));
+  assert.ok(kernel.includes('responseMaximum := (4096 : UInt32)'));
   const model = fs.readFileSync(new URL("../../app/src/WorkProtocol.lex.tex", import.meta.url), "utf8");
   assert.equal(model.match(/theorem\{/g).length, 3);
   for (const [name, label] of [["wrong-owner", "wireRejectsWrongOwner"], ["progress", "wireProgressKeepsAccounting"], ["counter-exhausted", "wireRefusesCounterOverflow"]]) {

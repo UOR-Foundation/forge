@@ -251,6 +251,30 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
+      "id": "semantic-routing",
+      "version": 1,
+      "owner": "SemanticRouter.boundary",
+      "effects": [],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent finite relevance and latency qualification; no permission authority."
+    },
+    {
+      "id": "application-discovery",
+      "version": 1,
+      "owner": "FoundrySpecification.discoveryBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Finite vocabulary and explicit profile review; independent quality and release obligations remain."
     }
   ],
   "commands": [
@@ -1195,6 +1219,26 @@ export const commandRegistryData = {
       "output": "product-boundary"
     },
     {
+      "channel": "forge:discover",
+      "feature": "application-discovery",
+      "version": 1,
+      "owner": "FoundrySpecification.discoveryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
+      "input": "product-boundary",
+      "output": "product-boundary"
+    },
+    {
+      "channel": "forge:discovery-create",
+      "feature": "application-discovery",
+      "version": 1,
+      "owner": "FoundrySpecification.discoveryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
+      "input": "product-boundary",
+      "output": "product-boundary"
+    },
+    {
       "channel": "forge:event",
       "feature": "events",
       "version": 1,
@@ -1289,6 +1333,16 @@ export const commandRegistryData = {
       "feature": "representation",
       "version": 1,
       "owner": "FoundrySpecification.representationBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
+      "input": "product-boundary",
+      "output": "product-boundary"
+    },
+    {
+      "channel": "forge:route",
+      "feature": "semantic-routing",
+      "version": 1,
+      "owner": "SemanticRouter.boundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",

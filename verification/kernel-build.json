@@ -1,15 +1,15 @@
 {
   "schema": "prism/remote-build/1",
   "repository": "UOR-Foundation/foundry",
-  "sha": "8baef63680ba67b8608a0e750aceba4ef8b5073a",
-  "run_id": 43075425831,
-  "run_url": "https://github.com/UOR-Foundation/foundry/actions/runs/43075425831",
-  "workflow_ref": "UOR-Foundation/foundry/.github/workflows/build.yml@refs/heads/prism/build/stateful-application",
+  "sha": "0b9dc207ba242b6f97d324cf959b362bfa359340",
+  "run_id": 43099200049,
+  "run_url": "https://github.com/UOR-Foundation/foundry/actions/runs/43099200049",
+  "workflow_ref": "UOR-Foundation/foundry/.github/workflows/build.yml@refs/heads/prism/build/semantic-router-symbol",
   "event": "push",
-  "ref": "refs/heads/prism/build/stateful-application",
+  "ref": "refs/heads/prism/build/semantic-router-symbol",
   "project": "app",
-  "build": "9d232c11651524a43cbee6df7cbd10c11620eeaf5aedec94bf1a26e2acfbb0de",
+  "build": "a88c6b05021404a2b4d8016bafe20177bf9d80271bcd7f2aea477abae9083854",
   "holo": "Forge kernel.holo",
-  "fingerprint": "b46ffbaf7edeb696dcd73481423776a30fd33705af80d8eee8b156d351145653",
-  "holo_sha256": "470470068748a71fd28a22ef39f87d90db6fdfac8091a574b7f0a48753b79d0e"
+  "fingerprint": "0c8de865370d2217315561da8e4039765e93de43fe6d47a386a5f9ed71f7738d",
+  "holo_sha256": "7f37f29d64876d812af556f1115b2a4054a9df7cb35a7a28b3144b90bb3f3997"
 }

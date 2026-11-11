@@ -48,6 +48,7 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if (["invalidDiscoveryIntent", "discoveryRefused", "discoveryReviewChanged", "discoveryUnavailable"].includes(error?.code)) return refusal(error.code, channel, "validation", "Application discovery was refused");
     if (["invalidState", "wrongOwner", "staleRevision", "invalidPhase", "invalidAmount", "budgetExceeded", "reservationMissing", "reservationExceeded", "obligationExceeded", "checkpointNotAdvanced", "unfinishedWork", "invalidOwner", "invalidWorkRequest", "workCounterExhausted", "workRuntimeFailed"].includes(error?.code)) return refusal(error.code, channel, "validation", "The work guest refused this operation");
     if (["invalidStoredProviderCredential", "unsupportedCredentialProvider", "providerCredentialArtifact"].includes(error?.code)) return refusal(error.code, channel, "validation", "Provider credential access was refused");
     if (["invalidBuildWork", "buildWorkBusy", "buildWorkUnavailable", "buildWorkConflict", "buildWorkSourceChanged", "buildWorkArtifactInvalid", "buildWorkLimitExceeded"].includes(error?.code)) return refusal(error.code, channel, "validation", "Durable build work was refused");
