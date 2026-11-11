@@ -49,6 +49,8 @@ const put = (store, key, value) => tx(store, "readwrite", (s) => s.put(value, ke
 const del = (store, key) => tx(store, "readwrite", (s) => s.delete(key));
 const all = (store) => tx(store, "readonly", (s) => s.getAll());
 const keys = (store) => tx(store, "readonly", (s) => s.getAllKeys());
+// An app's files are the keys "<id>:<path>": read by key range instead of walking every app's keys.
+const appRange = (appId) => IDBKeyRange.bound(appId + ":", appId + ":￿");
 
 // ---- settings
 const DEFAULT_SETTINGS = {
@@ -144,7 +146,7 @@ const nextId = async (store) => { const ks = await keys(store), high = await get
 const nulls = { githubOrg: null, githubRepo: null, githubBranch: null, supabaseProjectId: null, supabaseParentProjectId: null, supabaseOrganizationSlug: null, neonProjectId: null, neonDevelopmentBranchId: null, neonPreviewBranchId: null, neonActiveBranchId: null, selectedDatabaseBranchType: null, vercelProjectId: null, vercelProjectName: null, vercelDeploymentUrl: null, vercelTeamId: null, installCommand: null, startCommand: null, chatContext: null, isFavorite: false, testingEnabled: false, collectionId: null };
 const withDates = (a) => ({ ...a, createdAt: new Date(a.createdAt), updatedAt: new Date(a.updatedAt), resolvedPath: a.path });
 async function filesOf(appId) {
-  const ks = (await keys("files")).filter((k) => k.startsWith(appId + ":")).map((k) => k.slice(String(appId).length + 1)).sort();
+  const ks = (await tx("files", "readonly", (s) => s.getAllKeys(appRange(appId)))).map((k) => k.slice(String(appId).length + 1)).sort();
   return ks;
 }
 let scaffold = null;
@@ -862,6 +864,16 @@ async function codebaseOf(appId, source) {
 // can say proved only after Lean attested the current rules, and publish only proved rules. The
 // state lives at refs["prism:<appId>"].
 const kernelReady = import(new URL("kernel.js", BASE).href).then(() => self.ForgeKernel.load((p) => fetch(new URL(p, BASE))));
+// The renderer's screens ask the kernel too, for the decisions it holds about them (the build screen's layout,
+// what counts as this week): the answer is the kernel's, the screen only draws it. Nothing is asked before the
+// guest has passed its pin and every acceptance vector.
+window.__forgeKernel = Object.freeze({ ask: (line) => kernelReady.then((k) => k.ask(line)) });
+// The build screen draws whichever layout the kernel last answered for this window's width, then asks again:
+// the answer is asked here as soon as the kernel is ready, and on every resize, so the build screen starts in
+// the kernel's layout instead of drawing the other one and remounting.
+const askLayout = () => kernelReady.then((k) => k.ask("layout " + Math.max(0, Math.round(innerWidth)))).then((a) => { if (a === "tabs" || a === "split") { try { localStorage.setItem("holo.layout.narrow", a === "tabs" ? "1" : "0"); } catch (e) {} } }).catch(() => {});
+askLayout();
+addEventListener("resize", askLayout);
 async function representationCommand(operation, input, reconstruct = false) {
   if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).sort().join(",") !== (reconstruct ? "basis,bytes,identity" : "basis,bytes")) return { ok: false, code: "invalidRepresentation" };
   try { return { ok: true, value: await (reconstruct ? operation(input.bytes, input.identity, input.basis) : operation(input.bytes, input.basis)) }; }
@@ -1138,6 +1150,12 @@ async function chatTurn(chatId, intent) {
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = full; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
+    // A model streams far faster than a screen draws, and every onText walks the whole answer and redraws the
+    // message: deltas are coalesced to one onText per animation frame. The final text is delivered by onText
+    // itself after the stream, and drops whatever frame is still pending.
+    let pendingText = null, frame = 0;
+    const onTextSoon = (t) => { pendingText = t; if (!frame) frame = requestAnimationFrame(() => { frame = 0; const next = pendingText; pendingText = null; if (next !== null) onText(next); }); };
+    const settleText = () => { if (frame) cancelAnimationFrame(frame); frame = 0; pendingText = null; };
     // Warm up: the local model is chosen but not resident yet; a held key (the visitor's, or the
     // site's) answers through OpenRouter meanwhile, and the local model starts loading for the next turn.
     const warm = route === "Local" && !engine.instance && core.run({ op: "warmup", localReady: !!engine.instance, keyPresent: !!(await inference.keyGet()), online: navigator.onLine }).warmup;
@@ -1150,15 +1168,17 @@ async function chatTurn(chatId, intent) {
       const warmHit = await lookup(warmBody);
       if (warmHit.hit) { await onText(warmHit.text); provenance = { receipt: warmHit.receipt, served: true, fingerprint: warmHit.fingerprint, warm: true }; }
       else {
-        const { text, rec } = await paidGenerate(warmBody, (t) => onText(t), abort.signal);
+        const { text, rec } = await paidGenerate(warmBody, onTextSoon, abort.signal);
+        settleText();
         await onText(text);
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
       // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
-      const thinking = (r) => onText("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
-      const { text, rec } = await paidGenerate(body, (t) => onText(t), abort.signal, thinking);
+      const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
+      const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
+      settleText();
       await onText(text);
       // An answer cut at the token limit is not sealed, so the same request is never served it again.
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
@@ -1185,7 +1205,8 @@ async function chatTurn(chatId, intent) {
       // No repetition penalty: rules are JSON, which repeats its keys by nature, and a penalty pushes a
       // small model off valid syntax. The receipt records the penalty used, so the answer stays re-derivable.
       const maxNew = Math.min(held.model.cap, room);
-      const res = await withEngine(() => inst.generate(ids, { maxNew, repPenalty: 1, onToken: ({ text }) => { if (!abort.signal.aborted) onText(text); } }));
+      const res = await withEngine(() => inst.generate(ids, { maxNew, repPenalty: 1, onToken: ({ text }) => { if (!abort.signal.aborted) onTextSoon(text); } }));
+      settleText();
       const text = prism.withoutThinking(res.text);
       window.__prism.lastDevice = res.text || "";
       messages[messages.length - 1].model = "webgpu:" + held.model.fam; // the model that wrote the rules
@@ -1477,6 +1498,22 @@ window.electron = {
 })();
 window.__host = { handlers, emit, seen, get, put, all, kappa, core: () => core, coreReady, view: () => coreReady.then((c) => c.run({ op: "view" })), publish: () => lastPublish };
 if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("sw.js", BASE)).catch(() => {});
+// The worker installs only what a first paint needs; once this page has loaded and is idle it is asked to
+// fill the rest of the closure (the engine, the chat app, the photos), so offline use follows soon after.
+if ("serviceWorker" in navigator) {
+  const idle = (fn) => (self.requestIdleCallback ? requestIdleCallback(fn, { timeout: 10000 }) : setTimeout(fn, 3000));
+  addEventListener("load", () => idle(() => navigator.serviceWorker.ready.then((r) => r.active && r.active.postMessage("fill")).catch(() => {})), { once: true });
+}
+// After a deployment a page can run an entry that names a chunk the origin no longer serves: the worker has
+// already revalidated the entry, so one reload runs the new build whole.
+addEventListener("vite:preloadError", (event) => {
+  const key = "holo.chunk.reloaded";
+  if (sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, "1");
+  event.preventDefault();
+  location.reload();
+});
+addEventListener("load", () => setTimeout(() => sessionStorage.removeItem("holo.chunk.reloaded"), 10000), { once: true });
 // Applications installed before the kernel's gate held no grant record, and the gate refuses to
 // serve without one: each gets the grant install now writes, served with no network.
 (async () => {

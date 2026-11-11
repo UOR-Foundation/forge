@@ -66,7 +66,7 @@
   background-image: var(--spectrum); background-size: 200% 100%; opacity: 0.618; animation: spectrum-drift 24s linear infinite;
   -webkit-mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(black 0 0) content-box exclude, linear-gradient(black 0 0);
-  transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 :is([data-testid="home-chat-input-container"], [data-testid="chat-input-container"]) > div.rounded-2xl:is(:hover, :focus-within)::before { opacity: 0.854; }
 @keyframes spectrum-drift { to { background-position: 200% 0; } }
@@ -101,7 +101,7 @@
 [data-testid="home-chat-input-container"] > div.rounded-2xl::after {
   content: ""; position: absolute; left: 22%; right: 22%; bottom: -2px; height: 3px; border-radius: 999px; pointer-events: none;
   background-image: var(--spectrum); background-size: 200% 100%; animation: spectrum-drift 24s linear infinite;
-  filter: blur(7px); opacity: 0.9; clip-path: inset(2px -60px -60px -60px); transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  filter: blur(7px); opacity: 0.9; clip-path: inset(2px -60px -60px -60px); transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 @media (prefers-reduced-motion: reduce) { [data-testid="home-chat-input-container"] > div.rounded-2xl::after { animation: none; } }
 [data-testid="home-chat-input-container"] > div.rounded-2xl > :is(div.flex.items-end, div.justify-between) { display: contents; }
@@ -218,3 +218,20 @@ button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button
 :root[data-holo-pane] :is([data-testid="toggle-terminal-button"], [data-testid="toggle-preview-panel-button"], [data-testid="notification-tip-banner"]) { display: none !important; }
 :root[data-holo-pane] #preview-panel div:has(> * > [data-testid="preview-mode-button"], > [data-testid="preview-mode-button"], > * > [data-testid="preview-mode-overflow-button"]):not(:has(iframe)) { display: none !important; }
 :root[data-holo-pane] #preview-panel div:has(> .lucide-logs) { display: none !important; }
+
+/* Touch: every small control the kit draws (icon buttons, switches, checkboxes, the sidebar's trigger and
+   items, menu and select triggers, tabs) answers a 44 px square around its centre, drawn by nothing. Their
+   look is the kit's; only the area a finger can hit grows. */
+@media (pointer: coarse) {
+  :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link], #appearance):not(.absolute, .fixed) { position: relative; }
+  :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link], #appearance)::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+  }
+}
+
+/* Motion: a sheet slides in 200 ms, not the kit's 300 to 500; and a visitor who asks for less motion gets
+   none from the stylesheet (the composer's glow above already stops). */
+[data-slot=sheet-content][data-state] { animation-duration: 200ms; }
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

@@ -81,6 +81,8 @@ jobs:
         run: |
           node tools/kernel.mjs --check
           node tools/kernel_browser.mjs
+      - name: The Experience gate, the stylesheet held to the kernel's answers (FK-16 to FK-21)
+        run: node tools/experience.mjs --check
       - name: The Prism journey in the shell is prism-code's, byte for byte
         run: node tools/prism_journey.mjs --check
       - name: The commit Forge makes on a template instance is prism-code's, byte for byte

@@ -1,12 +1,12 @@
 {
  "spec": "hologram-forge/kernel/1",
  "application": "Forge kernel",
- "source": "https://raw.githubusercontent.com/UOR-Foundation/foundry/6d721f5632c6d09d85b66b8eb3403e4f849f0330/studio/shell/kernel/kernel.holo",
- "digest": "blake3:4e9d80d52a73916bcdf9163902b31a520e4e42eaad227b087fda0e1a7c5e7cac",
+ "source": "https://raw.githubusercontent.com/UOR-Foundation/foundry/d9864ed486e3238bbe7d693c2e2e60478a7bda89/studio/shell/kernel/kernel.holo",
+ "digest": "blake3:4f5fb5970028d8d65b821719f0d69bae31f96319f51e126cd2baf1d1af0165df",
  "guest": {
   "path": "kernel/guest.wasm",
-  "sha256": "3d5dd03f7dc50bb427006f0fb7ba30bc848d600664302df7edeb89c6e909ccd7",
-  "bytes": 18649
+  "sha256": "89bc7948c2ad58c1e49266eb53d66edf6e0f55b6a43caef536567344bba4f78a",
+  "bytes": 22367
  },
  "limits": {
   "request": 32776,
@@ -468,6 +468,174 @@
   ],
   [
    "Z2F0ZSBmb3JnZSAgZmV0Y2ggbm8gbm8gbm8=",
+   "aW52YWxpZA=="
+  ],
+  [
+   "YnVkZ2V0IGNvbGQgOTMwMA==",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGNvbGQgMTA1MDA=",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGNvbGQgMTE1MDE=",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IHdhcm0gMTgwMA==",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGlucCA0NTA=",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGlucCA0NTE=",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IHRva2VuIDUwMDA=",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IHRva2VuIDUwMDE=",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IGhvbWUgNjE1",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGhvbWUgOTA1",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IGNoYXQgOTMx",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IHNldHRpbmdzIDY0NQ==",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGRldGFpbHMgNjQ2",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IGFwcHMgNjMw",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGNvZGUgOTQ1",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IHB1Ymxpc2ggOTYx",
+   "b3Zlcg=="
+  ],
+  [
+   "bGF5b3V0IDM5MA==",
+   "dGFicw=="
+  ],
+  [
+   "bGF5b3V0IDc2Nw==",
+   "dGFicw=="
+  ],
+  [
+   "bGF5b3V0IDc2OA==",
+   "c3BsaXQ="
+  ],
+  [
+   "bGF5b3V0IDE0NDA=",
+   "c3BsaXQ="
+  ],
+  [
+   "bW90aW9uIDIwMCBubw==",
+   "YWxsb3c="
+  ],
+  [
+   "bW90aW9uIDIwMSBubw==",
+   "ZGVueQ=="
+  ],
+  [
+   "bW90aW9uIDIwMCB5ZXM=",
+   "ZGVueQ=="
+  ],
+  [
+   "bW90aW9uIDAgbm8=",
+   "YWxsb3c="
+  ],
+  [
+   "dGFyZ2V0IDQ0",
+   "b2s="
+  ],
+  [
+   "dGFyZ2V0IDQz",
+   "c21hbGw="
+  ],
+  [
+   "dGFyZ2V0IDMy",
+   "c21hbGw="
+  ],
+  [
+   "cmVjZW50IDA=",
+   "eWVz"
+  ],
+  [
+   "cmVjZW50IDYwNDgwMA==",
+   "eWVz"
+  ],
+  [
+   "cmVjZW50IDYwNDgwMQ==",
+   "bm8="
+  ],
+  [
+   "cmVjZW50IDY5MTIwMA==",
+   "bm8="
+  ],
+  [
+   "YnVkZ2V0",
+   "aW52YWxpZA=="
+  ],
+  [
+   "YnVkZ2V0IGNvbGQ=",
+   "aW52YWxpZA=="
+  ],
+  [
+   "YnVkZ2V0IHVua25vd24gMQ==",
+   "aW52YWxpZA=="
+  ],
+  [
+   "YnVkZ2V0IGNvbGQgMDE=",
+   "aW52YWxpZA=="
+  ],
+  [
+   "YnVkZ2V0IGNvbGQgOTMwMCAx",
+   "aW52YWxpZA=="
+  ],
+  [
+   "bGF5b3V0",
+   "aW52YWxpZA=="
+  ],
+  [
+   "bGF5b3V0IHdpZGU=",
+   "aW52YWxpZA=="
+  ],
+  [
+   "bW90aW9uIDIwMCBtYXliZQ==",
+   "aW52YWxpZA=="
+  ],
+  [
+   "bW90aW9uIDIwMA==",
+   "aW52YWxpZA=="
+  ],
+  [
+   "dGFyZ2V0IDQ0IDQ0",
+   "aW52YWxpZA=="
+  ],
+  [
+   "cmVjZW50IC0x",
    "aW52YWxpZA=="
   ]
  ]

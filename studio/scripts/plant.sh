@@ -19,6 +19,11 @@
 #   ./scripts/plant.sh rolled    # a screen imports Base UI itself: the renderer's build must refuse the bundle
 #   ./scripts/plant.sh rewrite   # a screen calls a ui component in a way the Radix rewrite cannot convert: the typecheck must refuse
 #   ./scripts/plant.sh passage   # Dyad changes a passage the shell patches: the shell's screens must refuse rather than skip it
+#   ./scripts/plant.sh unapplied # a patch names a file the build never reads: the build must refuse rather than skip it
+#   ./scripts/plant.sh heavy     # home imports the chat page itself, un-split: the Performance gate must refuse
+#                                # (rebuild the renderer after it: the plant leaves its build in shell/assets)
+#   ./scripts/plant.sh tap       # shrink the touch hit area under the kernel's tap target: the Experience gate must refuse
+#   ./scripts/plant.sh inpbudget # raise the kernel's mobile INP budget past 500 ms: Lean must refuse FK-14 (run in the SDK image)
 #   ./scripts/plant.sh table     # invert a condition mask in the decision table: the Table gate must refuse
 #   ./scripts/plant.sh edit      # keep a patch that does not check: the Edit gate must refuse
 #   ./scripts/plant.sh look      # let the build screen fall back to the home look: the Build look check must refuse
@@ -139,6 +144,18 @@ EOF
     sed -i 's/<SubscriptionStatusBanner \/>/<SubscriptionStatusBanner compact \/>/' vendor/dyad/src/app/layout.tsx
     expect_fail bash -c 'cd vendor/dyad && node hologram.typecheck.mjs'
     cp /tmp/plant-layout.tsx vendor/dyad/src/app/layout.tsx ;;
+  unapplied)
+    # A patch aimed at a module the build never reads did nothing, silently, before the build asked.
+    cp vendor/dyad/hologram.lean.mjs /tmp/plant-lean.mjs
+    sed -i 's#\["src/routes/apps.ts", #["src/routes/apps.mts", #' vendor/dyad/hologram.lean.mjs
+    expect_fail bash -c 'cd vendor/dyad && MSYS_NO_PATHCONV=1 npx vite build --config vite.shell.config.mts --base /foundry/ --outDir /tmp/plant-dist --emptyOutDir'
+    cp /tmp/plant-lean.mjs vendor/dyad/hologram.lean.mjs ;;
+  heavy)
+    # The heaviest page pulled into the first load by one static import: what the route split exists to stop.
+    cp vendor/dyad/src/pages/home.tsx /tmp/plant-home.tsx
+    sed -i '1i import ChatPage from "./chat"; console.log(ChatPage);' vendor/dyad/src/pages/home.tsx
+    expect_fail bash -c 'cd vendor/dyad && MSYS_NO_PATHCONV=1 npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py && cd ../.. && node tools/perf_budget.mjs'
+    cp /tmp/plant-home.tsx vendor/dyad/src/pages/home.tsx ;;
   table)
     # A table that answers differently from the rules: every answer, guarantee and diff built on it is wrong.
     cp shell/live/table.mjs /tmp/plant-table.mjs
@@ -157,7 +174,21 @@ EOF
     perl -pi -e 's/readJson\(BUILD_KEY\) \|\| \{ palette: "dark", immersive: false \}/readJson(BUILD_KEY) || home/' shell/appearance.js
     grep -q 'readJson(BUILD_KEY) || home;' shell/appearance.js || { echo "anchor not found"; exit 1; }
     expect_fail node tools/build_look.mjs ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|look" >&2; exit 2 ;;
+  tap)
+    # A hit area a finger misses, typed into the stylesheet where the kernel cannot see it.
+    cp shell/appearance.css /tmp/plant-appearance.css
+    sed -i 's/width: max(100%, 44px); height: max(100%, 44px)/width: max(100%, 40px); height: max(100%, 40px)/' shell/appearance.css
+    grep -q 'max(100%, 40px)' shell/appearance.css || { echo "anchor not found"; exit 1; }
+    expect_fail node tools/experience.mjs --check
+    cp /tmp/plant-appearance.css shell/appearance.css ;;
+  inpbudget)
+    # A budget loosened in the kernel itself: the theorem that bounds it is what must stop it.
+    cp ../app/src/ForgeKernel.lex.tex /tmp/plant-kernel.lex.tex
+    sed -i 's/(if (journey =? 2) then 450 else/(if (journey =? 2) then 600 else/' ../app/src/ForgeKernel.lex.tex
+    grep -q 'then 600 else' ../app/src/ForgeKernel.lex.tex || { echo "anchor not found"; exit 1; }
+    expect_fail bash -c 'cd .. && prismpm --project app verify'
+    cp /tmp/plant-kernel.lex.tex ../app/src/ForgeKernel.lex.tex ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|look|unapplied|heavy|tap|inpbudget" >&2; exit 2 ;;
 esac
 restore
 echo "restored"
