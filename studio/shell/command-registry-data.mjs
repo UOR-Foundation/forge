@@ -366,6 +366,19 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Committed bounded origin window ownership, interest relay and query invalidation recovery; browser platform locks are cooperative, not authentication."
+    },
+    {
+      "id": "working-tree",
+      "version": 1,
+      "owner": "FoundrySpecification.workingTreeBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Committed bounded origin window ownership, interest relay and query invalidation recovery; browser platform locks are cooperative, not authentication."
     }
   ],
   "commands": [
@@ -1871,9 +1884,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "git:get-uncommitted-file-diff",
-      "feature": "local-read",
+      "feature": "working-tree",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.workingTreeBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -1881,9 +1894,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "git:get-uncommitted-files",
-      "feature": "local-read",
+      "feature": "working-tree",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.workingTreeBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",

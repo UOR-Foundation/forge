@@ -365,6 +365,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-29` | `build` | Worker activation requires bounded independently verified shell bytes including renderer and scaffold closure |
 
+## verified-working-tree
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-58` | `build` | Working-tree queries compare atomically captured source with verified snapshot bytes and refuse corrupt or over-budget differences |
+
 ## version-preview-model
 
 | ID | Level | Statement |

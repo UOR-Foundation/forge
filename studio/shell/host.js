@@ -1,3 +1,4 @@
+import {readWorkingTree} from "./working-tree.mjs";
 import {createWindowDelivery} from "./window-delivery.mjs";
 import {createWindowCoordinator,windowJournalStore,windowRecoveryScopes} from "./window-coordination.mjs";
 import {VisibleEntitySchema,ChatTabOwnershipSchema,WindowInterestSchema,QueryInvalidationScopeSchema,QueryInvalidationBatchSchema} from "./chat-contracts.mjs";
@@ -335,17 +336,6 @@ handlers.set("forge:import", async (input) => {
 // address only when its bytes re-derive to it (the core's restore rule).
 handlers.set("list-versions", async input => listStoredVersions(await dbReady,input));
 handlers.set("get-current-branch", async () => ({ branch: "main" }));
-// What a version changed, computed from the addresses themselves: a version is the preimage of the
-// project state (its JSON lists every file as [path, kappa, bytes] with the parent's address), and
-// every file's bytes are an object at their own address, so the diff against the parent is a walk of
-// two entry lists. Nothing is stored twice for this.
-async function snapshotOf(oid) {
-  if (!oid) return null;
-  const bytes = await get("objects", oid);
-  if (!bytes) return null;
-  try { const snap = JSON.parse(dec.decode(bytes)); return Array.isArray(snap.entries) ? snap : null; } catch (e) { return null; }
-}
-const contentAt = async (kappa) => { const b = kappa ? await get("objects", kappa) : null; return b ? dec.decode(b) : ""; };
 async function versionHistoryBoundary(){await coreReady;return {readObject:key=>get("objects",key),derive:kappa,admit:async(derived,expected)=>core.run({op:"restore",derived,expected}).decision==="Accept"};}
 handlers.set("get-version-changes", async input => verifiedVersionChanges(await dbReady,input,await versionHistoryBoundary()));
 handlers.set("set-version-favorite", async input => setStoredVersionMetadata(await dbReady,input,"isFavorite"));
@@ -801,15 +791,8 @@ handlers.set("is-capacitor", () => false);
 handlers.set("get-app-theme", () => null);
 handlers.set("get-proposal", () => null);
 handlers.set("select-app-for-preview", () => undefined);
-handlers.set("git:get-uncommitted-files", () => []);
-// Every edit here is sealed as it is made, so nothing is ever uncommitted; the diff of a file is still
-// real -- its bytes now against its bytes at the address main points at.
-handlers.set("git:get-uncommitted-file-diff", async ({ appId, filePath }) => {
-  const snap = await snapshotOf(await get("refs", appId + ":main"));
-  const entry = (snap ? snap.entries : []).find(([path]) => path === filePath);
-  const now = await get("files", appId + ":" + filePath);
-  return { path: filePath, oldContent: entry ? await contentAt(entry[1]) : "", newContent: now === undefined ? "" : now, additions: 0, deletions: 0 };
-});
+handlers.set("git:get-uncommitted-files", async input => readWorkingTree(await dbReady,input,await versionHistoryBoundary()));
+handlers.set("git:get-uncommitted-file-diff", async input => readWorkingTree(await dbReady,input,await versionHistoryBoundary()));
 handlers.set("github:list-local-branches", () => ({ branches: ["main"], current: "main" }));
 handlers.set("reload-env-path", () => undefined);
 handlers.set("get-cloud-sandbox-status", () => null);

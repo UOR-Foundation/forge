@@ -441,3 +441,9 @@ id = "FA-57"
 level = "build"
 suite = "browser-window-coordination"
 statement = "Browser window registration focus visibility interests and invalidation recovery replace empty acknowledgements with bounded origin coordination"
+
+[[id]]
+id = "FA-58"
+level = "build"
+suite = "verified-working-tree"
+statement = "Working-tree queries compare atomically captured source with verified snapshot bytes and refuse corrupt or over-budget differences"
