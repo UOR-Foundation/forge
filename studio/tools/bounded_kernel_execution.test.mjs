@@ -44,10 +44,9 @@ test('service-worker requests use only a matching verified document guest and ne
  const kernel=await self.ForgeKernel.load(document.get);assert.equal(await kernel.ask('drafting check'),'checked');assert.equal(document.instances,3);
 });
 test('service-worker absence of a verified matching document refuses acceptance',async()=>{
- const owner=fixture();await owner.load();const pair=new MessageChannel();
- const closed=new Promise(resolve=>pair.port1.addEventListener('close',resolve));pair.port1.start();
- await owner.bridge({kind:'foundry:kernel-execute/1',key:originalMeta.digest+':'+originalMeta.guest.sha256,request:new TextEncoder().encode('drafting check')},[pair.port2],{});
- await closed;assert.equal(owner.instances,1);pair.port1.close();
+ const owner=fixture();await owner.load();let closed=false;const foreignPort={close(){closed=true;},postMessage(){assert.fail('foreign source received execution');}};
+ await owner.bridge({kind:'foundry:kernel-execute/1',key:originalMeta.digest+':'+originalMeta.guest.sha256,request:new TextEncoder().encode('drafting check')},[foreignPort],{});
+ assert.ok(closed);assert.equal(owner.instances,1);
  for(const mismatch of [false,true]){
   const document=fixture();await document.load();const self={clients:{matchAll:async()=>mismatch?[{postMessage:(data,ports)=>void document.bridge({...data,key:'unknown-guest'},ports)}]:[]}};
   vm.runInNewContext(source,{self,location:{},MessageChannel,crypto:webcrypto,WebAssembly,TextEncoder,TextDecoder,Uint8Array,atob,setTimeout,clearTimeout});
