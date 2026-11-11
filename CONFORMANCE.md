@@ -96,6 +96,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-15` | `build` | Unimplemented browser queries return typed unsupported errors rather than fabricated resource status or empty findings |
 
+## command-ownership-registry
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-43` | `build` | Every imported and browser command is classified by canonical ownership and dispatch refuses missing or changed bindings |
+
 ## composition-host-runtime
 
 | ID | Level | Statement |

@@ -1,6 +1,7 @@
 \begin{lexlean}{FoundrySpecification}
 \useglossary{lexlean.std.bool@1.2.0}
 \useglossary{lexlean.std.nat@1.2.0}
+\importmodule{CommandRegistry}
 \title{Boolean}
 \begin{semanticmodule}
 inductive{
@@ -835,6 +836,31 @@ definition{
   parameters: [],
   result: String,
   body: "Gallery and garden application documents contain a bounded interaction profile and text-only screen and control descriptions. The canonical Application module is reconstructed exactly from the profile; mismatched source refuses execution. Every transition and current frame is evaluated by the generated interaction guest. Persistent state is bound to the exact semantic profile and updated with source and prior-state comparisons in the existing atomic project transaction. Reload recovers that state. A changed profile requires explicit reset; unrelated presentation edits retain state. Generic generated batches cannot overwrite interaction authority. Direct authoring of the interaction document regenerates its canonical module atomically. Audio is off on every open and reload, starts only after explicit gesture, and is stopped on revocation, close or hidden document. Reduced motion is passed to the guest. Rendering uses closed illustrations and text nodes, native keyboard controls and guest-selected frame outputs. The local receipt binds model identity and project source; it does not establish arbitrary code compilation, authentication of same-origin callers, sensory quality or whole-release qualification."
+}
+
+inductive{
+  name: CommandRegistryError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: commandRegistryInvalid, fields: []},
+    {name: commandBindingMissing, fields: []},
+    {name: commandBindingMismatch, fields: []}
+  ]
+}
+
+definition{
+  name: commandRegistryBoundary,
+  parameters: [],
+  result: String,
+  body: "The canonical command registry classifies every imported renderer input and output contract and every installed browser handler. Each command has exactly one versioned owner binding, adapter, contract origin and availability. The browser dispatcher refuses undeclared commands and changed handler availability before effects, preserving typed unsupportedChannel for declared unavailable commands. The generated registry projection is byte compared against the canonical model. Independent enumeration of the real imported schema tables and installed browser handlers rejects omissions and additions. Ownership labels identify the boundary responsible for behavior; inventory admission does not prove the adapter implements its entire contract, grant effects, qualify arbitrary imported semantics or close whole-application release acceptance."
+}
+
+definition{
+  name: browserReadBoundary,
+  parameters: [],
+  result: String,
+  body: "Browser metadata and project readers expose the declared local platform, provider catalog, stored projects, chats, versions and context through imported renderer schemas. Fixed platform values describe the finite browser adapter. Browser-only acknowledgements and unavailable remote integrations are separate classifications. This owner declaration identifies existing adapters; semantic completeness of each imported operation is independently qualified."
 }
 \end{semanticmodule}
 \end{lexlean}

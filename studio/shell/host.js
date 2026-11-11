@@ -1,3 +1,4 @@
+import {commandRegistry, invokeBoundCommand} from "./command-registry.mjs";
 import {interactionPreset, interactionModule, validateInteractionDocument, interactionFailure} from "./interaction-application.mjs";
 import {runStoredInteraction} from "./interaction-state.mjs";
 import {mountInteractionApplications, openInteractionApplication} from "./interaction-ui.mjs";
@@ -1350,7 +1351,7 @@ function dispatch(channel, args) {
   seen.set(channel, (seen.get(channel) || 0) + 1);
   const output = window.__contracts && window.__contracts[channel];
   const input = window.__inputContracts && window.__inputContracts[channel];
-  return invokeHost(channel, args, handlers.get(channel), output, output || input ? { schema: input } : null);
+  return invokeBoundCommand(commandRegistry, channel, args, handlers.get(channel), (name, values, handler) => invokeHost(name, values, handler, output, output || input ? { schema: input } : null));
 }
 
 
