@@ -66,6 +66,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-30` | `build` | The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings |
 
+## canonical-module-boundary
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-35` | `build` | The canonical decision-module reader refuses ambiguous or discarded semantics before authoring |
+
 ## capability-availability
 
 | ID | Level | Statement |

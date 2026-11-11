@@ -303,3 +303,9 @@ id = "LL-02"
 level = "build"
 suite = "live-lexlean"
 statement = "Every guarantee of the Verdant Resonance fixture holds on every request in its bounds"
+
+[[id]]
+id = "FA-35"
+level = "build"
+suite = "canonical-module-boundary"
+statement = "The canonical decision-module reader refuses ambiguous or discarded semantics before authoring"
