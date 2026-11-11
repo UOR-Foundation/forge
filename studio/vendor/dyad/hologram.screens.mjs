@@ -231,6 +231,12 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     from: `import { ImportAppButton } from "@/components/ImportAppButton";\n`,
     to: ``,
   },
+  // The suggestion chips' row is named, so the shell can give the chips glass that reads over any photo.
+  {
+    file: "src/pages/home.tsx",
+    from: `<div className="mt-4 flex flex-wrap justify-center gap-2">`,
+    to: `<div className="mt-4 flex flex-wrap justify-center gap-2" data-slot="home-suggestions">`,
+  },
   // On a phone the page keeps the inset's 16 px gutter instead of 32 px, so the composer has the room.
   {
     file: "src/pages/home.tsx",

@@ -52,10 +52,11 @@ RED = {"50": RAMP["50"], "100": RAMP["100"], "200": RAMP["200"], "300": CORE["re
 # Arbitrary hex classes the renderer uses for its Pro accent: the foreground, never a second accent.
 ARBITRARY = {"#6c55dc": "foreground", "#7f22fe": "foreground"}
 
-# ---- Immersive: the photo unfaded behind a transparent main surface; glass on what carries text.
+# ---- Immersive: the photo unfaded inside the workspace (the inset panel), behind its transparent main
+# surface; glass on what carries text. The sidebar and the margin round the workspace are solid ground.
 # Alpha per surface, the smallest at which the pairs pass AA on the three curated photos (measured in
-# the browser; see HOLOGRAM/FORGE-BRAND-TOKENS-EVAL.md).
-ALPHA = {"background": 0.0, "sidebar": 0.62, "card": 0.74, "popover": 0.94, "muted": 0.7, "accent": 0.7, "secondary": 0.7}
+# the browser; see HOLOGRAM/FORGE-BRAND-TOKENS-EVAL.md). The sidebar has no photo behind it: opaque.
+ALPHA = {"background": 0.0, "sidebar": 1.0, "card": 0.74, "popover": 0.94, "muted": 0.7, "accent": 0.7, "secondary": 0.7}
 
 
 def rgb(hex6, alpha):
@@ -120,11 +121,11 @@ def immersive_block():
 def brand_css():
     out = HEAD + font_faces("")
     out += block(":root", variables(LIGHT, False)) + block(".dark", variables(DARK, True))
-    out += "\n/* Immersive: the photo, unfaded, behind a transparent main surface; glass on the panels that carry text. */\n"
-    out += ':root[data-holo-immersive="on"] body { background: transparent; }\n'
-    out += ':root[data-holo-immersive="on"] body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--holo-wallpaper, none) center / cover no-repeat, var(--background); }\n'
+    out += "\n/* Immersive: the photo, unfaded, inside the workspace window (the inset panel, clipped to its corners), behind a\n   transparent main surface; glass on the panels that carry text. The sidebar and the margin round the workspace\n   are the page's solid ground, as in every other look. */\n"
+    out += ':root[data-holo-immersive="on"] body { background: var(--sidebar); }\n'
+    out += ':root[data-holo-immersive="on"] [data-slot="sidebar-inset"] { background: var(--holo-wallpaper, none) center / cover no-repeat, var(--background-darker); }\n'
     out += immersive_block()
-    out += ':root[data-holo-immersive="on"] [data-slot="sidebar-inner"], :root[data-holo-immersive="on"] [data-slot="sidebar"] > div, :root[data-holo-immersive="on"] .popover { -webkit-backdrop-filter: blur(24px) saturate(1.2); backdrop-filter: blur(24px) saturate(1.2); }\n'
+    out += ':root[data-holo-immersive="on"] .popover { -webkit-backdrop-filter: blur(24px) saturate(1.2); backdrop-filter: blur(24px) saturate(1.2); }\n'
     out += "\n/* Type: the display face for titles, the interface face for everything else, the mono face for addresses; nothing under 14px. */\n"
     out += "body { font-family: var(--font-sans); }\n"
     out += ".font-display, h1.font-display, main > h1 { font-family: var(--font-display); letter-spacing: var(--tracking-display); font-weight: 600; }\n"
