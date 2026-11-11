@@ -157,6 +157,35 @@ const bad = lex.specFromTurn("<prism-lexlean>" + source.replace("else (answerWin
 claim("turn: a module that does not read is refused", !!bad && !!bad.error, bad && bad.error);
 claim("turn: the module being written projects as a draft", !!lex.partialFromTurn("<prism-lexlean>" + source.slice(0, Math.floor(source.length / 2))));
 
+// the model writes LexLean: declarations only, the theorems are derived
+const SPEC_RULES = prism.SPEC_RULES || "";
+const example = /<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(SPEC_RULES);
+let exampleReads = false;
+try { exampleReads = !!example && lex.readLexLean(example[1]).rules.length > 0 && !/theorem\{/.test(example[1]); } catch (e) {}
+claim("prompt: the model is asked for <prism-lexlean>, and the prompt's example reads", SPEC_RULES.includes("<prism-lexlean>") && !SPEC_RULES.includes("<dyad-spec>{") && exampleReads);
+const bare = source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
+let bareSpec = null;
+try { bareSpec = lex.readLexLean(bare); } catch (e) {}
+claim("source: declarations without theorems read, and the canonical source derives them", !!bareSpec && bareSpec.properties.length === spec.properties.length && lex.canonicalSource?.(bareSpec)?.source === source, `${bare.length.toLocaleString()} characters without theorems, ${source.length.toLocaleString()} with`);
+const turnBare = lex.specFromTurn("<prism-lexlean>" + bare + "</prism-lexlean>");
+claim("source: a turn's module is stored canonically", !!turnBare && turnBare.source === source);
+
+// every app has a canonical LexLean source, whatever wrote its spec
+const rsvpSource = lex.canonicalSource?.(rsvp);
+let rsvpSourceSame = false;
+if (rsvpSource) { const a = logicOf(rsvp), b = logicOf(lex.readLexLean(rsvpSource.source)), t = K.build(a); rsvpSourceSame = true; for (let r = 0; r < t.size && rsvpSourceSame; r++) { const l = K.requestOf(t, r); if (prismAnswer(a, l) !== prismAnswer(b, l)) rsvpSourceSame = false; } }
+claim("every app: a spec's canonical source decides as the spec does", !!rsvpSource && /^[A-Z]\w*$/.test(rsvpSource.name) && rsvpSourceSame, rsvpSource ? `prism/${rsvpSource.name}.lex.tex` : "no canonicalSource");
+
+// over prism-code's 24 rules: checked by obligations, never offered for proof
+const big = prism.checkSpec(spec);
+claim("cap: an app over 24 rules is checked by its obligations", big.ok === true && !!big.module && (big.notes || []).some((n) => /obligations/.test(n)), big.ok ? (big.notes || []).join(" ") : (big.issues || []).join(" "));
+const bigBroken = structuredClone(spec); bigBroken.rules[1].when.find((c) => c.field === "proximity").value = 60;
+const bb = prism.checkSpec(bigBroken);
+claim("cap: a broken app over 24 rules is refused with its counterexample", bb.ok === false && (bb.issues || []).some((i) => /does not hold/.test(i)), (bb.issues || []).join(" "));
+let proveWord = "";
+try { await prism.prove(spec); } catch (e) { proveWord = e.message; }
+claim("cap: proving an app over 24 rules is refused, and says why", /24 rules/.test(proveWord) && /605/.test(proveWord), proveWord);
+
 // budget
 const runs = [];
 checkObligations(spec);

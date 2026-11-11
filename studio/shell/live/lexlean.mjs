@@ -35,7 +35,7 @@ const conj = (terms) => terms.reduce((acc, t) => (acc ? `(${acc} && ${t})` : t),
 export function toLexLean(input) {
   // Rules and guarantees a person or model wrote may carry no id yet: number them as prism-code does.
   const pad = (i) => String(i + 1).padStart(3, "0");
-  const spec = { ...input, rules: (input.rules || []).map((r, i) => ({ id: `REQ-${pad(i)}`, ...r })), properties: (input.properties || []).map((p, i) => ({ id: `INV-${pad(i)}`, ...p })) };
+  const spec = { ...input, purpose: input.purpose ?? input.title ?? "", examples: input.examples || [], rules: (input.rules || []).map((r, i) => ({ id: `REQ-${pad(i)}`, ...r })), properties: (input.properties || []).map((p, i) => ({ id: `INV-${pad(i)}`, ...p })) };
   const n = names(spec);
   const keep = new Set(["Request", "judge", ...Object.values(n.rules), ...Object.values(n.answers), ...Object.values(n.fields).flatMap((f) => Object.values(f.choices))]);
   const decls = declarations(spec, n).filter((d) => keep.has(d.name)).map(declarationText);
@@ -236,18 +236,21 @@ export function readLexLean(text) {
   }
   const otherwise = answerOf(e, "judge");
 
-  // Properties: a `breaks…` definition that a theorem states is always false.
+  // Properties: each `breaks…` definition, the requests that would break a guarantee. Its `…Holds`
+  // theorem (that no request meets it) is derived, so a module the model writes need not carry it; a
+  // theorem that names a breaks definition the module lacks is refused.
   const properties = [];
   for (const th of bs.filter((b) => b.kind === "theorem")) {
     const m = /statement:\s*\(\(\s*(\w+)\s+request\s*\)\s*=\s*false\s*\)/.exec(th.body);
-    if (!m) continue;
-    const bb = byName.get(m[1]);
-    if (!bb) throw new LexLeanError(`no definition ${m[1]}`, th.name);
+    if (m && !byName.has(m[1])) throw new LexLeanError(`no definition ${m[1]}`, th.name);
+  }
+  for (const bb of bs.filter((b) => b.kind === "definition" && /^breaks[A-Z]\w*$/.test(b.name))) {
     const terms = flatAnd(parseExpr(bodyOf(bb), bb.name));
     const last = terms.pop(), neg = !!last.not, j = last.not ?? last;
     if (j.op !== "=?" || j.left.app !== "judge") throw new LexLeanError("the last term must compare (judge request) with an answer", bb.name);
+    const stem = bb.name.slice(6);
     properties.push({
-      id: th.name.replace(/Holds$/, ""), kind: neg ? "always" : "never", then: answerOf(j.right, bb.name),
+      id: stem[0].toLowerCase() + stem.slice(1), kind: neg ? "always" : "never", then: answerOf(j.right, bb.name),
       when: terms.map((c) => condition(c, bb.name, true)).filter((c) => !boundKeys.has(JSON.stringify(c))),
     });
   }
@@ -294,18 +297,24 @@ export function readLexLeanPartial(text) {
   }
 }
 
+/** An app's canonical LexLean source, written from its spec: the module named by the app, theorems derived. */
+export function canonicalSource(spec) {
+  const source = toLexLean(spec);
+  return { name: /\\begin\{lexlean\}\{(\w+)\}/.exec(source)[1], source };
+}
+
 /**
  * A chat turn's LexLean module: the text inside `<prism-lexlean>…</prism-lexlean>`. Returns null when
- * the turn has none, { error } when it does not read, else { name, source, spec }: the module is the
- * source, stored as written, and the spec is read from it.
+ * the turn has none, { error } when it does not read, else { name, source, spec }. The model writes the
+ * declarations; the source kept is the canonical module read from them, with the theorems derived, so the
+ * same meaning is always the same bytes.
  */
 export function specFromTurn(text) {
   const m = /<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(text || "");
   if (!m) return null;
-  const source = m[1].trim() + "\n";
   try {
-    const spec = readLexLean(source);
-    return { name: /\\begin\{lexlean\}\{(\w+)\}/.exec(source)[1], source, spec };
+    const spec = readLexLean(m[1].trim() + "\n");
+    return { ...canonicalSource(spec), spec };
   } catch (e) { return { error: "The LexLean module does not read: " + e.message }; }
 }
 

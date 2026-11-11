@@ -895,13 +895,14 @@ const saveRules = (appId, state) => put("refs", "prism:" + appId, state);
 // (the kernel's edit), are checked (its check), and on a pass the app's rule module is written.
 // Returns the files changed and the card that replaces the spec in the chat.
 async function rulesAfterTurn(appId, text, written = []) {
-  // A canonical LexLean module, when the model wrote one, is the app's source: it is stored as written
-  // and the spec is read from it, so the spec is a view of the module, never a second source.
+  // A LexLean module, when the model wrote one, carries the rules: the spec is read from it, keeping the
+  // screen's words (purpose, view, meanings) the spec already had, since the module holds only the logic.
   const lex = lexlean.specFromTurn(text);
   if (lex && lex.error) return { changed: 0, card: `**Rules** · not read\n\n- ${lex.error}\n\nAsk me to fix the module.` };
   if (lex) {
-    if ((await get("files", `${appId}:prism/${lex.name}.lex.tex`)) !== lex.source) { await put("objects", await kappa(enc.encode(lex.source)), enc.encode(lex.source)); await put("files", `${appId}:prism/${lex.name}.lex.tex`, lex.source); }
-    text = "<dyad-spec>" + JSON.stringify(lex.spec) + "</dyad-spec>";
+    let words = {};
+    try { const prev = JSON.parse((await get("files", appId + ":prism/spec.json")) || "{}"); words = Object.fromEntries(["purpose", "view", "meanings"].filter((k) => prev[k] !== undefined).map((k) => [k, prev[k]])); } catch (e) {}
+    text = "<dyad-spec>" + JSON.stringify({ ...lex.spec, ...words }) + "</dyad-spec>";
   }
   const tag = prism.parseSpecTag(text);
   let changed = 0;
@@ -910,6 +911,14 @@ async function rulesAfterTurn(appId, text, written = []) {
     if ((await get("files", appId + ":prism/spec.json")) !== json) { await put("objects", await kappa(enc.encode(json)), enc.encode(json)); await put("files", appId + ":prism/spec.json", json); changed++; }
   }
   const current = await get("files", appId + ":prism/spec.json");
+  // Every app's rules have a canonical LexLean source, whatever wrote them (a module, the on-device
+  // model's JSON, a click or an agent's patch): the same meaning is always the same module bytes.
+  if (current) {
+    try {
+      const c = lexlean.canonicalSource(JSON.parse(current));
+      if ((await get("files", `${appId}:prism/${c.name}.lex.tex`)) !== c.source) { await put("objects", await kappa(enc.encode(c.source)), enc.encode(c.source)); await put("files", `${appId}:prism/${c.name}.lex.tex`, c.source); changed++; }
+    } catch (e) {}
+  }
   const before = await rulesOf(appId);
   if (!current) return { changed, card: tag && tag.error ? `**Rules** · not checked\n\n- ${tag.error}\n\nAsk me to fix the rules.` : null };
   const specKappa = await kappa(enc.encode(current));
