@@ -609,5 +609,28 @@ definition{
   result: String,
   body: "Import accepts the existing hologram-forge/export/1 profile, snapshots relevant primitive inputs before asynchronous work, and validates the complete supplied object identities and referenced snapshot/file/history closure before any write. At most 64 apps, 1000 files per app, 16 MiB per file or object, 128 MiB aggregate prepared bytes, 8192 objects, 4096 historical snapshots, 4096 chats and 16384 messages are accepted; message text is at most 2 MiB each and 32 MiB total. One preparation deadline of at most 120 seconds bounds asynchronous identity and core checks; timeout or cancellation returns no prepared import. Source file bytes and app name must match an existing main snapshot. History parent cycles and missing or corrupt objects refuse. An export without a main reference receives an initial generated-core snapshot. A collision rename creates a child snapshot with the renamed app and exact files, preserving prior history. Direct dependency metadata must agree with a snapshot declaration; unbound legacy dependency requests refuse. Only validated names, dates, direct dependencies, version annotations and renderer-compatible chat/message fields survive normalization. Imported permissions, grants, keys, provider selection, cached rule/proof state and cross-app references never grant authority. Existing insert-only atomic import and persistent allocation guards commit the prepared data. Invalid input, limits, identity, missing object, source mismatch, history, timeout and cancellation have fixed typed public errors; existing snapshot/core/preparation errors remain typed. A preparation or commit failure leaves storage unchanged. This qualifies local import integrity and authority isolation, not export authenticity, external credential ownership, package authenticity, or whole-application conversion."
 }
+
+inductive{
+  name: ShellClosureError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidShellManifest, fields: []},
+    {name: shellClosureMismatch, fields: []},
+    {name: shellFileMismatch, fields: []},
+    {name: shellResponseInvalid, fields: []},
+    {name: shellClosureLimitExceeded, fields: []},
+    {name: shellClosureTimedOut, fields: []},
+    {name: shellClosureCancelled, fields: []},
+    {name: shellClosureUnavailable, fields: []}
+  ]
+}
+
+definition{
+  name: shellClosureBoundary,
+  parameters: [],
+  result: String,
+  body: "A worker installs only its pinned hologram-forge/shell/1 closure. It independently recomputes SHA256 of the canonical ordered manifest rows, then verifies every declared file length and SHA256 before publishing file responses to its version cache or requesting activation. The existing manifest profile uses rows with keys bytes, path and sha256 in that order. Paths are unique ascending portable ASCII paths of at most 1024 characters, without URL escapes, queries, fragments or traversal. The manifest is at most 2 MiB, with at most 8192 files, 32 MiB per file and 128 MiB aggregate. The entrypoints index.html, host.js, core.wasm, assets/index.js, assets/index.css and scaffold/files.json are required. Renderer and scaffold assets belong to the closure, while the separate app/ site has its own closure; the worker, its template, the manifest, deployment credentials and the separately closure-bound provenance receipt are excluded to avoid circularity. Fetches are same-origin GET with redirects refused, credentials omitted and HTTP cache bypassed; at most eight are in flight. One deadline of at most 120 seconds covers headers, bodies and identity work. Invalid manifest, closure, file, response, limits, timeout, cancellation and unavailable dependencies have fixed typed failures. No unverified file becomes a verified cache response. Only successful installation permits activation and deletion of prior shell caches. Controlled renderer and scaffold requests read the active worker version rather than the newest network asset, including offline use. This is installation byte consistency, not authentication of the worker or server, qualification of compiler/dependency provenance, prevention of all first-navigation races, or complete release acceptance."
+}
 \end{semanticmodule}
 \end{lexlean}

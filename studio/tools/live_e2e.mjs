@@ -23,7 +23,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const report = {};
 const log = (k, v) => { report[k] = v; console.log(k.padEnd(28), typeof v === "string" ? v : JSON.stringify(v)); };
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN, args: ["--no-sandbox"] } : {}) });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
 const page = await context.newPage();
 const errors = [];

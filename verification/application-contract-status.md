@@ -81,7 +81,7 @@ not substituted for this gate.
 
 ## Review disposition
 
-PRs #22–32, #34, #35, #37–39, #41, #42, #45 and #48–52 and #54–56 and #58 passed their recorded full gates and are ready for review. Author completeness reviews are not independent approval. This branch retains FA-01 through FA-27 and adds FA-28 verified project import; its full feature gate is recorded separately at its revision.
+PRs #22–32, #34, #35, #37–39, #41, #42, #45 and #48–52 and #54–56 and #58 passed their recorded full gates and are ready for review. Author completeness reviews are not independent approval. This branch retains FA-01 through FA-28 and adds FA-29 verified shell installation; its full feature gate is recorded separately at its revision.
 No PR merge into main, deployment, factory migration, or whole-application
 completion is claimed.
 
@@ -115,3 +115,8 @@ FA-24 component reproduction is now qualified: independent signed runs
 produced byte-identical 385046-byte archives. Both signatures bind the exact
 source and build workflow. The current `kernel-reproduction.json` and bundle
 record this component result; full application reproducibility remains open.
+
+FA-28 verified import is in PR #60 with full acceptance pending. FA-29 verifies
+worker installation and includes renderer/scaffold bytes in the staged closure;
+its initial full acceptance is pending. The full live-preview performance probe
+failed its existing edit latency threshold; see `verified-shell-cache.md`.

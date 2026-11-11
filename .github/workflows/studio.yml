@@ -43,10 +43,6 @@ jobs:
           key: lane-${{ hashFiles('studio/PRISMPM_REV', 'studio/lean-toolchain') }}
       - name: The authored model is what the author script writes
         run: python3 tools/author.py --check
-      - name: The lane, byte compared against the committed artifacts
-        run: ./scripts/lane.sh
-      - name: Byte identity corpus
-        run: python3 tools/corpus.py
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
@@ -54,6 +50,14 @@ jobs:
           cache-dependency-path: studio/vendor/dyad/package-lock.json
       - name: Install locked renderer contracts for boundary verification
         run: npm ci --prefix vendor/dyad --ignore-scripts --no-audit --no-fund
+      - name: Build the renderer and stage its complete closure before projection
+        run: (cd vendor/dyad && node node_modules/vite/bin/vite.js build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir) && python3 scripts/stamp_shell.py
+      - name: The lane, byte compared against the committed artifacts
+        run: ./scripts/lane.sh
+      - name: Verify every staged renderer, scaffold and shell byte before acceptance
+        run: node tools/check_shell_closure.mjs
+      - name: Byte identity corpus
+        run: python3 tools/corpus.py
       - name: Check the declared host scope and real renderer error recovery
         run: |
           node tools/contract_shapes.mjs --check
@@ -65,6 +69,7 @@ jobs:
           node tools/storage_request_browser.mjs
           node tools/project_creation_browser.mjs
           node tools/verified_project_import_browser.mjs
+          node tools/verified_shell_cache_browser.mjs
           node tools/project_edit_browser.mjs
           node tools/project_lifecycle_browser.mjs
           node tools/build_source_browser.mjs

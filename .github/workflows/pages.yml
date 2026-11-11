@@ -186,8 +186,15 @@ jobs:
             ~/.cache/hologram-forge-lane
             ~/.elan
           key: lane-${{ hashFiles('studio/PRISMPM_REV', 'studio/lean-toolchain') }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+      - name: The vendored renderer, built beside the shell as the homepage (no Electron, no src/pro)
+        run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py
       - name: The lane, which projects the page from the verified core and builds the wasm the page loads
         run: ./scripts/lane.sh
+      - name: Verify every staged renderer, scaffold and shell byte before acceptance
+        run: node tools/check_shell_closure.mjs
       - name: Byte identity corpus and shell hash check
         run: python3 tools/corpus.py
       - name: The site's included keys, from repository secrets, never from the tree
@@ -198,15 +205,10 @@ jobs:
           KEY: ${{ secrets.OPENROUTER_WARMUP_KEY }}
           FEATHERLESS: ${{ secrets.FEATHERLESS_SITE_KEY }}
         run: python3 -c "import json,os;json.dump({'key':os.environ['KEY'],'model':'qwen/qwen3.8-flash','featherless':os.environ['FEATHERLESS']},open('shell/warmup.json','w'))"
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "24"
       - name: Every shell script parses the way the browser parses it
         run: node tools/shell_parse.mjs
       - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone
         run: node tools/build_look.mjs
-      - name: The vendored renderer, built beside the shell as the homepage (no Electron, no src/pro)
-        run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py
       - name: The host answers the renderer's own contracts (the renderer's node_modules are installed by now)
         run: node tools/contract_shapes.mjs --check
       - name: The renderer preserves typed host refusals and recovers

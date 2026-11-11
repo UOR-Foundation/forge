@@ -22,14 +22,15 @@
 //     this origin's stores.
 const CLOSURE = "__CLOSURE__";   // written by the projector; a new shell is a new worker
 const BASE = new URL(self.registration.scope).pathname;
+const matchShell = async (request, options) => (await caches.open("shell-" + CLOSURE)).match(request, options);
 
 // The kernel decides what an untrusted document may do: its capability gate is proved by Lean
 // (FK-05 to FK-09 in UOR-Foundation/foundry). kernel.js checks the guest against its pin and replays
 // every acceptance vector before the first question; until then, and if that fails, nothing
 // untrusted is served.
-importScripts("kernel.js");
+importScripts("kernel.js", "shell-cache.js");
 let kernelLoad = null;
-const kernel = () => (kernelLoad ??= ForgeKernel.load(async (p) => (await caches.match(BASE + p)) || fetch(BASE + p, { cache: "no-store" })).catch((error) => { kernelLoad = null; throw error; }));
+const kernel = () => (kernelLoad ??= ForgeKernel.load(async (p) => (await matchShell(BASE + p)) || fetch(BASE + p, { cache: "no-store" })).catch((error) => { kernelLoad = null; throw error; }));
 
 async function readManifest() {
   const r = await fetch("manifest.json", { cache: "no-store" });
@@ -38,12 +39,13 @@ async function readManifest() {
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
-    const m = await readManifest();
-    if (m.closure !== CLOSURE) throw new Error("manifest closure does not match this worker");
-    const cache = await caches.open("shell-" + CLOSURE);
-    // Fetch every shell file fresh at install: the HTTP cache must not hand an older byte into a
-    // closure whose digest says otherwise.
-    await cache.addAll(m.files.map((f) => f.path).concat(["manifest.json", "provenance.json"]).map((p) => new Request(p, { cache: "reload" })));
+    const entries = await ShellClosure.prepare(self.registration.scope, CLOSURE);
+    try {
+      const cache = await caches.open("shell-" + CLOSURE);
+      for (const [url, response] of entries) await cache.put(url, response);
+    } catch {
+      throw Object.assign(new Error("Shell installation refused: shellClosureUnavailable"), { code: "shellClosureUnavailable" });
+    }
     await self.skipWaiting();
   })());
 });
@@ -206,21 +208,22 @@ self.addEventListener("fetch", (event) => {
     // app/ is the Forge kernel's Prism page, a separate site with its own worker: never answered here.
     if (path === "app" || path.startsWith("app/")) return;
     // The chat app under ui/ routes on the client: every navigation there is its one page, from the closure first.
-    if (path.startsWith("ui/") && event.request.mode === "navigate") { event.respondWith((async () => (await caches.match(BASE + "ui/index.html")) || fetch(new Request(BASE + "ui/index.html")))()); return; }
-    // The renderer's files under assets/ keep fixed names outside the closure: always revalidated
-    // with the origin (a conditional request, 304 when unchanged), never served stale from the HTTP cache.
-    if (path.startsWith("assets/")) { event.respondWith(fetch(event.request, { cache: "no-cache" }).catch(() => caches.match(event.request))); return; }
+    if (path.startsWith("ui/") && event.request.mode === "navigate") { event.respondWith((async () => (await matchShell(BASE + "ui/index.html")) || fetch(new Request(BASE + "ui/index.html")))()); return; }
+    // Renderer and scaffold bytes come from this worker's verified version, even offline.
+    if (path.startsWith("assets/") || path.startsWith("scaffold/")) {
+      event.respondWith((async () => (await (await caches.open("shell-" + CLOSURE)).match(event.request, { ignoreSearch: true })) || new Response("File absent from the active shell", { status: 404 }))()); return;
+    }
     // The hash list is the staleness oracle: the page compares the closure it was projected with
     // against the one this origin serves now, so it is never answered from a cache while the network
     // can answer. Offline, the cached copy is the truth.
-    if (path === "manifest.json" || path === "provenance.json") { event.respondWith(fetch(event.request, { cache: "no-store" }).catch(() => caches.match(event.request, { ignoreSearch: true }))); return; }
+    if (path === "manifest.json" || path === "provenance.json") { event.respondWith(fetch(event.request, { cache: "no-store" }).catch(() => matchShell(event.request, { ignoreSearch: true }))); return; }
     event.respondWith((async () => {
-      const hit = await caches.match(event.request, { ignoreSearch: true });
+      const hit = await matchShell(event.request, { ignoreSearch: true });
       if (hit) return hit;
       try {
         return await fetch(event.request);
       } catch (error) {
-        if (event.request.mode === "navigate") return (await caches.match("index.html")) || (await caches.match("./"));
+        if (event.request.mode === "navigate") return (await matchShell(BASE + "index.html")) || (await matchShell(BASE));
         throw error;
       }
     })());

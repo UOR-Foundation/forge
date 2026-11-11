@@ -190,6 +190,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-28` | `build` | Imports validate bounded snapshot closure and discard authority-bearing metadata before atomic insertion |
 
+## verified-shell-cache
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-29` | `build` | Worker activation requires bounded independently verified shell bytes including renderer and scaffold closure |
+
 ## work-ownership
 
 | ID | Level | Statement |
