@@ -30,6 +30,7 @@ import * as lexlean from "./live/lexlean.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
+import * as covers from "./covers.mjs";
 
 const BASE = new URL("./", import.meta.url); // the shell's directory, wherever it is served
 const listeners = new Map();
@@ -173,7 +174,7 @@ handlers.set("edit-app-file", async (input) => {
   emit("version-created", { appId: input.appId, oid });
   return { success: true, warning: null };
 });
-handlers.set("delete-app", async ({ appId }) => { await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); });
+handlers.set("delete-app", async ({ appId }) => { await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); await covers.forget(BASE, appId); });
 handlers.set("rename-app", async (input) => {
   await coreReady;
   await renameStoredProject(await dbReady, input, { core, derive: kappa, onCommit: oid => emit("version-created", { appId: input.appId, oid }) });
@@ -386,8 +387,59 @@ function publish(appId, patch) {
   m.revision += 1;
   m.state = { ...m.state, ...patch, revision: m.revision, capabilities: caps(patch.phase || m.state.phase) };
   emit("distributed-machine:snapshot", { protocolVersion: 1, machineId: "app_run", encodedKey: { appId }, actorInstanceId: "web-app_run-" + appId, revision: m.revision, encodedState: m.state });
+  if (m.state.phase === "ready" && m.state.url && m.state.url.appUrl) scheduleCover(appId, m.state.url.appUrl);
   return m;
 }
+// ---- app covers (covers.mjs). Every preview carries the capture responder; when an app's preview is
+// ready and its version has no cover yet, the preview is loaded once more, hidden, at cover size, and its
+// picture is stored with the version it shows. The card's words are asked of the visitor's own model
+// once per app, and stored only when they meet the rules in covers.mjs.
+let coverLibraryReady = null;
+const coverLibrary = () => (coverLibraryReady ??= fetch(new URL("assets/html-to-image.js", BASE)).then((r) => (r.ok ? r.text() : null)).catch(() => null));
+async function withCoverResponder(html) {
+  const library = await coverLibrary();
+  return library ? covers.withResponder(html, library) : html;
+}
+const coverTimers = new Map();
+let coverQueue = Promise.resolve();
+// A turn writes in batches and the preview is announced ready after each; the picture waits for the last.
+function scheduleCover(appId, appUrl) {
+  // Only a preview this page built carries the responder; a published app's page on GitHub Pages does not.
+  if (!String(appUrl).startsWith(BASE.href)) return;
+  clearTimeout(coverTimers.get(appId));
+  coverTimers.set(appId, setTimeout(() => {
+    coverTimers.delete(appId);
+    coverQueue = coverQueue.then(() => coverApp(appId, appUrl)).catch((e) => console.warn("cover", appId, e && e.message));
+  }, 4000));
+}
+async function coverApp(appId, appUrl) {
+  if (!(await get("apps", appId))) return;
+  const version = ((await get("refs", appId + ":main")) || "") + " " + appUrl;
+  if ((await covers.coverVersion(BASE, appId)) === version) return;
+  const shot = await covers.capture(appUrl);
+  if (!shot) return;
+  await covers.saveCover(BASE, appId, await covers.encodeCover(shot.png), version);
+  if (!(await covers.hasCard(BASE, appId)) && !turnRunning()) await describeApp(appId, shot.text);
+}
+// One short request through this origin's own endpoint, so it is routed, sealed and paid as any turn is.
+async function describeApp(appId, pageText) {
+  const app = await get("apps", appId);
+  const settings = (await get("settings", "user")) || DEFAULT_SETTINGS;
+  const chosen = settings.selectedModel || {};
+  const paid = chosen.provider === "featherless" && chosen.name;
+  const model = paid ? chosen.provider + "/" + chosen.name.replace(/^(openrouter|featherless)\//, "") : MODEL_ID;
+  let issues = [];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(new URL("v1/chat/completions", BASE), { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model, messages: covers.cardMessages(app.name, pageText, issues), max_tokens: paid ? 8192 : 256, temperature: "0.3" }) });
+    if (!res.ok) return;
+    const answer = (await res.json()).choices?.[0]?.message?.content;
+    const read = covers.readCard(answer);
+    if (read.card) { await covers.saveCard(BASE, appId, read.card); return; }
+    issues = read.issues;
+  }
+}
+
 let esbuildReady = null;
 async function esbuild() {
   if (!esbuildReady) esbuildReady = import("https://cdn.jsdelivr.net/npm/esbuild-wasm@0.25.5/esm/browser.min.js").then(async (m) => { await m.initialize({ wasmURL: "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.25.5/esbuild.wasm" }); return m; });
@@ -458,9 +510,10 @@ async function buildPreview(appId) {
 <script src="https://cdn.tailwindcss.com"><\/script>
 <style>${css}</style></head><body><div id="root"></div>
 <script type="module">${js}<\/script></body></html>`;
+  const shown = await withCoverResponder(html);
   await assertBuildSourceCurrent(await dbReady, appId, source);
   const cache = await caches.open("previews");
-  await cache.put(appUrl.pathname + "index.html", new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } }));
+  await cache.put(appUrl.pathname + "index.html", new Response(shown, { headers: { "content-type": "text/html; charset=utf-8" } }));
   return { appUrl: appUrl.href, bytes: js.length };
 }
 // ---- the live preview. An app with rules is not built: it is projected. One fixed frame on shadcn/ui
@@ -474,7 +527,7 @@ function liveFrame() {
     const text = async (p) => { const r = await fetch(new URL(p, BASE)); if (!r.ok) throw new Error(p + " answered " + r.status); return r.text(); };
     const fonts = {};
     for (const p of FONTS) { const r = await fetch(new URL(p, BASE)); if (r.ok) fonts[p] = b64(new Uint8Array(await r.arrayBuffer())); }
-    const html = frameHtml({ brandCss: await text("brand.css"), componentsCss: await text("live/components.css"), componentsJs: await text("live/components.js"), interpreter: prism.INTERPRETER, fonts });
+    const html = await withCoverResponder(frameHtml({ brandCss: await text("brand.css"), componentsCss: await text("live/components.css"), componentsJs: await text("live/components.js"), interpreter: prism.INTERPRETER, fonts }));
     await coreReady;
     const { path } = core.run({ op: "preview", kappa: await kappa(enc.encode(html)) });
     const url = new URL(path.slice(1), BASE);
