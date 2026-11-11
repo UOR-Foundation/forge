@@ -16,6 +16,7 @@ export function assertCanonicalGeneration(source, patch, lexlean) {
       if (!item || typeof item.from !== "string" || typeof item.to !== "string") throw invalid(); touched.push(item.from, item.to);
     }
     const files = new Map(source.files);
+    if (files.has("prism/interaction.json") && touched.some(path => ["prism/interaction.json", "prism/Application.lex.tex", "prism/InteractionModel.lex.tex"].includes(path))) throw refused();
     if (!files.has("prism/spec.json")) return;
     const owned = new Set(["prism/spec.json", "src/lib/prism.ts"]);
     let unknownModule = false;

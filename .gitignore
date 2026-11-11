@@ -30,3 +30,5 @@ site/manifest.webmanifest
 # Brand kit sources fetched by bootstrap/brand-sync.mjs for brand-fonts.py.
 .brand-src/
 screens/
+
+/studio/shell/interaction-model.lex.tex
