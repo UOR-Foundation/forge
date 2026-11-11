@@ -11,9 +11,9 @@ function fixture(){const urls=new Map(),timers=new Map(),workers=[];let serial=0
   postMessage(data){this.calls++;if(hang)return;queueMicrotask(()=>{if(!this.terminated)this.scope.onmessage({data});});}
   terminate(){this.terminated=true;this.scope=null;}
  }
- const self={};vm.runInNewContext(source,{self,Worker,Blob,location:{href:'https://example.test/'},URL:{createObjectURL:blob=>{const id='blob:'+ ++serial;urls.set(id,blob.text);return id;},revokeObjectURL:id=>urls.delete(id)},crypto:webcrypto,WebAssembly:wasm,TextEncoder,TextDecoder,Uint8Array,atob,Promise,setTimeout:fn=>{const id=++serial;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)});
+ let bridge;const controller={};const self={navigator:{serviceWorker:{controller,addEventListener:(_,fn)=>bridge=fn}}};vm.runInNewContext(source,{self,Worker,Blob,location:{href:'https://example.test/'},URL:{createObjectURL:blob=>{const id='blob:'+ ++serial;urls.set(id,blob.text);return id;},revokeObjectURL:id=>urls.delete(id)},crypto:webcrypto,WebAssembly:wasm,TextEncoder,TextDecoder,Uint8Array,atob,Promise,setTimeout:fn=>{const id=++serial;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)});
  const meta=structuredClone(originalMeta);meta.vectors=[meta.vectors[0]];const get=async path=>path.endsWith('.json')?{ok:true,json:async()=>meta}:{ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};
- return {load:()=>self.ForgeKernel.load(get),workers,urls,timers,get instances(){return instances;},set hang(x){hang=x;},set malformed(x){malformed=x;},set startup(x){startup=x;}};
+ return {load:()=>self.ForgeKernel.load(get),get,controller,bridge:(data,ports,source=controller)=>bridge({data,ports,source}),workers,urls,timers,get instances(){return instances;},set hang(x){hang=x;},set malformed(x){malformed=x;},set startup(x){startup=x;}};
 }
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 test('acceptance replay terminates its worker and each dispatch retains a fresh instance',async()=>{
@@ -36,4 +36,21 @@ test('queued caller buffers are captured before asynchronous worker execution',a
 test('browser worker absence refuses and canonical compiler acceptance remains mandatory',async()=>{
  const self={};vm.runInNewContext(source,{self,location:{},crypto:webcrypto,WebAssembly,TextEncoder,TextDecoder,Uint8Array,atob});const meta=structuredClone(originalMeta);meta.vectors=[meta.vectors[0]];await assert.rejects(()=>self.ForgeKernel.load(async path=>path.endsWith('.json')?{ok:true,json:async()=>meta}:{ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)}),{code:'kernelExecutionFailed'});
  assert.ok(fs.readFileSync(new URL('../../app/src/FoundrySpecification.lex.tex',import.meta.url),'utf8').includes('name: boundedKernelExecutionBoundary,'));assert.ok(fs.readFileSync(new URL('../../.github/workflows/studio.yml',import.meta.url),'utf8').includes('node tools/compiler_browser.mjs'));
+});
+
+test('service-worker requests use only a matching verified document guest and never instantiate locally',async()=>{
+ const document=fixture();await document.load();const self={clients:{matchAll:async()=>[{postMessage:(data,ports)=>void document.bridge(data,ports)}]}};
+ vm.runInNewContext(source,{self,location:{},MessageChannel,crypto:webcrypto,WebAssembly:{...WebAssembly,Module:WebAssembly.Module,compile:WebAssembly.compile,instantiate:()=>assert.fail('service worker instantiated')},TextEncoder,TextDecoder,Uint8Array,atob,setTimeout,clearTimeout});
+ const kernel=await self.ForgeKernel.load(document.get);assert.equal(await kernel.ask('drafting check'),'checked');assert.equal(document.instances,3);
+});
+test('service-worker absence of a verified matching document refuses acceptance',async()=>{
+ const owner=fixture();await owner.load();const pair=new MessageChannel();
+ const closed=new Promise(resolve=>pair.port1.addEventListener('close',resolve));pair.port1.start();
+ await owner.bridge({kind:'foundry:kernel-execute/1',key:originalMeta.digest+':'+originalMeta.guest.sha256,request:new TextEncoder().encode('drafting check')},[pair.port2],{});
+ await closed;assert.equal(owner.instances,1);pair.port1.close();
+ for(const mismatch of [false,true]){
+  const document=fixture();await document.load();const self={clients:{matchAll:async()=>mismatch?[{postMessage:(data,ports)=>void document.bridge({...data,key:'unknown-guest'},ports)}]:[]}};
+  vm.runInNewContext(source,{self,location:{},MessageChannel,crypto:webcrypto,WebAssembly,TextEncoder,TextDecoder,Uint8Array,atob,setTimeout,clearTimeout});
+  await assert.rejects(()=>self.ForgeKernel.load(document.get),{code:'kernelAcceptanceFailed'});
+ }
 });

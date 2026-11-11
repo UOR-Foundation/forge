@@ -89,6 +89,41 @@
     };
     return { execute, retire };
   }
+  const browserKernels = new Map();
+  scope.navigator?.serviceWorker?.addEventListener("message", async event => {
+    const data = event.data, port = event.ports?.[0];
+    if (data?.kind !== "foundry:kernel-execute/1" || !port || event.source !== scope.navigator.serviceWorker.controller) {port?.close();return;}
+    try {
+      const entry = browserKernels.get(data.key);
+      if (!entry) throw fail("kernelExecutionFailed");
+      const result = await entry(data.request);
+      port.postMessage({ ok: true, result }, [result.buffer]);
+    } catch (error) { port.postMessage({ ok: false, code: error?.code === "kernelResponseTooLarge" ? error.code : "kernelExecutionFailed" }); }
+    finally { port.close(); }
+  });
+  // Service workers cannot construct dedicated workers. Controlled document owners execute
+  // only the identical verified guest; this transport grants no effects or semantic authority.
+  function serviceExecutor(key) {
+    let pending = 0, queuedBytes = 0;
+    return { retire() {}, async execute(request, maximum) {
+      if (pending >= 64 || queuedBytes + request.length > 64 * 1024 * 1024) throw fail("kernelExecutionFailed");
+      pending++; queuedBytes += request.length; const ports = []; let timer;
+      try {
+        const clients = (await scope.clients.matchAll({type:"window",includeUncontrolled:false})).slice(0,8);
+        if (!clients.length) throw fail("kernelExecutionFailed");
+        const deadline = new Promise((_, reject) => {timer=setTimeout(()=>reject(fail("kernelExecutionFailed")),30000);});
+        const answer = Promise.any(clients.map(client=>new Promise((resolve,reject)=>{
+          const pair = new MessageChannel(); ports.push(pair.port1,pair.port2);
+          pair.port1.onmessage = ({data}) => {
+            if (!data?.ok || !(data.result instanceof Uint8Array) || data.result.length>maximum) {reject(fail(data?.code === "kernelResponseTooLarge" || data?.result?.length>maximum ? "kernelResponseTooLarge" : "kernelExecutionFailed"));return;}
+            resolve(data.result.slice());
+          };
+          try {client.postMessage({kind:"foundry:kernel-execute/1",key,request},[pair.port2]);} catch {reject(fail("kernelExecutionFailed"));}
+        })));
+        try {return await Promise.race([answer,deadline]);} catch (error) {throw fail(error?.errors?.some(e=>e?.code==="kernelResponseTooLarge") ? "kernelResponseTooLarge" : "kernelExecutionFailed");}
+      } finally {clearTimeout(timer);for(const port of ports)port.close();pending--;queuedBytes-=request.length;}
+    }};
+  }
   async function load(get) {
     let meta, bytes;
     try {
@@ -112,23 +147,30 @@
     const names = WebAssembly.Module.exports(module).map(e => e.name).sort().join(",");
     if (WebAssembly.Module.imports(module).length || names !== "holo_alloc,holo_run,memory") throw fail("kernelExportsMismatch");
     // Headless Node diagnostics have no browser location. Browsers must use a worker.
-    if (typeof location !== "undefined" && typeof Worker !== "function") throw fail("kernelExecutionFailed");
-    const executor = typeof Worker === "function" ? browserExecutor(module) : { execute: (request, maximum) => run(module, request, maximum), retire() {} };
+    const key = meta.digest + ":" + meta.guest.sha256;
+    const service = typeof Worker !== "function" && scope.clients?.matchAll && typeof MessageChannel === "function";
+    if (typeof location !== "undefined" && typeof Worker !== "function" && !service) throw fail("kernelExecutionFailed");
+    const executor = typeof Worker === "function" ? browserExecutor(module) : service ? serviceExecutor(key) : { execute: (request, maximum) => run(module, request, maximum), retire() {} };
     try { for (const [request, response] of vectors) {
       try { if (!same(await executor.execute(request, limits.response), response)) throw Error(); }
       catch { throw fail("kernelAcceptanceFailed"); }
     }
     } finally { executor.retire(); }
-    const dispatch = async request => {
+    const executeBounded = async (request, bound) => {
       if (!(request instanceof Uint8Array)) throw fail("invalidKernelRequest");
       let length, copy;
       try { length = byteLength.call(request); }
       catch { throw fail("invalidKernelRequest"); }
-      if (length > limits.request) throw fail("kernelRequestTooLarge");
+      if (length > bound) throw fail("kernelRequestTooLarge");
       try { copy = new Uint8Array(length); Uint8Array.prototype.set.call(copy, request); }
       catch { throw fail("invalidKernelRequest"); }
       return executor.execute(copy, limits.response);
     };
+    const dispatch = request => executeBounded(request,limits.request);
+    if (typeof Worker === "function" && scope.navigator?.serviceWorker) {
+      if (browserKernels.size>=8&&!browserKernels.has(key)) browserKernels.delete(browserKernels.keys().next().value);
+      browserKernels.set(key,request=>executeBounded(request,limits.guestAllocation));
+    }
     return Object.freeze({
       digest: meta.digest, vectors: vectors.length, dispatch,
       ask: async line => {
