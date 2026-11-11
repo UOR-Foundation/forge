@@ -184,6 +184,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-20` | `build` | Host storage requests report success only after transaction completion and refuse aborted or invalid operations |
 
+## verified-project-import
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-28` | `build` | Imports validate bounded snapshot closure and discard authority-bearing metadata before atomic insertion |
+
 ## work-ownership
 
 | ID | Level | Statement |

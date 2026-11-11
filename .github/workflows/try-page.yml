@@ -30,8 +30,30 @@ jobs:
           node-version: 22
       - name: Install the test runner
         run: npm install
+      - name: Chromium, kept by the test runner's Playwright version
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('package-lock.json') }}-chromium-${{ runner.os }}-${{ runner.arch }}
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        # The runner image carries the libraries Chromium needs (it ships Chrome itself), so no system
+        # packages are installed: they come from Ubuntu's mirror, which has failed runs for want of DNS.
+        # Only if the browser cannot start are they installed, with apt's own retries.
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            npx playwright install chromium && break
+            [[ $attempt -lt 3 ]] || exit 1
+            sleep $((attempt * 20))
+          done
+          if ! node -e 'require("playwright").chromium.launch().then((b) => b.close())'; then
+            for attempt in 1 2 3; do
+              sudo apt-get -o Acquire::Retries=5 update && npx playwright install-deps chromium && break
+              [[ $attempt -lt 3 ]] || exit 1
+              sleep $((attempt * 30))
+            done
+          fi
       - name: Verify, answer add 20 22 and replay 22/22
         run: npm run test:try
       - name: Prism accounts - every signature check refuses, and the passkey flow signs in

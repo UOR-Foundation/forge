@@ -249,3 +249,9 @@ id = "FA-27"
 level = "build"
 suite = "bounded-build-modules"
 statement = "Portable builds fetch only bounded approved-origin modules and retain exact module-byte receipts"
+
+[[id]]
+id = "FA-28"
+level = "build"
+suite = "verified-project-import"
+statement = "Imports validate bounded snapshot closure and discard authority-bearing metadata before atomic insertion"
