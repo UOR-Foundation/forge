@@ -56,5 +56,5 @@
     "experienceVectors": 42,
     "mandatoryBrowserJourneys": 41
   },
-  "claimScope": "Verified signed guest, complete embedded and external boundary replay, finite Node/runtime qualification, and all 41 mandatory Chromium journeys in the bounded-executor integration. Independent reproduction of this combined artifact and final exact-SDK/full CI remain pending. Not whole-product release acceptance."
+  "claimScope": "Verified signed guest, complete embedded and external boundary replay, finite Node/runtime qualification, and all 41 mandatory Chromium journeys in the bounded-executor integration. Independent signed rebuild reproduces all 505788 archive bytes with exact-source provenance. Final exact-SDK/full CI and whole-product release acceptance remain separate obligations."
 }

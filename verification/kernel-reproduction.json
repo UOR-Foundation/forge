@@ -1,18 +1,18 @@
 {
   "profile": "foundry/component-reproduction/1",
   "scope": "Forge kernel archive only; not the complete Foundry application",
-  "source": "2381dcda5372af9193cd9371e573d385c7f6a04f",
+  "source": "a291a72752d727aab1d68bbc1edcd09eae809f0f",
   "sdk": "ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58",
   "runs": [
-    43104652757,
-    43112346451
+    43115365275,
+    43118735269
   ],
   "artifacts": [
-    13896307397,
-    13897683589
+    13899592362,
+    13900963464
   ],
-  "archiveSha256": "96085efc7b9f7d34aa37f1a4a246462459dbd4f1ff8a4af87fa2e8461a982da2",
-  "archiveBytes": 687271,
+  "archiveSha256": "fcf77322417e0f212409214070829592df3411bb2ff2b292ffe158ea0a93cbcf",
+  "archiveBytes": 505788,
   "comparison": "complete byte-for-byte equality",
   "provenance": "Both Sigstore bundles verified for the exact source digest, repository and build workflow with self-hosted runners denied.",
   "trustedRoot": {
