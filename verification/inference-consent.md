@@ -52,3 +52,10 @@ Supplementary diagnostic verification passed all 13 modules with attestation
 The real browser also receives a provider redirect response: transport refuses
 it as inferenceNetworkFailed and makes no request to the redirected destination.
 Malformed top-level disclosures now return invalidInferenceConsent explicitly.
+
+Integration retains PR #69's cumulative import materialization bound, bounded
+local imported-message IDs and active-shell navigation binding. The merged
+source passes all 206 Node controls, the full local Rust workspace and Clippy,
+and the real paid-adapter consent browser test. The event branch independently
+passes the updated cache browser test online and offline, including corrupt
+update refusal and recovery. These checks do not remove PR #69's release hold.
