@@ -32,6 +32,27 @@ structure{
 }
 
 structure{
+  name: ReferenceList,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: (List FeatureComposition::FeatureRef)}]
+}
+
+structure{
+  name: CandidateList,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: (List Candidate)}]
+}
+
+structure{
+  name: ConceptList,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: (List Nat)}]
+}
+
+structure{
   name: RoutingOutcome,
   type_parameters: [],
   parameters: [],
@@ -96,28 +117,28 @@ definition{
     items : (List FeatureComposition::FeatureRef),
     acc : (List FeatureComposition::FeatureRef)
   ],
-  result: (List FeatureComposition::FeatureRef),
+  result: ReferenceList,
   body: (match items
-    | List.nil => acc
-    | List.cons head rest => (unionReferences rest (if (containsReference acc head) then acc else (prim append acc (cons head (nil FeatureComposition::FeatureRef)) : (List FeatureComposition::FeatureRef))))),
+    | List.nil => (record ReferenceList {value := acc})
+    | List.cons head rest => (record ReferenceList {value := (project (unionReferences rest (if (containsReference acc head) then acc else (prim append acc (cons head (nil FeatureComposition::FeatureRef)) : (List FeatureComposition::FeatureRef)))) value)})),
   recursive_argument: items
 }
 
 definition{
   name: inputReferences,
   parameters: [inputs : (List FeatureComposition::FeatureInput)],
-  result: (List FeatureComposition::FeatureRef),
+  result: ReferenceList,
   body: (match inputs
-    | List.nil => (nil FeatureComposition::FeatureRef)
-    | List.cons head rest => (cons (project head producer) (inputReferences rest))),
+    | List.nil => (record ReferenceList {value := (nil FeatureComposition::FeatureRef)})
+    | List.cons head rest => (record ReferenceList {value := (cons (project head producer) (project (inputReferences rest) value))})),
   recursive_argument: inputs
 }
 
 definition{
   name: dependencies,
   parameters: [feature : FeatureComposition::FeatureContract],
-  result: (List FeatureComposition::FeatureRef),
-  body: (unionReferences (inputReferences (project feature inputs)) (project feature needs))
+  result: ReferenceList,
+  body: (record ReferenceList {value := (project (unionReferences (project (inputReferences (project feature inputs)) value) (project feature needs)) value)})
 }
 
 definition{
@@ -142,7 +163,7 @@ definition{
   result: Bool,
   body: (match catalog
     | List.nil => true
-    | List.cons head rest => (((FeatureComposition::validFeature head) && ((negate (FeatureComposition::hasKey prior (project head key))) && ((knownNeeds (dependencies head) prior) && (((prim length (project head vocabulary) : Nat) <=? 32) && (((prim length (project head inputs) : Nat) <=? 32) && (((prim length (project head outputs) : Nat) <=? 32) && (((prim length (project head state) : Nat) <=? 32) && (((prim length (project head events) : Nat) <=? 32) && (((prim length (project head errors) : Nat) <=? 32) && (((prim length (project head effects) : Nat) <=? 32) && (((prim length (project head needs) : Nat) <=? 32) && (((prim length (project head conflicts) : Nat) <=? 32) && (((prim length (project head targets) : Nat) <=? 32) && (((prim length (project head accessibility) : Nat) <=? 32) && (((prim length (project head quality) : Nat) <=? 32) && true))))))))))))))) && (orderedCatalog rest (prim append prior (cons head (nil FeatureComposition::FeatureContract)) : (List FeatureComposition::FeatureContract))))),
+    | List.cons head rest => (((FeatureComposition::validFeature head) && ((negate (FeatureComposition::hasKey prior (project head key))) && ((knownNeeds (project (dependencies head) value) prior) && (((prim length (project head vocabulary) : Nat) <=? 32) && (((prim length (project head inputs) : Nat) <=? 32) && (((prim length (project head outputs) : Nat) <=? 32) && (((prim length (project head state) : Nat) <=? 32) && (((prim length (project head events) : Nat) <=? 32) && (((prim length (project head errors) : Nat) <=? 32) && (((prim length (project head effects) : Nat) <=? 32) && (((prim length (project head needs) : Nat) <=? 32) && (((prim length (project head conflicts) : Nat) <=? 32) && (((prim length (project head targets) : Nat) <=? 32) && (((prim length (project head accessibility) : Nat) <=? 32) && (((prim length (project head quality) : Nat) <=? 32) && true))))))))))))))) && (orderedCatalog rest (prim append prior (cons head (nil FeatureComposition::FeatureContract)) : (List FeatureComposition::FeatureContract))))),
   recursive_argument: catalog
 }
 
@@ -217,10 +238,10 @@ definition{
 definition{
   name: insertCandidate,
   parameters: [candidate : Candidate, ranked : (List Candidate)],
-  result: (List Candidate),
+  result: CandidateList,
   body: (match ranked
-    | List.nil => (cons candidate (nil Candidate))
-    | List.cons head rest => (if (candidateBefore candidate head) then (cons candidate (cons head rest)) else (cons head (insertCandidate candidate rest)))),
+    | List.nil => (record CandidateList {value := (cons candidate (nil Candidate))})
+    | List.cons head rest => (record CandidateList {value := (if (candidateBefore candidate head) then (cons candidate (cons head rest)) else (cons head (project (insertCandidate candidate rest) value)))})),
   recursive_argument: ranked
 }
 
@@ -231,10 +252,10 @@ definition{
     intent : SemanticIntent,
     relations : (List SemanticRelation)
   ],
-  result: (List Candidate),
+  result: CandidateList,
   body: (match catalog
-    | List.nil => (nil Candidate)
-    | List.cons head rest => (let score : Nat := (featureScore intent head relations); (let ranked : (List Candidate) := (rankCandidates rest intent relations); (if (score =? 0) then ranked else (insertCandidate (record Candidate {reference := (referenceOf head), score := score}) ranked))))),
+    | List.nil => (record CandidateList {value := (nil Candidate)})
+    | List.cons head rest => (record CandidateList {value := (let score : Nat := (featureScore intent head relations); (let ranked : (List Candidate) := (project (rankCandidates rest intent relations) value); (if (score =? 0) then ranked else (project (insertCandidate (record Candidate {reference := (referenceOf head), score := score}) ranked) value))))})),
   recursive_argument: catalog
 }
 
@@ -244,10 +265,10 @@ definition{
     catalog : (List FeatureComposition::FeatureContract),
     references : (List FeatureComposition::FeatureRef)
   ],
-  result: (List FeatureComposition::FeatureRef),
+  result: ReferenceList,
   body: (match catalog
-    | List.nil => references
-    | List.cons head rest => (expandReferences rest (if (containsReference references (referenceOf head)) then (unionReferences (dependencies head) references) else references))),
+    | List.nil => (record ReferenceList {value := references})
+    | List.cons head rest => (record ReferenceList {value := (project (expandReferences rest (if (containsReference references (referenceOf head)) then (project (unionReferences (project (dependencies head) value) references) value) else references)) value)})),
   recursive_argument: catalog
 }
 
@@ -258,10 +279,10 @@ definition{
     catalog : (List FeatureComposition::FeatureContract),
     references : (List FeatureComposition::FeatureRef)
   ],
-  result: (List FeatureComposition::FeatureRef),
+  result: ReferenceList,
   body: (match fuel
-    | Nat.zero => references
-    | Nat.succ less => (closeReferences less catalog (expandReferences catalog references))),
+    | Nat.zero => (record ReferenceList {value := references})
+    | Nat.succ less => (record ReferenceList {value := (project (closeReferences less catalog (project (expandReferences catalog references) value)) value)})),
   recursive_argument: fuel
 }
 
@@ -271,10 +292,10 @@ definition{
     catalog : (List FeatureComposition::FeatureContract),
     references : (List FeatureComposition::FeatureRef)
   ],
-  result: (List FeatureComposition::FeatureRef),
+  result: ReferenceList,
   body: (match catalog
-    | List.nil => (nil FeatureComposition::FeatureRef)
-    | List.cons head rest => (if (containsReference references (referenceOf head)) then (cons (referenceOf head) (selectReferences rest references)) else (selectReferences rest references))),
+    | List.nil => (record ReferenceList {value := (nil FeatureComposition::FeatureRef)})
+    | List.cons head rest => (record ReferenceList {value := (if (containsReference references (referenceOf head)) then (cons (referenceOf head) (project (selectReferences rest references) value)) else (project (selectReferences rest references) value))})),
   recursive_argument: catalog
 }
 
@@ -299,20 +320,20 @@ definition{
     catalog : (List FeatureComposition::FeatureContract),
     relations : (List SemanticRelation)
   ],
-  result: (List Nat),
+  result: ConceptList,
   body: (match concepts
-    | List.nil => (nil Nat)
-    | List.cons head rest => (if (conceptKnown catalog relations head) then (unknownConcepts rest catalog relations) else (cons head (unknownConcepts rest catalog relations)))),
+    | List.nil => (record ConceptList {value := (nil Nat)})
+    | List.cons head rest => (record ConceptList {value := (if (conceptKnown catalog relations head) then (project (unknownConcepts rest catalog relations) value) else (cons head (project (unknownConcepts rest catalog relations) value)))})),
   recursive_argument: concepts
 }
 
 definition{
   name: tiedCandidates,
   parameters: [ranked : (List Candidate), score : Nat],
-  result: (List Nat),
+  result: ConceptList,
   body: (match ranked
-    | List.nil => (nil Nat)
-    | List.cons head rest => (if ((project head score) =? score) then (cons (project (project head reference) key) (tiedCandidates rest score)) else (nil Nat))),
+    | List.nil => (record ConceptList {value := (nil Nat)})
+    | List.cons head rest => (record ConceptList {value := (if ((project head score) =? score) then (cons (project (project head reference) key) (project (tiedCandidates rest score) value)) else (nil Nat))})),
   recursive_argument: ranked
 }
 
@@ -324,10 +345,10 @@ definition{
     relations : (List SemanticRelation),
     selected : (List FeatureComposition::FeatureRef)
   ],
-  result: (List Nat),
-  body: (match (ProposalAdmission::resolveProposalFeatures catalog selected)
+  result: ConceptList,
+  body: (record ConceptList {value := (match (ProposalAdmission::resolveProposalFeatures catalog selected)
     | Result.error error => concepts
-    | Result.ok features => (unknownConcepts concepts features relations))
+    | Result.ok features => (project (unknownConcepts concepts features relations) value))})
 }
 
 definition{
@@ -341,11 +362,11 @@ definition{
     policy : FeatureComposition::CompositionPolicy
   ],
   result: RoutingOutcome,
-  body: (let ranked : (List Candidate) := (rankCandidates catalog intent relations); (let selected : (List FeatureComposition::FeatureRef) := (match ranked
+  body: (let ranked : (List Candidate) := (project (rankCandidates catalog intent relations) value); (let selected : (List FeatureComposition::FeatureRef) := (match ranked
     | List.nil => (nil FeatureComposition::FeatureRef)
-    | List.cons head rest => (selectReferences catalog (closeReferences (prim length catalog : Nat) catalog (cons (project head reference) (nil FeatureComposition::FeatureRef))))); (let ambiguities : (List Nat) := (match ranked
+    | List.cons head rest => (project (selectReferences catalog (project (closeReferences (prim length catalog : Nat) catalog (cons (project head reference) (nil FeatureComposition::FeatureRef))) value)) value)); (let ambiguities : (List Nat) := (match ranked
     | List.nil => (nil Nat)
-    | List.cons head rest => (let tied : (List Nat) := (tiedCandidates rest (project head score)); (if ((prim length tied : Nat) =? 0) then (nil Nat) else (cons (project (project head reference) key) tied)))); (let proposal : ProposalAdmission::Proposal := (record ProposalAdmission::Proposal {intent := (project intent id), registryRevision := (project intent registryRevision), selected := selected, ambiguities := ambiguities, unresolved := (proposalUnresolved (project intent concepts) catalog relations selected), confidence := 0}); (record RoutingOutcome {ranked := ranked, proposal := proposal, admission := (ProposalAdmission::admitProposal catalog expectedIntent registryRevision proposal policy)})))))
+    | List.cons head rest => (let tied : (List Nat) := (project (tiedCandidates rest (project head score)) value); (if ((prim length tied : Nat) =? 0) then (nil Nat) else (cons (project (project head reference) key) tied)))); (let proposal : ProposalAdmission::Proposal := (record ProposalAdmission::Proposal {intent := (project intent id), registryRevision := (project intent registryRevision), selected := selected, ambiguities := ambiguities, unresolved := (project (proposalUnresolved (project intent concepts) catalog relations selected) value), confidence := 0}); (record RoutingOutcome {ranked := ranked, proposal := proposal, admission := (ProposalAdmission::admitProposal catalog expectedIntent registryRevision proposal policy)})))))
 }
 
 definition{

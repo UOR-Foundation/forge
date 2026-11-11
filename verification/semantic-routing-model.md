@@ -46,7 +46,7 @@ finite model proof controls and eight protocol controls are defined. Six protoco
 controls operate on parsed words; raw empty/noncanonical controls retain declared
 `Quot.sound` and `propext`. The protocol diagnostic verifies seven modules with
 receipt `6cc78a93480bd2c6dd06263c6a5b241a32c3829171b38b95a6111574e9714203`.
-The full 18-module graph typechecks. Diagnostic tooling does not replace the
+The full 18-module graph diagnostic verifies (receipt `59398ea339acd752ae0554d8706119e371544e4c444bdb573428b2d1c750ad49`). Diagnostic tooling does not replace the
 exact SDK.
 
 Thirty-two independent wire vectors include ambiguity, unsupported intent,
@@ -75,3 +75,10 @@ reproduction and final exact-head SDK/Studio acceptance remain outstanding.
 Natural-language interpretation, product discovery/creation integration, learned
 R4 replacement, general relevance, complete feature semantics and release
 qualification remain distinct obligations.
+
+The initial signed build 43092373604 rejected list-returning helper calls as
+intermediate values during production code generation. Helpers now carry owned
+lists inside typed records, using the existing SDK representation. All finite
+model obligations remain unchanged and pass after this representation change.
+The selected-composition mutation is rejected by its concrete Lean obligation;
+restoring the model restores verification. No SDK implementation is replaced.
