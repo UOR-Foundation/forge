@@ -411,3 +411,9 @@ id = "FA-52"
 level = "build"
 suite = "canonical-version-history"
 statement = "Version history preserves canonical content identity through renderer aliases and atomically commits metadata with verified snapshot differences"
+
+[[id]]
+id = "FA-53"
+level = "build"
+suite = "version-preview-model"
+statement = "Version preview transitions preserve exact origin identity and reject stale or conflicting ownership through the Prism guest"

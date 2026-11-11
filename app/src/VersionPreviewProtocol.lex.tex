@@ -1,0 +1,116 @@
+\begin{lexlean}{VersionPreviewProtocol}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{VersionPreview}
+\importmodule{CompositionProtocol}
+\importmodule{WorkProtocol}
+\title{Boolean}
+\begin{semanticmodule}
+definition{
+  name: previewEncodeTransition,
+  parameters: [value : VersionPreview::PreviewTransition],
+  result: Bytes,
+  body: (prim append 0x6f6b20 (prim append (WorkProtocol::hexWord 1) (prim append (WorkProtocol::hexWord (project (project value state) revision)) (prim append (WorkProtocol::hexWord (project (project value state) active)) (prim append (WorkProtocol::hexWord (project (project value state) owner)) (prim append (WorkProtocol::hexWord (project (project (project value state) origin) w0)) (prim append (WorkProtocol::hexWord (project (project (project value state) origin) w1)) (prim append (WorkProtocol::hexWord (project (project (project value state) origin) w2)) (prim append (WorkProtocol::hexWord (project (project (project value state) origin) w3)) (prim append (WorkProtocol::hexWord (project (project (project value state) origin) w4)) (prim append (WorkProtocol::hexWord (project (project (project value state) origin) w5)) (prim append (WorkProtocol::hexWord (project (project (project value state) origin) w6)) (prim append (WorkProtocol::hexWord (project (project (project value state) origin) w7)) (prim append (WorkProtocol::hexWord (project (project (project value state) current) w0)) (prim append (WorkProtocol::hexWord (project (project (project value state) current) w1)) (prim append (WorkProtocol::hexWord (project (project (project value state) current) w2)) (prim append (WorkProtocol::hexWord (project (project (project value state) current) w3)) (prim append (WorkProtocol::hexWord (project (project (project value state) current) w4)) (prim append (WorkProtocol::hexWord (project (project (project value state) current) w5)) (prim append (WorkProtocol::hexWord (project (project (project value state) current) w6)) (prim append (WorkProtocol::hexWord (project (project (project value state) current) w7)) (prim append (WorkProtocol::hexWord (if (project value writeRequested) then 1 else 0)) (prim append (WorkProtocol::hexWord (project (project value target) w0)) (prim append (WorkProtocol::hexWord (project (project value target) w1)) (prim append (WorkProtocol::hexWord (project (project value target) w2)) (prim append (WorkProtocol::hexWord (project (project value target) w3)) (prim append (WorkProtocol::hexWord (project (project value target) w4)) (prim append (WorkProtocol::hexWord (project (project value target) w5)) (prim append (WorkProtocol::hexWord (project (project value target) w6)) (prim append (WorkProtocol::hexWord (project (project value target) w7)) 0x : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: previewEncodeResult,
+  parameters: [value : (Result VersionPreview::PreviewTransition VersionPreview::PreviewError)],
+  result: Bytes,
+  body: (match value | Result.ok transition => (previewEncodeTransition transition) | Result.error error => (match error | VersionPreview::PreviewError.invalidPreviewState => 0x696e76616c6964507265766965775374617465 | VersionPreview::PreviewError.invalidPreviewCommand => 0x696e76616c696450726576696577436f6d6d616e64 | VersionPreview::PreviewError.previewRevisionConflict => 0x707265766965775265766973696f6e436f6e666c696374 | VersionPreview::PreviewError.previewRevisionExhausted => 0x707265766965775265766973696f6e457868617573746564 | VersionPreview::PreviewError.previewAlreadyOwned => 0x70726576696577416c72656164794f776e6564 | VersionPreview::PreviewError.previewInactive => 0x70726576696577496e616374697665 | VersionPreview::PreviewError.previewWrongOwner => 0x7072657669657757726f6e674f776e6572))
+}
+
+definition{
+  name: dispatchPreviewWords,
+  parameters: [words : (List Nat)],
+  result: Bytes,
+  body: (if (((prim length words : Nat) =? 31) && ((WorkProtocol::word words 0) =? 1)) then (previewEncodeResult (VersionPreview::transitionPreview (record VersionPreview::PreviewState {revision := (WorkProtocol::word words 1), active := (WorkProtocol::word words 2), owner := (WorkProtocol::word words 3), origin := (record VersionPreview::PreviewAddress {w0 := (WorkProtocol::word words 4), w1 := (WorkProtocol::word words 5), w2 := (WorkProtocol::word words 6), w3 := (WorkProtocol::word words 7), w4 := (WorkProtocol::word words 8), w5 := (WorkProtocol::word words 9), w6 := (WorkProtocol::word words 10), w7 := (WorkProtocol::word words 11)}), current := (record VersionPreview::PreviewAddress {w0 := (WorkProtocol::word words 12), w1 := (WorkProtocol::word words 13), w2 := (WorkProtocol::word words 14), w3 := (WorkProtocol::word words 15), w4 := (WorkProtocol::word words 16), w5 := (WorkProtocol::word words 17), w6 := (WorkProtocol::word words 18), w7 := (WorkProtocol::word words 19)})}) (WorkProtocol::word words 20) (record VersionPreview::PreviewCommand {kind := (WorkProtocol::word words 21), owner := (WorkProtocol::word words 22), target := (record VersionPreview::PreviewAddress {w0 := (WorkProtocol::word words 23), w1 := (WorkProtocol::word words 24), w2 := (WorkProtocol::word words 25), w3 := (WorkProtocol::word words 26), w4 := (WorkProtocol::word words 27), w5 := (WorkProtocol::word words 28), w6 := (WorkProtocol::word words 29), w7 := (WorkProtocol::word words 30)})}))) else 0x6d616c666f726d65645072657669657752657175657374)
+}
+
+definition{
+  name: dispatchPreview,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (if (248 <? (prim length bytes : Nat)) then 0x7072657669657752657175657374546f6f4c61726765 else (let decoded : CompositionProtocol::DecodedWords := (CompositionProtocol::decodeWords bytes 0 31 (nil Nat)); (if (project decoded valid) then (dispatchPreviewWords (project decoded value)) else 0x6d616c666f726d65645072657669657752657175657374))),
+  axioms: [Quot.sound, propext]
+}
+
+inductive{
+  name: PreviewWireError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: malformedPreviewRequest, fields: []}, {name: previewRequestTooLarge, fields: []}, {name: previewRuntimeFailed, fields: []}, {name: invalidPreviewResponse, fields: []}]
+}
+
+definition{
+  name: previewWireBoundary,
+  parameters: [],
+  result: String,
+  body: "Requests use preview-space then exactly 31 lowercase little-endian uint32 hex words: version 1; state revision, active, owner, eight original-identity words, eight current-identity words; expected revision; command kind, owner, eight target-identity words. The payload is exactly 248 ASCII bytes. Replies use ok-space then 29 words: version 1, state fields, Boolean write-requested word, eight target-identity words. No identity limbs are omitted or truncated. Typed errors retain their exact spelling. The codec captures inputs before awaiting guest readiness, bounds output to 235 bytes, rejects malformed state representations, and performs no preview transition or source write itself."
+}
+
+theorem{
+  name: previewWire_acquire,
+  parameters: [],
+  statement: ((dispatchPreviewWords (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 7 (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (nil Nat))))))))))))))))))))))))))))))))) = 0x6f6b2030313030303030303031303030303030303130303030303030373030303030303031303030303030303230303030303030333030303030303034303030303030303530303030303030363030303030303037303030303030303830303030303030313030303030303032303030303030303330303030303030343030303030303035303030303030303630303030303030373030303030303038303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: previewWire_select,
+  parameters: [],
+  statement: ((dispatchPreviewWords (cons 1 (cons 3 (cons 1 (cons 7 (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (cons 9 (cons 10 (cons 11 (cons 12 (cons 13 (cons 14 (cons 15 (cons 16 (cons 3 (cons 2 (cons 7 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (nil Nat))))))))))))))))))))))))))))))))) = 0x6f6b2030313030303030303034303030303030303130303030303030373030303030303031303030303030303230303030303030333030303030303034303030303030303530303030303030363030303030303037303030303030303830303030303031313030303030303132303030303030313330303030303031343030303030303135303030303030313630303030303031373030303030303138303030303030303130303030303031313030303030303132303030303030313330303030303031343030303030303135303030303030313630303030303031373030303030303138303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: previewWire_selectSame,
+  parameters: [],
+  statement: ((dispatchPreviewWords (cons 1 (cons 3 (cons 1 (cons 7 (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (cons 9 (cons 10 (cons 11 (cons 12 (cons 13 (cons 14 (cons 15 (cons 16 (cons 3 (cons 2 (cons 7 (cons 9 (cons 10 (cons 11 (cons 12 (cons 13 (cons 14 (cons 15 (cons 16 (nil Nat))))))))))))))))))))))))))))))))) = 0x6f6b2030313030303030303034303030303030303130303030303030373030303030303031303030303030303230303030303030333030303030303034303030303030303530303030303030363030303030303037303030303030303830303030303030393030303030303061303030303030306230303030303030633030303030303064303030303030306530303030303030663030303030303130303030303030303130303030303030393030303030303061303030303030306230303030303030633030303030303064303030303030306530303030303030663030303030303130303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: previewWire_returnOrigin,
+  parameters: [],
+  statement: ((dispatchPreviewWords (cons 1 (cons 3 (cons 1 (cons 7 (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (cons 9 (cons 10 (cons 11 (cons 12 (cons 13 (cons 14 (cons 15 (cons 16 (cons 3 (cons 3 (cons 7 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))))))))))))))))))) = 0x6f6b2030313030303030303034303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303130303030303030313030303030303032303030303030303330303030303030343030303030303035303030303030303630303030303030373030303030303038303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: previewWire_restorePrepared,
+  parameters: [],
+  statement: ((dispatchPreviewWords (cons 1 (cons 3 (cons 1 (cons 7 (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (cons 9 (cons 10 (cons 11 (cons 12 (cons 13 (cons 14 (cons 15 (cons 16 (cons 3 (cons 4 (cons 7 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (nil Nat))))))))))))))))))))))))))))))))) = 0x6f6b2030313030303030303034303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303130303030303031313030303030303132303030303030313330303030303031343030303030303135303030303030313630303030303031373030303030303138303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: previewWire_recover,
+  parameters: [],
+  statement: ((dispatchPreviewWords (cons 1 (cons 3 (cons 1 (cons 7 (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (cons 9 (cons 10 (cons 11 (cons 12 (cons 13 (cons 14 (cons 15 (cons 16 (cons 3 (cons 5 (cons 8 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))))))))))))))))))) = 0x6f6b2030313030303030303034303030303030303130303030303030383030303030303031303030303030303230303030303030333030303030303034303030303030303530303030303030363030303030303037303030303030303830303030303030393030303030303061303030303030306230303030303030633030303030303064303030303030306530303030303030663030303030303130303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: previewRaw_empty,
+  parameters: [],
+  statement: ((dispatchPreview 0x) = 0x6d616c666f726d65645072657669657752657175657374),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+
+theorem{
+  name: previewRaw_trailing,
+  parameters: [],
+  statement: ((dispatchPreview 0x30313030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030313030303030303037303030303030303130303030303030323030303030303033303030303030303430303030303030353030303030303036303030303030303730303030303030383030303030303030303030303030) = 0x7072657669657752657175657374546f6f4c61726765),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

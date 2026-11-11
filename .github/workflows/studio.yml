@@ -102,6 +102,8 @@ jobs:
           node tools/semantic_routing_browser.mjs
           node tools/semantic_application_discovery_browser.mjs
           node tools/chat_queue_runtime.mjs
+          node tools/version_preview_runtime.mjs
+          node tools/version_preview_browser.mjs
           node tools/chat_queue_browser.mjs
           node tools/durable_chat_queue_browser.mjs
           node tools/canonical_version_history_browser.mjs

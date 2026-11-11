@@ -314,6 +314,17 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Snapshot and file identities require core admission; metadata does not change canonical source identity."
+    },
+    {
+      "id": "version-preview-model",
+      "version": 1,
+      "owner": "VersionPreview.boundary",
+      "effects": [],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Guest ownership admission does not grant source mutation permission or authenticate an owner."
     }
   ],
   "commands": [
@@ -1402,6 +1413,16 @@ export const commandRegistryData = {
       "feature": "representation",
       "version": 1,
       "owner": "FoundrySpecification.representationBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
+      "input": "product-boundary",
+      "output": "product-boundary"
+    },
+    {
+      "channel": "forge:version-preview",
+      "feature": "version-preview-model",
+      "version": 1,
+      "owner": "VersionPreview.boundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",

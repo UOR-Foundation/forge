@@ -1,3 +1,4 @@
+import {previewWithGuest} from "./version-preview-codec.mjs";
 import {listStoredVersions,setStoredVersionMetadata,verifiedVersionChanges,resolveStoredVersion} from "./version-history.mjs";
 import {createChatQueueController} from "./chat-queue-controller.mjs";
 import {readStoredChatQueue,commitStoredChatQueue,bindQueuePayload,chatQueueFailure} from "./chat-queue-store.mjs";
@@ -909,6 +910,7 @@ handlers.set("forge:compose", async (input) => {
 handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
 handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input));
 handlers.set("forge:queue", input=>queueWithGuest(kernelReady,input));
+handlers.set("forge:version-preview", input => previewWithGuest(kernelReady,input));
 handlers.set("forge:route", input => routeWithGuest(kernelReady,input));
 handlers.set("forge:interact", input => executeInteraction(kernelReady, input));
 let interactionModelSource;

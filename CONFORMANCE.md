@@ -341,6 +341,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-29` | `build` | Worker activation requires bounded independently verified shell bytes including renderer and scaffold closure |
 
+## version-preview-model
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-53` | `build` | Version preview transitions preserve exact origin identity and reject stale or conflicting ownership through the Prism guest |
+
 ## work-ownership
 
 | ID | Level | Statement |
