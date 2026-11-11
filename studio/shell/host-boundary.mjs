@@ -42,6 +42,9 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if (error?.code === "projectEditConflict") return refusal("projectEditConflict", channel, "validation", "The project changed during the edit");
+    if (error?.code === "invalidCanonicalEdit") return refusal("invalidCanonicalEdit", channel, "validation", "The canonical model edit is invalid or unsupported");
+    if (error?.code === "canonicalProjectionReadOnly") return refusal("canonicalProjectionReadOnly", channel, "validation", "Edit the canonical model to change its generated rule runtime");
     if (error?.code === "browserCompilerUnavailable") return refusal("browserCompilerUnavailable", channel, "internal", "The browser compiler could not initialize");
     if (error?.code === "browserTelemetryUnavailable") return refusal("browserTelemetryUnavailable", channel, "validation", "Vendor telemetry is unavailable in this browser");
     const known = providerKeyFailure(error);

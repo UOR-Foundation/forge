@@ -727,5 +727,22 @@ definition{
   result: String,
   body: "The browser decision-module reader accepts at most one MiB of UTF8 canonical LexLean text with at most 4096 declarations and 256 nested delimiters. It refuses duplicate declaration names, malformed or unsupported request fields, noncanonical bounds, altered arguments, unrepresented definitions and other discarded semantics. Every non-theorem declaration must equal the canonical renderer reconstruction after whitespace normalization; theorem text is not accepted as proof and is regenerated from the read properties. Refusals carry invalidCanonicalModule with a fixed public message. A valid module header can project its title before fields arrive, without inventing a decision. Partial streaming remains an untrusted draft and never establishes proof; only complete input receives canonical admission. This finite adapter profile is not a general LexLean compiler, semantic preservation theorem or complete source-authority conversion."
 }
+
+inductive{
+  name: CanonicalEditError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidCanonicalEdit, fields: []},
+    {name: canonicalProjectionReadOnly, fields: []}
+  ]
+}
+
+definition{
+  name: canonicalEditBoundary,
+  parameters: [],
+  result: String,
+  body: "Direct file-editor saves of prism/spec.json or the active canonical decision module validate at most one MiB of UTF8 input before storage mutation. A module is read through the canonical decision profile; its existing presentation fields are retained. The resulting specification must pass the existing decision checker and canonical renderer. Tag delimiters in textual metadata are escaped without changing their decoded values. A first module must match its file name. Canonical saves use the captured source and the existing atomic rules transaction to commit the semantic module, authoring JSON, generated rule runtime, snapshot, version and source-bound rules status together. Changing the module name removes only the prior active module in that same transaction. Source or lifecycle races refuse through the existing comparison boundary, retaining projectEditConflict in the host envelope. A project with a decision spec cannot directly edit src/lib/prism.ts; its model is the editable authority. Other files and inactive modules retain the generic atomic file-edit path. Invalid or unsupported canonical edits and generated-projection writes have fixed typed private refusals. Successful file-editor acknowledgements use the imported optional-string warning shape and never a null warning. This boundary covers direct file-editor commands, not every import, restore or generated-app route."
+}
 \end{semanticmodule}
 \end{lexlean}

@@ -66,6 +66,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-30` | `build` | The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings |
 
+## canonical-model-edits
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-36` | `build` | Direct canonical edits atomically update the decision source, projections and source-bound rules state |
+
 ## canonical-module-boundary
 
 | ID | Level | Statement |
