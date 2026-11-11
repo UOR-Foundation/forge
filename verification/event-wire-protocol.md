@@ -36,3 +36,18 @@ All 191 Node controls and local Rust/Clippy pass. The newly required actual
 browser corpus fails against the previous guest at `event: natural`, as expected;
 this is retained evidence that old executable bytes cannot satisfy the new gate.
 Signed SDK build source is `3cc266da289becc4b3aef8a332ff4509e5df8cc8`.
+
+Signed SDK build 43053854542 refused the initial application vector assembly
+with PP2001, `application acceptanceVectors is not a closed list`. The ten new
+cases now use a closed cons-list alias ending in the existing acceptance list,
+as required by the selected SDK; no acceptance case or admission rule changed.
+Main's d31bc32 integration and 4e22147 lifecycle-race fixes are retained. All 197
+combined Node controls and the real IndexedDB reword-race browser test pass.
+
+A diagnostic mutation replaced the caller's expected generation with the
+incoming envelope's generation. Lean rejected the stale-generation wire theorem
+with LLV7002 (`rfl` failed), at EventProtocol.lex.tex:166, generated Lean line 54.
+The probe initially expected the theorem name in the compiler text; the actual
+source location and expected staleGeneration bytes identify that control. The
+original model was restored. The environment restarted during the subsequent
+whole-project verification, so that interrupted run is not a passing receipt.
