@@ -1,0 +1,402 @@
+\begin{lexlean}{CompositionProtocol}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{FeatureComposition}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: DecodedWords,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: (List Nat)}, {name: valid, type: Bool}]
+}
+
+structure{
+  name: ScalarRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: Nat}, {name: rest, type: Nat}]
+}
+
+structure{
+  name: NatsRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: (List Nat)}, {name: rest, type: Nat}, {name: valid, type: Bool}]
+}
+
+structure{
+  name: ReferenceRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: FeatureComposition::FeatureRef}, {name: rest, type: Nat}]
+}
+
+structure{
+  name: InputRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: FeatureComposition::FeatureInput}, {name: rest, type: Nat}]
+}
+
+structure{
+  name: ReferencesRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List FeatureComposition::FeatureRef)},
+    {name: rest, type: Nat},
+    {name: valid, type: Bool}
+  ]
+}
+
+structure{
+  name: InputsRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List FeatureComposition::FeatureInput)},
+    {name: rest, type: Nat},
+    {name: valid, type: Bool}
+  ]
+}
+
+structure{
+  name: FeatureRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: FeatureComposition::FeatureContract}, {name: rest, type: Nat}]
+}
+
+structure{
+  name: FeaturesRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List FeatureComposition::FeatureContract)},
+    {name: rest, type: Nat},
+    {name: valid, type: Bool}
+  ]
+}
+
+structure{
+  name: PolicyRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: FeatureComposition::CompositionPolicy}, {name: rest, type: Nat}]
+}
+
+definition{
+  name: byteAsNat,
+  parameters: [bytes : Bytes, offset : Nat],
+  result: (Option Nat),
+  body: (match (prim index bytes offset : (Option UInt8))
+    | Option.none => (ctor Option.none [Nat])
+    | Option.some value => (ctor Option.some [Nat] (prim to_nat value : Nat))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: readNibble,
+  parameters: [bytes : Bytes, offset : Nat],
+  result: (Option Nat),
+  body: (match (byteAsNat bytes offset)
+    | Option.none => (ctor Option.none [Nat])
+    | Option.some value => (if ((48 <=? value) && (value <=? 57)) then (ctor Option.some [Nat] (prim subtract value 48 : Nat)) else (if ((97 <=? value) && (value <=? 102)) then (ctor Option.some [Nat] ((prim subtract value 97 : Nat) + 10)) else (ctor Option.none [Nat])))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: readHexByte,
+  parameters: [bytes : Bytes, offset : Nat],
+  result: (Option Nat),
+  body: (match (readNibble bytes offset)
+    | Option.none => (ctor Option.none [Nat])
+    | Option.some high => (match (readNibble bytes (offset + 1))
+      | Option.none => (ctor Option.none [Nat])
+      | Option.some low => (ctor Option.some [Nat] ((prim multiply high 16 : Nat) + low)))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: readWord,
+  parameters: [bytes : Bytes, offset : Nat],
+  result: (Option Nat),
+  body: (match (readHexByte bytes (offset + 0))
+    | Option.none => (ctor Option.none [Nat])
+    | Option.some b0 => (match (readHexByte bytes (offset + 2))
+      | Option.none => (ctor Option.none [Nat])
+      | Option.some b1 => (match (readHexByte bytes (offset + 4))
+        | Option.none => (ctor Option.none [Nat])
+        | Option.some b2 => (match (readHexByte bytes (offset + 6))
+          | Option.none => (ctor Option.none [Nat])
+          | Option.some b3 => (ctor Option.some [Nat] (b0 + ((prim multiply b1 256 : Nat) + ((prim multiply b2 65536 : Nat) + (prim multiply b3 16777216 : Nat))))))))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: decodeWords,
+  parameters: [bytes : Bytes, offset : Nat, fuel : Nat, acc : (List Nat)],
+  result: DecodedWords,
+  body: (match fuel
+    | Nat.zero => (record DecodedWords {value := acc, valid := (offset =? (prim length bytes : Nat))})
+    | Nat.succ less => (if (offset =? (prim length bytes : Nat)) then (record DecodedWords {value := acc, valid := true}) else (match (readWord bytes offset)
+      | Option.none => (record DecodedWords {value := acc, valid := false})
+      | Option.some head => (decodeWords bytes (offset + 8) less (prim append acc (cons head (nil Nat)) : (List Nat)))))),
+  axioms: [Quot.sound, propext],
+  recursive_argument: fuel
+}
+
+definition{
+  name: readScalar,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option ScalarRead),
+  body: (match (prim index words offset : (Option Nat))
+    | Option.none => (ctor Option.none [ScalarRead])
+    | Option.some value => (ctor Option.some [ScalarRead] (record ScalarRead {value := value, rest := (offset + 1)})))
+}
+
+definition{
+  name: readNats,
+  parameters: [words : (List Nat), offset : Nat, count : Nat, acc : (List Nat)],
+  result: NatsRead,
+  body: (match count
+    | Nat.zero => (record NatsRead {value := acc, rest := offset, valid := true})
+    | Nat.succ less => (match (readScalar words offset)
+      | Option.none => (record NatsRead {value := acc, rest := offset, valid := false})
+      | Option.some item => (readNats words (project item rest) less (prim append acc (cons (project item value) (nil Nat)) : (List Nat))))),
+  recursive_argument: count
+}
+
+definition{
+  name: listNats,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option NatsRead),
+  body: (match (readScalar words offset)
+    | Option.none => (ctor Option.none [NatsRead])
+    | Option.some count => (if ((project count value) <=? 64) then (let result : NatsRead := (readNats words (project count rest) (project count value) (nil Nat)); (if (project result valid) then (ctor Option.some [NatsRead] result) else (ctor Option.none [NatsRead]))) else (ctor Option.none [NatsRead])))
+}
+
+definition{
+  name: readReference,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option ReferenceRead),
+  body: (match (readScalar words offset)
+    | Option.none => (ctor Option.none [ReferenceRead])
+    | Option.some v0 => (match (readScalar words (project v0 rest))
+      | Option.none => (ctor Option.none [ReferenceRead])
+      | Option.some v1 => (ctor Option.some [ReferenceRead] (record ReferenceRead {value := (record FeatureComposition::FeatureRef {key := (project v0 value), version := (project v1 value)}), rest := (project v1 rest)}))))
+}
+
+definition{
+  name: readInput,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option InputRead),
+  body: (match (readScalar words offset)
+    | Option.none => (ctor Option.none [InputRead])
+    | Option.some v0 => (match (readScalar words (project v0 rest))
+      | Option.none => (ctor Option.none [InputRead])
+      | Option.some v1 => (match (readScalar words (project v1 rest))
+        | Option.none => (ctor Option.none [InputRead])
+        | Option.some v2 => (ctor Option.some [InputRead] (record InputRead {value := (record FeatureComposition::FeatureInput {producer := (record FeatureComposition::FeatureRef {key := (project v0 value), version := (project v1 value)}), schema := (project v2 value)}), rest := (project v2 rest)})))))
+}
+
+definition{
+  name: readReferences,
+  parameters: [
+    words : (List Nat),
+    offset : Nat,
+    count : Nat,
+    acc : (List FeatureComposition::FeatureRef)
+  ],
+  result: ReferencesRead,
+  body: (match count
+    | Nat.zero => (record ReferencesRead {value := acc, rest := offset, valid := true})
+    | Nat.succ less => (match (readReference words offset)
+      | Option.none => (record ReferencesRead {value := acc, rest := offset, valid := false})
+      | Option.some item => (readReferences words (project item rest) less (prim append acc (cons (project item value) (nil FeatureComposition::FeatureRef)) : (List FeatureComposition::FeatureRef))))),
+  recursive_argument: count
+}
+
+definition{
+  name: listReferences,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option ReferencesRead),
+  body: (match (readScalar words offset)
+    | Option.none => (ctor Option.none [ReferencesRead])
+    | Option.some count => (if ((project count value) <=? 64) then (let result : ReferencesRead := (readReferences words (project count rest) (project count value) (nil FeatureComposition::FeatureRef)); (if (project result valid) then (ctor Option.some [ReferencesRead] result) else (ctor Option.none [ReferencesRead]))) else (ctor Option.none [ReferencesRead])))
+}
+
+definition{
+  name: readInputs,
+  parameters: [
+    words : (List Nat),
+    offset : Nat,
+    count : Nat,
+    acc : (List FeatureComposition::FeatureInput)
+  ],
+  result: InputsRead,
+  body: (match count
+    | Nat.zero => (record InputsRead {value := acc, rest := offset, valid := true})
+    | Nat.succ less => (match (readInput words offset)
+      | Option.none => (record InputsRead {value := acc, rest := offset, valid := false})
+      | Option.some item => (readInputs words (project item rest) less (prim append acc (cons (project item value) (nil FeatureComposition::FeatureInput)) : (List FeatureComposition::FeatureInput))))),
+  recursive_argument: count
+}
+
+definition{
+  name: listInputs,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option InputsRead),
+  body: (match (readScalar words offset)
+    | Option.none => (ctor Option.none [InputsRead])
+    | Option.some count => (if ((project count value) <=? 64) then (let result : InputsRead := (readInputs words (project count rest) (project count value) (nil FeatureComposition::FeatureInput)); (if (project result valid) then (ctor Option.some [InputsRead] result) else (ctor Option.none [InputsRead]))) else (ctor Option.none [InputsRead])))
+}
+
+definition{
+  name: readFeature,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option FeatureRead),
+  body: (match (readScalar words offset)
+    | Option.none => (ctor Option.none [FeatureRead])
+    | Option.some rkey => (match (readScalar words (project rkey rest))
+      | Option.none => (ctor Option.none [FeatureRead])
+      | Option.some rversion => (match (readScalar words (project rversion rest))
+        | Option.none => (ctor Option.none [FeatureRead])
+        | Option.some rcpu => (match (readScalar words (project rcpu rest))
+          | Option.none => (ctor Option.none [FeatureRead])
+          | Option.some rmemory => (match (listNats words (project rmemory rest))
+            | Option.none => (ctor Option.none [FeatureRead])
+            | Option.some rvocabulary => (match (listNats words (project rvocabulary rest))
+              | Option.none => (ctor Option.none [FeatureRead])
+              | Option.some routputs => (match (listNats words (project routputs rest))
+                | Option.none => (ctor Option.none [FeatureRead])
+                | Option.some rstate => (match (listNats words (project rstate rest))
+                  | Option.none => (ctor Option.none [FeatureRead])
+                  | Option.some revents => (match (listNats words (project revents rest))
+                    | Option.none => (ctor Option.none [FeatureRead])
+                    | Option.some rerrors => (match (listNats words (project rerrors rest))
+                      | Option.none => (ctor Option.none [FeatureRead])
+                      | Option.some reffects => (match (listNats words (project reffects rest))
+                        | Option.none => (ctor Option.none [FeatureRead])
+                        | Option.some rconflicts => (match (listNats words (project rconflicts rest))
+                          | Option.none => (ctor Option.none [FeatureRead])
+                          | Option.some rtargets => (match (listNats words (project rtargets rest))
+                            | Option.none => (ctor Option.none [FeatureRead])
+                            | Option.some raccessibility => (match (listNats words (project raccessibility rest))
+                              | Option.none => (ctor Option.none [FeatureRead])
+                              | Option.some rquality => (match (listReferences words (project rquality rest))
+                                | Option.none => (ctor Option.none [FeatureRead])
+                                | Option.some rneeds => (match (listInputs words (project rneeds rest))
+                                  | Option.none => (ctor Option.none [FeatureRead])
+                                  | Option.some rinputs => (ctor Option.some [FeatureRead] (record FeatureRead {value := (record FeatureComposition::FeatureContract {key := (project rkey value), version := (project rversion value), vocabulary := (project rvocabulary value), inputs := (project rinputs value), outputs := (project routputs value), state := (project rstate value), events := (project revents value), errors := (project rerrors value), effects := (project reffects value), needs := (project rneeds value), conflicts := (project rconflicts value), targets := (project rtargets value), accessibility := (project raccessibility value), quality := (project rquality value), cpu := (project rcpu value), memory := (project rmemory value)}), rest := (project rinputs rest)}))))))))))))))))))
+}
+
+definition{
+  name: readFeatures,
+  parameters: [
+    words : (List Nat),
+    offset : Nat,
+    count : Nat,
+    acc : (List FeatureComposition::FeatureContract)
+  ],
+  result: FeaturesRead,
+  body: (match count
+    | Nat.zero => (record FeaturesRead {value := acc, rest := offset, valid := true})
+    | Nat.succ less => (match (readFeature words offset)
+      | Option.none => (record FeaturesRead {value := acc, rest := offset, valid := false})
+      | Option.some item => (readFeatures words (project item rest) less (prim append acc (cons (project item value) (nil FeatureComposition::FeatureContract)) : (List FeatureComposition::FeatureContract))))),
+  recursive_argument: count
+}
+
+definition{
+  name: listFeatures,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option FeaturesRead),
+  body: (match (readScalar words offset)
+    | Option.none => (ctor Option.none [FeaturesRead])
+    | Option.some count => (if ((project count value) <=? 32) then (let result : FeaturesRead := (readFeatures words (project count rest) (project count value) (nil FeatureComposition::FeatureContract)); (if (project result valid) then (ctor Option.some [FeaturesRead] result) else (ctor Option.none [FeaturesRead]))) else (ctor Option.none [FeaturesRead])))
+}
+
+definition{
+  name: readPolicy,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option PolicyRead),
+  body: (match (readScalar words offset)
+    | Option.none => (ctor Option.none [PolicyRead])
+    | Option.some rcpu => (match (readScalar words (project rcpu rest))
+      | Option.none => (ctor Option.none [PolicyRead])
+      | Option.some rmemory => (match (listNats words (project rmemory rest))
+        | Option.none => (ctor Option.none [PolicyRead])
+        | Option.some rgrants => (match (listNats words (project rgrants rest))
+          | Option.none => (ctor Option.none [PolicyRead])
+          | Option.some rtargets => (match (listNats words (project rtargets rest))
+            | Option.none => (ctor Option.none [PolicyRead])
+            | Option.some revidence => (ctor Option.some [PolicyRead] (record PolicyRead {value := (record FeatureComposition::CompositionPolicy {grants := (project rgrants value), targets := (project rtargets value), evidence := (project revidence value), cpu := (project rcpu value), memory := (project rmemory value)}), rest := (project revidence rest)})))))))
+}
+
+definition{
+  name: encodeError,
+  parameters: [error : FeatureComposition::CompositionError],
+  result: Bytes,
+  body: (match error
+    | FeatureComposition::CompositionError.emptyComposition => 0x656d707479436f6d706f736974696f6e
+    | FeatureComposition::CompositionError.invalidDeclaration => 0x696e76616c69644465636c61726174696f6e
+    | FeatureComposition::CompositionError.duplicateFeature => 0x6475706c696361746546656174757265
+    | FeatureComposition::CompositionError.missingDependency => 0x6d697373696e67446570656e64656e6379
+    | FeatureComposition::CompositionError.incompatibleInput => 0x696e636f6d70617469626c65496e707574
+    | FeatureComposition::CompositionError.featureConflict => 0x66656174757265436f6e666c696374
+    | FeatureComposition::CompositionError.permissionDenied => 0x7065726d697373696f6e44656e696564
+    | FeatureComposition::CompositionError.unsupportedTarget => 0x756e737570706f72746564546172676574
+    | FeatureComposition::CompositionError.missingEvidence => 0x6d697373696e6745766964656e6365
+    | FeatureComposition::CompositionError.budgetExceeded => 0x6275646765744578636565646564)
+}
+
+definition{
+  name: dispatchWords,
+  parameters: [words : (List Nat)],
+  result: Bytes,
+  body: (match (readPolicy words 0)
+    | Option.none => 0x6d616c666f726d6564436f6d706f736974696f6e
+    | Option.some policy => (match (listFeatures words (project policy rest))
+      | Option.none => 0x6d616c666f726d6564436f6d706f736974696f6e
+      | Option.some features => (if ((project features rest) =? (prim length words : Nat)) then (match (FeatureComposition::admitComposition (project policy value) (project features value))
+        | Result.error error => (encodeError error)
+        | Result.ok accepted => 0x6163636570746564) else 0x6d616c666f726d6564436f6d706f736974696f6e)))
+}
+
+definition{
+  name: dispatchComposition,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (if (32768 <? (prim length bytes : Nat)) then 0x636f6d706f736974696f6e546f6f4c61726765 else (let decoded : DecodedWords := (decodeWords bytes 0 (prim length bytes : Nat) (nil Nat)); (if (project decoded valid) then (dispatchWords (project decoded value)) else 0x6d616c666f726d6564436f6d706f736974696f6e))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "Composition wire v1 is compose followed by one ASCII space and lowercase hexadecimal octets of little-endian unsigned 32-bit words. Each word is eight ASCII characters so the text view preserves every request byte. Uppercase and nonhexadecimal characters refuse. Policy is CPU, memory, grants list, targets list, evidence list. Each list begins with its item count. Then comes the feature count and features: key, version, CPU, memory; vocabulary, outputs, state, events, errors, effects, conflicts, targets, accessibility and quality ID lists; dependency key/version pairs; input producer-key/version/schema triples. Maximum payload is 32768 ASCII bytes representing at most 16384 decoded bytes, 32 features, 64 entries per list. Truncation, excess counts and trailing words return malformedComposition; oversized payload returns compositionTooLarge. No semantics are decided by the browser codec. Admission errors and accepted are the generated model result. The wire bounds are not runtime resource budgets."
+}
+
+inductive{
+  name: WireError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: malformedComposition, fields: []},
+    {name: compositionTooLarge, fields: []},
+    {name: compositionRuntimeFailed, fields: []},
+    {name: invalidCompositionResponse, fields: []}
+  ]
+}
+
+definition{
+  name: adapterBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser codec encodes exactly the declared fields and preserves their scalar values. It admits only integral unsigned 32-bit representation values and the wire list and payload bounds. It performs no semantic admission. A caller supplies a verified loaded guest; its dispatch result alone determines accepted or the modeled refusal code. Runtime exceptions become compositionRuntimeFailed; unknown, malformed UTF-8, non-byte or oversized responses become invalidCompositionResponse. This adapter does not fetch a guest, authenticate its source, or certify any application generated from the composition."
+}
+\end{semanticmodule}
+\end{lexlean}

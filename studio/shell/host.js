@@ -1,3 +1,11 @@
+import { withBuildModules } from "./build-modules.mjs";
+import { captureBuildSource, assertBuildSourceCurrent, requiresRulePublication } from "./build-source.mjs";
+import { applyStoredProjectPatch, assertGenerationActive } from "./generation-patch.mjs";
+import { editStoredProject, captureProjectSource } from "./project-edit.mjs";
+import { loadProjectScaffold, prepareNewProject, createStoredProject, createStoredChat } from "./project-creation.mjs";
+import { storageRequest } from "./storage-request.mjs";
+import { executeWorkWithGuest } from "./work-codec.mjs";
+import { validateProviderKey } from "./provider-key-validation.mjs";
 // The browser host: the surface src/preload.ts exposes as window.electron, implemented on the page
 // with no server. Rules come from the generated core (core.wasm: preimage, restore, network, view);
 // addresses are BLAKE3 over the bytes the core spells; records live in IndexedDB. Adapters only:
@@ -7,6 +15,11 @@
 // the preview worker, and the app run machine (build in the tab, serve at the version's address).
 // The chat stream is the next slice.
 
+import { packBytes, unpackBytes, RepresentationError } from "./exact-representation.mjs";
+import { admitWithGuest } from "./composition-codec.mjs";
+import { readBoundRules, readBoundRulesSnapshot, saveBoundRules } from "./rules-source.mjs";
+import { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteStoredChat, updateStoredChat } from "./project-lifecycle.mjs";
+import { invokeHost, unwrapHost } from "./host-boundary.mjs";
 import { buildSystemPrompt } from "./prompts.js";
 import * as inference from "./inference.js";
 import { viewReady, lookup, routeOf, refusalWord, seal as sealAnswer, sealPaid, paidGenerate, gpuReady, gpuIds, heldFor, rulesModel, rememberSession, withEngine, engine, readWho, MODEL_ID, paidId, site, siteKeyReady, deviceKeyGet } from "./inference.js";
@@ -17,10 +30,7 @@ import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
 
-const MARKER = "dyad-ipc-envelope-v1";
 const BASE = new URL("./", import.meta.url); // the shell's directory, wherever it is served
-const ok = (value) => ({ __dyadIpcEnvelope: MARKER, ok: true, value });
-const fail = (message, kind = "not_found") => ({ __dyadIpcEnvelope: MARKER, ok: false, error: { name: "DyadError", message, kind } });
 const listeners = new Map();
 const handlers = new Map();
 const seen = new Map();
@@ -33,7 +43,7 @@ let core = null;
 const coreReady = inference.coreReady().then((c) => (core = c));
 const kappa = inference.kappa;
 const dbReady = inference.db();
-async function tx(store, mode, fn) { const db = await dbReady; return new Promise((res, rej) => { const t = db.transaction(store, mode); const q = fn(t.objectStore(store)); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+async function tx(store, mode, fn) { return storageRequest(await dbReady, store, mode, fn); }
 const get = (store, key) => tx(store, "readonly", (s) => s.get(key));
 const put = (store, key, value) => tx(store, "readwrite", (s) => s.put(value, key));
 const del = (store, key) => tx(store, "readwrite", (s) => s.delete(key));
@@ -126,79 +136,46 @@ const FEATHERLESS_MODELS = [{ apiName: "zai-org/GLM-5.3-Flash", displayName: "GL
 handlers.set("get-language-model-providers", () => [FEATHERLESS, LOCAL]);
 handlers.set("get-language-models", ({ providerId }) => (providerId === "openrouter" ? OPENROUTER_MODELS : providerId === "featherless" ? FEATHERLESS_MODELS : providerId === "local" ? LOCAL_MODELS : []));
 handlers.set("get-language-models-by-providers", () => ({ featherless: FEATHERLESS_MODELS, local: LOCAL_MODELS }));
-handlers.set("validate-provider-api-key", async ({ provider, apiKey }) => {
-  if (provider !== "openrouter") return { ok: true };
-  const r = await fetch("https://openrouter.ai/api/v1/auth/key", { headers: { authorization: "Bearer " + apiKey } });
-  if (!r.ok) throw new Error("OpenRouter did not accept this key (" + r.status + ")");
-  return { ok: true };
-});
-handlers.set("prompts:list", () => []);
-handlers.set("list-all-media", () => ({ apps: [] }));
-handlers.set("free-agent-quota:get-status", () => ({ messagesUsed: 0, messagesLimit: 5, isQuotaExceeded: false, windowStartTime: null, resetTime: null, hoursUntilReset: null }));
-handlers.set("get-themes", () => []);
-handlers.set("get-custom-themes", () => []);
-handlers.set("user-input:get-pending", () => []);
-handlers.set("get-app-upgrades", () => []);
-handlers.set("get-app-env-vars", () => []);
-handlers.set("get-templates", () => []);
-handlers.set("check-problems", () => ({ problems: [], totalErrors: 0, totalWarnings: 0 }));
+handlers.set("validate-provider-api-key", input => validateProviderKey(input));
 
 // ---- apps and files. A file is stored under "<appId>:<path>"; the app record carries no files,
 // get-app lists them. Every edit seals a version: the address of the project state.
-const nextId = async (store) => { const ks = await keys(store); return ks.length ? Math.max(...ks.map(Number)) + 1 : 1; };
+const nextId = async (store) => { const ks = await keys(store), high = await get("refs", `allocation:${store}`); const maximum = Math.max(0, high || 0, ...ks.map(Number)); if (!Number.isSafeInteger(maximum) || maximum < 0 || maximum >= Number.MAX_SAFE_INTEGER) throw new Error("Identifier allocation failed"); return maximum + 1; };
 const nulls = { githubOrg: null, githubRepo: null, githubBranch: null, supabaseProjectId: null, supabaseParentProjectId: null, supabaseOrganizationSlug: null, neonProjectId: null, neonDevelopmentBranchId: null, neonPreviewBranchId: null, neonActiveBranchId: null, selectedDatabaseBranchType: null, vercelProjectId: null, vercelProjectName: null, vercelDeploymentUrl: null, vercelTeamId: null, installCommand: null, startCommand: null, chatContext: null, isFavorite: false, testingEnabled: false, collectionId: null };
 const withDates = (a) => ({ ...a, createdAt: new Date(a.createdAt), updatedAt: new Date(a.updatedAt), resolvedPath: a.path });
 async function filesOf(appId) {
   const ks = (await keys("files")).filter((k) => k.startsWith(appId + ":")).map((k) => k.slice(String(appId).length + 1)).sort();
   return ks;
 }
-async function entriesOf(appId) {
-  const out = [];
-  for (const path of await filesOf(appId)) { const bytes = enc.encode(await get("files", appId + ":" + path)); out.push({ path, kappa: await kappa(bytes), bytes: bytes.length }); }
-  return out;
-}
-async function seal(appId, message) {
-  await coreReady;
-  const app = await get("apps", appId);
-  const parent = (await get("refs", appId + ":main")) || "";
-  const { bytes: preimage } = core.run({ op: "preimage", project: { label: app.name, entries: await entriesOf(appId) }, parent });
-  const body = enc.encode(preimage);
-  const k = await kappa(body);
-  await put("objects", k, body);
-  await put("refs", appId + ":main", k);
-  const versions = (await get("versions", appId)) || [];
-  versions.unshift({ oid: k, message, timestamp: Math.floor(Date.now() / 1000), dbTimestamp: null, isFavorite: false, note: null });
-  await put("versions", appId, versions);
-  emit("version-created", { appId, oid: k });
-  return k;
-}
 let scaffold = null;
 async function loadScaffold() {
-  if (scaffold) return scaffold;
-  const list = await (await fetch(new URL("scaffold/files.json", BASE))).json();
-  const files = {};
-  await Promise.all(list.concat(["AI_RULES.md"]).map(async (p) => { const r = await fetch(new URL("scaffold/" + p, BASE)); if (r.ok) files[p] = await r.text(); }));
-  return (scaffold = files);
+  if (!scaffold) scaffold = await loadProjectScaffold(new URL("scaffold/", BASE));
+  return scaffold;
 }
 handlers.set("list-apps", async () => ({ apps: (await all("apps")).map(withDates) }));
 handlers.set("get-app", async (id) => { const a = await get("apps", id); if (!a) throw new Error("no app " + id); return { ...withDates(a), files: await filesOf(id), frameworkType: "vite", supabaseProjectName: null, vercelTeamSlug: null }; });
 handlers.set("check-app-name", async ({ appName }) => ({ exists: (await all("apps")).some((a) => a.name === appName) }));
 handlers.set("preview-app-folder-name", async ({ appName }) => ({ folderName: appName }));
 handlers.set("create-app", async ({ name, initialChatMode }) => {
-  const id = await nextId("apps");
-  const now = new Date().toISOString();
-  const app = { id, name, path: name, createdAt: now, updatedAt: now, ...nulls };
-  await put("apps", id, app);
-  for (const [p, src] of Object.entries(await loadScaffold())) await put("files", id + ":" + p, src);
-  const oid = await seal(id, "Init Prism app");
-  const chatId = await nextId("chats");
-  await put("chats", chatId, { id: chatId, appId: id, title: name, createdAt: now, messages: [], initialCommitHash: oid, dbTimestamp: null, chatMode: initialChatMode || "build", modelSelection: null, referencedApps: [] });
-  return { app: withDates(app), chatId };
+  await coreReady;
+  const prepared = await prepareNewProject({ name, initialChatMode, files: await loadScaffold() }, { core, derive: kappa });
+  const created = await createStoredProject(await dbReady, prepared, nulls);
+  emit("version-created", { appId: created.app.id, oid: created.oid });
+  return { app: withDates(created.app), chatId: created.chatId };
 });
 handlers.set("read-app-file", async ({ appId, filePath }) => { const c = await get("files", appId + ":" + filePath); if (c === undefined) throw new Error("no file " + filePath); return c; });
-handlers.set("edit-app-file", async ({ appId, filePath, content }) => { await put("files", appId + ":" + filePath, content); await seal(appId, "Edit " + filePath); return { success: true, warning: null }; });
-handlers.set("delete-app", async ({ appId }) => { for (const p of await filesOf(appId)) await del("files", appId + ":" + p); await del("apps", appId); await del("versions", appId); await del("refs", appId + ":main"); for (const c of await all("chats")) if (c.appId === appId) await del("chats", c.id); });
-handlers.set("rename-app", async ({ appId, appName }) => { const a = await get("apps", appId); a.name = appName; a.path = appName; a.updatedAt = new Date().toISOString(); await put("apps", appId, a); return { app: withDates(a) }; });
+handlers.set("edit-app-file", async (input) => {
+  await coreReady;
+  const oid = await editStoredProject(await dbReady, input, { core, derive: kappa });
+  emit("version-created", { appId: input.appId, oid });
+  return { success: true, warning: null };
+});
+handlers.set("delete-app", async ({ appId }) => { await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); });
+handlers.set("rename-app", async (input) => {
+  await coreReady;
+  await renameStoredProject(await dbReady, input, { core, derive: kappa, onCommit: oid => emit("version-created", { appId: input.appId, oid }) });
+  return { app: withDates(await get("apps", input.appId)) };
+});
 // A search matches a project by name, by the title of one of its chats, or by a line in one of their
 // messages, and says which: the renderer shows the matched title and message under the project's name.
 handlers.set("search-app", async (q) => {
@@ -239,15 +216,12 @@ handlers.set("search-app-files", async ({ appId, query }) => {
   return out;
 });
 handlers.set("app:get-current-commit-hash", async ({ appId }) => (await get("refs", appId + ":main")) || null);
-handlers.set("app:list-screenshots", () => ({ screenshots: [] }));
-handlers.set("app:list-thumbnails", () => ({ thumbnails: [] }));
-handlers.set("appCollections:list", () => []);
 
 // ---- moving in. A browser keeps this store per origin, so apps made on the site Forge was served from
 // before stay there; its moved page writes them to a file (hologram-forge/export/1) and Import App on the
 // home page hands that file here. Ids are renumbered past the ones in use, so nothing here is replaced;
 // a name already taken gets " (moved)". The file carries apps, their files, chats, versions, rules state
-// and the objects those versions name; it never carries settings (keys), the audit, seals, grants or
+// and the objects those versions name; cached rule/proof status is ignored and must be rechecked. It never carries settings (keys), the audit, seals, grants or
 // installed holos, and anything else in it is ignored. An object is kept only when its bytes derive to
 // its address. Everything is written in one transaction: a failure leaves the store as it was.
 const EXPORT_SCHEMA = "hologram-forge/export/1";
@@ -273,7 +247,6 @@ handlers.set("forge:import", async (input) => {
     for (const [path, text] of files) { writes.push(["files", id + ":" + path, text]); const bytes = enc.encode(text); objects.set(await kappa(bytes), bytes); }
     if (Array.isArray(entry.versions)) writes.push(["versions", id, entry.versions]);
     if (typeof entry.main === "string" && entry.main) writes.push(["refs", id + ":main", entry.main]);
-    if (entry.rules && typeof entry.rules === "object") writes.push(["refs", "prism:" + id, entry.rules]);
     const chats = [];
     for (const c of Array.isArray(entry.chats) ? entry.chats : []) {
       if (!c || typeof c !== "object") continue;
@@ -286,9 +259,25 @@ handlers.set("forge:import", async (input) => {
   for (const [k, bytes] of objects) writes.push(["objects", k, bytes]);
   const db = await dbReady;
   await new Promise((res, rej) => {
-    const t = db.transaction(["apps", "chats", "files", "objects", "refs", "versions"], "readwrite");
-    for (const [store, key, value] of writes) t.objectStore(store).put(value, key);
-    t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error("the import was aborted"));
+    let t;
+    const refuse = () => rej(Object.assign(new Error("Project storage failed"), { code: "projectStorageFailed" }));
+    try {
+      t = db.transaction(["apps", "chats", "files", "objects", "refs", "versions"], "readwrite");
+      t.oncomplete = res; t.onerror = refuse; t.onabort = refuse;
+      const marks = new Map();
+      const commit = () => {
+        if (marks.size !== 2) return;
+        try {
+          for (const store of ["apps", "chats"]) {
+            const high = marks.get(store), assigned = writes.filter(row => row[0] === store).map(row => row[1]);
+            if (!Number.isSafeInteger(high) || high < 0 || assigned.some(id => !Number.isSafeInteger(id) || id <= high)) throw Error("stale allocation");
+            if (assigned.length) t.objectStore("refs").put(Math.max(high, ...assigned), `allocation:${store}`);
+          }
+          for (const [store, key, value] of writes) { if (store === "apps" || store === "chats") t.objectStore(store).add(value, key); else t.objectStore(store).put(value, key); }
+        } catch { try { t.abort(); } catch {} refuse(); }
+      };
+      for (const store of ["apps", "chats"]) { const q = t.objectStore("refs").get(`allocation:${store}`); q.onsuccess = () => { marks.set(store, q.result === undefined ? 0 : q.result); commit(); }; }
+    } catch { if (t) { try { t.abort(); } catch {} } refuse(); }
   });
   return { apps, objects: objects.size, refused };
 });
@@ -324,32 +313,30 @@ handlers.set("get-version-changes", async ({ versionId }) => {
 });
 handlers.set("set-version-favorite", async ({ appId, oid, isFavorite }) => { const v = (await get("versions", appId)) || []; for (const x of v) if (x.oid === oid) x.isFavorite = isFavorite; await put("versions", appId, v); });
 handlers.set("set-version-note", async ({ appId, oid, note }) => { const v = (await get("versions", appId)) || []; for (const x of v) if (x.oid === oid) x.note = note; await put("versions", appId, v); });
-async function restore(appId, oid) {
+async function restore(appId, oid, revert = false) {
   await coreReady;
-  const body = await get("objects", oid);
-  if (!body) throw new Error("no object at " + oid);
-  const derived = await kappa(body);
-  const { decision } = core.run({ op: "restore", derived, expected: oid });
-  await put("audit", Date.now() + ":" + oid, { ts: Date.now(), operation: "snapshot.restore", resource: oid, outcome: decision });
-  if (decision !== "Accept") throw new Error("refused: bytes at " + oid.slice(0, 22) + " re-derive to " + derived.slice(0, 22));
-  // The preimage names entries by address; the file bytes are looked up by their own addresses.
-  const state = JSON.parse(dec.decode(body));
-  for (const p of await filesOf(appId)) await del("files", appId + ":" + p);
-  for (const [path, k] of state.entries) { const bytes = await get("objects", k); if (bytes) await put("files", appId + ":" + path, dec.decode(bytes)); }
-  await put("refs", appId + ":main", oid);
-  return oid;
+  return restoreStoredProject(await dbReady, appId, oid, {
+    core, onCommit: hash => emit("version-created", { appId, oid: hash }),
+    readObject: key => get("objects", key),
+    derive: kappa,
+    admit: async (derived, expected) => {
+      const { decision } = core.run({ op: "restore", derived, expected });
+      await put("audit", Date.now() + ":" + oid, { ts: Date.now(), operation: "snapshot.restore", resource: oid, outcome: decision });
+      return decision === "Accept";
+    },
+  }, revert);
 }
 handlers.set("checkout-version", async ({ appId, versionId }) => { await restore(appId, versionId); });
-handlers.set("revert-version", async ({ appId, previousVersionId }) => { await restore(appId, previousVersionId); await seal(appId, "Revert to " + previousVersionId.slice(0, 22)); return { successMessage: "Reverted" }; });
+handlers.set("revert-version", async ({ appId, previousVersionId }) => { await restore(appId, previousVersionId, true); return { successMessage: "Reverted" }; });
 
 // ---- chats as records; the stream is the next slice
 handlers.set("get-chats", async (appId) => (await all("chats")).filter((c) => appId == null || c.appId === appId).map((c) => chatRow(c)));
 handlers.set("get-chat", async (id) => { const c = await get("chats", id); if (!c) throw new Error("no chat " + id); return { ...c, chatMode: c.chatMode || "build", referencedApps: c.referencedApps || [], messages: (c.messages || []).map((x) => ({ ...x, createdAt: x.createdAt || now() })) }; });
 const chatRow = (c) => ({ id: c.id, appId: c.appId, title: c.title, createdAt: new Date(c.createdAt || Date.now()), chatMode: c.chatMode || "build", isFavorite: !!c.isFavorite });
 handlers.set("get-chat-metadata", async (id) => { const c = await get("chats", id); return c ? chatRow(c) : null; });
-handlers.set("create-chat", async (appId) => { const id = await nextId("chats"); await put("chats", id, { id, appId, title: "New chat", createdAt: now(), messages: [], initialCommitHash: null, dbTimestamp: null, chatMode: "build", modelSelection: null, referencedApps: [] }); return id; });
-handlers.set("update-chat", async ({ chatId, title }) => { const c = await get("chats", chatId); if (c && title) c.title = title; if (c) await put("chats", chatId, c); });
-handlers.set("delete-chat", async (id) => { await del("chats", id); });
+handlers.set("create-chat", async (appId) => createStoredChat(await dbReady, appId, now()));
+handlers.set("update-chat", async ({ chatId, title }) => { if (title) await updateStoredChat(await dbReady, chatId, { title }); });
+handlers.set("delete-chat", async (id) => { await deleteStoredChat(await dbReady, id); });
 // The sidebar's search: a chat matches by title or by the text of one of its messages, and the line
 // that matched is what the renderer shows under it.
 handlers.set("search-chats", async (q) => {
@@ -413,20 +400,24 @@ async function grantPreview(id, endpoints) {
   await put("refs", "capabilities:" + id, { serve: true, network: { endpoints: [...endpoints], denied: [] } });
 }
 
+async function verifiedBuildSource(appId) {
+  return captureBuildSource(await dbReady, appId, {
+    readObject: key => get("objects", key), derive: kappa,
+    admit: async (derived, expected) => core.run({ op: "restore", derived, expected }).decision === "Accept",
+  });
+}
 async function buildPreview(appId) {
   await coreReady;
-  const head = await get("refs", appId + ":main");
-  const { path } = core.run({ op: "preview", kappa: head });
+  const source = await verifiedBuildSource(appId);
+  const { path } = core.run({ op: "preview", kappa: source.reference });
   const appUrl = new URL(path.slice(1), BASE);
   const owner = await get("apps", appId);
   await grantPreview(previewId(appUrl.pathname), Array.isArray(owner && owner.grants) ? owner.grants : PREVIEW_ENDPOINTS);
-  const files = new Map();
-  for (const p of await filesOf(appId)) files.set(p, await get("files", appId + ":" + p));
+  const files = new Map(source.files);
   const pkg = await (await fetch(new URL("scaffold/package.json", BASE))).json();
   const pkgs = Object.fromEntries(Object.entries(pkg.dependencies).map(([n, v]) => [n, v.replace(/^[\^~]/, "")]));
   // Packages the model added with <dyad-add-dependency>: name or name@version, resolved by esm.sh.
-  const app = await get("apps", appId);
-  for (const d of app.extraDeps || []) { const at = d.lastIndexOf("@"); if (at > 0) pkgs[d.slice(0, at)] = d.slice(at + 1); else pkgs[d] = ""; }
+  for (const d of source.dependencies) { const at = d.lastIndexOf("@"); if (at > 0) pkgs[d.slice(0, at)] = d.slice(at + 1); else pkgs[d] = ""; }
   const react = pkgs.react, dom = pkgs["react-dom"];
   const imports = { react: `https://esm.sh/react@${react}`, "react/": `https://esm.sh/react@${react}/`, "react-dom": `https://esm.sh/react-dom@${dom}?external=react`, "react-dom/": `https://esm.sh/react-dom@${dom}&external=react/` };
   for (const [n, v] of Object.entries(pkgs)) { if (n === "react" || n === "react-dom") continue; const at = v ? "@" + v : ""; imports[n] = `https://esm.sh/${n}${at}?external=react,react-dom`; imports[n + "/"] = `https://esm.sh/${n}${at}&external=react,react-dom/`; }
@@ -464,6 +455,7 @@ async function buildPreview(appId) {
 <script src="https://cdn.tailwindcss.com"><\/script>
 <style>${css}</style></head><body><div id="root"></div>
 <script type="module">${js}<\/script></body></html>`;
+  await assertBuildSourceCurrent(await dbReady, appId, source);
   const cache = await caches.open("previews");
   await cache.put(appUrl.pathname + "index.html", new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } }));
   return { appUrl: appUrl.href, bytes: js.length };
@@ -523,8 +515,8 @@ window.addEventListener("message", (e) => {
   // Everything else acts on an app: the one this frame was shown, never the one the message names.
   const appId = liveWindows.get(e.source);
   if (!appId) return;
-  if (m.type === "live/patch" && Array.isArray(m.ops)) patchSpec(appId, m.ops, { author: "user", key: m.key || null });
-  else if (m.type === "live/undo" || m.type === "live/redo") stepSpec(appId, m.type === "live/undo" ? "undo" : "redo");
+  if (m.type === "live/patch" && Array.isArray(m.ops)) patchSpec(appId, m.ops, { author: "user", key: m.key || null }).catch(() => {});
+  else if (m.type === "live/undo" || m.type === "live/redo") stepSpec(appId, m.type === "live/undo" ? "undo" : "redo").catch(() => {});
   else if (m.type === "live/point") { if (livePointed.get(appId)?.key === m.key) livePointed.delete(appId); else livePointed.set(appId, { key: m.key, kind: m.kind, edit: m.edit || {}, text: String(m.text || "").slice(0, 200) }); }
 });
 new MutationObserver(() => { for (const appId of liveLatest.keys()) pushLive(appId, liveLatest.get(appId).raw, liveLatest.get(appId).trust); }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
@@ -535,7 +527,11 @@ async function refreshLive(appId) {
   const state = await rulesOf(appId);
   // The spec as written is drawn, not the checker's normalised copy: every edit path on the screen is a
   // path in this spec, so a click patches exactly what the model or the user wrote.
-  try { pushLive(appId, JSON.parse(json), state && state.spec ? state.phase : "draft"); } catch (e) {}
+  try {
+    const bound = state?.spec && state.specKappa === await kappa(enc.encode(json));
+    const trust = bound ? state.phase === "published" && state.publicationCurrent === false ? "proved" : state.phase : "draft";
+    pushLive(appId, JSON.parse(json), trust);
+  } catch (e) {}
 }
 
 // ---- the one write path. A click on the screen and a patch the agent writes arrive here alike, as
@@ -548,8 +544,8 @@ const liveEditors = new Map(); // appId -> its edit history
 const livePointed = new Map(); // appId -> the node the user points the agent at
 const liveQueue = new Map();
 const checkForEdit = (spec) => { try { const c = prism.checkSpec(spec); return { ok: !!c.ok, issues: c.issues || [] }; } catch (e) { return { ok: false, issues: [String((e && e.message) || e)] }; } };
-async function editorOf(appId) {
-  const json = await get("files", appId + ":prism/spec.json");
+async function editorOf(appId, source) {
+  const json = source ? new Map(source.files).get("prism/spec.json") : await get("files", appId + ":prism/spec.json");
   if (!json) return null;
   const spec = JSON.parse(json);
   let ed = liveEditors.get(appId);
@@ -567,37 +563,48 @@ function inOrder(appId, job) {
 function refuse(appId, key, message) {
   for (const [win, app] of liveWindows) if (app === appId && !win.closed) win.postMessage({ type: "live/refused", app: String(appId), key, message }, "*");
 }
-async function saveSpec(appId, spec, summary) {
-  const result = await rulesAfterTurn(appId, "<dyad-spec>" + JSON.stringify(spec) + "</dyad-spec>", []);
-  if (result.changed) await seal(appId, summary);
+async function saveSpec(appId, spec, options = {}) {
+  const result = await rulesAfterTurn(appId, "<dyad-spec>" + JSON.stringify(spec) + "</dyad-spec>", [], { onCommit: (oid) => emit("version-created", { appId, oid }), ...options });
   await refreshLive(appId);
   return result;
 }
-async function patchSpec(appId, ops, { author = "user", key = null } = {}) {
+async function patchSpec(appId, ops, { author = "user", key = null, ...options } = {}) {
+  ops = structuredClone(ops);
   // Optimistic, before anything is awaited: with the app's history already in memory and nothing ahead of
   // it in the queue, the patched spec is drawn now, then checked.
   const cached = liveEditors.get(appId);
   let drawn = false;
   if (cached && !liveBusy.has(appId)) { try { pushLive(appId, applyOps(cached.spec, ops), "draft", true); drawn = true; } catch (e) { if (!(e instanceof PatchError)) throw e; } }
   return inOrder(appId, async () => {
-    const ed = await editorOf(appId);
+    assertGenerationActive(options.signal);
+    const source = options.source || await captureProjectSource(await dbReady, appId);
+    const ed = await editorOf(appId, source);
     if (!ed) return { ok: false, issues: ["This app has no rules yet."] };
-    const before = ed.spec, trust = ((await rulesOf(appId)) || {}).phase || "draft";
+    const before = ed.spec;
     try { if (!drawn) pushLive(appId, applyOps(before, ops), "draft", true); }
     catch (e) { if (!(e instanceof PatchError)) throw e; refuse(appId, key, e.message); return { ok: false, issues: [e.message] }; }
     const result = ed.apply(ops);
-    if (!result.ok) { pushLive(appId, before, trust); refuse(appId, key, result.issues[0]); return result; }
-    await saveSpec(appId, result.spec, `${author === "agent" ? "The agent" : "You"} changed ${ops.map((o) => o.path.join(".")).join(", ")}`);
-    return result;
+    if (!result.ok) { await refreshLive(appId); refuse(appId, key, result.issues[0]); return result; }
+    try {
+      const saved = await saveSpec(appId, result.spec, { ...options, source });
+      return { ...result, ...saved };
+    } catch (e) {
+      liveEditors.delete(appId);
+      await refreshLive(appId);
+      refuse(appId, key, e.message);
+      throw e;
+    }
   });
 }
 async function stepSpec(appId, way) {
   return inOrder(appId, async () => {
-    const ed = liveEditors.get(appId) || (await editorOf(appId));
+    const source = await captureProjectSource(await dbReady, appId);
+    const ed = await editorOf(appId, source);
     if (!ed || !(way === "undo" ? ed.canUndo : ed.canRedo)) return;
     const spec = way === "undo" ? ed.undo() : ed.redo();
     pushLive(appId, spec, "draft", true);
-    await saveSpec(appId, spec, way === "undo" ? "Undo" : "Redo");
+    try { await saveSpec(appId, spec, { source }); }
+    catch (e) { liveEditors.delete(appId); await refreshLive(appId); refuse(appId, null, e.message); throw e; }
   });
 }
 // What the user points at, said to the agent with the request, so "make this cheaper" has a "this".
@@ -734,33 +741,8 @@ handlers.set("get-context-paths", async ({ appId }) => {
   };
 });
 handlers.set("set-context-paths", async ({ appId, chatContext }) => { const a = await get("apps", appId); if (!a) throw new Error("no app " + appId); a.chatContext = chatContext; await put("apps", appId, a); });
-// Features this build does not have, each answering what is true here rather than a placeholder:
-// nothing is connected, nothing is installed, nothing was found. A settings or integration screen
-// reads one of these the moment it mounts, and a screen that reads nothing renders its empty state,
-// while a refusal would crash it. Every other unimplemented channel is answered from its own contract
-// in `dispatch` below.
-handlers.set("coolify:get-status", () => ({ hasToken: false, tokenId: null, instanceUrl: null, serverUrl: null, connection: null, appUrl: null, lastDeployedAt: null }));
-handlers.set("coolify:discover", () => ({ servers: [], projects: [] }));
-handlers.set("coolify-setup:snapshot", () => ({ type: "idle" }));
-handlers.set("coolify-setup:get-server-key", () => ({ publicKey: "" }));
-handlers.set("coolify-setup:reveal-credentials", () => ({ instance: null, server: null }));
-handlers.set("local-models:list-ollama", () => ({ models: [] }));
-handlers.set("local-models:list-lmstudio", () => ({ models: [] }));
-handlers.set("mcp:list-catalog", () => ({ entries: [], addedSlugs: [] }));
-handlers.set("mcp:is-oauth-storage-encrypted", () => ({ available: false }));
-handlers.set("mcp:probe-callback-port", () => ({ port: 0 }));
-handlers.set("neon:get-project", () => ({ projectId: "", projectName: "", orgId: "", branches: [] }));
-handlers.set("neon:get-branch-env-vars", () => ({ databaseUrl: "" }));
-handlers.set("neon:get-email-password-config", () => ({ enabled: false, email_verification_method: "link", require_email_verification: false, auto_sign_in_after_verification: false, send_verification_email_on_sign_up: false, send_verification_email_on_sign_in: false, disable_sign_up: false }));
-handlers.set("supabase:detect-legacy-app-key", () => ({ hasLegacyKey: false }));
-handlers.set("tests:list", () => ({ specs: [] }));
-handlers.set("tests:detect-legacy", () => ({ files: [] }));
-handlers.set("vercel:get-sync-preview", () => ({ vercelProjectName: null, branchType: "development", envKeys: [], cookieSecretIncluded: false, target: [], trustedDomainOrigins: [], authActive: false }));
-// No review has been run: this host makes no review turn, so there are no findings to show.
-handlers.set("get-latest-security-review", () => ({ findings: [], timestamp: new Date(0).toISOString(), chatId: 0 }));
-// The site's included key answers without a quota of its own, and a visitor's own key has whatever
-// OpenRouter gives it. Either way nothing is counted here.
-handlers.set("free-model-quota:get-status", () => ({ messagesUsed: 0, messagesLimit: 0, messagesRemaining: 0, isQuotaExceeded: false, resetTime: null }));
+// Unimplemented imported capabilities have no handler. The typed dispatch
+// boundary reports unsupportedChannel, preserving the renderer error state.
 window.__preview = buildPreview;
 
 // ---- the model: OpenRouter with the visitor's own key, streamed as OpenAI compatible SSE. The key
@@ -805,13 +787,10 @@ function parseDyadTags(text) {
   for (const m of text.matchAll(/<dyad-add-dependency\s+([^>]*?)\s*\/?>/g)) { const p = attr(m[1], "packages") || attr(m[1], "package"); if (p) deps.push(...p.split(/\s+/).filter(Boolean)); }
   return { writes, deletes, renames, deps };
 }
-async function applyDyadTags(appId, tags) {
-  let changed = 0;
-  for (const w of tags.writes) if (w.path) { await put("objects", await kappa(enc.encode(w.content)), enc.encode(w.content)); await put("files", appId + ":" + w.path, w.content); changed++; }
-  for (const d of tags.deletes) if (d.path) { await del("files", appId + ":" + d.path); changed++; }
-  for (const r of tags.renames) if (r.from && r.to) { const c = await get("files", appId + ":" + r.from); if (c !== undefined) { await del("files", appId + ":" + r.from); await put("files", appId + ":" + r.to, c); changed++; } }
-  if (tags.deps.length) { const app = await get("apps", appId); app.extraDeps = [...new Set([...(app.extraDeps || []), ...tags.deps])]; await put("apps", appId, app); }
-  return changed;
+async function applyDyadTags(appId, tags, options = {}) {
+  await coreReady;
+  const result = await applyStoredProjectPatch(await dbReady, appId, tags, { core, derive: kappa, ...options });
+  return result;
 }
 window.__chat = { streamOpenRouter, parseDyadTags, applyDyadTags };
 
@@ -856,22 +835,23 @@ async function markInterruptedTurns() {
     const open = /^<think>/.test(last.content) && !last.content.includes("</think>");
     if (!open && last.content.trim()) continue;
     last.content = (open ? last.content + "</think>" : last.content) + CUT;
-    await put("chats", chat.id, chat);
+    await updateStoredChat(await dbReady, chat.id, { messages: chat.messages });
   }
 }
 markInterruptedTurns().catch((e) => console.warn("[host] marking interrupted turns", e));
 const djb2 = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; return h; };
 const now = () => new Date().toISOString();
 async function messagesOf(chatId) { const c = await get("chats", chatId); return c ? c.messages : []; }
-async function saveMessages(chatId, messages) { const c = await get("chats", chatId); c.messages = messages; await put("chats", chatId, c); }
+async function saveMessages(chatId, messages) { return updateStoredChat(await dbReady, chatId, { messages }); }
 // What the model is shown of the project: every path, and the source of the files a visitor's app
 // is made of; the shadcn ui library files are named, not pasted, since the model knows them.
-async function codebaseOf(appId) {
-  const paths = await filesOf(appId);
+async function codebaseOf(appId, source) {
+  const captured = source ? new Map(source.files) : null;
+  const paths = captured ? [...captured.keys()] : await filesOf(appId);
   const parts = [];
   for (const p of paths) {
     if (p.startsWith("src/components/ui/")) continue;
-    const c = await get("files", appId + ":" + p);
+    const c = captured ? captured.get(p) : await get("files", appId + ":" + p);
     parts.push(`<dyad-file path="${p}">\n${c}\n</dyad-file>`);
   }
   return "Files in the project:\n" + paths.join("\n") + "\n\n" + parts.join("\n\n");
@@ -882,63 +862,67 @@ async function codebaseOf(appId) {
 // can say proved only after Lean attested the current rules, and publish only proved rules. The
 // state lives at refs["prism:<appId>"].
 const kernelReady = import(new URL("kernel.js", BASE).href).then(() => self.ForgeKernel.load((p) => fetch(new URL(p, BASE))));
+async function representationCommand(operation, input, reconstruct = false) {
+  if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).sort().join(",") !== (reconstruct ? "basis,bytes,identity" : "basis,bytes")) return { ok: false, code: "invalidRepresentation" };
+  try { return { ok: true, value: await (reconstruct ? operation(input.bytes, input.identity, input.basis) : operation(input.bytes, input.basis)) }; }
+  catch (error) { if (error instanceof RepresentationError) return { ok: false, code: error.code }; throw error; }
+}
+handlers.set("forge:pack-bytes", input => representationCommand(packBytes, input));
+handlers.set("forge:unpack-bytes", input => representationCommand(unpackBytes, input, true));
+handlers.set("forge:compose", async (input) => {
+  if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).sort().join(",") !== "features,policy") return { ok: false, code: "malformedComposition", error: "Composition requires policy and features" };
+  return admitWithGuest(await kernelReady, input.policy, input.features);
+});
+handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
 const PHASES = ["drafting", "checked", "proving", "proved", "published"];
 async function nextPhase(phase, event) {
   const answer = await (await kernelReady).ask(phase + " " + event);
   if (!PHASES.includes(answer)) throw new Error("the kernel answered " + answer + " to " + phase + " " + event);
   return answer;
 }
-const rulesOf = (appId) => get("refs", "prism:" + appId);
-const saveRules = (appId, state) => put("refs", "prism:" + appId, state);
+const rulesOf = async (appId) => readBoundRules(await dbReady, appId, kappa);
+const rulesSnapshotOf = async (appId) => readBoundRulesSnapshot(await dbReady, appId, kappa);
+const saveRules = async (appId, state, expected, signal) => saveBoundRules(await dbReady, appId, state, kappa, expected, signal);
 // After a turn: the spec the model wrote (if any) becomes prism/spec.json; new rules drop the proof
 // (the kernel's edit), are checked (its check), and on a pass the app's rule module is written.
 // Returns the files changed and the card that replaces the spec in the chat.
-async function rulesAfterTurn(appId, text, written = []) {
+async function rulesAfterTurn(appId, text, written = [], options = {}) {
+  assertGenerationActive(options.signal);
+  await coreReady;
+  const source = options.source || await captureProjectSource(await dbReady, appId);
+  const files = new Map(source.files), writes = [];
+  const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
   const tag = prism.parseSpecTag(text);
-  let changed = 0;
-  if (tag && tag.spec) {
-    const json = JSON.stringify(tag.spec, null, 2) + "\n";
-    if ((await get("files", appId + ":prism/spec.json")) !== json) { await put("objects", await kappa(enc.encode(json)), enc.encode(json)); await put("files", appId + ":prism/spec.json", json); changed++; }
-  }
-  const current = await get("files", appId + ":prism/spec.json");
-  const before = await rulesOf(appId);
-  if (!current) return { changed, card: tag && tag.error ? `**Rules** · not checked\n\n- ${tag.error}\n\nAsk me to fix the rules.` : null };
+  if (tag && tag.spec) stage("prism/spec.json", JSON.stringify(tag.spec, null, 2) + "\n");
+  const current = files.get("prism/spec.json"), snapshot = await rulesSnapshotOf(appId), before = snapshot.state;
+  if (!current) return { changed: 0, source, card: tag && tag.error ? `**Rules** · not checked\n\n- ${tag.error}\n\nAsk me to fix the rules.` : null };
   const specKappa = await kappa(enc.encode(current));
-  if (before && before.specKappa === specKappa) return { changed, card: tag ? prism.card(before) : null };
-  // The proof is about the logic (fields, rules, answers, guarantees), so it is keyed by the logic kappa,
-  // not by the bytes of the file. An edit that leaves the logic kappa as it was (a word, a label, the
-  // view) is a reword: the kernel keeps the phase (FK-10, FK-11, proved by Lean), and the proof stands.
-  let parsed = null;
-  try { parsed = JSON.parse(current); } catch (e) {}
-  const logicKappa = parsed ? live.project(parsed).logicKappa : null;
-  if (before && before.spec && before.logicKappa && logicKappa === before.logicKappa) {
-    const kept = await rewordPhase(before.phase);
-    const reworded = kept ? prism.checkSpec(parsed) : null;
-    if (reworded && reworded.ok) {
-      if ((await get("files", appId + ":src/lib/prism.ts")) !== reworded.module) { await put("objects", await kappa(enc.encode(reworded.module)), enc.encode(reworded.module)); await put("files", appId + ":src/lib/prism.ts", reworded.module); changed++; }
-      const state = { ...before, phase: kept, specKappa, logicKappa, spec: reworded.spec, issues: reworded.issues, notes: reworded.notes || [], vectors: reworded.vectors || 0, updated: now() };
-      await saveRules(appId, state);
-      return { changed, card: prism.card(state) };
-    }
-  }
+  const proofKey = spec => live.kappaOfValue({ name: spec.name, logic: live.logicOf(spec) });
+  if (before && before.specKappa === specKappa && writes.length === 0) return { changed: 0, source, card: tag ? prism.card(before) : null };
   let phase = before ? await nextPhase(before.phase, "edit") : "drafting";
+  let logicKappa = null, retained = false;
   let checked;
   try { checked = prism.checkSpec(JSON.parse(current)); } catch (e) { checked = { ok: false, issues: ["The rules are not valid JSON: " + e.message] }; }
   if (checked.ok) {
-    phase = await nextPhase(phase, "check");
-    if ((await get("files", appId + ":src/lib/prism.ts")) !== checked.module) { await put("objects", await kappa(enc.encode(checked.module)), enc.encode(checked.module)); await put("files", appId + ":src/lib/prism.ts", checked.module); changed++; }
-    // No page asks the rules yet, and this turn wrote none: Forge draws the form (the device's turns
-    // write only rules). A page the model wrote, or one that already uses the rules, is left alone.
-    const page = (await get("files", appId + ":src/pages/Index.tsx")) || "";
-    if (!page.includes("@/lib/prism") && !written.some((p) => p && p.startsWith("src/pages/"))) {
-      const screen = prism.screenSource();
-      await put("objects", await kappa(enc.encode(screen)), enc.encode(screen)); await put("files", appId + ":src/pages/Index.tsx", screen); changed++;
+    logicKappa = proofKey(checked.spec);
+    if (before?.spec && before.logicKappa === logicKappa && proofKey(before.spec) === logicKappa) {
+      const reword = await rewordPhase(before.phase);
+      if (reword) { phase = reword; retained = true; }
     }
+    if (!retained) phase = await nextPhase(phase, "check");
+    stage("src/lib/prism.ts", checked.module);
+    const page = files.get("src/pages/Index.tsx") || "";
+    if (!page.includes("@/lib/prism") && !written.some((p) => p && p.startsWith("src/pages/"))) stage("src/pages/Index.tsx", prism.screenSource());
   }
   const notes = [...(tag && tag.repaired ? ["Forge repaired the JSON syntax the model wrote. Read the rules before you approve them."] : []), ...(checked.notes || [])];
-  const state = { phase, specKappa, logicKappa, spec: checked.spec || null, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: null, updated: now() };
-  await saveRules(appId, state);
-  return { changed, card: prism.card(state) };
+  const state = { ...(retained ? before : {}), phase, specKappa, logicKappa, spec: checked.spec || null, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: retained ? before.proof : null, updated: now() };
+  // A semantic proof survives wording changes; a release still identifies the older bytes.
+  if (retained && before.phase === "published" && before.specKappa !== specKappa) state.publicationCurrent = false;
+  // Compare the captured lifecycle and install its successor in the source transaction.
+  // A completed proof wins over this stale edit; no deleted-status interval is exposed.
+  const applied = await applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, ...options, source, rulesUpdate: { expected: snapshot.expected, state } });
+  assertGenerationActive(options.signal);
+  return { changed: applied.changed, source: applied.source, card: prism.card(state) };
 }
 // The kernel's answer to a reword. A kernel guest older than the event (KERNEL_REV pins the guest the page
 // runs) answers invalid; the edit is then decided as an edit, by the kernel's own answer to that, and the
@@ -952,14 +936,22 @@ async function rewordPhase(phase) {
 // changed under it.
 async function proveRules(appId, logicKey, onWait) {
   const state = await rulesOf(appId);
+  if (!state || (state.logicKappa || state.specKappa) !== logicKey || state.phase !== "proving") return null;
   const result = await prism.prove(state.spec, { onWait }).catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
-  const latest = await rulesOf(appId);
-  if (!latest || (latest.logicKappa || latest.specKappa) !== logicKey || latest.phase !== "proving") return null;
   const phase = await nextPhase("proving", result.ok ? "attest" : "fail");
-  // The axiom sets Lean settled on are kept: the model the SDK builds must be the model Lean proved.
-  await saveRules(appId, { ...latest, phase, proof: result.ok ? result.record : null, axioms: result.ok ? result.axioms || {} : null, proofError: result.ok ? null : result.error, updated: now() });
-  refreshLive(appId);
+  let attempted;
+  for (;;) {
+    const latest = await rulesOf(appId);
+    if (!latest || (latest.logicKappa || latest.specKappa) !== logicKey || latest.phase !== "proving") return null;
+    const predecessor = JSON.stringify(latest);
+    if (predecessor === attempted) return null;
+    attempted = predecessor;
+    // Reword can commit between this read and CAS. Retry the completed result,
+    // not the prover, only while a new current predecessor has matching semantics.
+    if (await saveRules(appId, { ...latest, phase, proof: result.ok ? result.record : null, axioms: result.ok ? result.axioms || {} : null, proofError: result.ok ? null : result.error, updated: now() }, latest)) break;
+  }
   await put("audit", Date.now() + ":prism:" + appId, { timestamp_millis: Date.now(), principal: "app:" + appId, operation: "prism.rules.prove", resource: logicKey, outcome: result.ok ? "proved" : "refused" });
+  await refreshLive(appId);
   return result;
 }
 // "approve" is the user's yes to the guarantees on the card: no model is asked. The answer is a
@@ -971,8 +963,8 @@ async function approveRules(appId) {
   if (state.phase === "proved" || state.phase === "published") return { text: "These rules are already proved by Lean." };
   if (state.phase !== "checked") return { text: "The rules are not checked yet, so there is nothing to approve. Ask me to fix them." };
   const phase = await nextPhase("checked", "approve");
-  await saveRules(appId, { ...state, phase, approved: now() });
-  refreshLive(appId);
+  if (!await saveRules(appId, { ...state, phase, approved: now() }, state)) return { text: "The rules changed before approval was recorded. Check the current rules again." };
+  await refreshLive(appId);
   return { text: prism.provingMessage(state.spec), spec: state.spec, prove: (onWait) => proveRules(appId, state.logicKappa || state.specKappa, onWait) };
 }
 // The approve turn stays open while Lean works, as a build turn stays open while the model writes:
@@ -1038,28 +1030,34 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   if (refusal) { await show(refusal); return finish(); }
   const spec = rules.spec;
   const head = `**Publishing ${spec.title}** with the Prism SDK on GitHub Actions, as \`npx prism-code\` builds it. The repository is public, so anyone can read its rules and LexLean model.`;
-  let links = "";
+  let links = "", observing = true;
+  const abort = new AbortController(); m.abort = abort;
   const step = (word, detail, extra) => {
     if (extra && extra.runs) links = `\n\n[Build run](${extra.runs["pages.yml"]}) · [Lean gate](${extra.runs["bootstrap.yml"]})`;
-    if (!m.abort || !m.abort.signal.aborted) show(`${head}\n\n${word}: ${detail}.${links}`);
+    if (observing && !abort.signal.aborted) show(`${head}\n\n${word}: ${detail}.${links}`);
   };
-  const abort = new AbortController(); m.abort = abort;
   const stopped = new Promise((res) => abort.signal.addEventListener("abort", () => res("stopped")));
   const t0 = Date.now();
-  const build = buildOnGitHub({ token, spec, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: prism.templateCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step })
+  const build = buildOnGitHub({ token, spec, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: prism.templateCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
     .catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
   const result = await Promise.race([build, stopped]);
-  m.abort = null;
-  if (result === "stopped") { await show(`${head}\n\nStopped watching. The build goes on on GitHub; say publish again to pick it up.${links}`); return finish(); }
+  observing = false;
+  if (m.abort === abort) m.abort = null;
+  if (result === "stopped") { await show(`${head}\n\nStopped browser requests. Work already submitted to GitHub may continue; say publish again to pick it up.${links}`); return finish(); }
   const row = (outcome, resource) => put("audit", Date.now() + ":publish:" + appId, { timestamp_millis: Date.now(), principal: "app:" + appId, operation: "prism.application.publish", resource, outcome });
   if (!result.ok) {
     await row("refused", (result.repository || "") + (result.sha ? "@" + result.sha : ""));
     const why = result.error || (result.vectors ? `${result.vectors.total - result.vectors.passed} of ${result.vectors.total} acceptance vectors failed in the built guest, or the live page names another holo` : "the build did not pass");
-    await show(`${head}\n\nNothing was published: ${why}.${links}`);
+    await show(`${head}\n\nPublication verification failed: ${why}. Remote content may already be live; this does not undo the GitHub build.${links}`);
     return finish();
   }
   const next = await nextPhase(rules.phase, "publish");
-  await saveRules(appId, { ...rules, phase: next === "published" ? next : rules.phase, publishedAs: result.live, build: { repository: result.repository, sha: result.sha, fingerprint: result.fingerprint, vectors: result.vectors, runs: Object.fromEntries(Object.entries(result.runs).map(([w, r]) => [w, r.html_url])), at: now() }, updated: now() });
+  const current = await saveRules(appId, { ...rules, phase: next === "published" ? next : rules.phase, publishedAs: result.live, publicationCurrent: true, build: { repository: result.repository, sha: result.sha, fingerprint: result.fingerprint, vectors: result.vectors, runs: Object.fromEntries(Object.entries(result.runs).map(([w, r]) => [w, r.html_url])), at: now() }, updated: now() }, rules);
+  if (!current) {
+    await row("stale", result.live);
+    await show(`${head}\n\nThe build completed for earlier rules and may already be live at ${result.live}. The current project has not been marked published. Check and approve the current rules before publishing them.${links}`);
+    return finish();
+  }
   await row("granted", result.live);
   // The preview shows what was published: the live app, from GitHub Pages.
   const run = machineOf(appId);
@@ -1091,7 +1089,8 @@ async function chatTurn(chatId, intent) {
   if (prism.isApproval(intent.prompt)) return approveTurn(chatId, appId, messages, userId, ref, intent.intentId);
   if (prism.isPublish(intent.prompt)) return publishTurn(chatId, appId, messages, userId, ref, intent.intentId);
   // T3: the assistant placeholder
-  const head = (await get("refs", appId + ":main")) || null;
+  const projectSource = await captureProjectSource(await dbReady, appId);
+  const head = projectSource.reference;
   const asstId = userId + 1;
   messages.push({ id: asstId, role: "assistant", content: "", approvalState: "approved", commitHash: null, sourceCommitHash: head, model, createdAt: now() });
   await saveMessages(chatId, messages);
@@ -1099,13 +1098,15 @@ async function chatTurn(chatId, intent) {
   let full = "", lastSent = "", updatedFiles = false, summary, error = null;
   const abort = new AbortController(); m.abort = abort;
   let provenance = null;
+  const committed = [];
+  const onCommit = (oid) => { committed.push(oid); updatedFiles = true; emit("version-created", { appId, oid }); };
   try {
     const app = await get("apps", appId);
-    const rules = await get("files", appId + ":AI_RULES.md");
+    const rules = new Map(projectSource.files).get("AI_RULES.md");
     const history = messages.slice(0, -2).filter((x) => x.content).map((x) => ({ role: x.role, content: x.content }));
     const request = [
       { role: "system", content: buildSystemPrompt(rules) + "\n\n" + prism.SPEC_RULES },
-      { role: "user", content: "This is my codebase. " + (await codebaseOf(appId)) },
+      { role: "user", content: "This is my codebase. " + (await codebaseOf(appId, projectSource)) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
@@ -1149,7 +1150,7 @@ async function chatTurn(chatId, intent) {
       const warmHit = await lookup(warmBody);
       if (warmHit.hit) { await onText(warmHit.text); provenance = { receipt: warmHit.receipt, served: true, fingerprint: warmHit.fingerprint, warm: true }; }
       else {
-        const { text, rec } = await paidGenerate(warmBody, (t) => { onText(t); }, abort.signal);
+        const { text, rec } = await paidGenerate(warmBody, (t) => onText(t), abort.signal);
         await onText(text);
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
@@ -1157,7 +1158,7 @@ async function chatTurn(chatId, intent) {
       // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
       const thinking = (r) => onText("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
-      const { text, rec } = await paidGenerate(body, (t) => { onText(t); }, abort.signal, thinking);
+      const { text, rec } = await paidGenerate(body, (t) => onText(t), abort.signal, thinking);
       await onText(text);
       // An answer cut at the token limit is not sealed, so the same request is never served it again.
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
@@ -1171,9 +1172,11 @@ async function chatTurn(chatId, intent) {
       // Rules that checked are the base of an edit. Rules that did not are left out: given them, the small
       // model copies them back unchanged, so it is asked again from the user's own words, every request so far.
       const current = await rulesOf(appId);
+      const capturedSpec = new Map(projectSource.files).get("prism/spec.json");
+      const currentMatches = typeof capturedSpec === "string" && current?.specKappa === await kappa(enc.encode(capturedSpec));
       const asks = messages.filter((x) => x.role === "user" && x.content && !prism.isApproval(x.content)).map((x) => x.content);
-      const deviceMessages = current && current.spec && current.phase !== "drafting"
-        ? prism.deviceRequest(intent.prompt, await get("files", appId + ":prism/spec.json"))
+      const deviceMessages = currentMatches && current.spec && current.phase !== "drafting"
+        ? prism.deviceRequest(intent.prompt, capturedSpec)
         : prism.deviceRequest(asks.join("\n"), null);
       const { ids } = gpuIds(inst, deviceMessages, held.model);
       const room = held.model.ctx - ids.length - 8;
@@ -1191,30 +1194,31 @@ async function chatTurn(chatId, intent) {
       const rec = await inst.buildReceipt({ promptText: intent.prompt, ctxIds: [], turnIds: ids, outIds: res.outIds, paramsPatch: { repetitionPenalty: 1, maxTokens: maxNew } });
       provenance = { receipt: await sealAnswer(body, rec, hit.key), fingerprint: `${(rec.body["prov:used"] || {})["holo:model"]}` };
     }
-    // T6: what the model wrote becomes the project, sealed as a version
+    // T6: completed batches have their own committed snapshots.
+    assertGenerationActive(abort.signal);
     const sm = full.match(/<dyad-chat-summary>([\s\S]*?)<\/dyad-chat-summary>/); summary = sm ? sm[1].trim() : undefined;
-    if (summary && (!chat.title || chat.title === "New chat")) { const c = await get("chats", chatId); c.title = summary; await put("chats", chatId, c); }
+    if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
     const tags = parseDyadTags(full);
-    let changed = await applyDyadTags(appId, tags);
-    const spec = await rulesAfterTurn(appId, full, tags.writes.map((w) => w.path));
-    // A patch the agent wrote goes through the same write path as a click: checked, or refused.
-    for (const m of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
-      let ops = null; try { ops = JSON.parse(m[1].trim()); } catch (e) {}
-      const r = ops ? await patchSpec(appId, Array.isArray(ops) ? ops : [ops], { author: "agent" }) : { ok: false, issues: ["The patch is not JSON."] };
-      if (!r.ok) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + r.issues[0];
-      else spec.changed += 1;
+    const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
+    let changed = applied.changed;
+    const spec = await rulesAfterTurn(appId, full, tags.writes.map((w) => w.path), { signal: abort.signal, source: applied.source, onCommit });
+    for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
+      assertGenerationActive(abort.signal);
+      let ops; try { ops = JSON.parse(match[1]); } catch {}
+      const result = ops ? await patchSpec(appId, Array.isArray(ops) ? ops : [ops], { author: "agent", signal: abort.signal, source: spec.source, onCommit }) : { ok: false, issues: ["The patch is not JSON."] };
+      if (!result.ok) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + result.issues[0];
+      else { spec.changed += result.changed; spec.source = result.source; spec.card = result.card; }
     }
     changed += spec.changed;
     if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshLive(appId); }
-    updatedFiles = changed > 0;
-    let commit = null;
-    if (updatedFiles) commit = await seal(appId, summary || `${changed} file(s) changed`);
+    updatedFiles = updatedFiles || changed > 0;
+    const commit = committed.at(-1) || null;
     messages[messages.length - 1] = { ...messages[messages.length - 1], content: prism.withCard(full, spec.card), commitHash: commit, approvalState: "approved", requestId: provenance && provenance.receipt || null };
     await saveMessages(chatId, messages);
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   } catch (e) {
     error = abort.signal.aborted ? null : String((e && e.message) || e);
-    messages[messages.length - 1] = { ...messages[messages.length - 1], content: full + (abort.signal.aborted ? "\n\n<dyad-output type=\"warning\" message=\"Response cancelled by user\"></dyad-output>" : error ? `\n\n<dyad-output type="error" message="${error.replace(/"/g, "'")}"></dyad-output>` : "") };
+    messages[messages.length - 1] = { ...messages[messages.length - 1], commitHash: committed.at(-1) || null, content: full + (updatedFiles ? "\n\nCommitted project changes were retained." : "") + (abort.signal.aborted ? "\n\n<dyad-output type=\"warning\" message=\"Response cancelled by user\"></dyad-output>" : error ? `\n\n<dyad-output type="error" message="${error.replace(/"/g, "'")}"></dyad-output>` : "") };
     await saveMessages(chatId, messages);
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   }
@@ -1253,52 +1257,15 @@ function chatDispatch({ encodedKey, messageId, expectedActorInstanceId, encodedE
 handlers.set("chat:observe-submission-stop-policy", (chatId) => chatMachineOf(chatId).state.stopPolicyVersion);
 handlers.set("chat:cancel", (chatId) => { const m = chatMachineOf(chatId); if (m.abort) m.abort.abort(); });
 
-// ---- the surface
-// Every answer is checked against the channel's own contract, which the renderer publishes on the page
-// (vendor/dyad/hologram.contracts.ts). the renderer validates nothing it receives, so a wrong shape
-// used to reach a screen and crash it far from the cause ("is not iterable"). A disagreement is named
-// in the console, and an array the renderer will iterate is answered with an empty one rather than a
-// value it cannot walk: a screen renders empty instead of dying.
-function checked(channel, value) {
-  const schema = window.__contracts && window.__contracts[channel];
-  if (!schema) return value;
-  const parsed = schema.safeParse(value);
-  if (parsed.success) return value;
-  const iterable = Array.isArray(value) || value == null;
-  console.error("[host] the answer for", channel, "does not match its contract", parsed.error && parsed.error.issues ? parsed.error.issues.slice(0, 3) : parsed.error, value);
-  return iterable ? value : (schema._def && (schema._def.type === "array" || schema._def.typeName === "ZodArray") ? [] : value);
-}
-// the renderer carries every screen it has ever had, including Supabase, Vercel, Neon, Coolify,
-// GitHub, MCP, a terminal and native windows, none of which exist here. A channel this build does not
-// implement is answered with the empty value the channel's own contract accepts -- no servers, no
-// tests, no cloud projects, all true here -- so a screen that opens one renders its empty state
-// instead of dying on a refusal. Nothing is invented: the value has to satisfy the contract, and
-// `tools/contract_shapes.mjs --check` fails the build if a channel a screen reads accepts none of
-// them and has no handler either.
-const EMPTY = [undefined, [], null, {}];
-function emptyAnswer(channel) {
-  const schema = window.__contracts && window.__contracts[channel];
-  if (!schema) return null;
-  for (const value of EMPTY) { let parsed = null; try { parsed = schema.safeParse(value); } catch (e) { parsed = null; } if (parsed && parsed.success) return { value }; }
-  return null;
-}
+// ---- the typed host boundary (FoundrySpecification.hostResponseBoundary)
 function dispatch(channel, args) {
-  const n = (seen.get(channel) || 0) + 1; seen.set(channel, n);
-  const h = handlers.get(channel);
-  if (!h) {
-    const empty = emptyAnswer(channel);
-    if (n === 1) console.warn("[host] not implemented:", channel, empty ? "answered with the empty value its contract accepts" : "refused", args[0]);
-    return Promise.resolve(empty ? ok(empty.value) : fail("not implemented in the browser: " + channel));
-  }
-  return Promise.resolve().then(() => h(...args)).then((value) => ok(checked(channel, value)), (e) => { console.warn("[host]", channel, e); return fail(String((e && e.message) || e), "internal"); });
+  seen.set(channel, (seen.get(channel) || 0) + 1);
+  const output = window.__contracts && window.__contracts[channel];
+  const input = window.__inputContracts && window.__inputContracts[channel];
+  return invokeHost(channel, args, handlers.get(channel), output, output || input ? { schema: input } : null);
 }
-// Every stored file's bytes are also an object at their own address, so a restore can find them.
-const originalPut = put;
-handlers.set("__seal-files", null); handlers.delete("__seal-files");
-const rawEdit = handlers.get("edit-app-file");
-handlers.set("edit-app-file", async (input) => { await originalPut("objects", await kappa(enc.encode(input.content)), enc.encode(input.content)); return rawEdit(input); });
-const rawCreate = handlers.get("create-app");
-handlers.set("create-app", async (input) => { for (const src of Object.values(await loadScaffold())) { const b = enc.encode(src); await originalPut("objects", await kappa(b), b); } return rawCreate(input); });
+
+
 
 
 // ---- publish: a version becomes a Hologram application. The View is the project's built page with
@@ -1308,15 +1275,14 @@ handlers.set("create-app", async (input) => { for (const src of Object.values(aw
 // under holoPath(κ) for the worker, and offered as one link and one download. The core decides first:
 // the shell closure of this page must be the closure the lane recorded beside the core, and the
 // lane's attestation must be present; otherwise the View's refusal word and an audit row.
-async function buildPortable(appId) {
+async function buildPortable(appId, captured) {
   await coreReady;
+  const source = captured || await verifiedBuildSource(appId);
   const t0 = performance.now();
-  const files = new Map();
-  for (const p of await filesOf(appId)) files.set(p, await get("files", appId + ":" + p));
+  const files = new Map(source.files);
   const pkg = await (await fetch(new URL("scaffold/package.json", BASE))).json();
   const pkgs = Object.fromEntries(Object.entries(pkg.dependencies).map(([n, v]) => [n, v.replace(/^[\^~]/, "")]));
-  const app = await get("apps", appId);
-  for (const d of app.extraDeps || []) { const at = d.lastIndexOf("@"); if (at > 0) pkgs[d.slice(0, at)] = d.slice(at + 1); else pkgs[d] = ""; }
+  for (const d of source.dependencies) { const at = d.lastIndexOf("@"); if (at > 0) pkgs[d.slice(0, at)] = d.slice(at + 1); else pkgs[d] = ""; }
   // Every package resolves to one esm.sh URL and is fetched once; react and react-dom are external
   // to every other package so one React is bundled; the output is one script with no imports left.
   const urlOf = (name) => {
@@ -1326,7 +1292,7 @@ async function buildPortable(appId) {
     if (bare === "react-dom") return `https://esm.sh/react-dom${v}${sub}?target=es2022&external=react`;
     return `https://esm.sh/${bare}${v}${sub}?target=es2022&external=react,react-dom`;
   };
-  const fetched = new Map();
+  return withBuildModules(async remote => {
   const tw = await (await fetch(new URL("scaffold/tailwind.config.ts", BASE))).text();
   const m = tw.match(/theme:\s*(\{[\s\S]*\n  \}),\n  plugins/);
   const tailwindConfig = m ? "{darkMode:['class'],theme:" + m[1] + "}" : "{}";
@@ -1350,8 +1316,7 @@ async function buildPortable(appId) {
       return { path: urlOf(args.path), namespace: "http" };
     });
     b.onLoad({ filter: /.*/, namespace: "http" }, async (args) => {
-      let text = fetched.get(args.path);
-      if (text == null) { const r = await fetch(args.path); if (!r.ok) throw new Error("fetch " + args.path + ": " + r.status); text = await r.text(); fetched.set(args.path, text); }
+      const text = await remote.fetchText(args.path);
       return { contents: text, loader: /\.css(\?|$)/.test(args.path) ? "css" : "js" };
     });
     b.onLoad({ filter: /.*/, namespace: "project" }, (args) => {
@@ -1380,7 +1345,9 @@ async function buildPortable(appId) {
   const compilePage = head + ` tailwind = { config: ${tailwindConfig} };<\/script>\n<script src="https://cdn.tailwindcss.com"><\/script>\n<div hidden id="tw-candidates" class="${candidates.replace(/"/g, "")}"></div>\n` + body;
   const tailwindCss = await compileTailwind(compilePage);
   const html = head + `<\/script>\n<style>${tailwindCss}</style>\n` + body;
-  return { html, modules: fetched.size, jsBytes: js.length, cssBytes: css.length, tailwindBytes: tailwindCss.length, ms: Math.round(performance.now() - t0) };
+  await assertBuildSourceCurrent(await dbReady, appId, source);
+  return { html, sourceReference: source.reference, modules: remote.count, jsBytes: js.length, cssBytes: css.length, tailwindBytes: tailwindCss.length, ms: Math.round(performance.now() - t0) };
+  });
 }
 // Runs inside the compile frame. The frame is a preview address, so the worker serves it in a CSP
 // sandbox with an opaque origin and the host cannot read its document: the frame reports instead,
@@ -1451,26 +1418,17 @@ handlers.set("holo:publish", async ({ appId }) => {
   const closure = manifest.closure, built = provenance ? provenance.browser_projection_sha256 || "" : "";
   const attestation = provenance && provenance.attestation_id ? provenance.attestation_id : null;
   const { decision } = core.run({ op: "publish-decision", closure, built, attestation });
-  const app = await get("apps", appId);
-  const version = await get("refs", appId + ":main");
+  const captured = await verifiedBuildSource(appId);
+  const app = { name: captured.name }, version = captured.reference;
   const row = (outcome, resource) => put("audit", Date.now() + ":publish:" + appId, { timestamp_millis: Date.now(), principal: "app:" + appId, operation: "holo.application.publish", resource, outcome });
   if (decision !== "Accept") { await row("refused", version || ""); return { decision, word: words.publishRefusedLabel, closure, built, attestation }; }
-  // An app with rules publishes only proved rules: the kernel's answer to `<phase> publish`. The View
-  // then carries the rules and Lean's record beside the page, at prism/spec.json and prism/proof.json.
-  const rules = await rulesOf(appId);
-  const ruleFiles = [];
-  // An app with rules is published with the Prism SDK, through the chat ("publish", publishTurn), so the
-  // holo's guest is its rules compiled; this route is for apps that decide nothing.
-  if (rules && rules.spec) { await row("refused", version || ""); return { decision: "Chat", word: "This app has rules, so it is built with the Prism SDK: say publish in the chat.", closure, built, attestation }; }
-  if (rules) {
-    if ((await nextPhase(rules.phase, "publish")) !== "published") {
-      await row("refused", version || "");
-      return { decision: "Refuse", word: `Publishing waits for proved rules. These rules are ${rules.phase === "checked" ? "checked, not yet proved: reply approve in the chat" : rules.phase}.`, closure, built, attestation };
-    }
-    ruleFiles.push({ path: "prism/spec.json", bytes: enc.encode(JSON.stringify(rules.spec, null, 2) + "\n") }, { path: "prism/proof.json", bytes: enc.encode(JSON.stringify(rules.proof, null, 2) + "\n") });
+  // Cached proof status can be absent after an edit; source determines the publication route.
+  if (requiresRulePublication(captured)) {
+    await row("refused", version);
+    return { decision: "Chat", word: "This app has rules, so it is built with the Prism SDK: say publish in the chat.", closure, built, attestation };
   }
-  const page = await buildPortable(appId);
-  const view = encodeView([{ path: "index.html", bytes: enc.encode(page.html) }, ...ruleFiles]);
+  const page = await buildPortable(appId, captured);
+  const view = encodeView([{ path: "index.html", bytes: enc.encode(page.html) }, { path: "build/modules.json", bytes: enc.encode(JSON.stringify(page.moduleClosure, null, 2) + "\n") }, ...page.moduleFiles]);
   const guest = new Uint8Array(await (await fetch(new URL("core.wasm", BASE), { cache: "no-store" })).arrayBuffer());
   const model = core.run({ op: "publish-preimage", application: app.name, version, closure, attestation }).bytes;
   const modelBytes = enc.encode(model);
@@ -1484,9 +1442,9 @@ handlers.set("holo:publish", async ({ appId }) => {
   const bytes = unb64(composed.bytes);
   const address = await kappa(bytes);
   if (address !== composed.identities.archive_kappa) throw new Error("the page's address of the archive differs from PrismPM's: " + address);
+  await assertBuildSourceCurrent(await dbReady, appId, captured);
   const done = await install(bytes, { appId, application: app.name, version });
   await row("granted", address);
-  if (rules) await saveRules(appId, { ...rules, phase: await nextPhase(rules.phase, "publish"), publishedAs: address, updated: now() });
   const record = { application: app.name, version, closure, attestation, provenance: prov, identities: composed.identities, directory: composed.directory, byteLength: bytes.length, modelId, viewBytes: view.length, guestBytes: guest.length };
   lastPublish = { record, bytes, guest, view, model: modelBytes, source: sourceBytes, page };
   return { decision, kappa: address, url: done.url, byteLength: bytes.length, viewBytes: view.length, guestBytes: guest.length, ms: Math.round(performance.now() - t0), buildMs: page.ms, composeMs, installMs: done.ms, modules: page.modules, jsBytes: page.jsBytes, cssBytes: page.cssBytes, tailwindBytes: page.tailwindBytes, identities: composed.identities, record };
@@ -1495,7 +1453,7 @@ handlers.set("holo:publish", async ({ appId }) => {
 window.electron = {
   ipcRenderer: {
     invokeEnvelope: (channel, ...args) => dispatch(channel, args),
-    invoke: (channel, ...args) => dispatch(channel, args).then((env) => { if (env.ok) return env.value; const err = new Error(env.error.message); err.name = env.error.name || "Error"; throw err; }),
+    invoke: (channel, ...args) => dispatch(channel, args).then(unwrapHost),
     send: (channel) => { const n = (seen.get(channel) || 0) + 1; seen.set(channel, n); if (n === 1) console.warn("[host] send:", channel); },
     on: (channel, fn) => { if (!listeners.has(channel)) listeners.set(channel, new Set()); listeners.get(channel).add(fn); return () => listeners.get(channel).delete(fn); },
     removeListener: (channel, fn) => { const set = listeners.get(channel); if (set) set.delete(fn); },

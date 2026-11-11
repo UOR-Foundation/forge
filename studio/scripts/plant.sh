@@ -99,8 +99,8 @@ EOF
     python3 -c 'import io;p="shell/host.js";t=io.open(p,encoding="utf-8",newline="").read();a=".split(/"+chr(92)+"r?"+chr(92)+"n/)";assert t.count(a)==1,"anchor";io.open(p,"w",encoding="utf-8",newline="").write(t.replace(a,chr(46)+"split("+chr(34)+chr(10)+chr(34)+")"))'
     expect_fail node tools/shell_parse.mjs ;;
   hole)
-    # A channel a screen reads on mount, left with no handler and no empty answer its contract accepts:
-    # the screen that reads it dies on the refusal.
+    # A required read loses its handler: typed refusal must not be mistaken
+    # for preservation of a capability the declared adapter scope promises.
     perl -0pi -e 's/handlers\.set\("get-context-paths"/handlers.set("get-context-paths-planted"/' shell/host.js
     expect_fail node tools/contract_shapes.mjs --check ;;
   live)

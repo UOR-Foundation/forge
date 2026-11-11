@@ -11,12 +11,21 @@ into one, and writes src/{Workspace,Inference,Object,Publish,Forge}.lex.tex, plu
 model/roots.txt (Module.name, strictly sorted, as the exporter demands).
 
 Run from the project root: python3 tools/author.py
+Check without rewriting: python3 tools/author.py --check
+
+The authoring/projection obligation is FoundrySpecification.authority and
+FoundrySpecification.authoringBoundary in app/src/FoundrySpecification.lex.tex.
 
 Rules met on the way (all hit): glossary imports precede module imports in a header; a cross module
 reference is the member's "module" field; declaration names are unique across modules because the
 generated Rust is one flat crate; the escape chain is freeinference's five steps (tab included).
 """
-import importlib.util, json, pathlib
+import argparse, importlib.util, json, pathlib, sys
+
+sys.dont_write_bytecode = True
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--check", action="store_true", help="compare every projection without writing")
+args = parser.parse_args()
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -162,8 +171,7 @@ def document(name, imports, decls):
     return head + body + "}" + NL + BS + "end{semanticmodule}" + NL + BS + "end{lexlean}" + NL
 
 
-(ROOT / "src").mkdir(exist_ok=True)
-(ROOT / "model").mkdir(exist_ok=True)
+outputs = {}
 roots = []
 DEPENDENCY_ORDER = ["Workspace", "Inference", "Object", "Publish", "Forge"]
 for name in DEPENDENCY_ORDER:
@@ -172,10 +180,34 @@ for name in DEPENDENCY_ORDER:
     qualify(decls, name, imports)
     imports = [m for m in DEPENDENCY_ORDER if m in imports]
     text = document(name, imports, decls)
-    (ROOT / "src" / (name + ".lex.tex")).write_text(text, encoding="utf-8", newline="\n")
+    outputs["src/" + name + ".lex.tex"] = text.encode("utf-8")
     roots += [name + "." + d["name"] for d in decls if d["kind"] == "definition"]
-    counts = {k: sum(1 for d in decls if d["kind"] == k) for k in ("structure", "inductive", "definition", "theorem")}
-    print(f"wrote src/{name}.lex.tex ({len(text)} bytes; imports {imports or 'none'}; {counts})")
+
 roots.sort()
-(ROOT / "model" / "roots.txt").write_text("\n".join(roots) + "\n", encoding="utf-8", newline="\n")
-print(f"wrote model/roots.txt ({len(roots)} roots); View has {len(fields)} fields")
+outputs["model/roots.txt"] = ("\n".join(roots) + "\n").encode("utf-8")
+
+failures = []
+for relative, expected in outputs.items():
+    path = ROOT / relative
+    if args.check:
+        try:
+            actual = path.read_bytes()
+        except FileNotFoundError:
+            failures.append(("missingProjection", relative))
+            continue
+        except OSError:
+            failures.append(("unreadableProjection", relative))
+            continue
+        if actual != expected:
+            failures.append(("divergedProjection", relative))
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(expected)
+        print(f"wrote {relative} ({len(expected)} bytes)")
+
+for diagnostic, relative in failures:
+    print(f"author:{diagnostic}: {relative}", file=sys.stderr)
+if failures:
+    raise SystemExit(1)
+if args.check:
+    print(f"author: current ({len(outputs)} projections)")

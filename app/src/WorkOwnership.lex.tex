@@ -1,0 +1,367 @@
+\begin{lexlean}{WorkOwnership}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+inductive{
+  name: Phase,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: ready, fields: []},
+    {name: running, fields: []},
+    {name: paused, fields: []},
+    {name: complete, fields: []}
+  ]
+}
+
+structure{
+  name: Work,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: owner, type: Nat},
+    {name: revision, type: Nat},
+    {name: capacity, type: Nat},
+    {name: spent, type: Nat},
+    {name: reserved, type: Nat},
+    {name: checkpoint, type: Nat},
+    {name: remaining, type: Nat},
+    {name: phase, type: Phase}
+  ]
+}
+
+inductive{
+  name: Action,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: reserve, fields: [Nat]},
+    {name: start, fields: []},
+    {name: progress, fields: [Nat, Nat, Nat]},
+    {name: pause, fields: []},
+    {name: resume, fields: []},
+    {name: finish, fields: []},
+    {name: transfer, fields: [Nat]}
+  ]
+}
+
+inductive{
+  name: WorkError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidState, fields: []},
+    {name: wrongOwner, fields: []},
+    {name: staleRevision, fields: []},
+    {name: invalidPhase, fields: []},
+    {name: invalidAmount, fields: []},
+    {name: budgetExceeded, fields: []},
+    {name: reservationMissing, fields: []},
+    {name: reservationExceeded, fields: []},
+    {name: obligationExceeded, fields: []},
+    {name: checkpointNotAdvanced, fields: []},
+    {name: unfinishedWork, fields: []},
+    {name: invalidOwner, fields: []}
+  ]
+}
+
+definition{
+  name: negate,
+  parameters: [value : Bool],
+  result: Bool,
+  body: (if value then false else true)
+}
+
+definition{
+  name: validWork,
+  parameters: [work : Work],
+  result: Bool,
+  body: ((negate ((project work owner) =? 0)) && ((negate ((project work capacity) =? 0)) && ((((project work spent) + (project work reserved)) <=? (project work capacity)) && (match (project work phase)
+    | Phase.ready => (((project work spent) =? 0) && (((project work checkpoint) =? 0) && (negate ((project work remaining) =? 0))))
+    | Phase.complete => (((project work remaining) =? 0) && ((project work reserved) =? 0))
+    | Phase.running => true
+    | Phase.paused => true))))
+}
+
+definition{
+  name: initialize,
+  parameters: [owner : Nat, capacity : Nat, remaining : Nat],
+  result: (Result Work WorkError),
+  body: (if (owner =? 0) then (ctor Result.error [Work, WorkError] (ctor WorkError.invalidOwner)) else (if ((capacity =? 0) || (remaining =? 0)) then (ctor Result.error [Work, WorkError] (ctor WorkError.invalidAmount)) else (ctor Result.ok [Work, WorkError] (record Work {owner := owner, revision := 0, capacity := capacity, spent := 0, reserved := 0, checkpoint := 0, remaining := remaining, phase := (ctor Phase.ready)}))))
+}
+
+definition{
+  name: transition,
+  parameters: [work : Work, owner : Nat, revision : Nat, action : Action],
+  result: (Result Work WorkError),
+  body: (if (negate (validWork work)) then (ctor Result.error [Work, WorkError] (ctor WorkError.invalidState)) else (if (negate (owner =? (project work owner))) then (ctor Result.error [Work, WorkError] (ctor WorkError.wrongOwner)) else (if (negate (revision =? (project work revision))) then (ctor Result.error [Work, WorkError] (ctor WorkError.staleRevision)) else (match action
+    | Action.reserve amount => (match (project work phase)
+      | Phase.ready => (if (amount =? 0) then (ctor Result.error [Work, WorkError] (ctor WorkError.invalidAmount)) else (if (negate ((((project work spent) + (project work reserved)) + amount) <=? (project work capacity))) then (ctor Result.error [Work, WorkError] (ctor WorkError.budgetExceeded)) else (ctor Result.ok [Work, WorkError] (record Work {owner := (project work owner), revision := ((project work revision) + 1), capacity := (project work capacity), spent := (project work spent), reserved := ((project work reserved) + amount), checkpoint := (project work checkpoint), remaining := (project work remaining), phase := (project work phase)}))))
+      | Phase.paused => (if (amount =? 0) then (ctor Result.error [Work, WorkError] (ctor WorkError.invalidAmount)) else (if (negate ((((project work spent) + (project work reserved)) + amount) <=? (project work capacity))) then (ctor Result.error [Work, WorkError] (ctor WorkError.budgetExceeded)) else (ctor Result.ok [Work, WorkError] (record Work {owner := (project work owner), revision := ((project work revision) + 1), capacity := (project work capacity), spent := (project work spent), reserved := ((project work reserved) + amount), checkpoint := (project work checkpoint), remaining := (project work remaining), phase := (project work phase)}))))
+      | Phase.running => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.complete => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase)))
+    | Action.start => (match (project work phase)
+      | Phase.ready => (if ((project work reserved) =? 0) then (ctor Result.error [Work, WorkError] (ctor WorkError.reservationMissing)) else (ctor Result.ok [Work, WorkError] (record Work {owner := (project work owner), revision := ((project work revision) + 1), capacity := (project work capacity), spent := (project work spent), reserved := (project work reserved), checkpoint := (project work checkpoint), remaining := (project work remaining), phase := (ctor Phase.running)})))
+      | Phase.running => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.paused => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.complete => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase)))
+    | Action.progress cost units checkpoint => (match (project work phase)
+      | Phase.running => (if ((cost =? 0) || (units =? 0)) then (ctor Result.error [Work, WorkError] (ctor WorkError.invalidAmount)) else (if (negate (cost <=? (project work reserved))) then (ctor Result.error [Work, WorkError] (ctor WorkError.reservationExceeded)) else (if (negate (units <=? (project work remaining))) then (ctor Result.error [Work, WorkError] (ctor WorkError.obligationExceeded)) else (if (checkpoint <=? (project work checkpoint)) then (ctor Result.error [Work, WorkError] (ctor WorkError.checkpointNotAdvanced)) else (ctor Result.ok [Work, WorkError] (record Work {owner := (project work owner), revision := ((project work revision) + 1), capacity := (project work capacity), spent := ((project work spent) + cost), reserved := (prim subtract (project work reserved) cost : Nat), checkpoint := checkpoint, remaining := (prim subtract (project work remaining) units : Nat), phase := (project work phase)}))))))
+      | Phase.ready => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.paused => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.complete => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase)))
+    | Action.pause => (match (project work phase)
+      | Phase.running => (ctor Result.ok [Work, WorkError] (record Work {owner := (project work owner), revision := ((project work revision) + 1), capacity := (project work capacity), spent := (project work spent), reserved := (project work reserved), checkpoint := (project work checkpoint), remaining := (project work remaining), phase := (ctor Phase.paused)}))
+      | Phase.ready => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.paused => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.complete => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase)))
+    | Action.resume => (match (project work phase)
+      | Phase.paused => (if ((project work reserved) =? 0) then (ctor Result.error [Work, WorkError] (ctor WorkError.reservationMissing)) else (ctor Result.ok [Work, WorkError] (record Work {owner := (project work owner), revision := ((project work revision) + 1), capacity := (project work capacity), spent := (project work spent), reserved := (project work reserved), checkpoint := (project work checkpoint), remaining := (project work remaining), phase := (ctor Phase.running)})))
+      | Phase.ready => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.running => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.complete => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase)))
+    | Action.finish => (match (project work phase)
+      | Phase.running => (if (negate ((project work remaining) =? 0)) then (ctor Result.error [Work, WorkError] (ctor WorkError.unfinishedWork)) else (ctor Result.ok [Work, WorkError] (record Work {owner := (project work owner), revision := ((project work revision) + 1), capacity := (project work capacity), spent := (project work spent), reserved := 0, checkpoint := (project work checkpoint), remaining := (project work remaining), phase := (ctor Phase.complete)})))
+      | Phase.ready => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.paused => (if (negate ((project work remaining) =? 0)) then (ctor Result.error [Work, WorkError] (ctor WorkError.unfinishedWork)) else (ctor Result.ok [Work, WorkError] (record Work {owner := (project work owner), revision := ((project work revision) + 1), capacity := (project work capacity), spent := (project work spent), reserved := 0, checkpoint := (project work checkpoint), remaining := (project work remaining), phase := (ctor Phase.complete)})))
+      | Phase.complete => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase)))
+    | Action.transfer nextOwner => (match (project work phase)
+      | Phase.paused => (if (nextOwner =? 0) then (ctor Result.error [Work, WorkError] (ctor WorkError.invalidOwner)) else (ctor Result.ok [Work, WorkError] (record Work {owner := nextOwner, revision := ((project work revision) + 1), capacity := (project work capacity), spent := (project work spent), reserved := (project work reserved), checkpoint := (project work checkpoint), remaining := (project work remaining), phase := (project work phase)})))
+      | Phase.ready => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.running => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))
+      | Phase.complete => (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase)))))))
+}
+
+theorem{
+  name: invalidStateRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 21, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.pause)) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidState))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongOwnerRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 8 3 (ctor Action.pause)) = (ctor Result.error [Work, WorkError] (ctor WorkError.wrongOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: staleRevisionRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 2 (ctor Action.pause)) = (ctor Result.error [Work, WorkError] (ctor WorkError.staleRevision))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: unreservedStartRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 0, reserved := 0, checkpoint := 0, remaining := 5, phase := (ctor Phase.ready)}) 7 3 (ctor Action.start)) = (ctor Result.error [Work, WorkError] (ctor WorkError.reservationMissing))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: reservedStartAdmitted,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 0, reserved := 8, checkpoint := 0, remaining := 5, phase := (ctor Phase.ready)}) 7 3 (ctor Action.start)) = (ctor Result.ok [Work, WorkError] (record Work {owner := 7, revision := 4, capacity := 20, spent := 0, reserved := 8, checkpoint := 0, remaining := 5, phase := (ctor Phase.running)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: runningReserveRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.reserve 1)) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: emptyReserveRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}) 7 3 (ctor Action.reserve 0)) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidAmount))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: excessReserveRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}) 7 3 (ctor Action.reserve 9)) = (ctor Result.error [Work, WorkError] (ctor WorkError.budgetExceeded))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: reserveAdmitted,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}) 7 3 (ctor Action.reserve 8)) = (ctor Result.ok [Work, WorkError] (record Work {owner := 7, revision := 4, capacity := 20, spent := 4, reserved := 16, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: progressAdmitted,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.progress 3 2 9)) = (ctor Result.ok [Work, WorkError] (record Work {owner := 7, revision := 4, capacity := 20, spent := 7, reserved := 5, checkpoint := 9, remaining := 3, phase := (ctor Phase.running)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: emptyProgressRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.progress 0 2 9)) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidAmount))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: unreservedProgressRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.progress 9 2 9)) = (ctor Result.error [Work, WorkError] (ctor WorkError.reservationExceeded))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: excessObligationRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.progress 3 6 9)) = (ctor Result.error [Work, WorkError] (ctor WorkError.obligationExceeded))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: staleCheckpointRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.progress 3 2 2)) = (ctor Result.error [Work, WorkError] (ctor WorkError.checkpointNotAdvanced))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: pauseRetainsWork,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.pause)) = (ctor Result.ok [Work, WorkError] (record Work {owner := 7, revision := 4, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: pausedProgressRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}) 7 3 (ctor Action.progress 3 2 9)) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: resumeRetainsWork,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}) 7 3 (ctor Action.resume)) = (ctor Result.ok [Work, WorkError] (record Work {owner := 7, revision := 4, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: emptyResumeRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 0, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}) 7 3 (ctor Action.resume)) = (ctor Result.error [Work, WorkError] (ctor WorkError.reservationMissing))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: unfinishedRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.finish)) = (ctor Result.error [Work, WorkError] (ctor WorkError.unfinishedWork))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: completionReleasesReservation,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 0, phase := (ctor Phase.running)}) 7 3 (ctor Action.finish)) = (ctor Result.ok [Work, WorkError] (record Work {owner := 7, revision := 4, capacity := 20, spent := 4, reserved := 0, checkpoint := 2, remaining := 0, phase := (ctor Phase.complete)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: completedResumeRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 0, checkpoint := 2, remaining := 0, phase := (ctor Phase.complete)}) 7 3 (ctor Action.resume)) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: transferRetainsWork,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}) 7 3 (ctor Action.transfer 8)) = (ctor Result.ok [Work, WorkError] (record Work {owner := 8, revision := 4, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: runningTransferRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.running)}) 7 3 (ctor Action.transfer 8)) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidPhase))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: missingOwnerRefused,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 8, checkpoint := 2, remaining := 5, phase := (ctor Phase.paused)}) 7 3 (ctor Action.transfer 0)) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: initializeAdmitted,
+  parameters: [],
+  statement: ((initialize 7 20 5) = (ctor Result.ok [Work, WorkError] (record Work {owner := 7, revision := 0, capacity := 20, spent := 0, reserved := 0, checkpoint := 0, remaining := 5, phase := (ctor Phase.ready)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: initializeOwnerRefused,
+  parameters: [],
+  statement: ((initialize 0 20 5) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: initializeEmptyRefused,
+  parameters: [],
+  statement: ((initialize 7 20 0) = (ctor Result.error [Work, WorkError] (ctor WorkError.invalidAmount))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: pausedCompletionAdmitted,
+  parameters: [],
+  statement: ((transition (record Work {owner := 7, revision := 3, capacity := 20, spent := 4, reserved := 0, checkpoint := 2, remaining := 0, phase := (ctor Phase.paused)}) 7 3 (ctor Action.finish)) = (ctor Result.ok [Work, WorkError] (record Work {owner := 7, revision := 4, capacity := 20, spent := 4, reserved := 0, checkpoint := 2, remaining := 0, phase := (ctor Phase.complete)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "This pure library models one owned work item. Capacity, reservation and spending are semantic units, not physical measurements. Progress records a caller-supplied monotonically advancing checkpoint and decreases outstanding units; it does not verify achieved external effects. Suspension retains reservations, spending, checkpoint and owner. Completion releases unused reservation. Callers must authenticate owner identifiers, persist transitions atomically and bind checkpoints to actual achieved state before using this model to authorize external effects. Error results leave the input state unchanged. Browser adapters expose these pure operations only through a qualified generated guest; authentication and durable persistence remain separate."
+}
+\end{semanticmodule}
+\end{lexlean}

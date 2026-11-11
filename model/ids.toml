@@ -76,13 +76,176 @@ suite = "forge_kernel"
 statement = "The gate never lets a preview fetch without a grant"
 
 [[id]]
+id = "FA-01"
+level = "build"
+suite = "application-authority"
+statement = "The application authority model rejects missing or competing product authorities and unchecked external boundaries"
+
+[[id]]
+id = "FA-02"
+level = "build"
+suite = "authoring-projection"
+statement = "The authoring boundary checks every generated Studio module and export root without rewriting drift"
+
+[[id]]
+id = "FA-03"
+level = "build"
+suite = "host-response-boundary"
+statement = "The browser host refuses unsupported channels and invalid contracted responses with typed errors"
+
+[[id]]
+id = "FA-04"
+level = "build"
+suite = "publication-cancellation"
+statement = "Cancelling publication prevents subsequent browser requests and bounded requests return typed failures"
+
+[[id]]
+id = "FA-05"
+level = "build"
+suite = "publication-identity"
+statement = "Publication requires exact canonical archive identity and complete nonempty runtime acceptance"
+
+[[id]]
+id = "FA-06"
+level = "build"
+suite = "feature-composition"
+statement = "The LexLean composition model rejects duplicate identity, missing dependencies, conflicts, incompatible inputs, ungranted effects and excess budgets"
+
+[[id]]
+id = "FA-07"
+level = "build"
+suite = "composition-protocol"
+statement = "The generated guest decodes bounded composition requests and returns the model admission result"
+
+[[id]]
+id = "FA-08"
+level = "build"
+suite = "snapshot-restore"
+statement = "Snapshot restoration validates every referenced object before atomically replacing files and the main reference"
+
+[[id]]
+id = "FA-09"
+level = "build"
+suite = "rules-source-binding"
+statement = "Rule status and asynchronous proof or publication completion remain bound to the current rule source"
+
+[[id]]
+id = "FA-10"
+level = "build"
+suite = "composition-host-runtime"
+statement = "The browser host composes features only through its pinned and replayed generated kernel"
+
+[[id]]
+id = "FA-11"
+level = "build"
+suite = "inference-effect-boundary"
+statement = "Cloud inference bounds requests and streamed responses and refuses cancellation, malformed data and provider failures explicitly"
+
+[[id]]
+id = "FA-12"
+level = "build"
+suite = "host-input-boundary"
+statement = "Imported renderer input contracts validate browser commands before any handler effect"
+
+[[id]]
+id = "FA-13"
+level = "build"
+suite = "work-ownership"
+statement = "The Prism work model reserves capacity before execution and preserves spending and checkpoints across suspension with owner and revision checks"
+
+[[id]]
+id = "FA-14"
+level = "build"
+suite = "exact-representation"
+statement = "Byte representations verify original, payload, decoder specification and optional basis identities before returning exact reconstructed bytes"
+
+[[id]]
+id = "FA-15"
+level = "build"
+suite = "capability-availability"
+statement = "Unimplemented browser queries return typed unsupported errors rather than fabricated resource status or empty findings"
+
+[[id]]
+id = "FA-16"
+level = "build"
+suite = "provider-key-validation"
+statement = "Provider credential validation rejects unsupported providers and requires a bounded authenticated response before success"
+
+[[id]]
+id = "FA-17"
+level = "build"
+suite = "work-protocol"
+statement = "The generated guest executes bounded work ownership requests and returns exact state or typed refusal"
+
+[[id]]
+id = "FA-18"
+level = "build"
+suite = "proposal-admission"
+statement = "Router proposals resolve exact registered feature versions and cannot bypass ambiguity, registry revision or composition admission"
+
+[[id]]
+id = "FA-19"
+level = "build"
+suite = "event-admission"
+statement = "Typed event admission binds exact feature routes to current composition policy, generation, sequence and bounded payloads"
+
+[[id]]
+id = "FA-20"
+level = "build"
+suite = "storage-commit-boundary"
+statement = "Host storage requests report success only after transaction completion and refuse aborted or invalid operations"
+
+[[id]]
+id = "FA-21"
+level = "build"
+suite = "atomic-project-creation"
+statement = "Project creation commits its files, objects, initial version and chat atomically with transaction-local identifiers"
+
+[[id]]
+id = "FA-22"
+level = "build"
+suite = "atomic-project-edit"
+statement = "File edits atomically commit a source-bound snapshot or refuse concurrent project changes without partial writes"
+
+[[id]]
+id = "FA-23"
+level = "build"
+suite = "atomic-generation-patch"
+statement = "Generated file batches commit against captured project source and cancellation prevents uncommitted project writes"
+
+[[id]]
 id = "FK-10"
 level = "build"
 suite = "forge_kernel"
 statement = "The app always answers proved when event is reword and phase is proved"
+
 
 [[id]]
 id = "FK-11"
 level = "build"
 suite = "forge_kernel"
 statement = "The app always answers published when event is reword and phase is published"
+
+[[id]]
+id = "FA-24"
+level = "build"
+suite = "current-main-integration"
+statement = "Current live editing and reword flows retain source-bound commits and the complete compiled kernel protocols"
+
+[[id]]
+id = "FA-25"
+level = "build"
+suite = "atomic-project-lifecycle"
+statement = "Project rename, deletion, checkout and revert commit coherent state and refuse stale sources"
+
+[[id]]
+id = "FA-26"
+level = "build"
+suite = "snapshot-bound-builds"
+statement = "Preview and portable publication consume one verified snapshot and cannot bypass rule publication through an absent cache"
+
+[[id]]
+id = "FA-27"
+level = "build"
+suite = "bounded-build-modules"
+statement = "Portable builds fetch only bounded approved-origin modules and retain exact module-byte receipts"

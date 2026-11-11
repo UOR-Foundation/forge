@@ -9,6 +9,8 @@ LICENSE.
 
 Changes to reused files are listed here, one line each, so upstream can be tracked:
 
+- `hologram.contracts.ts` (ours) also publishes imported input schemas as `window.__inputContracts`; the browser host validates and copies command inputs before effects, and returns typed refusals rather than synthesizing successful output.
+
 - `src/pro/` is not Dyad's: four small files of ours export the names the renderer imports from the
   removed folder, so the renderer builds without the Functional Source License code:
   `shared/search_replace_parser.ts` (a parser for the SEARCH / REPLACE blocks the chat renders),
