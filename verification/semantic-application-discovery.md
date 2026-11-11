@@ -18,7 +18,8 @@ A review identity binds exact input, current catalog, concrete interaction
 profile and guest result. Creation captures its input, reruns guest admission,
 compares the review identity and calls the existing atomic canonical application
 creator. Editing the prompt invalidates the displayed review; a stale asynchronous
-response cannot re-enable creation. Guest ranking does not grant an effect.
+response cannot re-enable creation. A pending review can be cancelled; only the
+short atomic creation operation retains its dialog until settlement. Guest ranking does not grant an effect.
 
 ## Evidence
 
@@ -26,8 +27,8 @@ The ID, scenario and missing-test failure preceded implementation. Six adapter
 controls cover vocabulary preservation/bounds, snapshots, no-write discovery,
 review invalidation, admission refusal, projection/ownership and native UI
 wiring. All 296 Node controls and workspace tests pass; diagnostics are not
-SDK acceptance. Initial two-module specification diagnostic receipt:
-`4fa2087008628edaf9d765fbde572a49361a1d854162bd42c7738f61d4fe7c83`.
+SDK acceptance. Two-module specification diagnostic receipt:
+`aa3e87ffde13bb2a8c3dae87f385605baea03da8d1d052c71b35c5fb88680c02`.
 
 Six planted defects cover the input bound, unknown-concept preservation, caller
 capture, review identity, independent guest admission and exact-text binding.
