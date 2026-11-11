@@ -1,3 +1,4 @@
+import {createPromptLibrary} from "./prompt-library.mjs";
 import {readWorkingTree} from "./working-tree.mjs";
 import {createWindowDelivery} from "./window-delivery.mjs";
 import {createWindowCoordinator,windowJournalStore,windowRecoveryScopes} from "./window-coordination.mjs";
@@ -87,6 +88,12 @@ const all = (store) => tx(store, "readonly", (s) => s.getAll());
 const keys = (store) => tx(store, "readonly", (s) => s.getAllKeys());
 // An app's files are the keys "<id>:<path>": read by key range instead of walking every app's keys.
 const appRange = (appId) => IDBKeyRange.bound(appId + ":", appId + ":￿");
+
+const promptLibrary=createPromptLibrary(dbReady);
+handlers.set("prompts:list", () => promptLibrary("list"));
+handlers.set("prompts:create", input => promptLibrary("create",input));
+handlers.set("prompts:update", input => promptLibrary("update",input));
+handlers.set("prompts:delete", input => promptLibrary("delete",input));
 
 // ---- settings
 const DEFAULT_SETTINGS = {

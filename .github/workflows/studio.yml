@@ -114,6 +114,7 @@ jobs:
           node tools/version_preview_browser.mjs
           node tools/durable_version_preview_browser.mjs
           node tools/verified_working_tree_browser.mjs
+          node tools/durable_prompt_library_browser.mjs
           node tools/browser_window_coordination_browser.mjs
           node tools/message_linked_restoration_browser.mjs
           node tools/chat_queue_browser.mjs

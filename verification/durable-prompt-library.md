@@ -1,0 +1,9 @@
+# FA-61 — Durable prompt library
+
+Authority: `FoundrySpecification.promptLibraryBoundary`; ownership is projected from `CommandRegistry.commandRegistryJson`. The registered scenario and failing FA-61 Rust test preceded implementation.
+
+The renderer's four prompt contracts now reach bounded browser storage. Listing returns detached ordered records; create/update/delete execute one IndexedDB read-write transaction, with completion as the acknowledgement boundary. IDs are monotonic across deletion, slugs are unique, omitted updates preserve fields, and timestamps retain imported Date semantics. The complete stored journal is validated; malformed storage cannot become an empty list. Limits and six typed failures are declared in the LexLean specification. Prompt contents are never interpolated into error messages.
+
+All six focused controls pass. Planted defects removing slug uniqueness, capacity limits, stored Date validation, caller capture, completion-only acknowledgement and omitted-field preservation are rejected; the restored controls pass. Actual Chromium exercises imported contracts through the real host, cross-window duplicate-slug contention, reload, Date/content fidelity, deletion/monotonic identity, corrupt journal refusal/recovery and an IndexedDB request-success-then-abort. The latter refuses without changing stored bytes. No page exceptions occur. The host scope and command inventory now require all four adapters instead of accepting unsupported behavior.
+
+The two-module host diagnostic verifies at `ea93c992abef8ddd628267132a50adca9b7473c3d64547bca08bcc060c31c529`. This diagnostic is not the exact-SDK acceptance boundary. Final workspace, full CI and independent review remain separately required. The existing guest bytes are unchanged; the adapter is a typed independently checked storage boundary, with no network or execution authority.
