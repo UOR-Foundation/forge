@@ -1,0 +1,154 @@
+name: isolated-template-worker-qualification
+on:
+  push:
+    branches: [maintainer/template-worker-qualification-7b97c3b]
+permissions:
+  contents: read
+concurrency:
+  group: template-worker-qualification-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  template:
+    if: github.repository == 'UOR-Foundation/foundry' && github.ref == 'refs/heads/maintainer/template-worker-qualification-7b97c3b'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: job-inputs
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: UOR-Foundation/template
+          ref: dfc09e61ac847c29a95183d471111d24dc24000d
+          persist-credentials: false
+          fetch-depth: 0
+          path: upstream
+      - name: Verify exact reviewed patch and all patched template bytes
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' b7105d4ffb56d66c073b2b2ec16bd13a08a3514a665c8aeb00234120adfd7589 job-inputs/diagnostics/worker-qualification/inputs.json | sha256sum --check --strict
+          python3 job-inputs/diagnostics/worker-qualification/prepare.py template
+          cd upstream
+          node bootstrap/frame-sync.mjs --check
+      - name: Full official immutable-SDK acceptance, unchanged gates
+        run: bash job-inputs/diagnostics/worker-qualification/sdk.sh template
+      - name: Retain template full-gate evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: template-worker-full-vv
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
+  page:
+    if: github.repository == 'UOR-Foundation/foundry' && github.ref == 'refs/heads/maintainer/template-worker-qualification-7b97c3b'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: original
+            source: d31bc32b12057c199a92141016775b43b086a473
+          - variant: candidate
+            source: be93409042e8c80aa6ceebdd404295aca1aa9db8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: job-inputs
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: UOR-Foundation/template
+          ref: dfc09e61ac847c29a95183d471111d24dc24000d
+          persist-credentials: false
+          fetch-depth: 0
+          path: upstream
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ matrix.source }}
+          persist-credentials: false
+          fetch-depth: 0
+          path: source
+      - name: Bind reviewed inputs, source and unchanged source locks
+        env:
+          VARIANT: ${{ matrix.variant }}
+          SOURCE: ${{ matrix.source }}
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' b7105d4ffb56d66c073b2b2ec16bd13a08a3514a665c8aeb00234120adfd7589 job-inputs/diagnostics/worker-qualification/inputs.json | sha256sum --check --strict
+          python3 job-inputs/diagnostics/worker-qualification/prepare.py "$VARIANT"
+          [[ $(git -C source rev-parse HEAD) == "$SOURCE" ]]
+          [[ -z $(git -C source status --porcelain) ]]
+          cd source
+          node bootstrap/brand-sync.mjs --check
+          python3 -I bootstrap/brand-fonts.py --check
+          node bootstrap/frame-sync.mjs --check
+      - name: Build candidate archive with the same immutable SDK, unsigned
+        if: matrix.variant == 'candidate'
+        run: bash job-inputs/diagnostics/worker-qualification/sdk.sh candidate
+      - name: Assemble qualification copy without changing locked source
+        id: assembly
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          python3 job-inputs/diagnostics/worker-qualification/assemble.py "$VARIANT"
+          if [[ "$VARIANT" == candidate ]]; then
+            node job-inputs/diagnostics/worker-qualification/verify-assembly.mjs before | tee evidence/assembly-input-check.log
+          fi
+          cd assembly
+          if [[ "$VARIANT" == candidate ]]; then
+            python3 -m venv "$RUNNER_TEMP/draw"
+            "$RUNNER_TEMP/draw/bin/pip" install --quiet --no-deps --only-binary :all: --require-hashes -r bootstrap/draw-requirements.txt
+            "$RUNNER_TEMP/draw/bin/python" -I bootstrap/og.py
+            "$RUNNER_TEMP/draw/bin/python" -I bootstrap/icons.py
+            env -u ACTIONS_ID_TOKEN_REQUEST_URL -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u PRISM_REGISTRY_TOKEN -u GITHUB_TOKEN GITHUB_SHA=be93409042e8c80aa6ceebdd404295aca1aa9db8 node bootstrap/page.mjs site 2>&1 | tee ../evidence/page-build.log
+            (cd .. && node job-inputs/diagnostics/worker-qualification/verify-assembly.mjs after) | tee ../evidence/assembly-output-check.log
+          fi
+          # Prove the actual helper exits before any registry request, no mocks.
+          env -u ACTIONS_ID_TOKEN_REQUEST_URL -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u PRISM_REGISTRY_TOKEN -u GITHUB_TOKEN node bootstrap/register.mjs site | tee ../evidence/register.log
+          grep -F 'no OIDC token here, so nothing is sent' ../evidence/register.log
+          node bootstrap/precache.mjs site
+          git -C ../source diff --exit-code
+      - name: Three unchanged mobile Lighthouse measurements and assertions
+        id: lighthouse
+        working-directory: assembly
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --global @lhci/cli@0.15.1
+          # collect/assert are the autorun gates without its public report upload.
+          lhci collect --config=lighthouserc.json --settings.saveAssets=true 2>&1 | tee ../evidence/lighthouse-collect.log
+          lhci assert --config=lighthouserc.json 2>&1 | tee ../evidence/lighthouse-assert.log
+      - name: Unchanged browser screen gate with real CSP, fetch and worker startup
+        if: always() && steps.assembly.outcome == 'success'
+        working-directory: assembly
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --global playwright@1.56.1
+          playwright install chromium
+          # No host package/security changes or alternate mocked browser.
+          node bootstrap/screens.mjs site screens 2>&1 | tee ../evidence/screens.log
+      - name: Hash all retained bytes
+        if: always() && steps.assembly.outcome == 'success'
+        run: python3 job-inputs/diagnostics/worker-qualification/finalize.py
+      - name: Retain exact qualification page and all traces, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: worker-page-${{ matrix.variant }}
+          include-hidden-files: true
+          path: |
+            evidence/
+            assembly/site/
+            assembly/screens/
+            assembly/.lighthouseci/
+            assembly/*.trace.json
+            assembly/*.devtoolslog.json
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,12 @@
+{
+  "assemble.py": "daf285138a563d48fe553fda9f829324962b6a90dcf662b3169bae7e2214727f",
+  "finalize.py": "bf46c2095fee23ae06f453dfb4d36387350d7a1653427b95f813891bc3f9a67f",
+  "original-site.json": "54461ddd8132de7d5e2e84e1eaf3bb1952da9580645c79e6396b4f8ad66f9f28",
+  "original-site.tar.gz.b64": "c2230a4a94072e1ea2ee1df65eaa13ee41ad1abe8a09ce437678a81364d5ffcc",
+  "prepare.py": "9a6231dd7263d9cf188f13d3fb6774e62d41c094aa93f81ee86082ca45a89315",
+  "reviewed-template.json": "45c6b1f2c2646aa3c6d0de31aa7ec186e2e7cd56c2355112aabbebfe0b23cf64",
+  "sdk.sh": "3dd257a0fa36d712093d4e97ee4e96ff7d7c44cf2d4ca7a5c6f4c9a381ff78a2",
+  "template.patch": "1fe1d13c36aed85cad777ee235eddd19386b8fe2a8494e0103391fbe12db4004",
+  "test-finalize.py": "f2ef41f1eb5906c3f369736c481bb731768605bc7cdbe6f7568eec10823b2c5b",
+  "verify-assembly.mjs": "bf494f1eae30f515b167fa8410cac02fc3faf55f88fd4bbfd776f5dc7f1a712e"
+}

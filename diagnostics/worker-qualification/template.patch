@@ -1,0 +1,624 @@
+diff --git a/CONFORMANCE.md b/CONFORMANCE.md
+index 01f1ecf..96c4af2 100644
+--- a/CONFORMANCE.md
++++ b/CONFORMANCE.md
+@@ -24,6 +24,12 @@ model does not sanction.
+ | --- | --- | --- |
+ | `TC-01` | `build` | The checker answers conformant exactly when every universal policy file's observed digest equals its locked digest |
+ 
++## frame
++
++| ID | Level | Statement |
++| --- | --- | --- |
++| `FR-01` | `build` | With a working worker, the page loads and verifies the archive only in that worker before using its identities or guest |
++
+ ## Cited authorities
+ 
+ Never re-derived, vendored, or gated on.
+diff --git a/TEMPLATE-VERIFICATION.md b/TEMPLATE-VERIFICATION.md
+index 5587971..4ae0132 100644
+--- a/TEMPLATE-VERIFICATION.md
++++ b/TEMPLATE-VERIFICATION.md
+@@ -17,8 +17,8 @@ template contract checker in `app/`.
+ Each check runs once per `just vv`. `just bdd` runs only the meta-gate while a
+ scenario is being written; `just test` already includes it.
+ 
+-The register holds one claim, `TC-01`, so the meta-gate checks a real row, a
+-real scenario and a real test. It becomes an error as soon as an ID, scenario,
++The register holds `TC-01` and `FR-01`, so the meta-gate checks real rows,
++scenarios and tests. It becomes an error as soon as an ID, scenario,
+ or test is added without the other two.
+ 
+ ## Planted defects
+@@ -324,3 +324,64 @@ commits and against mirrors served with `PRISM_TEMPLATE_RAW`:
+ | a mirror's lock names a file its frame does not | refused: the lock's list against the frame's; nothing written |
+ | a mirror's frame and lock both add `.github/workflows/x.yml` | refused: `names files outside the page`; nothing written |
+ | an untouched mirror | pinned |
++
++## Archive verification stays off the UI thread (FR-01)
++
++The frame's normal worker path now sends an absolute archive URL, not already
++parsed guest bytes. The worker calls the locked `prism-code` browser loader and
++keeps that application for identities, dispatch and acceptance. The page never
++imports the archive runtime on that path. No runtime parser or verifier is copied.
++
++Absent workers, constructor errors and failed startup transport retain fully
++verified page-side loading. A worker reply carrying a runtime load refusal is
++final: it is never treated as unavailable transport. Unverified identities cannot
++enable the card or workspace and cannot dispatch or replay inside the worker.
++Runtime error codes survive the message boundary. Frame protocol failures are
++`frame.worker` (transport), `frame.worker.not-ready`, `frame.worker.initialized`,
++`frame.worker.not-verified`, and `frame.worker.request`, as specified in FR-01's
++scenario. After an initialized worker crashes, waiting and future calls fail;
++they are not silently re-executed on the page.
++
++`frame_fr_01` calls `node site/worker-gate.mjs` from the normal Rust test suite.
++The gate executes the complete production page and worker modules in isolated
++VM contexts. Browser APIs and the imported runtime are test doubles. Fourteen
++controls cover verified fallback, normal startup, exact identities, dispatch,
++acceptance mismatch indices, final archive refusal, unverified archives, protocol
++refusals, runtime codes, crashed/malformed transport, and latest-answer/Enter
++history UI ordering. The gate requires all fourteen controls to pass without
++skips, cancellation or todo entries; process success alone is not enough.
++
++The new capability's register, scenario and failing test preceded implementation.
++The baseline production-page test failed with `archive verification was imported
++on the UI thread before worker startup`; its no-worker control passed. Actual
++`just model-write` and read-back ran in the locked SDK in Foundry diagnostic run
++43059551107, bound to template base dfc09e61 and the preparation patch. Only its
++hash-verified generated `CONFORMANCE.md` was imported, never a handwritten
++projection. `frame.lock` was regenerated with the template's own
++`node bootstrap/frame-sync.mjs --lock` after implementation.
++
++Planted defects rejected by `node site/worker-gate.mjs` (all exit 1):
++- importing archive verification on the normal UI path;
++- retrying an archive refusal through page-side fallback;
++- allowing worker dispatch for unverified identities;
++- returning a different archive fingerprint;
++- dropping runtime refusal codes;
++- skipping the normal worker control;
++- omitting a fallback control.
++
++All fourteen controls passed again after restoring the production sources.
++Syntax checks, `frame-sync --check`, and whitespace checks also passed locally.
++A separate Node worker-thread adapter executed the unchanged production worker
++with the exact failed Foundry archive (385,046 bytes; SHA-256
++`b7b116cd0f20bca62b598a51867bd20a01a91ca122769f791b9ae0201ce61e93`) and the diagnostic
++artifact's actual runtime. All 114 acceptance vectors and 114 individual dispatch
++comparisons passed, with the original verified fingerprint. A changed model
++returned unverified identities and refused dispatch/replay; a malformed header
++preserved `archive.magic`. These are Node functional checks, not browser
++performance qualification, and the diagnostic inputs are not vendored here.
++
++Full locked-SDK `just vv` on the finished patch and browser/Lighthouse acceptance
++remain required. Local tooling did not support the SDK or browser launch. No
++performance threshold, universal policy, production dependency, or deployment
++gate was weakened. No production performance improvement is claimed until the
++original browser gate passes on the reviewed downstream import.
+diff --git a/crates/conformance/tests/frame.rs b/crates/conformance/tests/frame.rs
+new file mode 100644
+index 0000000..960a4be
+--- /dev/null
++++ b/crates/conformance/tests/frame.rs
+@@ -0,0 +1,24 @@
++//! Executes the production frame regression under Node's isolated VM loader.
++
++use std::path::PathBuf;
++use std::process::Command;
++
++#[test]
++fn frame_fr_01() {
++    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
++        .ancestors()
++        .nth(2)
++        .expect("crates/conformance is two below the root")
++        .to_path_buf();
++    let result = Command::new("node")
++        .arg("site/worker-gate.mjs")
++        .current_dir(root)
++        .output()
++        .expect("Node executes the production frame regression");
++    assert!(
++        result.status.success(),
++        "FR-01: {}\n{}",
++        String::from_utf8_lossy(&result.stdout),
++        String::from_utf8_lossy(&result.stderr)
++    );
++}
+diff --git a/features/suites/frame.feature b/features/suites/frame.feature
+new file mode 100644
+index 0000000..b96d60f
+--- /dev/null
++++ b/features/suites/frame.feature
+@@ -0,0 +1,23 @@
++Feature: frame
++
++  The frame delegates archive verification and execution to the same worker,
++  retaining the locked prism-code runtime as the verification authority.
++
++  @FR-01 @build
++  Scenario: With a working worker, the page loads and verifies the archive only in that worker before using its identities or guest
++    Given the production page and its module worker with the locked runtime
++    When the page loads an archive by its absolute URL
++    Then the worker loads and verifies the archive before returning its identities
++    And the page never loads, resolves or compiles the archive on the working-worker path
++    And dispatch and acceptance use that same worker-owned verified application
++    And a runtime refusal retains its code and cannot publish verified identities
++    And absent workers retain the existing fully verified online execution path
++    And failed worker initialization retains the existing fully verified online execution path
++    And a crashed initialized worker rejects every waiting call without executing an unverified guest
++    And frame.worker reports transport failure without retrying calls after initialization
++    And frame.worker.not-ready refuses dispatch or acceptance before loading completes
++    And frame.worker.initialized refuses repeated initialization
++    And frame.worker.not-verified refuses use of unverified identities
++    And frame.worker.request refuses an unknown operation
++    And runtime archive rejection codes are final and never trigger page-side fallback
++    And all fourteen production-module controls execute without skips, filtering or cancellation
+diff --git a/frame.lock b/frame.lock
+index 1c7252e..c0edab5 100644
+--- a/frame.lock
++++ b/frame.lock
+@@ -35,11 +35,11 @@
+     },
+     {
+       "path": "site/app.mjs",
+-      "sha256": "7a54aecef87c300cbff8d6d578e146d7f508dbe5ea73e5775edcd4cd36a3363a"
++      "sha256": "b5b30e78ab9b693fd6d29b89b9d2b74542340542864e99e4533a9ced2d987ee0"
+     },
+     {
+       "path": "site/guest-worker.mjs",
+-      "sha256": "0aae31bd459646dfa3a9b8f5f1e9139a34f2fc86154342c14ad5601ec9876d7e"
++      "sha256": "682803b3c7ea23c81a20b9c05ce47bf9184166002a4b7acadaa13996dda17d88"
+     },
+     {
+       "path": "site/page.template.html",
+diff --git a/model/ids.toml b/model/ids.toml
+index a0d287f..bf2a1bf 100644
+--- a/model/ids.toml
++++ b/model/ids.toml
+@@ -26,3 +26,9 @@ id = "TC-01"
+ level = "build"
+ suite = "contract"
+ statement = "The checker answers conformant exactly when every universal policy file's observed digest equals its locked digest"
++
++[[id]]
++id = "FR-01"
++level = "build"
++suite = "frame"
++statement = "With a working worker, the page loads and verifies the archive only in that worker before using its identities or guest"
+diff --git a/site/app.mjs b/site/app.mjs
+index 257932a..c343802 100644
+--- a/site/app.mjs
++++ b/site/app.mjs
+@@ -141,41 +141,58 @@ const afterFirstFrame = () => new Promise((resolve) => {
+   }
+ });
+ 
+-// The verified guest runs in a worker, so nothing blocks the page; without
+-// workers it runs here.
+-async function offThread(app) {
+-  if (typeof Worker !== "function") return app;
+-  const { resolveArchive } = await import("./vendor/prism-code/src/index.mjs");
+-  const wasm = resolveArchive(app.archive).guest.content;
+-  const worker = new Worker("./guest-worker.mjs", { type: "module" });
++// Verification belongs to the worker too: loading a large model can block
++// the UI before the guest ever runs. Only unavailable/broken worker transport
++// falls back to the same fully verified runtime on the page. A runtime refusal
++// is final, not evidence that workers are unavailable.
++async function offThread(source) {
++  const onPage = async () => {
++    const { load } = await import("./vendor/prism-code/src/browser.mjs");
++    return load(source);
++  };
++  if (typeof Worker !== "function") return onPage();
++  let worker;
++  try {
++    worker = new Worker("./guest-worker.mjs", { type: "module" });
++  } catch {
++    return onPage();
++  }
+   const waiting = new Map();
+   let next = 0;
++  let failure = null;
++  const stop = () => {
++    failure ??= Object.assign(new Error("the guest worker failed"), { code: "frame.worker" });
++    worker.terminate();
++    for (const settle of waiting.values()) settle.reject(failure);
++    waiting.clear();
++  };
+   worker.onmessage = ({ data: reply }) => {
+-    const settle = waiting.get(reply.id);
++    const settle = waiting.get(reply?.id);
++    if (!settle || typeof reply.ok !== "boolean") { stop(); return; }
+     waiting.delete(reply.id);
+     if (reply.ok) settle.resolve(reply.value);
+-    else settle.reject(new Error(reply.error));
+-  };
+-  // A crashed worker fails every call; the page falls back to the instance.
+-  worker.onerror = (event) => {
+-    event.preventDefault?.();
+-    for (const settle of waiting.values()) settle.reject(new Error("the guest worker failed"));
+-    waiting.clear();
++    else settle.reject(Object.assign(new Error(reply.error), { code: reply.code, runtimeRefusal: true }));
+   };
+-  const call = (kind, payload) => new Promise((resolve, reject) => {
++  worker.onerror = (event) => { event.preventDefault?.(); stop(); };
++  worker.onmessageerror = stop;
++  const call = (kind, payload = {}) => new Promise((resolve, reject) => {
++    if (failure) { reject(failure); return; }
+     const id = next++;
+     waiting.set(id, { resolve, reject });
+-    worker.postMessage({ id, kind, ...payload });
++    try { worker.postMessage({ id, kind, ...payload }); } catch { stop(); }
+   });
++  let identities;
+   try {
+-    await call("init", { wasm, limits: app.limits ?? {} });
+-  } catch {
++    identities = await call("init", { source });
++  } catch (error) {
+     worker.terminate();
+-    return app;
++    if (error.runtimeRefusal) throw error;
++    return onPage();
+   }
+   return {
++    identities,
+     dispatch: (request) => call("dispatch", { request }),
+-    acceptance: () => call("acceptance", { vectors: app.vectors }),
++    acceptance: () => call("acceptance"),
+   };
+ }
+ 
+@@ -299,8 +316,7 @@ async function main() {
+   let app;
+   try {
+     await afterFirstFrame();
+-    const { load } = await import("./vendor/prism-code/src/browser.mjs");
+-    app = await load("./app.holo");
++    app = await offThread(new URL("./app.holo", document.baseURI).href);
+   } catch (error) {
+     verdict("bad", "The app failed to load");
+     replayed("error");
+@@ -310,7 +326,7 @@ async function main() {
+   }
+ 
+   const { identities } = app;
+-  const runner = await offThread(app);
++  const runner = app;
+   const ok = identities.verified;
+   verdict(ok ? "good" : "bad", ok ? "Verified in this browser" : "NOT verified", identities.archiveFingerprint);
+   checked.fingerprint = identities.archiveFingerprint;
+diff --git a/site/guest-worker.mjs b/site/guest-worker.mjs
+index 5b47c70..240b6c6 100644
+--- a/site/guest-worker.mjs
++++ b/site/guest-worker.mjs
+@@ -1,29 +1,37 @@
+-// Runs the holo's guest off the page's main thread. A request that takes a
+-// second on a slow phone (a chess reply, a long search) never blocks a tap or
+-// a paint. The page loads and verifies the holo itself and sends this worker
+-// the guest bytes of that same verified archive; the worker only compiles and
+-// runs them with the runtime's own guest loop, one fresh instance per request.
+-import { compileGuest, runGuest, runAcceptance } from "./vendor/prism-code/src/core.mjs";
+-
+-let guest = null;
+-let limits = {};
++// The locked runtime owns archive verification, compilation and execution.
++// Keep the verified application here; only identities and request results
++// cross the boundary. No parsed archive or guest bytes are trusted from the UI.
++import { load } from "./vendor/prism-code/src/browser.mjs";
+ 
++let app = null;
++let started = false;
++const refuse = (code) => { throw Object.assign(new Error(code), { code }); };
+ const describe = (error) => error?.code ?? error?.message ?? String(error);
+ 
+ self.onmessage = async ({ data }) => {
+   const { id, kind } = data;
+   try {
+     if (kind === "init") {
+-      guest = await compileGuest(data.wasm);
+-      limits = data.limits;
+-      self.postMessage({ id, ok: true });
+-    } else if (kind === "dispatch") {
+-      self.postMessage({ id, ok: true, value: runGuest(guest, data.request, limits) });
+-    } else if (kind === "acceptance") {
+-      const result = await runAcceptance(data.vectors, async (request) => runGuest(guest, request, limits));
+-      self.postMessage({ id, ok: true, value: { total: result.total, passed: result.passed } });
++      if (started) refuse("frame.worker.initialized");
++      started = true;
++      app = await load(data.source);
++      self.postMessage({ id, ok: true, value: app.identities });
++    } else {
++      if (!app) refuse("frame.worker.not-ready");
++      if (!app.identities.verified) refuse("frame.worker.not-verified");
++      if (kind === "dispatch") {
++        self.postMessage({ id, ok: true, value: await app.dispatch(data.request) });
++      } else if (kind === "acceptance") {
++        const result = await app.acceptance();
++        self.postMessage({ id, ok: true, value: {
++          total: result.total, passed: result.passed,
++          failed: (result.failed ?? []).map(({ index }) => ({ index })),
++        } });
++      } else {
++        refuse("frame.worker.request");
++      }
+     }
+   } catch (error) {
+-    self.postMessage({ id, ok: false, error: describe(error) });
++    self.postMessage({ id, ok: false, error: describe(error), code: error?.code });
+   }
+ };
+diff --git a/site/worker-gate.mjs b/site/worker-gate.mjs
+new file mode 100644
+index 0000000..afacc9d
+--- /dev/null
++++ b/site/worker-gate.mjs
+@@ -0,0 +1,19 @@
++// The Rust acceptance suite calls this fixed, complete invocation. Successful
++// process exit alone also accepts test.skip/test.todo and name-filtered suites.
++import assert from "node:assert/strict";
++import { spawnSync } from "node:child_process";
++import { fileURLToPath } from "node:url";
++
++const result = spawnSync(process.execPath, [
++  "--experimental-vm-modules", "--test", "--test-reporter=tap",
++  fileURLToPath(new URL("./worker.test.mjs", import.meta.url)),
++], { encoding: "utf8" });
++process.stdout.write(result.stdout ?? "");
++process.stderr.write(result.stderr ?? "");
++assert.ifError(result.error);
++assert.equal(result.status, 0, "FR-01 production frame regression failed");
++for (const [name, count] of Object.entries({ tests: 14, pass: 14, fail: 0, cancelled: 0, skipped: 0, todo: 0 })) {
++  const values = [...result.stdout.matchAll(new RegExp(`^# ${name} (\\d+)$`, "gm"))];
++  assert.equal(values.length, 1, `FR-01 requires one ${name} summary`);
++  assert.equal(Number(values[0][1]), count, `FR-01 incomplete ${name} count`);
++}
+diff --git a/site/worker.test.mjs b/site/worker.test.mjs
+new file mode 100644
+index 0000000..05a12e7
+--- /dev/null
++++ b/site/worker.test.mjs
+@@ -0,0 +1,242 @@
++import assert from "node:assert/strict";
++import { readFile } from "node:fs/promises";
++import test from "node:test";
++import vm from "node:vm";
++
++const source = await readFile(new URL("./app.mjs", import.meta.url), "utf8");
++const workerSource = await readFile(new URL("./guest-worker.mjs", import.meta.url), "utf8");
++const flush = async () => { for (let i = 0; i < 10; i++) await new Promise(setImmediate); };
++const identities = { verified: true, archiveFingerprint: "exact-test-fingerprint" };
++const application = (overrides = {}) => ({
++  identities,
++  dispatch: async (request) => request,
++  acceptance: async () => ({ total: 2, passed: 1, failed: [{ index: 1 }] }),
++  ...overrides,
++});
++const failure = (code) => Object.assign(new Error(code), { code });
++
++async function workerHarness(load) {
++  const replies = [];
++  let receive = () => {};
++  const self = { postMessage: (reply) => {
++    const cloned = structuredClone(reply);
++    replies.push(cloned);
++    receive(cloned);
++  } };
++  const context = vm.createContext({ self });
++  const module = new vm.SourceTextModule(workerSource, { context });
++  await module.link(async (specifier) => {
++    assert.equal(specifier, "./vendor/prism-code/src/browser.mjs", "use the locked full archive loader");
++    return new vm.SyntheticModule(["load"], function () { this.setExport("load", load); }, { context });
++  });
++  await module.evaluate();
++  return { replies, send: (data) => self.onmessage({ data }), listen: (fn) => { receive = fn; } };
++}
++
++// Execute the complete, unmodified production modules. Only browser APIs and
++// the imported runtime are doubles; no production function is reconstructed.
++async function startPage({ mode = "working", load = async () => application(), workspace = false } = {}) {
++  const events = [];
++  const elements = new Map();
++  const element = (id) => {
++    if (id === "input" && !workspace) return null;
++    if (!elements.has(id)) elements.set(id, {
++      textContent: id === "app-data" ? '{"card":true}' : "",
++      attrs: {}, value: "", placeholder: "request", children: [], listeners: {},
++      style: { setProperty() {} }, focus() {},
++      addEventListener(kind, fn) { this.listeners[kind] = fn; },
++      querySelectorAll() { return []; },
++      append(...children) { this.children.push(...children); },
++      prepend(child) { this.children.unshift(child); },
++      setAttribute(name, value) { this.attrs[name] = value; },
++    });
++    return elements.get(id);
++  };
++  let runner;
++  let client;
++  let terminated = false;
++  const actual = await workerHarness(async (url) => {
++    events.push(`worker-load:${url}`);
++    return load(url);
++  });
++  class Worker {
++    constructor(url, options) {
++      events.push("worker-created");
++      assert.equal(url, "./guest-worker.mjs");
++      assert.equal(options.type, "module");
++      if (mode === "constructor") throw new Error("unavailable");
++      client = this;
++      actual.listen((reply) => { if (!terminated) this.onmessage({ data: reply }); });
++    }
++    postMessage(data) {
++      if (mode === "post") throw new Error("transport failure");
++      queueMicrotask(() => {
++        if (mode === "startup") this.onerror({ preventDefault() {} });
++        else actual.send(structuredClone(data));
++      });
++    }
++    terminate() { terminated = true; }
++  }
++  const context = vm.createContext({
++    TextEncoder, TextDecoder, URL, console,
++    document: { getElementById: element, createElement: (tag) => element(`created-${tag}-${elements.size}`), documentElement: {}, baseURI: "https://example.test/app/" },
++    navigator: { onLine: true }, location: { hash: "", search: "" },
++    customElements: { get: () => true }, addEventListener() {},
++    performance: { getEntriesByName: () => [{}] },
++    requestAnimationFrame: (fn) => queueMicrotask(fn),
++    clearTimeout() {},
++    setTimeout: (fn, delay) => { if (delay !== 900) queueMicrotask(fn); return 1; },
++    ...(mode === "absent" ? {} : { Worker }),
++  });
++  const page = new vm.SourceTextModule(source, {
++    context,
++    importModuleDynamically: async (specifier) => {
++      events.push(`main-import:${specifier}`);
++      let exports;
++      if (specifier === "./vendor/prism-code/src/browser.mjs") exports = { load };
++      else if (specifier === "./card.mjs") exports = { default: ({ app }) => { runner = app; } };
++      else throw new Error(`unexpected import ${specifier}`);
++      const module = new vm.SyntheticModule(Object.keys(exports), function () {
++        for (const [key, value] of Object.entries(exports)) this.setExport(key, value);
++      }, { context });
++      await module.link(() => { throw new Error("unexpected import"); });
++      await module.evaluate();
++      return module;
++    },
++  });
++  await page.link(() => { throw new Error("unexpected static import"); });
++  await page.evaluate();
++  await flush();
++  return { events, elements, runner, client, actual, terminated: () => terminated };
++}
++
++for (const mode of ["absent", "constructor", "startup", "post"]) {
++  test(`FR-01: ${mode} worker retains fully verified fallback`, async () => {
++    let loads = 0;
++    const page = await startPage({ mode, load: async (url) => {
++      assert.equal(url, "https://example.test/app/app.holo");
++      loads++;
++      return application();
++    } });
++    assert.ok(page.events.includes("main-import:./vendor/prism-code/src/browser.mjs"));
++    assert.equal(loads, 1);
++    assert.equal(page.elements.get("frame").attrs.verdict, "good");
++    assert.equal(page.elements.get("frame").attrs.examples, "1/2");
++  });
++}
++
++test("FR-01: working worker owns load, identities, dispatch and acceptance", async () => {
++  let loads = 0;
++  let replays = 0;
++  const page = await startPage({ load: async (url) => {
++    assert.equal(url, "https://example.test/app/app.holo");
++    loads++;
++    return application({ acceptance: async () => { replays++; return { total: 2, passed: 1, failed: [{ index: 1 }] }; } });
++  } });
++  assert.equal(loads, 1);
++  assert.equal(replays, 1);
++  assert.deepEqual(page.events.filter((event) => event.includes("main-import:") && event.includes("prism-code/")), []);
++  assert.equal(page.elements.get("frame").attrs.fingerprint, identities.archiveFingerprint);
++  assert.equal(page.elements.get("frame").attrs.verdict, "good");
++  const request = new Uint8Array([1, 2, 3]);
++  assert.deepEqual(await page.runner.dispatch(request), request);
++  assert.deepEqual(await page.runner.dispatch(request), request);
++  const result = await page.runner.acceptance();
++  assert.deepEqual(result.failed, [{ index: 1 }]);
++  assert.equal(replays, 2);
++});
++
++test("FR-01: archive rejection is final, never main-thread fallback", async () => {
++  const page = await startPage({ load: async () => { throw failure("archive.fingerprint"); } });
++  assert.equal(page.actual.replies[0].code, "archive.fingerprint");
++  assert.equal(page.actual.replies[0].ok, false);
++  assert.equal(page.elements.get("frame").attrs.verdict, "bad");
++  assert.equal(page.runner, null);
++  assert.ok(page.terminated());
++  assert.ok(!page.events.some((event) => event.startsWith("main-import:") && event.includes("prism-code/")));
++});
++
++test("FR-01: unverified identities cannot enable the page or guest", async () => {
++  const page = await startPage({ load: async () => application({ identities: { ...identities, verified: false } }) });
++  assert.equal(page.runner, null);
++  assert.equal(page.elements.get("frame").attrs.verdict, "bad");
++  assert.equal(page.elements.get("frame").attrs.examples, "error");
++  await page.actual.send({ id: 99, kind: "dispatch", request: new Uint8Array() });
++  assert.equal(page.actual.replies.at(-1).code, "frame.worker.not-verified");
++});
++
++test("FR-01: worker protocol refuses premature, repeated and unknown requests", async () => {
++  let finish;
++  const worker = await workerHarness(() => new Promise((resolve) => { finish = resolve; }));
++  await worker.send({ id: 0, kind: "dispatch" });
++  assert.equal(worker.replies.at(-1).code, "frame.worker.not-ready");
++  const init = worker.send({ id: 1, kind: "init", source: "https://example.test/app.holo" });
++  await worker.send({ id: 2, kind: "acceptance" });
++  assert.equal(worker.replies.at(-1).code, "frame.worker.not-ready");
++  await worker.send({ id: 3, kind: "init" });
++  assert.equal(worker.replies.at(-1).code, "frame.worker.initialized");
++  finish(application());
++  await init;
++  await worker.send({ id: 4, kind: "unknown" });
++  assert.equal(worker.replies.at(-1).code, "frame.worker.request");
++});
++
++test("FR-01: dispatch and acceptance preserve runtime refusal codes", async () => {
++  const page = await startPage({ load: async () => application({
++    dispatch: async () => { throw failure("guest.request-size"); },
++    acceptance: async () => { throw failure("acceptance.mismatch"); },
++  }) });
++  assert.equal(page.elements.get("frame").attrs.examples, "error");
++  await assert.rejects(page.runner.dispatch(new Uint8Array()), { code: "guest.request-size" });
++  await assert.rejects(page.runner.acceptance(), { code: "acceptance.mismatch" });
++});
++
++for (const kind of ["error", "messageerror", "malformed", "unknown-id"]) {
++  test(`FR-01: ${kind} fails pending and future calls without fallback`, async () => {
++    const page = await startPage({ load: async () => application({ dispatch: () => new Promise(() => {}) }) });
++    const first = assert.rejects(page.runner.dispatch(new Uint8Array()), { code: "frame.worker" });
++    const second = assert.rejects(page.runner.dispatch(new Uint8Array()), { code: "frame.worker" });
++    if (kind === "error") page.client.onerror({ preventDefault() {} });
++    if (kind === "messageerror") page.client.onmessageerror();
++    if (kind === "malformed") page.client.onmessage({ data: { id: 2 } });
++    if (kind === "unknown-id") page.client.onmessage({ data: { id: -1, ok: true } });
++    await Promise.all([first, second]);
++    await assert.rejects(page.runner.acceptance(), { code: "frame.worker" });
++    assert.ok(page.terminated());
++    assert.ok(!page.events.some((event) => event.startsWith("main-import:") && event.includes("prism-code/")));
++  });
++}
++
++
++test("FR-01: UI keeps newest answer and Enter history across worker replies", async () => {
++  const pending = new Map();
++  const page = await startPage({ workspace: true, load: async () => application({
++    dispatch: (request) => new Promise((resolve) => pending.set(new TextDecoder().decode(request), resolve)),
++  }) });
++  const input = page.elements.get("input");
++  const out = page.elements.get("out");
++  input.value = "first";
++  input.listeners.input();
++  input.value = "second";
++  input.listeners.input();
++  await flush();
++  pending.get("second")(new TextEncoder().encode("latest"));
++  await flush();
++  pending.get("first")(new TextEncoder().encode("stale"));
++  await flush();
++  assert.equal(out.textContent, "Latest");
++  input.value = "saved";
++  input.listeners.keydown({ key: "Enter" });
++  await flush();
++  pending.get("saved")(new TextEncoder().encode("kept"));
++  await flush();
++  assert.equal(out.textContent, "Kept");
++  assert.equal(page.elements.get("hist").children.length, 1);
++  input.value = "";
++  input.listeners.input();
++  assert.equal(out.textContent, "—");
++  input.value = "hex:zz";
++  input.listeners.input();
++  await flush();
++  assert.equal(out.textContent, "Invalid request");
++});
