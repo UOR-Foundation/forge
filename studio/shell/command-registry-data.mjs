@@ -275,6 +275,17 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Finite vocabulary and explicit profile review; independent quality and release obligations remain."
+    },
+    {
+      "id": "chat-queue",
+      "version": 1,
+      "owner": "ChatQueue.boundary",
+      "effects": [],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Finite queue transitions; durable payload and actor integration are separately qualified."
     }
   ],
   "commands": [
@@ -1333,6 +1344,16 @@ export const commandRegistryData = {
       "feature": "representation",
       "version": 1,
       "owner": "FoundrySpecification.representationBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
+      "input": "product-boundary",
+      "output": "product-boundary"
+    },
+    {
+      "channel": "forge:queue",
+      "feature": "chat-queue",
+      "version": 1,
+      "owner": "ChatQueue.boundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",

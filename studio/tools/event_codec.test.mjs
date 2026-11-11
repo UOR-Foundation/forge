@@ -47,7 +47,7 @@ test("canonical model contains bounded parser generated dispatch and executable 
   }
   for(const token of ['EventAdmission::admitEvent','CompositionProtocol::decodeWords','32768','1024','wire_natural','wire_revoked','wire_staleGeneration','wire_trailing','wire_flag'])assert.ok(model.includes(token),token);
   assert.ok(read('../../app/src/ForgeKernel.lex.tex').includes('EventProtocol::dispatchEvent'));
-  assert.ok(read('../../app/src/ForgeKernel.lex.tex').includes('acceptanceVectors := (routingAcceptance)'));
+  assert.ok(read('../../app/src/ForgeKernel.lex.tex').includes('acceptanceVectors := (queueAcceptance)'));
   assert.ok(read('../shell/host.js').includes('handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input))'));
   assert.ok(read('./kernel_browser.mjs').includes('assert.equal(documentResult.events, 30)'));
   assert.ok(read('./kernel_browser.mjs').includes('assert.equal(documentResult.embedded, 145)'));

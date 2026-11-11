@@ -393,3 +393,9 @@ id = "FA-49"
 level = "build"
 suite = "semantic-application-discovery"
 statement = "Finite language discovery creates only guest-admitted catalog applications after source-bound explicit review"
+
+[[id]]
+id = "FA-50"
+level = "build"
+suite = "chat-queue-model"
+statement = "Bounded chat queues preserve unique pending work and reject stale revisions owners and stop policies through guest transitions"

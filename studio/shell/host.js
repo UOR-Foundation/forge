@@ -1,3 +1,4 @@
+import {queueWithGuest} from "./chat-queue-codec.mjs";
 import {createDiscovery} from "./application-discovery.mjs";
 import {mountApplicationDiscovery} from "./discovery-ui.mjs";
 import {routeWithGuest} from './routing-codec.mjs';
@@ -912,6 +913,7 @@ handlers.set("forge:compose", async (input) => {
 });
 handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
 handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input));
+handlers.set("forge:queue", input=>queueWithGuest(kernelReady,input));
 handlers.set("forge:route", input => routeWithGuest(kernelReady,input));
 handlers.set("forge:interact", input => executeInteraction(kernelReady, input));
 let interactionModelSource;

@@ -1,0 +1,146 @@
+\begin{lexlean}{ChatQueueProtocol}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{ChatQueue}
+\importmodule{CompositionProtocol}
+\importmodule{WorkProtocol}
+\title{Boolean}
+\begin{semanticmodule}
+definition{
+  name: encodeItems,
+  parameters: [items : (List Nat)],
+  result: Bytes,
+  body: (match items
+    | List.nil => 0x
+    | List.cons head rest => (prim append (WorkProtocol::hexWord head) (encodeItems rest) : Bytes)),
+  recursive_argument: items
+}
+
+definition{
+  name: encodeState,
+  parameters: [state : ChatQueue::QueueState],
+  result: Bytes,
+  body: (prim append 0x6f6b20 (prim append (WorkProtocol::hexWord 1) (prim append (WorkProtocol::hexWord (project state revision)) (prim append (WorkProtocol::hexWord (project state paused)) (prim append (WorkProtocol::hexWord (project state stopPolicy)) (prim append (WorkProtocol::hexWord (project state active)) (prim append (WorkProtocol::hexWord (project state owner)) (prim append (WorkProtocol::hexWord (prim length (project state items) : Nat)) (encodeItems (project state items)) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: encodeResult,
+  parameters: [result : (Result ChatQueue::QueueState ChatQueue::QueueError)],
+  result: Bytes,
+  body: (match result
+    | Result.ok state => (encodeState state)
+    | Result.error error => (match error
+      | ChatQueue::QueueError.invalidQueueState => 0x696e76616c696451756575655374617465
+      | ChatQueue::QueueError.invalidQueueCommand => 0x696e76616c69645175657565436f6d6d616e64
+      | ChatQueue::QueueError.queueRevisionConflict => 0x71756575655265766973696f6e436f6e666c696374
+      | ChatQueue::QueueError.queueFull => 0x717565756546756c6c
+      | ChatQueue::QueueError.queueItemMissing => 0x71756575654974656d4d697373696e67
+      | ChatQueue::QueueError.queueItemDuplicate => 0x71756575654974656d4475706c6963617465
+      | ChatQueue::QueueError.queueActiveConflict => 0x7175657565416374697665436f6e666c696374
+      | ChatQueue::QueueError.queuePaused => 0x7175657565506175736564
+      | ChatQueue::QueueError.queueStopConflict => 0x717565756553746f70436f6e666c696374
+      | ChatQueue::QueueError.queueOwnerConflict => 0x71756575654f776e6572436f6e666c696374
+      | ChatQueue::QueueError.queueRevisionExhausted => 0x71756575655265766973696f6e457868617573746564))
+}
+
+definition{
+  name: dispatchQueueWords,
+  parameters: [words : (List Nat)],
+  result: Bytes,
+  body: (if (((WorkProtocol::word words 0) =? 1) && (((WorkProtocol::word words 6) <=? 32) && ((prim length words : Nat) =? (13 + (WorkProtocol::word words 6))))) then (match (CompositionProtocol::listNats words 6)
+    | Option.none => 0x6d616c666f726d6564517565756552657175657374
+    | Option.some items => (encodeResult (ChatQueue::transitionQueue (record ChatQueue::QueueState {revision := (WorkProtocol::word words 1), paused := (WorkProtocol::word words 2), stopPolicy := (WorkProtocol::word words 3), active := (WorkProtocol::word words 4), owner := (WorkProtocol::word words 5), items := (project items value)}) (WorkProtocol::word words ((project items rest) + 0)) (record ChatQueue::QueueCommand {kind := (WorkProtocol::word words ((project items rest) + 1)), item := (WorkProtocol::word words ((project items rest) + 2)), index := (WorkProtocol::word words ((project items rest) + 3)), owner := (WorkProtocol::word words ((project items rest) + 4)), observedStop := (WorkProtocol::word words ((project items rest) + 5))})))) else 0x6d616c666f726d6564517565756552657175657374)
+}
+
+definition{
+  name: dispatchQueue,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (if (512 <? (prim length bytes : Nat)) then 0x717565756552657175657374546f6f4c61726765 else (let decoded : CompositionProtocol::DecodedWords := (CompositionProtocol::decodeWords bytes 0 64 (nil Nat)); (if (project decoded valid) then (dispatchQueueWords (project decoded value)) else 0x6d616c666f726d6564517565756552657175657374))),
+  axioms: [Quot.sound, propext]
+}
+
+inductive{
+  name: QueueWireError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: malformedQueueRequest, fields: []},
+    {name: queueRequestTooLarge, fields: []},
+    {name: queueRuntimeFailed, fields: []},
+    {name: invalidQueueResponse, fields: []}
+  ]
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "Requests use ASCII queue-space followed by lowercase hexadecimal little-endian uint32 words: version=1, state revision, paused flag, stop policy, active item, owner, item count, item IDs, expected revision, command kind, item, index, owner, observed stop. The count is at most 32 and the entire request must end after the last command word. Maximum payload is 512 ASCII bytes. Successful replies are ok-space, version=1 and the same state fields without a command. All other replies are exact typed errors. This representation adapter invokes ChatQueue.transitionQueue and grants no persistence, actor authenticity or effect authority."
+}
+
+theorem{
+  name: wire_enqueue,
+  parameters: [],
+  statement: ((dispatchQueueWords (cons 1 (cons 3 (cons 0 (cons 2 (cons 0 (cons 0 (cons 3 (cons 11 (cons 12 (cons 13 (cons 3 (cons 1 (cons 14 (cons 0 (cons 0 (cons 0 (nil Nat)))))))))))))))))) = 0x6f6b2030313030303030303034303030303030303030303030303030323030303030303030303030303030303030303030303030343030303030303062303030303030306330303030303030643030303030303065303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wire_remove,
+  parameters: [],
+  statement: ((dispatchQueueWords (cons 1 (cons 3 (cons 0 (cons 2 (cons 0 (cons 0 (cons 3 (cons 11 (cons 12 (cons 13 (cons 3 (cons 2 (cons 12 (cons 0 (cons 0 (cons 0 (nil Nat)))))))))))))))))) = 0x6f6b20303130303030303030343030303030303030303030303030303230303030303030303030303030303030303030303030303230303030303030623030303030303064303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wire_reorder,
+  parameters: [],
+  statement: ((dispatchQueueWords (cons 1 (cons 3 (cons 0 (cons 2 (cons 0 (cons 0 (cons 3 (cons 11 (cons 12 (cons 13 (cons 3 (cons 3 (cons 13 (cons 0 (cons 0 (cons 0 (nil Nat)))))))))))))))))) = 0x6f6b203031303030303030303430303030303030303030303030303032303030303030303030303030303030303030303030303033303030303030306430303030303030623030303030303063303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wire_edit,
+  parameters: [],
+  statement: ((dispatchQueueWords (cons 1 (cons 3 (cons 0 (cons 2 (cons 0 (cons 0 (cons 3 (cons 11 (cons 12 (cons 13 (cons 3 (cons 4 (cons 12 (cons 0 (cons 0 (cons 0 (nil Nat)))))))))))))))))) = 0x6f6b203031303030303030303430303030303030303030303030303032303030303030303030303030303030303030303030303033303030303030306230303030303030633030303030303064303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wire_clear,
+  parameters: [],
+  statement: ((dispatchQueueWords (cons 1 (cons 3 (cons 0 (cons 2 (cons 0 (cons 0 (cons 3 (cons 11 (cons 12 (cons 13 (cons 3 (cons 5 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat)))))))))))))))))) = 0x6f6b203031303030303030303430303030303030303030303030303032303030303030303030303030303030303030303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wire_pause,
+  parameters: [],
+  statement: ((dispatchQueueWords (cons 1 (cons 3 (cons 0 (cons 2 (cons 0 (cons 0 (cons 3 (cons 11 (cons 12 (cons 13 (cons 3 (cons 6 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat)))))))))))))))))) = 0x6f6b203031303030303030303430303030303030313030303030303032303030303030303030303030303030303030303030303033303030303030306230303030303030633030303030303064303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wire_empty,
+  parameters: [],
+  statement: ((dispatchQueue 0x) = 0x6d616c666f726d6564517565756552657175657374),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+
+theorem{
+  name: wire_trailing,
+  parameters: [],
+  statement: ((dispatchQueue 0x30313030303030303033303030303030303030303030303030323030303030303030303030303030303030303030303030333030303030303062303030303030306330303030303030643030303030303033303030303030303130303030303030653030303030303030303030303030303030303030303030303030303030303030303030303030) = 0x6d616c666f726d6564517565756552657175657374),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

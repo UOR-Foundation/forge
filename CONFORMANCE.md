@@ -96,6 +96,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-15` | `build` | Unimplemented browser queries return typed unsupported errors rather than fabricated resource status or empty findings |
 
+## chat-queue-model
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-50` | `build` | Bounded chat queues preserve unique pending work and reject stale revisions owners and stop policies through guest transitions |
+
 ## command-ownership-registry
 
 | ID | Level | Statement |
