@@ -62,3 +62,18 @@ The Node gate now checks the event parser/result names against every other
 application module. Reintroducing the old encodeResult name fails the source
 control before SDK compilation; restoring the unique name restores all six
 controls. This is an early collision check, not a replacement compiler.
+
+Signed build 43056835696 at f3b83edd0de9c45826f70765b8fb5879a5f42364
+now compiles and verifies through the selected immutable SDK. Artifact
+13874175976 contains a 408521-byte archive, SHA256
+ee25aa258c18532a45011fee5af5617e71842b528b4efc756e0e2e437472b945,
+with archive-body BLAKE3
+1ec54f3efcb67725fe7e554310e78d4819c2363ba5c0567de298f9357282c6af.
+The exact repository/source/workflow Sigstore provenance verifies with
+self-hosted runners denied. Wrong-source and changed-byte controls both refuse.
+The pinned 24198-byte guest passes all 124 embedded vectors and all 26
+composition, 30 work and 30 event corpus cases in both document and dedicated
+worker contexts, retaining all five reword phases. The structured event adapter
+also replays its independently encoded cases against this actual guest.
+Full feature CI and independent same-source reproduction remain pending.
+The existing reproduction receipt still describes the earlier 114-vector guest.
