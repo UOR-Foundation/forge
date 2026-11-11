@@ -1,17 +1,17 @@
 {
   "schema": "foundry/kernel-artifact-review/1",
-  "source": "f3b83edd0de9c45826f70765b8fb5879a5f42364",
-  "run": 43056835696,
-  "artifact": 13874175976,
+  "source": "8baef63680ba67b8608a0e750aceba4ef8b5073a",
+  "run": 43075425831,
+  "artifact": 13881743759,
   "archiveFingerprint": {
     "algorithm": "blake3",
     "profile": "hologram-archive-body",
-    "digest": "1ec54f3efcb67725fe7e554310e78d4819c2363ba5c0567de298f9357282c6af"
+    "digest": "b46ffbaf7edeb696dcd73481423776a30fd33705af80d8eee8b156d351145653"
   },
   "archiveFile": {
     "algorithm": "sha256",
     "profile": "whole-file",
-    "digest": "ee25aa258c18532a45011fee5af5617e71842b528b4efc756e0e2e437472b945"
+    "digest": "470470068748a71fd28a22ef39f87d90db6fdfac8091a574b7f0a48753b79d0e"
   },
   "provenance": {
     "verifier": "GitHub CLI 2.103.3",
@@ -26,7 +26,7 @@
     "changedArchiveByte": "refused"
   },
   "runtime": {
-    "embeddedVectors": 124,
+    "embeddedVectors": 145,
     "wireVectors": 26,
     "maximumPayloadBytes": 32768,
     "maximumPayloadOutcome": "malformedComposition",
@@ -36,7 +36,8 @@
     ],
     "workWireVectors": 30,
     "rewordPhases": 5,
-    "eventWireVectors": 30
+    "eventWireVectors": 30,
+    "interactionWireVectors": 21
   },
   "claimScope": "Executed qualification of this artifact and the browser adapter; not independent review approval, registry authenticity, R4 routing, or whole-application release acceptance."
 }
