@@ -3,7 +3,7 @@
 // trend badges, tabs with counts beside the table's tools, and a data table with row selection and a row
 // menu. Every part is the kit's shadcn/ui component. The data and every action are Dyad's own (its hooks,
 // its ipc calls, its collection views and dialogs), so nothing behind the page changes.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import {
@@ -55,10 +55,28 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const WEEK = 7 * 24 * 60 * 60 * 1000;
 const day = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
 const when = (d: Date | string) => day.format(new Date(d));
-const thisWeek = (d: Date | string) => Date.now() - +new Date(d) < WEEK;
+
+// What counts as this week is the Forge kernel's decision (FK-21, proved by Lean: nothing older than seven
+// days): each date is asked as "recent <seconds old>". Until every answer is in, the figures show a dash.
+declare global { interface Window { __forgeKernel?: { ask: (line: string) => Promise<string> } } }
+function useThisWeek(dates: (Date | string)[]) {
+  const key = dates.map((d) => +new Date(d)).join(",");
+  const [answers, setAnswers] = useState<Map<number, boolean> | null>(null);
+  useEffect(() => {
+    let live = true;
+    const kernel = window.__forgeKernel;
+    if (!kernel) return;
+    const times = [...new Set(key ? key.split(",").map(Number) : [])];
+    const now = Date.now();
+    Promise.all(times.map((t) => kernel.ask("recent " + Math.max(0, Math.floor((now - t) / 1000))).then((a) => [t, a === "yes"] as const)))
+      .then((pairs) => { if (live) setAnswers(new Map(pairs)); })
+      .catch(() => { if (live) setAnswers(null); });
+    return () => { live = false; };
+  }, [key]);
+  return answers && ((d: Date | string) => answers.get(+new Date(d)) === true);
+}
 
 export default function AppsPage() {
   const navigate = useNavigate();
@@ -118,10 +136,12 @@ export default function AppsPage() {
     }
   };
 
+  const thisWeek = useThisWeek([...apps.map((a) => a.createdAt), ...apps.map((a) => a.updatedAt), ...chats.map((c) => c.createdAt)]);
+  const count = <T,>(xs: T[], at: (x: T) => Date | string) => (thisWeek ? xs.filter((x) => thisWeek(at(x))).length : null);
   const stats = [
-    { label: "Apps", value: apps.length, trend: apps.filter((a) => thisWeek(a.createdAt)).length, note: "Created this week", foot: "Every app you have built here" },
-    { label: "Chats", value: chats.length, trend: chats.filter((c) => thisWeek(c.createdAt)).length, note: "Started this week", foot: "Conversations across all apps" },
-    { label: "Updated", value: apps.filter((a) => thisWeek(a.updatedAt)).length, trend: null, note: "Changed in the last 7 days", foot: "Apps you are working on" },
+    { label: "Apps", value: apps.length, trend: count(apps, (a) => a.createdAt), note: "Created this week", foot: "Every app you have built here" },
+    { label: "Chats", value: chats.length, trend: count(chats, (c) => c.createdAt), note: "Started this week", foot: "Conversations across all apps" },
+    { label: "Updated", value: count(apps, (a) => a.updatedAt) ?? "–", trend: null, note: "Changed in the last 7 days", foot: "Apps you are working on" },
     { label: "Starred", value: apps.filter((a) => a.isFavorite).length, trend: null, note: `${collections.length} collection${collections.length === 1 ? "" : "s"}`, foot: "Pinned to the top of the sidebar" },
   ];
 

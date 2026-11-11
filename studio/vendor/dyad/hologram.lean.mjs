@@ -172,27 +172,42 @@ const routerPatches = [
   },
 ];
 
-// The chat page on a phone: chat and preview as the kit's two tabs, each the whole width, both kept mounted
-// so a switch keeps scroll, the stream and the preview's state. Side by side they were 95 px each at 390 px.
+// The chat page on a narrow screen: chat and preview as the kit's two tabs, each the whole width, both kept
+// mounted so a switch keeps scroll, the stream and the preview's state. Side by side they were 95 px each at
+// 390 px. Which layout applies is asked of the kernel.
 // The panels no longer animate their width (a layout property); a collapse or expand is immediate.
 const CHAT = "src/pages/chat.tsx";
 const chatPatches = [
   {
     file: CHAT,
     from: `const DEFAULT_CHAT_PANEL_SIZE = 50;`,
-    to: `import React, { useSyncExternalStore } from "react";
+    to: `import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const DEFAULT_CHAT_PANEL_SIZE = 50;
 
-// Narrow is the kit's mobile breakpoint (its use-mobile hook): under 768 px.
-const NARROW = "(max-width: 767px)";
+// Whether chat and preview are tabs or side by side is the Forge kernel's decision for the window's width
+// (FK-16 and FK-17, proved by Lean: tabs under 768 px, split from 768). The last answer is kept, so a return
+// visit draws the right layout at once; the kernel is asked again on load and on every resize.
+const LAST_LAYOUT = "holo.layout.narrow";
 function useNarrow() {
-  return useSyncExternalStore(
-    (change) => { const q = matchMedia(NARROW); q.addEventListener("change", change); return () => q.removeEventListener("change", change); },
-    () => matchMedia(NARROW).matches,
-    () => false,
-  );
+  const [narrow, setNarrow] = useState(() => { try { return localStorage.getItem(LAST_LAYOUT) === "1"; } catch { return false; } });
+  useEffect(() => {
+    let live = true;
+    const decide = () => {
+      const kernel = window.__forgeKernel;
+      if (!kernel) return;
+      void kernel.ask("layout " + Math.max(0, Math.round(innerWidth))).then((answer) => {
+        if (!live || (answer !== "tabs" && answer !== "split")) return;
+        setNarrow(answer === "tabs");
+        try { localStorage.setItem(LAST_LAYOUT, answer === "tabs" ? "1" : "0"); } catch { /* storage is a convenience */ }
+      });
+    };
+    decide();
+    addEventListener("resize", decide);
+    return () => { live = false; removeEventListener("resize", decide); };
+  }, []);
+  return narrow;
 }
 
 function NarrowChat({ chatId }: { chatId: React.ComponentProps<typeof ChatPanel>["chatId"] }) {

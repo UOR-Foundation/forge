@@ -1,4 +1,0 @@
-{
-  "routeJsKB": { "home": 615, "chat": 930, "settings": 645, "app-details": 645, "apps": 630, "CodeView": 945, "PublishPanel": 960 },
-  "journeys": { "mobileColdLcpMs": 10500, "mobileWarmLcpMs": 1800, "mobileInpMs": 450, "firstTokenMs": 2600 }
-}

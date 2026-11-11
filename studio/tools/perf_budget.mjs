@@ -1,4 +1,7 @@
-// The Performance gate: the renderer as built must stay inside the budget recorded in perf_budget.json.
+// The Performance gate: the renderer as built must stay inside its budgets, and the budgets are the Forge
+// kernel's (FK-12 to FK-15, proved by Lean in app/src): every measure is asked as "budget <journey> <value>"
+// of the guest KERNEL_REV pins, loaded through shell/kernel.js exactly as the page loads it, and the kernel
+// answers within or over. No budget is written anywhere else.
 //
 //   node tools/perf_budget.mjs             the JS each route needs, gzip bytes, from the build's manifest
 //   node tools/perf_budget.mjs --browser   also the mobile journeys in Chromium (Playwright 1.56.1, as CI
@@ -7,8 +10,8 @@
 //
 // Run from studio/ after the renderer's build and scripts/stamp_shell.py. The browser part serves shell/
 // itself under /foundry/ as Pages does, through one throttled link (562 ms RTT, 1474 kbps: Slow 4G as
-// Lighthouse applies it), with the CPU slowed 4x, at 390x844. It refuses a route or a journey missing from
-// the budget, a budget naming something the build no longer has, and any number over its budget.
+// Lighthouse applies it), with the CPU slowed 4x, at 390x844. It refuses a route the build no longer has as a
+// chunk of its own, a journey the kernel holds no budget for, and any measure the kernel answers over.
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -17,15 +20,28 @@ import { execSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const studio = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const budget = JSON.parse(fs.readFileSync(path.join(studio, "tools", "perf_budget.json"), "utf8"));
 const shell = path.join(studio, "shell");
+
+// The kernel, as the page runs it: kernel.js checks the guest against its pin and replays every vector first.
+globalThis.self = globalThis;
+await import(pathToFileURL(path.join(shell, "kernel.js")).href);
+const kernel = await self.ForgeKernel.load(async (p) => new Response(fs.readFileSync(path.join(shell, p))));
+// The budget itself, for the message only: the largest value the kernel still answers within.
+async function budgetOf(journey) {
+  let lo = 0, hi = 1 << 20;
+  if ((await kernel.ask(`budget ${journey} 0`)) !== "within") return null;
+  while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if ((await kernel.ask(`budget ${journey} ${mid}`)) === "within") lo = mid; else hi = mid - 1; }
+  return lo;
+}
 const viteManifest = path.join(studio, "vendor", "dyad", "dist", ".vite", "manifest.json");
 const failures = [];
-const report = (name, value, limit, unit) => {
-  const ok = value <= limit;
-  if (!ok) failures.push(`${name}: ${value} ${unit} is over its budget of ${limit} ${unit}`);
-  console.log(`${ok ? "within" : "OVER  "} ${name.padEnd(34)} ${String(value).padStart(7)} ${unit} (budget ${limit})`);
-};
+async function report(journey, name, value, unit) {
+  const answer = await kernel.ask(`budget ${journey} ${value}`);
+  const limit = await budgetOf(journey);
+  if (answer !== "within" && answer !== "over") { failures.push(`${name}: the kernel holds no budget for "${journey}" (it answered ${answer})`); return; }
+  if (answer === "over") failures.push(`${name}: ${value} ${unit} is over its budget of ${limit} ${unit} (the kernel's answer)`);
+  console.log(`${answer === "within" ? "within" : "OVER  "} ${name.padEnd(34)} ${String(value).padStart(7)} ${unit} (kernel budget ${limit})`);
+}
 
 // ---- the JS each route needs: the entry's static closure plus the route chunk's, gzip level 9.
 if (!fs.existsSync(viteManifest)) { console.error(`no ${path.relative(studio, viteManifest)}: build the renderer first`); process.exit(2); }
@@ -48,19 +64,19 @@ function closure(key, into = new Set()) {
   return into;
 }
 const entry = closure(entryKey);
-const routes = budget.routeJsKB;
-if (!routes || !Object.keys(routes).length) failures.push("perf_budget.json names no route");
+// The kernel's journey name for each route, and the chunk the build names it by.
+const routes = { home: "home", chat: "chat", settings: "settings", details: "app-details", apps: "apps", code: "CodeView", publish: "PublishPanel" };
 // A route or panel is named by its chunk's name (the page or component file's name); a locale file of the
 // same name is not it. "home" is the first load: the entry and what it imports statically.
 const chunkNamed = (name) => Object.keys(m).filter((k) => m[k].name === name && m[k].isDynamicEntry && !String(m[k].src ?? "").endsWith(".json"));
-for (const [route, limit] of Object.entries(routes ?? {})) {
+for (const [journey, route] of Object.entries(routes)) {
   let files = entry;
   if (route !== "home") {
     const keys = chunkNamed(route);
     if (keys.length !== 1) { failures.push(`${route}: the build has ${keys.length} chunks of that name loaded on demand, not one (is it in the first load?)`); continue; }
     files = closure(keys[0], new Set(entry));
   }
-  report(`JS for ${route}`, Math.round([...files].reduce((a, f) => a + gzipOf(f), 0) / 1024), limit, "KB");
+  await report(journey, `JS for ${route}`, Math.round([...files].reduce((a, f) => a + gzipOf(f), 0) / 1024), "KB");
 }
 
 // ---- the mobile journeys
@@ -72,7 +88,6 @@ if (process.argv.includes("--browser")) {
   const BASE = `http://localhost:${port}/foundry/`;
   // PERF_CHANNEL=chrome runs it in an installed Chrome on a workstation; CI uses the Chromium Playwright installs.
   const browser = await chromium.launch({ headless: true, channel: process.env.PERF_CHANNEL || undefined });
-  const measured = {};
   const median = (xs) => xs.slice().sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   const cold = [], warm = [], inp = [], token = [];
   for (let run = 0; run < 3; run++) {
@@ -111,13 +126,12 @@ if (process.argv.includes("--browser")) {
     await ctx.close();
   }
   await browser.close();
-  measured.mobileColdLcpMs = median(cold); measured.mobileWarmLcpMs = median(warm); measured.mobileInpMs = median(inp); measured.firstTokenMs = median(token);
   console.log("runs", JSON.stringify({ cold, warm, inp, token }));
-  for (const [name, limit] of Object.entries(budget.journeys ?? {})) {
-    if (!(name in measured)) { failures.push(`${name}: the budget names a journey this gate does not measure`); continue; }
-    report(name, measured[name], limit, "ms");
-  }
-  for (const name of Object.keys(measured)) if (!(name in (budget.journeys ?? {}))) failures.push(`${name}: measured but has no budget`);
+  // The kernel's journey names: cold and warm LCP, the slowest of the three presses, Enter to the first token.
+  await report("cold", "mobile cold LCP", median(cold), "ms");
+  await report("warm", "mobile warm LCP", median(warm), "ms");
+  await report("inp", "mobile INP", median(inp), "ms");
+  await report("token", "Enter to first token", median(token), "ms");
   server.close();
 }
 

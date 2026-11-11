@@ -190,7 +190,7 @@ fn forge_kernel_fk_14() {
 fn forge_kernel_fk_15() {
     pinned(
         "breaksRouteBelowFirstLoad",
-        "body: ((((4 <? (project request journey)) && ((project request journey) <? 11)) && ((ForgeKernel::budgetOf (project request journey)) <? (ForgeKernel::budgetOf 4))))",
+        "body: (((4 <? (project request journey)) && ((project request journey) <? 11)) && ((ForgeKernel::budgetOf (project request journey)) <? (ForgeKernel::budgetOf 4)))",
         "routeBelowFirstLoadHolds",
     );
 }

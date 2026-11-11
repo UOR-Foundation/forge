@@ -22,6 +22,8 @@
 #   ./scripts/plant.sh unapplied # a patch names a file the build never reads: the build must refuse rather than skip it
 #   ./scripts/plant.sh heavy     # home imports the chat page itself, un-split: the Performance gate must refuse
 #                                # (rebuild the renderer after it: the plant leaves its build in shell/assets)
+#   ./scripts/plant.sh tap       # shrink the touch hit area under the kernel's tap target: the Experience gate must refuse
+#   ./scripts/plant.sh inpbudget # raise the kernel's mobile INP budget past 500 ms: Lean must refuse FK-14 (run in the SDK image)
 #   ./scripts/plant.sh table     # invert a condition mask in the decision table: the Table gate must refuse
 #   ./scripts/plant.sh edit      # keep a patch that does not check: the Edit gate must refuse
 #   ./scripts/plant.sh look      # let the build screen fall back to the home look: the Build look check must refuse
@@ -172,7 +174,21 @@ EOF
     perl -pi -e 's/readJson\(BUILD_KEY\) \|\| \{ palette: "dark", immersive: false \}/readJson(BUILD_KEY) || home/' shell/appearance.js
     grep -q 'readJson(BUILD_KEY) || home;' shell/appearance.js || { echo "anchor not found"; exit 1; }
     expect_fail node tools/build_look.mjs ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|look|unapplied|heavy" >&2; exit 2 ;;
+  tap)
+    # A hit area a finger misses, typed into the stylesheet where the kernel cannot see it.
+    cp shell/appearance.css /tmp/plant-appearance.css
+    sed -i 's/width: max(100%, 44px); height: max(100%, 44px)/width: max(100%, 40px); height: max(100%, 40px)/' shell/appearance.css
+    grep -q 'max(100%, 40px)' shell/appearance.css || { echo "anchor not found"; exit 1; }
+    expect_fail node tools/experience.mjs --check
+    cp /tmp/plant-appearance.css shell/appearance.css ;;
+  inpbudget)
+    # A budget loosened in the kernel itself: the theorem that bounds it is what must stop it.
+    cp ../app/src/ForgeKernel.lex.tex /tmp/plant-kernel.lex.tex
+    sed -i 's/(if (journey =? 2) then 450 else/(if (journey =? 2) then 600 else/' ../app/src/ForgeKernel.lex.tex
+    grep -q 'then 600 else' ../app/src/ForgeKernel.lex.tex || { echo "anchor not found"; exit 1; }
+    expect_fail bash -c 'cd .. && prismpm --project app verify'
+    cp /tmp/plant-kernel.lex.tex ../app/src/ForgeKernel.lex.tex ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|look|unapplied|heavy|tap|inpbudget" >&2; exit 2 ;;
 esac
 restore
 echo "restored"

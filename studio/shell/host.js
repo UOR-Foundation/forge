@@ -891,6 +891,10 @@ async function codebaseOf(appId) {
 // can say proved only after Lean attested the current rules, and publish only proved rules. The
 // state lives at refs["prism:<appId>"].
 const kernelReady = import(new URL("kernel.js", BASE).href).then(() => self.ForgeKernel.load((p) => fetch(new URL(p, BASE))));
+// The renderer's screens ask the kernel too, for the decisions it holds about them (the chat layout, what
+// counts as this week): the answer is the kernel's, the screen only draws it. Nothing is asked before the
+// guest has passed its pin and every acceptance vector.
+window.__forgeKernel = Object.freeze({ ask: (line) => kernelReady.then((k) => k.ask(line)) });
 const PHASES = ["drafting", "checked", "proving", "proved", "published"];
 async function nextPhase(phase, event) {
   const answer = await (await kernelReady).ask(phase + " " + event);
