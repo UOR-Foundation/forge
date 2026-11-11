@@ -632,5 +632,22 @@ definition{
   result: String,
   body: "A worker installs only its pinned hologram-forge/shell/1 closure. It independently recomputes SHA256 of the canonical ordered manifest rows, then verifies every declared file length and SHA256 before publishing file responses to its version cache or requesting activation. The existing manifest profile uses rows with keys bytes, path and sha256 in that order. Paths are unique ascending portable ASCII paths of at most 1024 characters, without URL escapes, queries, fragments or traversal. The manifest is at most 2 MiB, with at most 8192 files, 32 MiB per file and 128 MiB aggregate. The entrypoints index.html, host.js, core.wasm, assets/index.js, assets/index.css and scaffold/files.json are required. Renderer and scaffold assets belong to the closure, while the separate app/ site has its own closure; the worker, its template, the manifest, deployment credentials and the separately closure-bound provenance receipt are excluded to avoid circularity. Fetches are same-origin GET with redirects refused, credentials omitted and HTTP cache bypassed; at most eight are in flight. One deadline of at most 120 seconds covers headers, bodies and identity work. Invalid manifest, closure, file, response, limits, timeout, cancellation and unavailable dependencies have fixed typed failures. No unverified file becomes a verified cache response. Only successful installation permits activation and deletion of prior shell caches. Controlled renderer and scaffold requests read the active worker version rather than the newest network asset, including offline use. This is installation byte consistency, not authentication of the worker or server, qualification of compiler/dependency provenance, prevention of all first-navigation races, or complete release acceptance."
 }
+
+inductive{
+  name: BrowserTelemetryError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: browserTelemetryUnavailable, fields: []},
+    {name: browserTelemetryProjectionMismatch, fields: []}
+  ]
+}
+
+definition{
+  name: browserTelemetryBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser product does not initialize the imported renderer vendor telemetry SDK. Its browser projection removes the unique telemetry initialization declaration and retains the uninitialized imported client only for renderer context compatibility; no replacement analytics implementation is supplied. The browser settings surface states that vendor usage events, session recordings and diagnostic reports are not sent and exposes no enable switch or telemetry identifier. Reads normalize fresh and legacy settings to opted_out and remove telemetryUserId; writes persist that normalized policy and reject attempts to opt in with browserTelemetryUnavailable. The typed host envelope preserves this refusal without exposing source error text. Existing opted-in local storage cannot initialize the client. The projection parses the imported TypeScript and requires exactly the expected declaration and settings section; absent, duplicate or changed initializer shape refuses with browserTelemetryProjectionMismatch. Tests execute the actual installed imported SDK, including capture and exception calls, and observe browser network and persistent storage under fresh and legacy consent. This is a browser vendor telemetry boundary, not a claim that AI, publishing, image, font or other explicit product requests are offline or that every external effect has already been qualified."
+}
 \end{semanticmodule}
 \end{lexlean}

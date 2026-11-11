@@ -24,6 +24,7 @@ function program(configName, rewrite) {
   if (rewrite) {
     const get = host.getSourceFile.bind(host);
     host.getSourceFile = (file, lang, onError, fresh) => {
+      if (slash(file) === slash(path.join(here, "src/lib/settingsSearchIndex.ts"))) { const text = ts.sys.readFile(file); if (text !== undefined) return ts.createSourceFile(file, screenSource(file, text), lang, true); }
       if (slash(file).startsWith(src) && /\.tsx$/.test(file)) {
         const text = ts.sys.readFile(file);
         if (text !== undefined && slash(file).includes("/components/ui/")) return ts.createSourceFile(file, screenSource(file, text), lang, true);

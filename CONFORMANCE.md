@@ -60,6 +60,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-27` | `build` | Portable builds fetch only bounded approved-origin modules and retain exact module-byte receipts |
 
+## browser-telemetry-isolation
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-30` | `build` | The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings |
+
 ## capability-availability
 
 | ID | Level | Statement |
