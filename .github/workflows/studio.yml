@@ -15,6 +15,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request makes its earlier run moot: that run is cancelled. Runs on main all finish.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('studio-pr-{0}', github.event.pull_request.number) || format('studio-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lane:
     runs-on: ubuntu-24.04

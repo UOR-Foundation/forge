@@ -304,14 +304,10 @@ jobs:
         run: cd vendor/dyad && node hologram.typecheck.mjs
       - name: The Experience gate, the stylesheet's hit area, durations and reduced-motion rule held to the kernel's answers
         run: node tools/experience.mjs --check
-      - name: The Performance gate, JS per route and the mobile journeys inside the kernel's budgets (FK-12 to FK-15)
-        # Chromium at 390x844, 4x CPU slowdown, Slow 4G through one throttled link; three runs, medians. The
-        # warmup.json the step before wrote is not read: the gate serves its own placeholder key and a
-        # provider that answers at once, so the first token measures Forge, not the provider.
-        run: |
-          npm install --no-audit --no-fund --global playwright@1.56.1
-          playwright install --with-deps chromium
-          node tools/perf_budget.mjs --browser
+      - name: The Performance gate's static arm, the JS each route needs inside the kernel's budgets (FK-12, FK-15)
+        # Exact, from the build's chunk graph. The browser arm measures time, so it runs on the pull request that
+        # changes Forge (forge-perf.yml), not here, where a slower runner would stop the deploy for everyone.
+        run: node tools/perf_budget.mjs
       - name: The served site names nothing outside this repository
         run: node tools/self_contained.mjs shell
       # The site carries no provider key. Keys written into warmup.json were public to every visitor (see

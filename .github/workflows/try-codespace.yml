@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+    # Forge (studio/) is not read by the try page, the frame, the identity page or the try codespace: a pull
+    # request that changes only Forge does not wait for them.
+    paths-ignore:
+      - "studio/**"
   workflow_dispatch:
 
 permissions:
