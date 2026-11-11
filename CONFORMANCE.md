@@ -142,6 +142,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-03` | `build` | The browser host refuses unsupported channels and invalid contracted responses with typed errors |
 
+## inference-consent
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-34` | `build` | Cloud inference requires per-request disclosure and approval with cancellation before and after submission |
+
 ## inference-effect-boundary
 
 | ID | Level | Statement |

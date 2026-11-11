@@ -739,32 +739,6 @@ handlers.set("set-context-paths", async ({ appId, chatContext }) => { const a = 
 // boundary reports unsupportedChannel, preserving the renderer error state.
 window.__preview = buildPreview;
 
-// ---- the model: OpenRouter with the visitor's own key, streamed as OpenAI compatible SSE. The key
-// lives in the settings record as the renderer keeps it (providerSettings.openrouter.apiKey.value).
-async function* streamOpenRouter({ key, model, messages, signal }) {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST", signal,
-    headers: { "content-type": "application/json", authorization: "Bearer " + key, "HTTP-Referer": location.origin, "X-Title": "hologram-forge" },
-    body: JSON.stringify({ model, messages, stream: true }),
-  });
-  if (!res.ok) throw new Error("OpenRouter " + res.status + ": " + (await res.text()).slice(0, 200));
-  const reader = res.body.getReader();
-  let buf = "";
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let i;
-    while ((i = buf.indexOf("\n")) >= 0) {
-      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (!line.startsWith("data:")) continue;
-      const data = line.slice(5).trim();
-      if (data === "[DONE]") return;
-      try { const j = JSON.parse(data); const d = j.choices && j.choices[0] && j.choices[0].delta; if (d && d.content) yield d.content; if (j.error) throw new Error(j.error.message || "model error"); } catch (e) { if (e instanceof SyntaxError) continue; throw e; }
-    }
-  }
-}
-
 // ---- the renderer's tags: what the model writes becomes files. The grammar is the renderer's: a block per
 // file, attributes path and description, content verbatim between the tags; delete and rename are
 // single tags; add-dependency names packages the import map must carry.
@@ -786,7 +760,7 @@ async function applyDyadTags(appId, tags, options = {}) {
   const result = await applyStoredProjectPatch(await dbReady, appId, tags, { core, derive: kappa, ...options });
   return result;
 }
-window.__chat = { streamOpenRouter, parseDyadTags, applyDyadTags };
+window.__chat = { parseDyadTags, applyDyadTags };
 
 // ---- the chat stream machine. the renderer submits a turn only here: SUBMIT on the chat_stream
 // machine, then it watches the snapshot (admitting, streaming, finalizing, idle) and applies the

@@ -144,3 +144,10 @@ FA-31 (#66) has now passed full SDK 43051703625 as well as Studio, Try-page
 and codespace gates. FA-32 is in #67 with full acceptance pending. FA-33's
 event protocol source is in #68; its generated-guest installation and browser
 acceptance are pending. Pure event admission is distinct from durable delivery.
+
+FA-32 (#67) now passes exact-head SDK 43052840608, Studio 43052840850,
+Try-page 43052840803 and codespace 43052840910 and is ready for review.
+FA-34 adds per-request cloud inference disclosure/approval with pending and
+active cancellation. Its model and evidence are recorded separately.
+Main d31bc32 already includes the earlier boundary stack and reviewed lifecycle
+race fixes; this stack retains them. Earlier PR readiness records are historical.

@@ -71,7 +71,7 @@ test("the actual paidGenerate adapter delegates transport and records validated 
   const source = fs.readFileSync(new URL("../shell/inference.js", import.meta.url), "utf8");
   const start = source.indexOf("export async function paidGenerate"), end = source.indexOf("// ---- the route:", start);
   let captured;
-  const context = { providerOf: () => "openrouter", paidId: m => m.replace("openrouter/", ""), coreReady: async () => ({ run: () => ({ bytes: '{}' }) }), keyFor: async () => "key", viewReady: async () => ({}), location: { origin: "https://foundry.test" }, cloudCompletion: async input => { captured = input; return { text: "answer", finish: "stop", ttftMs: 12, last: { id: "r", usage: { prompt_tokens: 4, completion_tokens: 1 } } }; } };
+  const context = { settingsGet: async () => ({}), authorizeInference: async input => ({ disclosure: input, signal: input.signal, close() {} }), providerOf: () => "openrouter", paidId: m => m.replace("openrouter/", ""), coreReady: async () => ({ run: () => ({ bytes: '{}' }) }), keyFor: async () => "key", viewReady: async () => ({}), location: { origin: "https://foundry.test" }, cloudCompletion: async input => { captured = input; return { text: "answer", finish: "stop", ttftMs: 12, last: { id: "r", usage: { prompt_tokens: 4, completion_tokens: 1 } } }; } };
   vm.createContext(context); vm.runInContext(source.slice(start, end).replace("export ", ""), context);
   const result = await context.paidGenerate({ model: "openrouter/model" });
   assert.equal(captured.bytes, '{}'); assert.equal(result.text, "answer"); assert.equal(result.rec.ttftMs, 12); assert.equal(result.rec.rederivable, false);

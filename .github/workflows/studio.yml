@@ -86,6 +86,7 @@ jobs:
           node tools/generation_patch_browser.mjs
           node tools/rules_source_browser.mjs
           node tools/inference_effects_browser.mjs
+          node tools/inference_consent_browser.mjs
           node tools/exact_representation_browser.mjs
           node tools/provider_key_browser.mjs
       - name: Every shell script parses the way the browser parses it
