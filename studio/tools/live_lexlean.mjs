@@ -43,6 +43,7 @@ const semantic = (l) => ({ fields: l.fields, rules: l.rules.map((r) => ({ when: 
 // round trip
 claim("round trip: Verdant re-writes to the same bytes", lex.toLexLean(spec) === source, `${source.split("\n").length} lines`);
 const rsvp = JSON.parse(fs.readFileSync(path.join(root, "tools/fixtures/live/rsvp.json"), "utf8"));
+const hostSource = fs.readFileSync(path.join(root, "shell/host.js"), "utf8");
 let rsvpBack = null, rsvpError = "", rsvpText = "";
 try { rsvpText = lex.toLexLean(rsvp); rsvpBack = lex.readLexLean(rsvpText); } catch (e) { rsvpError = e.message; }
 // A comparison of two fields may read back with its sides swapped (a > b as b < a), so the logic is
@@ -185,6 +186,39 @@ claim("cap: a broken app over 24 rules is refused with its counterexample", bb.o
 let proveWord = "";
 try { await prism.prove(spec); } catch (e) { proveWord = e.message; }
 claim("cap: proving an app over 24 rules is refused, and says why", /24 rules/.test(proveWord) && /605/.test(proveWord), proveWord);
+
+// What real models got wrong (Haiku and Sonnet on Foundry's prompt, four apps each): the reader names the
+// mistake so the model can fix it, and reads what is unambiguous. Each case is the prompt's own example,
+// changed the way a model changed its module.
+const ex = example ? example[1] : "";
+const refusal = (text) => { try { lex.readLexLean(text.trim() + "\n"); return ""; } catch (e) { return e.message; } };
+const exSpec = example ? lex.readLexLean(ex.trim() + "\n") : null;
+const sameAsExample = (text) => { try { const s = lex.readLexLean(text.trim() + "\n"); return same(semantic(logicOf(s)), semantic(logicOf(exSpec))) && JSON.stringify(s.properties) === JSON.stringify(exSpec.properties); } catch (e) { return false; } };
+const extra = refusal(ex.replace("<? 3))", "<? 3)))"));
+claim("errors: one \")\" too many is named, with where", /^inBounds: one "\)" too many, after/.test(extra), extra);
+const missing = refusal(ex.replace("(answerStandard))))", "(answerStandard)))"));
+claim("errors: a \")\" missing is named", /^judge: 1 "\)" missing/.test(missing), missing);
+const several = refusal(ex.replaceAll("<? 3))", "<? 3)))"));
+claim("errors: every unbalanced declaration is named at once", /^2 declarations have unbalanced parentheses: inBounds: .*; breaksInv001: /.test(several), several);
+const misnamed = refusal(ex.replaceAll("vehicleTruck", "typeTruck"));
+claim("errors: a value named after anything but its field is told its name", /typeTruck .*vehicleTruck$/.test(misnamed), misnamed);
+claim("reads: `x <? N` bounds a number as `x <=? N - 1`", sameAsExample(ex.replaceAll("(project request hours) <=? 24)", "(project request hours) <? 25)")));
+claim("reads: a guarantee may name inBounds and its rule, and leave its outer pair off", sameAsExample(ex.replace(/(name: breaksInv001,[\s\S]*?body: )[^\n]*/, "$1((inBounds request) && (rule1 request)) && ((judge request) =? (answerPremium))")));
+
+// one repair turn, with the reader's words
+const brokenTurn = "Here are the rules.\n<prism-lexlean>\n" + ex.replace("<? 3))", "<? 3)))").trim() + "\n</prism-lexlean>";
+const fixed = "<prism-lexlean>\n" + ex.trim() + "\n</prism-lexlean>";
+const asked = [];
+const afterRepair = await lex.withRepair(brokenTurn, async (p) => { asked.push(p); return fixed; });
+const repairedSpec = lex.specFromTurn(afterRepair);
+claim("repair: a module that does not read is asked for once, with the reader's words, and the answer is read", asked.length === 1 && asked[0].includes('inBounds: one ")" too many') && !!repairedSpec && !repairedSpec.error && repairedSpec.name === "ParkingFee", asked[0] ? asked[0].split("\n")[0] : "never asked");
+const untouched = [];
+const good = await lex.withRepair(fixed, async (p) => { untouched.push(p); return ""; });
+claim("repair: a module that reads is never sent back", untouched.length === 0 && good === fixed);
+const twice = [];
+const still = lex.specFromTurn(await lex.withRepair(brokenTurn, async (p) => { twice.push(p); return brokenTurn; }));
+claim("repair: one attempt only; a repair that still does not read is shown with its error", twice.length === 1 && !!still && !!still.error, still && still.error);
+claim("repair: the host asks on both paid routes", (hostSource.match(/await repaired\((body|warmBody)\);/g) || []).length === 2 && hostSource.includes("lexlean.withRepair("));
 
 // budget
 const runs = [];

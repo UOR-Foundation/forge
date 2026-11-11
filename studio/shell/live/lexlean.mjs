@@ -107,8 +107,22 @@ function tokens(src, where) {
 }
 
 const BIN = new Set(["=?", "<?", "<=?", "&&", "||"]);
+// Models lose count of parentheses in long chains (measured: three of four unreadable modules from real
+// models), and "unexpected &&" does not tell them which. Counted first, the error says how many and where.
+function balance(t, where) {
+  let depth = 0;
+  for (let j = 0; j < t.length; j++) {
+    if (t[j] === "(") depth++;
+    else if (t[j] === ")" && --depth < 0) {
+      const before = t.slice(Math.max(0, j - 6), j).join(" ");
+      throw new LexLeanError(`one ")" too many, after "${before}": every && and every if takes exactly one pair, as in (((a && b) && c) && d)`, where);
+    }
+  }
+  if (depth > 0) throw new LexLeanError(`${depth} ")" missing at the end: every && and every if takes exactly one pair, so an if-chain of n ifs ends with n ")"`, where);
+}
 function parseExpr(src, where) {
   const t = tokens(src, where);
+  balance(t, where);
   let i = 0;
   const peek = () => t[i], next = () => t[i++];
   const expect = (x) => { if (next() !== x) throw new LexLeanError(`expected "${x}"`, where); };
@@ -129,7 +143,8 @@ function parseExpr(src, where) {
     while (BIN.has(peek())) { const op = next(); left = { op, left, right: primary() }; }
     return left;
   }
-  const e = primary();
+  // A body may leave its outermost pair off (`a && b`): it reads the same, and the canonical source writes it on.
+  const e = inner();
   if (i !== t.length) throw new LexLeanError(`unexpected "${t[i]}"`, where);
   return e;
 }
@@ -145,6 +160,16 @@ export function readLexLean(text) {
   const bs = blocks(text);
   const byName = new Map(bs.map((b) => [b.name, b]));
   const bodyOf = (b) => { const m = /\bbody:\s*/.exec(b.body); if (!m) throw new LexLeanError("no body", b.name); return b.body.slice(m.index + m[0].length).replace(/,\s*(axioms|recursive_argument):[\s\S]*$/, "").trim(); };
+  // Every declaration's parentheses, counted before any is read: a model that lost a pair usually lost it
+  // in several (measured: a repair that fixed the one named and kept the same slip in another), so all are
+  // named at once.
+  const unbalanced = [];
+  for (const b of bs) {
+    if (b.kind !== "definition" || !/\bbody:/.test(b.body)) continue;
+    try { balance(tokens(bodyOf(b), b.name), b.name); } catch (e) { if (e instanceof LexLeanError) unbalanced.push(e.message); else throw e; }
+  }
+  if (unbalanced.length > 1) throw new LexLeanError(`${unbalanced.length} declarations have unbalanced parentheses: ${unbalanced.map((m) => m.split(": every &&")[0]).join("; ")}. Every && and every if takes exactly one pair, as in (((a && b) && c) && d)`);
+  if (unbalanced.length === 1) throw new LexLeanError(unbalanced[0]);
 
   const req = bs.find((b) => b.kind === "structure" && b.name === "Request");
   if (!req) throw new LexLeanError("no structure Request");
@@ -194,7 +219,13 @@ export function readLexLean(text) {
     if (!lf && !rf) throw new LexLeanError("a condition must name a field", where);
     const fid = lf ?? rf, v = val(lf ? b.right : b.left);
     if (!fieldIds.includes(fid)) throw new LexLeanError(`unknown field ${fid}`, where);
-    if (!v) throw new LexLeanError("unknown value", where);
+    if (!v) {
+      const x = lf ? b.right : b.left, id = x.id ?? (x.app && !x.args.length ? x.app : null);
+      // A value is found by its name alone: `<field><Value>`. A model that names it otherwise (measured:
+      // `submittedYes` for field `projectSubmitted`) is told the name the reader looks for.
+      if (id && consts.has(id)) throw new LexLeanError(`${id} is not a value of ${fid}: a choice's values are named after their field, so this one is ${fid}${(/[A-Z]\w*$/.exec(id) || [""])[0] || id[0].toUpperCase() + id.slice(1)}`, where);
+      throw new LexLeanError(`${id ?? "this"} is not a value of ${fid}: compare ${fid} with a whole number${choices[fid] ? " or one of " + Object.keys(Object.fromEntries([...constOf].filter(([, c]) => c.field === fid))).join(", ") : ""}`, where);
+    }
     if (v.choice) {
       if (b.op !== "=?" || !lf || v.choice.field !== fid) throw new LexLeanError(`${fid} is a choice: compare it with =? and one of its codes`, where);
       return { field: fid, op: neg ? "is not" : "is", value: v.choice.value };
@@ -202,6 +233,12 @@ export function readLexLean(text) {
     if (choices[fid]) {
       // A choice's only numeric condition is its bound: the code is below the number of choices.
       if (bound && lf && b.op === "<?" && !neg && v.num === choices[fid].length) return { field: fid, op: "<", value: v.num };
+      if (bound && lf && b.op === "<?" && !neg) {
+        // A count that disagrees usually means a value named after something else: it is not counted.
+        const owned = [...constOf].filter(([, c]) => c.field === fid).map(([k]) => k);
+        const stray = [...consts.keys()].filter((k) => !constOf.has(k) && !/^answer[A-Z]/.test(k));
+        throw new LexLeanError(`${fid} has ${owned.length} values (${owned.join(", ")}), not ${v.num}${stray.length ? `; ${stray.join(", ")} is named after no field, and a value of ${fid} is named ${fid}<Value>, as ${fid}${(/[A-Z]\w*$/.exec(stray[0]) || [""])[0]}` : ""}`, where);
+      }
       throw new LexLeanError(`${fid} is a choice: compare it with one of its codes`, where);
     }
     const op = lf ? { "=?": "=", "<?": "<", "<=?": "<=" }[b.op] : { "=?": "=", "<?": ">", "<=?": ">=" }[b.op];
@@ -216,7 +253,9 @@ export function readLexLean(text) {
   const fields = fieldIds.map((fid) => {
     if (choices[fid]) return { name: fid, kind: "choice", values: choices[fid] };
     const own = bounds.filter((c) => c.field === fid);
-    const max = own.find((c) => c.op === "<=")?.value, min = own.find((c) => c.op === ">=")?.value ?? 0;
+    // `x <? N` bounds a number as surely as `x <=? N - 1`; the canonical source writes the latter.
+    const below = own.find((c) => c.op === "<")?.value;
+    const max = own.find((c) => c.op === "<=")?.value ?? (below > 0 ? below - 1 : undefined), min = own.find((c) => c.op === ">=")?.value ?? 0;
     if (max === undefined) throw new LexLeanError(`${fid} needs an upper bound ((project request ${fid}) <=? N)`, "inBounds");
     return { name: fid, kind: "number", min, max };
   });
@@ -245,7 +284,13 @@ export function readLexLean(text) {
     if (m && !byName.has(m[1])) throw new LexLeanError(`no definition ${m[1]}`, th.name);
   }
   for (const bb of bs.filter((b) => b.kind === "definition" && /^breaks[A-Z]\w*$/.test(b.name))) {
-    const terms = flatAnd(parseExpr(bodyOf(bb), bb.name));
+    // `(inBounds request)` or `(ruleN request)` in a guarantee means exactly its definition's conditions
+    // (a model wrote it so); they are read in place, and the canonical source writes them out.
+    const inline = (c) => {
+      const name = c.app && c.args.length === 1 && c.args[0].id === "request" ? c.app : null;
+      return name && (name === "inBounds" || /^rule\d+$/.test(name)) && byName.has(name) ? flatAnd(parseExpr(bodyOf(byName.get(name)), name)) : [c];
+    };
+    const terms = flatAnd(parseExpr(bodyOf(bb), bb.name)).flatMap(inline);
     const last = terms.pop(), neg = !!last.not, j = last.not ?? last;
     if (j.op !== "=?" || j.left.app !== "judge") throw new LexLeanError("the last term must compare (judge request) with an answer", bb.name);
     const stem = bb.name.slice(6);
@@ -307,20 +352,39 @@ export function canonicalSource(spec) {
  * A chat turn's LexLean module: the text inside `<prism-lexlean>…</prism-lexlean>`. Returns null when
  * the turn has none, { error } when it does not read, else { name, source, spec }. The model writes the
  * declarations; the source kept is the canonical module read from them, with the theorems derived, so the
- * same meaning is always the same bytes.
+ * same meaning is always the same bytes. A turn that wrote the module again (its repair) is read by its
+ * last module.
  */
 export function specFromTurn(text) {
-  const m = /<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(text || "");
-  if (!m) return null;
+  const all = [...(text || "").matchAll(/<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/g)];
+  if (!all.length) return null;
   try {
-    const spec = readLexLean(m[1].trim() + "\n");
+    const spec = readLexLean(all[all.length - 1][1].trim() + "\n");
     return { ...canonicalSource(spec), spec };
   } catch (e) { return { error: "The LexLean module does not read: " + e.message }; }
 }
 
+/** What Forge asks the model when its module does not read: the reader's own words, and the whole module again. */
+export function repairRequest(error) {
+  return `Forge could not read your <prism-lexlean> module. ${error}.\nWrite the whole module again, in one <prism-lexlean> block, with that fixed and nothing else changed. Write nothing but the block.`;
+}
+
+/**
+ * One repair turn: when the turn's module does not read, the model is asked once, with the reader's
+ * words, and its answer is added to the turn (read by its last module). Measured on real models: of four
+ * unreadable modules, a strong model fixed its one from the error alone. One attempt, never a loop: a
+ * module that still does not read is shown with the error, and the user decides.
+ * `ask(prompt)` sends the repair request after the turn and resolves the model's answer.
+ */
+export async function withRepair(turn, ask) {
+  const got = specFromTurn(turn);
+  if (!got || !got.error) return turn;
+  return turn + "\n\n" + (await ask(repairRequest(got.error.replace(/^The LexLean module does not read: /, ""))));
+}
+
 /** The part of a module a turn has written so far, projected as a draft; null before there is one. */
 export function partialFromTurn(text) {
-  const at = (text || "").indexOf("<prism-lexlean>");
+  const at = (text || "").lastIndexOf("<prism-lexlean>");
   if (at < 0) return null;
   const part = readLexLeanPartial(text.slice(at + 15).split("</prism-lexlean>")[0]);
   return part.spec ? part : null;

@@ -1161,6 +1161,17 @@ async function chatTurn(chatId, intent) {
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = full; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
+    // A LexLean module that does not read gets one repair turn from the same model, with the reader's
+    // words, streamed into this answer, so the user sees a fixed app rather than an error to relay.
+    const repaired = async (genBody) => {
+      const before = full;
+      const next = await lexlean.withRepair(before, async (prompt) => {
+        const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: prompt }] };
+        const { text } = await paidGenerate(ask, (t) => onText(before + "\n\n" + t), abort.signal);
+        return text;
+      });
+      if (next !== before) await onText(next);
+    };
     // Warm up: the local model is chosen but not resident yet; a held key (the visitor's, or the
     // site's) answers through OpenRouter meanwhile, and the local model starts loading for the next turn.
     const warm = route === "Local" && !engine.instance && core.run({ op: "warmup", localReady: !!engine.instance, keyPresent: !!(await inference.keyGet()), online: navigator.onLine }).warmup;
@@ -1175,6 +1186,7 @@ async function chatTurn(chatId, intent) {
       else {
         const { text, rec } = await paidGenerate(warmBody, (t) => onText(t), abort.signal);
         await onText(text);
+        await repaired(warmBody);
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
@@ -1183,6 +1195,7 @@ async function chatTurn(chatId, intent) {
       const thinking = (r) => onText("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
       const { text, rec } = await paidGenerate(body, (t) => onText(t), abort.signal, thinking);
       await onText(text);
+      await repaired(body);
       // An answer cut at the token limit is not sealed, so the same request is never served it again.
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
     } else {

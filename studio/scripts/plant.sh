@@ -24,6 +24,8 @@
 #   ./scripts/plant.sh lexlean   # drop the upper piece of a box subtraction in the obligations: the LexLean gate must refuse
 #   ./scripts/plant.sh lexread   # read LexLean <? as <=: the LexLean gate must refuse
 #   ./scripts/plant.sh proof     # rule 2 breaking two guarantees in the Lean fixture: the kernel must refuse to decide it
+#   ./scripts/plant.sh repair    # never ask the model to repair a module that does not read: the LexLean gate must refuse
+#   ./scripts/plant.sh parens    # count no parentheses before parsing: the LexLean gate must refuse the vague error
 #   ./scripts/plant.sh look      # let the build screen fall back to the home look: the Build look check must refuse
 # `hole` runs the Contract gate, which bundles the vendored contracts with the renderer's own esbuild,
 # so run it where those dependencies were installed for this platform -- otherwise esbuild refuses to
@@ -166,6 +168,18 @@ EOF
     sed -i 's/const op = lf ? { "=?": "=", "<?": "<", "<=?": "<=" }\[b.op\]/const op = lf ? { "=?": "=", "<?": "<=", "<=?": "<=" }[b.op]/' shell/live/lexlean.mjs
     expect_fail node tools/live_lexlean.mjs --check
     cp /tmp/plant-lexlean.mjs shell/live/lexlean.mjs ;;
+  repair)
+    # A turn whose module does not read is shown with its error, never sent back to the model.
+    cp shell/live/lexlean.mjs /tmp/plant-lexlean.mjs
+    sed -i 's/  if (!got || !got.error) return turn;/  return turn;/' shell/live/lexlean.mjs
+    expect_fail node tools/live_lexlean.mjs --check
+    cp /tmp/plant-lexlean.mjs shell/live/lexlean.mjs ;;
+  parens)
+    # Parentheses not counted: a model is told "unexpected &&", not which pair it lost.
+    cp shell/live/lexlean.mjs /tmp/plant-lexlean.mjs
+    sed -i 's/^function balance(t, where) {$/function balance(t, where) { return;/' shell/live/lexlean.mjs
+    expect_fail node tools/live_lexlean.mjs --check
+    cp /tmp/plant-lexlean.mjs shell/live/lexlean.mjs ;;
   proof)
     # A fixture whose rule 2 breaks two guarantees: Lean's kernel must refuse to decide its obligations.
     cp proof/PrismLive/VerdantRegions.lean /tmp/plant-verdant.lean
@@ -178,7 +192,7 @@ EOF
     perl -pi -e 's/readJson\(BUILD_KEY\) \|\| \{ palette: "dark", immersive: false \}/readJson(BUILD_KEY) || home/' shell/appearance.js
     grep -q 'readJson(BUILD_KEY) || home;' shell/appearance.js || { echo "anchor not found"; exit 1; }
     expect_fail node tools/build_look.mjs ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|lexlean|lexread|proof|look" >&2; exit 2 ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|lexlean|lexread|repair|parens|proof|look" >&2; exit 2 ;;
 esac
 restore
 echo "restored"
