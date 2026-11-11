@@ -62,7 +62,7 @@ jobs:
         run: echo "key=prism-page-v1-${{ hashFiles('**', '!studio/**', '!.git/**') }}" >>"$GITHUB_OUTPUT"
       - name: The page already built, verified and signed from these files, if there is one
         id: reuse
-        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: verified-page
           key: ${{ steps.address.outputs.key }}
@@ -199,7 +199,7 @@ jobs:
       # author sees it, not here after the merge, where a slower page stopped every deploy until traced.
       - name: The screens' browser, kept by its version
         if: steps.reuse.outputs.cache-hit != 'true'
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-1.56.1-chromium-${{ runner.os }}-${{ runner.arch }}
@@ -227,7 +227,7 @@ jobs:
           node bootstrap/screens.mjs site screens
       - name: Keep the screens
         if: always() && steps.reuse.outputs.cache-hit != 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: screens
           path: screens
@@ -238,12 +238,12 @@ jobs:
         run: cp -r site verified-page
       - name: Save the page under its address
         if: steps.reuse.outputs.cache-hit != 'true'
-        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: verified-page
           key: ${{ steps.address.outputs.key }}
       - name: Keep the Prism page, deployed under app/ beside Forge
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: prism-page
           path: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}
@@ -266,10 +266,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
-      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cache/hologram-forge-lane
@@ -279,7 +279,7 @@ jobs:
         run: ./scripts/lane.sh
       - name: Byte identity corpus and shell hash check
         run: python3 tools/corpus.py
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
           # The renderer's 1,600 packages come from the runner's cache while its lockfile is unchanged.
@@ -314,7 +314,7 @@ jobs:
           found=$(find shell -name warmup.json -print -quit)
           if [[ -n $found ]]; then printf 'refused: %s would publish a provider key\n' "$found" >&2; exit 1; fi
       - name: Keep Forge's site, deployed at the root
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge-site
           path: studio/shell
@@ -334,21 +334,21 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Forge, at the root
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: forge-site
           path: out
       - name: The Prism page, under app/
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: prism-page
           path: out/app
       - name: Configure Pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
       - name: Upload the site
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
         with:
           path: out
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
