@@ -3,6 +3,56 @@ export const commandRegistryData = {
   "profile": "foundry/command-registry/1",
   "features": [
     {
+      "id": "actor",
+      "version": 1,
+      "owner": "FoundrySpecification.currentMainIntegrationBoundary",
+      "effects": [
+        "storage",
+        "network",
+        "execution"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
+      "id": "application-discovery",
+      "version": 1,
+      "owner": "FoundrySpecification.discoveryBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Finite vocabulary and explicit profile review; independent quality and release obligations remain."
+    },
+    {
+      "id": "chat-queue",
+      "version": 1,
+      "owner": "ChatQueue.boundary",
+      "effects": [],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Finite queue transitions; durable payload and actor integration are separately qualified."
+    },
+    {
+      "id": "composition",
+      "version": 1,
+      "owner": "FoundrySpecification.compositionHostBoundary",
+      "effects": [],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
       "id": "creation",
       "version": 1,
       "owner": "FoundrySpecification.projectCreationBoundary",
@@ -14,6 +64,35 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
+      "id": "durable-chat",
+      "version": 1,
+      "owner": "FoundrySpecification.durableChatQueueBoundary",
+      "effects": [
+        "storage",
+        "network",
+        "execution"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Queue admission grants no effect permission; inference, build and publication boundaries remain mandatory."
+    },
+    {
+      "id": "durable-version-preview",
+      "version": 1,
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
+      "effects": [
+        "storage",
+        "execution"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Origin window ownership and guest-admitted atomic source preview; imported version actor transport and independent recovery journeys apply."
     },
     {
       "id": "editing",
@@ -29,47 +108,12 @@ export const commandRegistryData = {
       "quality": "Independent journey and release obligations apply; this inventory grants no effects."
     },
     {
-      "id": "lifecycle",
+      "id": "event-delivery",
       "version": 1,
-      "owner": "FoundrySpecification.projectLifecycleBoundary",
+      "owner": "FoundrySpecification.eventDeliveryBoundary",
       "effects": [
         "storage"
       ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
-    },
-    {
-      "id": "import",
-      "version": 1,
-      "owner": "FoundrySpecification.projectImportBoundary",
-      "effects": [
-        "storage"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
-    },
-    {
-      "id": "composition",
-      "version": 1,
-      "owner": "FoundrySpecification.compositionHostBoundary",
-      "effects": [],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
-    },
-    {
-      "id": "work",
-      "version": 1,
-      "owner": "WorkProtocol.boundary",
-      "effects": [],
       "targets": [
         "browser"
       ],
@@ -88,9 +132,9 @@ export const commandRegistryData = {
       "quality": "Independent journey and release obligations apply; this inventory grants no effects."
     },
     {
-      "id": "event-delivery",
+      "id": "import",
       "version": 1,
-      "owner": "FoundrySpecification.eventDeliveryBoundary",
+      "owner": "FoundrySpecification.projectImportBoundary",
       "effects": [
         "storage"
       ],
@@ -125,76 +169,9 @@ export const commandRegistryData = {
       "quality": "Independent journey and release obligations apply; this inventory grants no effects."
     },
     {
-      "id": "representation",
+      "id": "lifecycle",
       "version": 1,
-      "owner": "FoundrySpecification.representationBoundary",
-      "effects": [],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
-    },
-    {
-      "id": "provider-validation",
-      "version": 1,
-      "owner": "FoundrySpecification.providerKeyBoundary",
-      "effects": [
-        "network"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
-    },
-    {
-      "id": "publication",
-      "version": 1,
-      "owner": "FoundrySpecification.publicationIdentityBoundary",
-      "effects": [
-        "storage",
-        "network",
-        "execution"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
-    },
-    {
-      "id": "privacy",
-      "version": 1,
-      "owner": "FoundrySpecification.browserTelemetryBoundary",
-      "effects": [
-        "storage"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
-    },
-    {
-      "id": "actor",
-      "version": 1,
-      "owner": "FoundrySpecification.currentMainIntegrationBoundary",
-      "effects": [
-        "storage",
-        "network",
-        "execution"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
-    },
-    {
-      "id": "rules",
-      "version": 1,
-      "owner": "FoundrySpecification.rulesSourceBoundary",
+      "owner": "FoundrySpecification.projectLifecycleBoundary",
       "effects": [
         "storage"
       ],
@@ -242,10 +219,91 @@ export const commandRegistryData = {
       "quality": "Independent journey and release obligations apply; this inventory grants no effects."
     },
     {
-      "id": "unavailable",
+      "id": "message-restoration",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
+      "owner": "FoundrySpecification.messageRestorationBoundary",
+      "effects": [
+        "storage",
+        "execution"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Verified source and message restoration share atomic acknowledgement; busy queues and changed history refuse."
+    },
+    {
+      "id": "privacy",
+      "version": 1,
+      "owner": "FoundrySpecification.browserTelemetryBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
+      "id": "prompt-library",
+      "version": 1,
+      "owner": "FoundrySpecification.promptLibraryBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Bounded transactional prompt library with exact imported contracts and rollback acceptance"
+    },
+    {
+      "id": "provider-validation",
+      "version": 1,
+      "owner": "FoundrySpecification.providerKeyBoundary",
+      "effects": [
+        "network"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
+      "id": "publication",
+      "version": 1,
+      "owner": "FoundrySpecification.publicationIdentityBoundary",
+      "effects": [
+        "storage",
+        "network",
+        "execution"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
+      "id": "representation",
+      "version": 1,
+      "owner": "FoundrySpecification.representationBoundary",
       "effects": [],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
+      "id": "rules",
+      "version": 1,
+      "owner": "FoundrySpecification.rulesSourceBoundary",
+      "effects": [
+        "storage"
+      ],
       "targets": [
         "browser"
       ],
@@ -264,43 +322,15 @@ export const commandRegistryData = {
       "quality": "Independent finite relevance and latency qualification; no permission authority."
     },
     {
-      "id": "application-discovery",
+      "id": "unavailable",
       "version": 1,
-      "owner": "FoundrySpecification.discoveryBoundary",
-      "effects": [
-        "storage"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Finite vocabulary and explicit profile review; independent quality and release obligations remain."
-    },
-    {
-      "id": "chat-queue",
-      "version": 1,
-      "owner": "ChatQueue.boundary",
+      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
       "effects": [],
       "targets": [
         "browser"
       ],
       "assurance": "boundary-inventory",
-      "quality": "Finite queue transitions; durable payload and actor integration are separately qualified."
-    },
-    {
-      "id": "durable-chat",
-      "version": 1,
-      "owner": "FoundrySpecification.durableChatQueueBoundary",
-      "effects": [
-        "storage",
-        "network",
-        "execution"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Queue admission grants no effect permission; inference, build and publication boundaries remain mandatory."
+      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
     },
     {
       "id": "version-history",
@@ -327,34 +357,6 @@ export const commandRegistryData = {
       "quality": "Guest ownership admission does not grant source mutation permission or authenticate an owner."
     },
     {
-      "id": "durable-version-preview",
-      "version": 1,
-      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
-      "effects": [
-        "storage",
-        "execution"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Origin window ownership and guest-admitted atomic source preview; imported version actor transport and independent recovery journeys apply."
-    },
-    {
-      "id": "message-restoration",
-      "version": 1,
-      "owner": "FoundrySpecification.messageRestorationBoundary",
-      "effects": [
-        "storage",
-        "execution"
-      ],
-      "targets": [
-        "browser"
-      ],
-      "assurance": "boundary-inventory",
-      "quality": "Verified source and message restoration share atomic acknowledgement; busy queues and changed history refuse."
-    },
-    {
       "id": "window-coordination",
       "version": 1,
       "owner": "FoundrySpecification.windowCoordinationBoundary",
@@ -366,6 +368,17 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Committed bounded origin window ownership, interest relay and query invalidation recovery; browser platform locks are cooperative, not authentication."
+    },
+    {
+      "id": "work",
+      "version": 1,
+      "owner": "WorkProtocol.boundary",
+      "effects": [],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent journey and release obligations apply; this inventory grants no effects."
     },
     {
       "id": "working-tree",
@@ -2614,41 +2627,41 @@ export const commandRegistryData = {
     },
     {
       "channel": "prompts:create",
-      "feature": "unavailable",
+      "feature": "prompt-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.promptLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },
     {
       "channel": "prompts:delete",
-      "feature": "unavailable",
+      "feature": "prompt-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.promptLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },
     {
       "channel": "prompts:list",
-      "feature": "unavailable",
+      "feature": "prompt-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.promptLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },
     {
       "channel": "prompts:update",
-      "feature": "unavailable",
+      "feature": "prompt-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.promptLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },

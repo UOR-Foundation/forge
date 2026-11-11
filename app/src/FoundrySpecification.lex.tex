@@ -419,7 +419,7 @@ definition{
   name: unavailableBrowserQueries,
   parameters: [],
   result: (List String),
-  body: (cons "prompts:list" (cons "list-all-media" (cons "free-agent-quota:get-status" (cons "get-themes" (cons "get-custom-themes" (cons "user-input:get-pending" (cons "get-app-upgrades" (cons "get-app-env-vars" (cons "get-templates" (cons "check-problems" (cons "app:list-screenshots" (cons "app:list-thumbnails" (cons "appCollections:list" (cons "coolify:get-status" (cons "coolify:discover" (cons "coolify-setup:snapshot" (cons "coolify-setup:get-server-key" (cons "coolify-setup:reveal-credentials" (cons "local-models:list-ollama" (cons "local-models:list-lmstudio" (cons "mcp:list-catalog" (cons "mcp:is-oauth-storage-encrypted" (cons "mcp:probe-callback-port" (cons "neon:get-project" (cons "neon:get-branch-env-vars" (cons "neon:get-email-password-config" (cons "supabase:detect-legacy-app-key" (cons "tests:list" (cons "tests:detect-legacy" (cons "vercel:get-sync-preview" (cons "get-latest-security-review" (cons "free-model-quota:get-status" (nil String)))))))))))))))))))))))))))))))))
+  body: (cons "list-all-media" (cons "free-agent-quota:get-status" (cons "get-themes" (cons "get-custom-themes" (cons "user-input:get-pending" (cons "get-app-upgrades" (cons "get-app-env-vars" (cons "get-templates" (cons "check-problems" (cons "app:list-screenshots" (cons "app:list-thumbnails" (cons "appCollections:list" (cons "coolify:get-status" (cons "coolify:discover" (cons "coolify-setup:snapshot" (cons "coolify-setup:get-server-key" (cons "coolify-setup:reveal-credentials" (cons "local-models:list-ollama" (cons "local-models:list-lmstudio" (cons "mcp:list-catalog" (cons "mcp:is-oauth-storage-encrypted" (cons "mcp:probe-callback-port" (cons "neon:get-project" (cons "neon:get-branch-env-vars" (cons "neon:get-email-password-config" (cons "supabase:detect-legacy-app-key" (cons "tests:list" (cons "tests:detect-legacy" (cons "vercel:get-sync-preview" (cons "get-latest-security-review" (cons "free-model-quota:get-status" (nil String))))))))))))))))))))))))))))))))
 }
 
 definition{
@@ -1126,6 +1126,27 @@ definition{
   parameters: [],
   result: String,
   body: "Browser pure guest execution preserves a fresh WebAssembly instance for every request, including acceptance replay. A dedicated worker executes at most sixteen requests before termination and replacement; replay always terminates its worker before exposing dispatch. This bounds virtual Wasm memory reservations independently of garbage-collection timing and leaves the local compiler able to initialize after replay. Requests remain copied before asynchronous execution. At most 64 requests and 64 MiB of captured request bytes can await execution; each worker request has a 30000 ms deadline. Queue exhaustion, worker startup, timeout, malformed result and execution failures retain typed kernelExecutionFailed; oversized outputs retain kernelResponseTooLarge. Worker failure terminates its isolate and subsequent admitted requests may create a new worker. Service workers cannot spawn dedicated workers, so their verified guest requests are relayed through private MessageChannels to at most eight controlled document clients. Only a current controller may request execution; the archive digest and guest SHA256 must match a document-verified kernel, and the document independently enforces its allocation/response bounds and bounded worker executor. At most eight verified kernels are registered per document. All ports close on settlement or a 30000 ms deadline; no owner or version mismatch refuses. This is cooperative same-origin transport, not independent authentication of a hostile browser realm. Other browser worker unavailability refuses; nonbrowser Node diagnostics execute the same fresh-instance function inline and establish no browser resource claim. No untrusted script or URL is accepted: worker source is the host's fixed execution adapter and messages contain only the verified compiled module, captured request and response bound. Worker ownership grants no effects and does not change guest bytes or SDK authority."
+}
+
+inductive{
+  name: PromptLibraryError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidPromptCommand, fields: []},
+    {name: promptLibraryInvalid, fields: []},
+    {name: promptMissing, fields: []},
+    {name: promptSlugConflict, fields: []},
+    {name: promptLibraryLimit, fields: []},
+    {name: promptLibraryStorageFailed, fields: []}
+  ]
+}
+
+definition{
+  name: promptLibraryBoundary,
+  parameters: [],
+  result: String,
+  body: "Prompt library list, create, update and delete use imported renderer input and output contracts. A dedicated settings record retains at most 1000 prompts and four MiB of UTF-8 JSON, with positive safe monotonic identities that are never reused after deletion. Titles and content are nonempty strings bounded to 256 and 65536 UTF-8 bytes; optional descriptions are bounded to 4096 bytes and nonempty slugs to 128 ASCII letters, digits or hyphens. Slugs are unique with exact case-sensitive comparison; null clears a slug and omitted update fields retain their values. Created and updated times are valid Dates; updates cannot precede creation. Input is captured before asynchronous work. Every operation validates the entire stored journal, and corrupt records never become an empty successful list. A read-write IndexedDB transaction reads, validates and writes one journal without asynchronous gaps; concurrent windows serialize in the database and completion alone acknowledges mutation. Request success followed by transaction abort is a typed failure with no partial acknowledgement. Listing returns detached records ordered by increasing identity. Invalid input, corrupt storage, absent identities, duplicate slugs, capacity or identity exhaustion and transaction failure are typed refusals with no prompt content in their messages. Data remains on the current browser origin, and this storage grants no network or execution effects. Imported prompt Dates preserve renderer semantics. This boundary is a reusable prompt library, not a claim of remote synchronization or agent execution."
 }
 \end{semanticmodule}
 \end{lexlean}

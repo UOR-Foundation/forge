@@ -168,6 +168,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-40` | `build` | Guest-admitted events commit to a source-bound durable queue and remain pending until ordered acknowledgement |
 
+## durable-prompt-library
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-61` | `build` | Prompt library creation updates deletion and listing persist atomically with bounded validated records and unique slugs |
+
 ## durable-version-preview
 
 | ID | Level | Statement |

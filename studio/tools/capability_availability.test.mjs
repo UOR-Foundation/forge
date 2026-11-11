@@ -11,9 +11,9 @@ assert.ok(start > 0);
 const declaration = model.slice(start, model.indexOf("\n}\n", start));
 const channels = [...declaration.matchAll(/\(cons "([^"]+)"/g)].map(match => match[1]);
 test("declared unavailable queries cannot install fabricated success handlers", () => {
-  assert.equal(channels.length, 32); assert.equal(new Set(channels).size, 32);
+  assert.equal(channels.length, 31); assert.equal(new Set(channels).size, 31);
   const scope = JSON.parse(fs.readFileSync(new URL("../model/host-read-scope.json", import.meta.url), "utf8"));
-  assert.equal(channels.filter(channel => scope.unavailable.includes(channel)).length, 30);
+  assert.equal(channels.filter(channel => scope.unavailable.includes(channel)).length, 29);
   assert.ok(channels.every(channel => !scope.required.includes(channel)));
   for (const channel of channels) {
     assert.ok(!host.includes(JSON.stringify(channel)) && !host.includes("'" + channel + "'"), `unavailable query has a host registration: ${channel}`);

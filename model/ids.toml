@@ -519,3 +519,9 @@ id = "FA-60"
 level = "build"
 suite = "bounded-kernel-execution"
 statement = "Fresh guest instances execute in bounded browser worker lifetimes without exhausting compiler memory reservations"
+
+[[id]]
+id = "FA-61"
+level = "build"
+suite = "durable-prompt-library"
+statement = "Prompt library creation updates deletion and listing persist atomically with bounded validated records and unique slugs"
