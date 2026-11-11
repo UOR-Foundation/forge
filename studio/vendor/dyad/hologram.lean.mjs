@@ -238,6 +238,16 @@ const settlePatches = [
 // shaped, so they press, focus and disable the way every other control does.
 const HOME = "src/pages/home.tsx";
 const chipPatches = [
+  // A prompt on Home opens the chat; the chat page is a chunk of its own, and while it was still arriving
+  // the router kept Home on screen at /chat and Home collapsed under the visitor (CLS 0.29 on a phone).
+  // Home fetches it once the page is idle, so Enter finds it ready.
+  {
+    file: HOME,
+    from: `export default function HomePage() {`,
+    to: `(window.requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 2000)))(() => { void import("./chat"); });
+
+export default function HomePage() {`,
+  },
   {
     file: HOME,
     retag: `<button

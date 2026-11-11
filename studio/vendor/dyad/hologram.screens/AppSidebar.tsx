@@ -96,6 +96,10 @@ export function AppSidebar() {
   const { isMobile, setOpenMobile } = useSidebar();
   const href = useLocation({ select: (l) => l.href });
   useEffect(() => { if (isMobile) setOpenMobile(false); }, [href, isMobile, setOpenMobile]);
+  // A tooltip names an item of the collapsed rail. In the Sheet it is never shown, but the kit still opens it
+  // when the Sheet focuses its first item, and the first Escape then closed that invisible tooltip, not the
+  // Sheet. On a phone the items carry none.
+  const tip = (label: string) => (isMobile ? undefined : label);
   const navigate = useNavigate();
   const setHelpDialog = useSetAtom(helpDialogAtom);
   const setSelectedAppId = useSetAtom(selectedAppIdAtom);
@@ -112,7 +116,7 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip={PRODUCT}>
+            <SidebarMenuButton asChild size="lg" tooltip={tip(PRODUCT)}>
               <Link to="/" onClick={newApp}>
                 {/* The kit's mark is white; on the light paper it is drawn in ink. */}
                 <img src={logo} alt="" className="size-6 shrink-0 invert dark:invert-0" />
@@ -128,7 +132,7 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  tooltip="New app"
+                  tooltip={tip("New app")}
                   onClick={newApp}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
                 >
@@ -140,7 +144,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {NAV.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild tooltip={item.title} isActive={isActive(item.to, item.exact)}>
+                  <SidebarMenuButton asChild tooltip={tip(item.title)} isActive={isActive(item.to, item.exact)}>
                     <Link to={item.to}>
                       <item.icon />
                       <span>{item.title}</span>
@@ -156,7 +160,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings" isActive={isActive("/settings")}>
+            <SidebarMenuButton asChild tooltip={tip("Settings")} isActive={isActive("/settings")}>
               <Link to="/settings">
                 <Settings />
                 <span>Settings</span>
@@ -164,7 +168,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Help" onClick={() => setHelpDialog({ open: true })}>
+            <SidebarMenuButton tooltip={tip("Help")} onClick={() => setHelpDialog({ open: true })}>
               <HelpCircle />
               <span>Help</span>
             </SidebarMenuButton>
