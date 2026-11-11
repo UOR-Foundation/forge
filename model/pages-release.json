@@ -1,0 +1,13 @@
+{
+  "schema": "foundry/pages-export/1",
+  "capability": "FR-01",
+  "forbidden_basenames": ["warmup.json"],
+  "entry_policy": "directories-and-single-link-regular-files-only",
+  "diagnostics": {
+    "forbidden": "PAGES_EXPORT_FORBIDDEN",
+    "invalid": "PAGES_EXPORT_INVALID",
+    "empty": "PAGES_EXPORT_EMPTY",
+    "changed": "PAGES_EXPORT_CHANGED",
+    "source": "PAGES_EXPORT_SOURCE"
+  }
+}

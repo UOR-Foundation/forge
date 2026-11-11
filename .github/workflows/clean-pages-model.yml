@@ -1,0 +1,109 @@
+# Read-only model generation prerequisite. No release credentials or deployment.
+name: clean Pages model generation
+
+on:
+  push:
+    branches: [containment/foundry-clean-model-e7d]
+
+permissions:
+  contents: read
+
+jobs:
+  model:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the exact event revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bind this generation to its committed source
+        env:
+          EXPECTED_SOURCE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE"
+          test -z "$(git status --porcelain)"
+          git rev-parse HEAD > "$RUNNER_TEMP/source-commit.txt"
+          git rev-parse HEAD^{tree} > "$RUNNER_TEMP/source-tree.txt"
+          git archive --format=tar HEAD | sha256sum > "$RUNNER_TEMP/source-archive.sha256"
+          git ls-tree -r --full-tree HEAD > "$RUNNER_TEMP/source-files.txt"
+      - name: Generate and verify only the declared document through the locked SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/clean-pages-model"
+          mkdir -p "$evidence/original" "$evidence/generated"
+          cp CONFORMANCE.md "$evidence/original/CONFORMANCE.md"
+          snapshot() {
+            python3 - "$1" <<'PYTHON'
+          import hashlib, json, os, stat, subprocess, sys
+          from pathlib import Path
+          names = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z']).decode().split('\0')
+          names = sorted(set(n for n in names if n and n != 'CONFORMANCE.md'))
+          if any('warmup.json' in Path(n).parts for n in names):
+              raise SystemExit('PAGES_MODEL_FORBIDDEN_SOURCE_NAME')
+          result = {}
+          for name in names:
+              path = Path(name)
+              mode = path.lstat().st_mode
+              if stat.S_ISLNK(mode):
+                  data = os.readlink(path).encode()
+              elif stat.S_ISREG(mode):
+                  data = path.read_bytes()
+              else:
+                  raise SystemExit('PAGES_MODEL_INVALID_SOURCE_TYPE')
+              result[name] = {'mode': stat.S_IMODE(mode), 'sha256': hashlib.sha256(data).hexdigest()}
+          Path(sys.argv[1]).write_text(json.dumps(result, sort_keys=True, indent=2) + '\n')
+          PYTHON
+          }
+          snapshot "$evidence/source-before.json"
+          image=$(python3 -c 'import json; print(json.load(open("prismpm.lock"))["sdk_image"])')
+          test "$image" = 'ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58'
+          docker_config=$(mktemp -d "$RUNNER_TEMP/model-docker.XXXXXX")
+          trap 'rm -rf "$docker_config"' EXIT
+          printf '{}\n' >"$docker_config/config.json"
+          DOCKER_CONFIG="$docker_config" docker pull "$image"
+          DOCKER_CONFIG="$docker_config" docker image inspect "$image" --format '{{.Id}}' > "$evidence/sdk-image-id.txt"
+          DOCKER_CONFIG="$docker_config" docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,exec,nosuid,size=2g \
+            --volume "$PWD:$PWD" \
+            --workdir "$PWD" \
+            --env HOME=/tmp/prismpm-home \
+            --env PRISMPM_EPHEMERAL_HOME=1 \
+            "$image" bash -euo pipefail -c \
+            'just model-write; cargo run -q --locked -p xtask -- check-model' \
+            2>&1 | tee "$evidence/generator.log"
+          snapshot "$evidence/source-after.json"
+          cmp "$evidence/source-before.json" "$evidence/source-after.json"
+          cp CONFORMANCE.md "$evidence/generated/CONFORMANCE.md"
+          cp "$RUNNER_TEMP"/source-{commit.txt,tree.txt,archive.sha256,files.txt} "$evidence/"
+          git diff -- CONFORMANCE.md > "$evidence/generated/conformance.diff"
+          python3 - "$evidence" "$image" <<'PYTHON'
+          import hashlib, json, os, subprocess, sys
+          from pathlib import Path
+          evidence, image = Path(sys.argv[1]), sys.argv[2]
+          sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          receipt = {
+              'schema': 'foundry/clean-pages-model/1',
+              'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'sdk_image': image,
+              'sdk_lock_sha256': sha(Path('prismpm.lock')),
+              'generation': 'just model-write',
+              'verification': 'cargo run -q --locked -p xtask -- check-model',
+              'source_unchanged_except': 'CONFORMANCE.md',
+              'files': {str(p.relative_to(evidence)): sha(p) for p in sorted(evidence.rglob('*')) if p.is_file()}
+          }
+          (evidence / 'receipt.json').write_text(json.dumps(receipt, sort_keys=True, indent=2) + '\n')
+          PYTHON
+      - name: Preserve only model-generation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: clean-pages-model-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 7
+          path: ${{ runner.temp }}/clean-pages-model

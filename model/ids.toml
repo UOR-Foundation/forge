@@ -86,3 +86,9 @@ id = "FK-11"
 level = "build"
 suite = "forge_kernel"
 statement = "The app always answers published when event is reword and phase is published"
+
+[[id]]
+id = "FR-01"
+level = "build"
+suite = "pages_release"
+statement = "Pages exports reject every warmup.json path and nonregular entry before hashing or upload, and deploy only after clean exact-source acceptance"
