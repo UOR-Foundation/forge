@@ -251,6 +251,18 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-08` | `build` | Snapshot restoration validates every referenced object before atomically replacing files and the main reference |
 
+## stateful-application-journeys
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-42` | `build` | Stored gallery and garden applications execute canonical guest transitions with atomic recovery and explicit audio consent |
+
+## stateful-application-model
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-41` | `build` | The generated interaction profile admits bounded state transitions and projects consent-sensitive visual audio and motion outputs |
+
 ## storage-commit-boundary
 
 | ID | Level | Statement |

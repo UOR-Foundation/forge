@@ -53,3 +53,6 @@ print(f"staged {len(editor['files'])} locked editor assets and licenses")
 from compiler_assets import compiler_assets
 compiler_receipt = compiler_assets(root)
 print(f"staged {len(compiler_receipt['files'])} locked compiler assets and licenses")
+
+# Application instances carry the exact project-owned model source.
+shutil.copyfile(root.parent / "app" / "src" / "InteractionModel.lex.tex", root / "shell" / "interaction-model.lex.tex")
