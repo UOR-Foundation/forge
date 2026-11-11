@@ -96,6 +96,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-19` | `build` | Typed event admission binds exact feature routes to current composition policy, generation, sequence and bounded payloads |
 
+## event-wire-protocol
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-33` | `build` | Typed event admission crosses a bounded byte protocol executed by the generated Prism guest |
+
 ## exact-representation
 
 | ID | Level | Statement |

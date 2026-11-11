@@ -8,3 +8,5 @@ Feature: verified-shell-cache
     And renderer assets and scaffold files belong to that same closure
     And corrupted, missing, redirected, malformed or timed-out responses refuse installation
     And the active worker serves its own verified version while offline
+    And controlled root and renderer-route refreshes including unknown routes retain the active verified document after a refused update online and offline
+    And special subapp preview published application resource and engine routes retain their own handling

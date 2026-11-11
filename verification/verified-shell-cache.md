@@ -62,3 +62,45 @@ Installation consistency does not authenticate the server/worker, establish full
 production dependency or compiler provenance, eliminate first-navigation races,
 or qualify the entire release. The existing Studio lane's Git production
 dependencies and legacy vendored toolchain remain separately open obligations.
+
+## Controlled navigation repair
+
+An already-controlled root or renderer-route refresh could miss the cached
+`index.html` key and load the newest network HTML while its renderer came from
+the previous active closure. A refused update did not resolve this mismatch.
+FA-29 now binds shell-document GET navigations to the active index, preserving
+query strings in the navigation URL and serving its cached headers unchanged.
+Missing active HTML returns 404 rather than borrowing a different version.
+Exact cached resource/document responses remain unchanged. Preview, published
+application, app/ui subapps, engine/API and static-resource namespaces retain
+their separate handling; requests outside the worker base are not intercepted.
+
+The renderer's existing not-found redirect and Pages' `404.html` fallback mean
+that a closed list of renderer routes would repeat the defect for new routes.
+The repair therefore covers unknown shell routes too, with explicit namespace
+exceptions. `/chat` is the build screen; `/q/` carries the engine assets.
+This is not a claim that worker activation is atomic for already-running clients,
+that partial CacheStorage writes roll back, or that the JS adapter is generated
+Prism implementation.
+
+The model/scenario regression ran against the original routing and failed with
+`NETWORK B` instead of `HTML A`. Seven shell Node tests pass after repair;
+the full local Studio Node suite passes 194/194, with no skipped/cancelled/todo
+tests. The shell parser and browser fixture syntax check also pass.
+Four planted defects fail the new control and were restored: bypassing document
+binding, limiting binding to a few known routes, swallowing the engine namespace,
+and fetching network HTML when the active document is absent. The restored
+seven-test suite passes. These checks used
+`node --test studio/tools/verified_shell_cache.test.mjs`,
+`node --test studio/tools/*.test.mjs`, and `node studio/tools/shell_parse.mjs`.
+
+The real-browser fixture now loads a generation-marked HTML document and executes
+its renderer. It navigates and reloads root, chat, nested and unknown routes with
+A active, after B is refused online and offline, and after valid B activation
+online and offline. It also retains the existing corrupt-update, offline asset,
+missing-file, cache cleanup and omitted-cookie assertions. This expanded browser
+fixture has not run locally: browser launch is blocked in this environment and
+was not retried. Its required Studio CI execution remains pending.
+`just model-write` and `just vv` also remain unrun because the immutable SDK tools
+(`just`, Cargo and PrismPM) are unavailable here; CONFORMANCE.md was not manually
+edited. This local result is not complete release acceptance.

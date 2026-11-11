@@ -63,3 +63,49 @@ Diagnostic twelve-module verification of the aliased source passed with
 attestation `fc38bf351c4a7ffd4e1e5a1aa1e5be6662fb115bc35c8f5f28596a2bffbf015a`.
 This is supplementary host evidence. Full feature SDK/Studio CI and the newly
 requested independent build remain pending at this revision.
+
+## Maintainer race repair
+
+The invalid-live-edit redraw previously copied the semantic phase directly.
+After publish and a wording change this could label unpublished bytes
+published; a source mismatch could likewise borrow unrelated trust. The redraw
+now uses the existing exact-source/publication-current refresh path.
+
+Rules checking previously captured a lifecycle predecessor, committed source
+while deleting status, then installed that stale predecessor in a separate
+transaction. A proof completing before the commit was lost; completion during
+the missing-status interval was dropped. Rules batches now compare the exact
+raw predecessor and atomically write source and status. A stale reword refuses
+with projectEditConflict, preserving both the completed proof and old source.
+Status-only batches perform the same comparison without adding a source version.
+Proof completion retries its settled result after a matching reword CAS race,
+only while the predecessor changes and semantics still match. An unchanged
+predecessor stops retries; continual matching edits can delay completion.
+
+Local evidence: 161 Node controls pass, including production transaction
+callbacks under a deterministic scheduler and exact extracted host functions.
+The installed signed kernel identity and 114 embedded vectors remain covered.
+The real IndexedDB generation gate adds deterministic proof-before-commit and
+proof-after-commit interleavings, including observing source-bound status at
+the commit callback. These browser controls are added but not locally executed:
+the environment cannot launch Chromium. Full browser and immutable SDK
+acceptance remains pending CI for the repaired commit; historical results above
+do not qualify these new changes.
+
+
+Four representative mutations were each rejected, then restored:
+- Replacing refusal refresh with raw semantic phase redraw fails the invalid
+  live edit trust control (published instead of proved/draft).
+- Omitting lifecycle predecessor comparison fails the pre-commit proof control
+  (expected projectEditConflict and unchanged storage).
+- Deleting status rather than installing it atomically fails the status-gap
+  control (missing current status).
+- Disabling retries after the first failed completion CAS fails the reword
+  completion control (completed proof lost).
+
+Commands: node --test studio/tools/current_main_integration.test.mjs and
+node --test studio/tools/rules_transaction.test.mjs. The restored combined
+12-control gate passes and is wired into the exact-count Rust FA-24 gate.
+Shell source parsing passes. model-write and full just vv could not run locally
+because cargo, just and prismpm are unavailable; generated evidence was not
+hand-edited to substitute for that gate.

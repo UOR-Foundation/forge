@@ -48,11 +48,11 @@ export function normalizeProjectImport(input, at = new Date().toISOString()) {
       chats++; if (chats > 4096) throw fail("projectImportLimitExceeded");
       if (!object(chat) || (chat.title !== undefined && (typeof chat.title !== "string" || chat.title.length > 1024)) || !Array.isArray(chat.messages || [])) throw fail("invalidProjectImport");
       const ids = new Set();
-      const copiedMessages = (chat.messages || []).map(m => {
+      const copiedMessages = (chat.messages || []).map((m, index) => {
         messageCount++; if (messageCount > 16384) throw fail("projectImportLimitExceeded");
         if (!object(m) || !Number.isSafeInteger(m.id) || m.id < 0 || ids.has(m.id) || !["user", "assistant"].includes(m.role) || typeof m.content !== "string") throw fail("invalidProjectImport"); ids.add(m.id);
         messageChars += m.content.length; if (m.content.length > 2 * MiB || messageChars > 32 * MiB) throw fail("projectImportLimitExceeded");
-        const out = { id: m.id, role: m.role, content: m.content, createdAt: date(m.createdAt, at), approvalState: null, commitHash: null, sourceCommitHash: null, dbTimestamp: null, requestId: null, totalTokens: null, model: null };
+        const out = { id: index + 1, role: m.role, content: m.content, createdAt: date(m.createdAt, at), approvalState: null, commitHash: null, sourceCommitHash: null, dbTimestamp: null, requestId: null, totalTokens: null, model: null };
         if (m.approvalState != null) { if (!["approved", "rejected"].includes(m.approvalState)) throw fail("invalidProjectImport"); out.approvalState = m.approvalState; }
         for (const field of ["commitHash", "sourceCommitHash"]) { if (m[field] != null && !address(m[field])) throw fail("invalidProjectImport"); out[field] = m[field] || null; }
         if (m.model != null) { if (typeof m.model !== "string" || m.model.length > 512) throw fail("invalidProjectImport"); out.model = m.model; }
@@ -91,16 +91,23 @@ export async function prepareProjectImport(input, boundary, { takenNames = [], s
   };
   const derive = bytes => timed(async () => { let key; try { key = await boundary.derive(bytes); } catch { throw fail("projectImportIdentityMismatch"); } if (!address(key)) throw fail("projectImportIdentityMismatch"); return key; });
   const creation = { core: boundary.core, derive };
-  const checked = new Map();
+  const checked = new Map(); let materializedBytes = 0;
   const snapshot = async oid => {
     const chain = new Set(); let cursor = oid;
     while (cursor && !checked.has(cursor)) {
       check(); if (chain.has(cursor)) throw fail("projectImportHistoryInvalid");
       chain.add(cursor); if (checked.size >= 4096) throw fail("projectImportLimitExceeded");
       if (!objects.has(cursor)) throw fail("projectImportMissingObject");
-      let prepared;
-      try { prepared = await timed(() => prepareSnapshot(cursor, { readObject: key => { check(); if (!objects.has(key)) throw fail("projectImportMissingObject"); return objects.get(key); }, derive, admit: boundary.admit })); }
-      catch (error) { check(); if (["missingSnapshotObject", "missingFileObject", "snapshotStorageFailed"].includes(error.code)) throw fail("projectImportMissingObject"); throw error; }
+      let prepared, materializationLimitExceeded = false;
+      try { prepared = await timed(() => prepareSnapshot(cursor, { readObject: key => {
+        check(); if (!objects.has(key)) throw fail("projectImportMissingObject");
+        const bytes = objects.get(key);
+        // History may repeatedly decode the same object into distinct retained strings.
+        materializedBytes += bytes.length;
+        if (materializedBytes > 128 * MiB) { materializationLimitExceeded = true; throw fail("projectImportLimitExceeded"); }
+        return bytes;
+      }, derive, admit: boundary.admit })); }
+      catch (error) { check(); if (materializationLimitExceeded) throw fail("projectImportLimitExceeded"); if (["missingSnapshotObject", "missingFileObject", "snapshotStorageFailed"].includes(error.code)) throw fail("projectImportMissingObject"); throw error; }
       if (prepared.files.length > 1000 || !prepared.name.trim() || prepared.name.length > 255) throw fail("invalidProjectImport");
       // prepareSnapshot has checked this exact immutable body's complete schema.
       const parent = JSON.parse(decoder.decode(objects.get(cursor))).parent;

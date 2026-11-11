@@ -11,6 +11,8 @@ const files = new Map([
   ["/vectors.json", "../../verification/composition-wire-vectors.json"],
   ["/work-vectors.json", "../../verification/work-wire-vectors.json"],
   ["/work-codec.mjs", "../shell/work-codec.mjs"],
+  ["/event-vectors.json", "../../verification/event-wire-vectors.json"],
+  ["/event-codec.mjs", "../shell/event-codec.mjs"],
 ].map(([url, file]) => [url, fs.readFileSync(new URL(file, import.meta.url))]));
 const exercise = async () => {
   const { admitWithGuest } = await import("/composition-codec.mjs");
@@ -33,9 +35,21 @@ const exercise = async () => {
   for (const vector of work) if (await guest.ask(vector.request) !== vector.response) throw Error("work: " + vector.name);
   const initialized = await executeWorkWithGuest(guest, { kind: "initialize", owner: 7, capacity: 20, remaining: 2 });
   if (!initialized.ok || initialized.state.owner !== 7 || initialized.state.remaining !== 2) throw Error("work adapter");
+  const { admitEventWithGuest } = await import("/event-codec.mjs");
+  const events = (await (await fetch("/event-vectors.json")).json()).vectors;
+  for (const vector of events) {
+    if (await guest.ask(vector.request) !== vector.response) throw Error("event: " + vector.name);
+    if (vector.input) {
+      const reply = await admitEventWithGuest(guest, vector.input);
+      if (vector.response.startsWith("ok ")) {
+        const next = vector.name === "lastSequence" ? 0xffffffff : 3;
+        if (!reply.ok || reply.nextSequence !== next) throw Error("event adapter: " + vector.name);
+      } else if (reply.ok || reply.code !== vector.response) throw Error("event adapter: " + vector.name);
+    }
+  }
   if (await guest.ask("drafting check") !== "checked") throw Error("legacy phase");
   for (const phase of ["drafting", "checked", "proving", "proved", "published"]) if (await guest.ask(phase + " reword") !== phase) throw Error("reword phase");
-  return { vectors: vectors.length, work: work.length, embedded: guest.vectors, digest: guest.digest };
+  return { vectors: vectors.length, work: work.length, events: events.length, embedded: guest.vectors, digest: guest.digest };
 };
 const workerSource = `importScripts('/kernel.js'); (${exercise.toString()})().then(result => postMessage({result}), error => postMessage({error: String(error)}));`;
 const server = http.createServer((request, response) => {
@@ -63,7 +77,8 @@ try {
   assert.deepEqual(workerResult, documentResult);
   assert.equal(documentResult.vectors, 26);
   assert.equal(documentResult.work, 30);
-  assert.ok(documentResult.embedded >= 109);
+  assert.equal(documentResult.events, 30);
+  assert.equal(documentResult.embedded, 124);
   console.log(JSON.stringify({ page: documentResult, worker: workerResult }));
 } finally {
   if (browser) await browser.close();
