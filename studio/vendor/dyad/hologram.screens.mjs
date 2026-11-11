@@ -189,6 +189,31 @@ const SCREEN_PATCHES = [
     from: `<span>{selectedApp.updatedAt.toString()}</span>`,
     to: `<span>{new Date(selectedApp.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span>`,
   },
+  // The build screen on a narrow screen: one pane at a time and a bar at the bottom
+  // (hologram.screens/MobileBuild.tsx) instead of the two resizable panels. Which applies is the Forge kernel's
+  // answer for the window's width (FK-16, FK-17; useNarrow, hologram.lean.mjs).
+  {
+    file: "src/pages/chat.tsx",
+    from: `import { ipc } from "@/ipc/types";`,
+    to: `import { ipc } from "@/ipc/types";
+import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
+  },
+  {
+    file: "src/pages/chat.tsx",
+    from: `  return (
+    <PanelGroup autoSaveId="persistence" direction="horizontal">`,
+    to: `  const isMobile = useNarrow();
+  if (isMobile) {
+    return (
+      <MobileBuild
+        chat={<ChatPanel chatId={chatId} isPreviewOpen={true} onTogglePreview={() => {}} />}
+        preview={<PreviewPanel />}
+      />
+    );
+  }
+  return (
+    <PanelGroup autoSaveId="persistence" direction="horizontal">`,
+  },
 ];
 
 // The screens' patches, then the ones that keep the first load lean (hologram.lean.mjs).

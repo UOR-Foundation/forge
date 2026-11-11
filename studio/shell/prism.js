@@ -437,7 +437,7 @@ const PHASE_WORD = { drafting: "not checked", checked: "checked, not yet proved"
 export function card(state) {
   const spec = state.spec;
   if (!spec) return `**Rules** · not checked\n\n${state.issues.map((i) => "- " + i).join("\n")}\n\nAsk me to fix the rules.`;
-  const lines = [`**Rules: ${spec.title}** · ${PHASE_WORD[state.phase] || state.phase}`, "", spec.purpose, ""];
+  const lines = [`**Rules: ${spec.title}** · ${state.phase === "published" && state.publicationCurrent === false ? "proved by Lean; wording changed since publication" : PHASE_WORD[state.phase] || state.phase}`, "", spec.purpose, ""];
   if (spec.properties.length) {
     lines.push(state.phase === "proved" || state.phase === "published" ? "Guarantees, proved by Lean for every request:" : "Guarantees Lean will prove for every request:");
     spec.properties.forEach((p, i) => lines.push(`${i + 1}. ${said(p)}${p.why ? ` *${p.why}*` : ""}`));

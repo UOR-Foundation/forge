@@ -1,0 +1,367 @@
+\begin{lexlean}{EventAdmission}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{FeatureComposition}
+\title{Boolean}
+\begin{semanticmodule}
+inductive{
+  name: EventPayload,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: natural, fields: [Nat]},
+    {name: flag, fields: [Bool]},
+    {name: bytes, fields: [(List Nat)]}
+  ]
+}
+
+structure{
+  name: EventContract,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: key, type: Nat},
+    {name: version, type: Nat},
+    {name: kind, type: Nat},
+    {name: maximumBytes, type: Nat},
+    {name: producers, type: (List FeatureComposition::FeatureRef)},
+    {name: consumers, type: (List FeatureComposition::FeatureRef)}
+  ]
+}
+
+structure{
+  name: EventEnvelope,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: key, type: Nat},
+    {name: version, type: Nat},
+    {name: generation, type: Nat},
+    {name: sequence, type: Nat},
+    {name: producer, type: FeatureComposition::FeatureRef},
+    {name: consumer, type: FeatureComposition::FeatureRef},
+    {name: payload, type: EventPayload}
+  ]
+}
+
+inductive{
+  name: EventError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidEventContract, fields: []},
+    {name: invalidEventContext, fields: []},
+    {name: staleGeneration, fields: []},
+    {name: staleSequence, fields: []},
+    {name: wrongEvent, fields: []},
+    {name: undeclaredRoute, fields: []},
+    {name: invalidPayload, fields: []},
+    {name: compositionRejected, fields: [FeatureComposition::CompositionError]}
+  ]
+}
+
+definition{
+  name: eventSameRef,
+  parameters: [a : FeatureComposition::FeatureRef, b : FeatureComposition::FeatureRef],
+  result: Bool,
+  body: (((project a key) =? (project b key)) && ((project a version) =? (project b version)))
+}
+
+definition{
+  name: eventHasRef,
+  parameters: [
+    refs : (List FeatureComposition::FeatureRef),
+    reference : FeatureComposition::FeatureRef
+  ],
+  result: Bool,
+  body: (match refs
+    | List.nil => false
+    | List.cons head rest => (if (eventSameRef head reference) then true else (eventHasRef rest reference))),
+  recursive_argument: refs
+}
+
+definition{
+  name: eventFeatureDeclares,
+  parameters: [
+    features : (List FeatureComposition::FeatureContract),
+    reference : FeatureComposition::FeatureRef,
+    key : Nat
+  ],
+  result: Bool,
+  body: (match features
+    | List.nil => false
+    | List.cons head rest => (if (eventSameRef (record FeatureComposition::FeatureRef {key := (project head key), version := (project head version)}) reference) then (FeatureComposition::containsId (project head events) key) else (eventFeatureDeclares rest reference key))),
+  recursive_argument: features
+}
+
+definition{
+  name: eventRoutesValid,
+  parameters: [
+    features : (List FeatureComposition::FeatureContract),
+    refs : (List FeatureComposition::FeatureRef),
+    key : Nat
+  ],
+  result: Bool,
+  body: (match refs
+    | List.nil => true
+    | List.cons head rest => ((eventFeatureDeclares features head key) && ((if (eventHasRef rest head) then false else true) && (eventRoutesValid features rest key)))),
+  recursive_argument: refs
+}
+
+definition{
+  name: eventContractValid,
+  parameters: [features : (List FeatureComposition::FeatureContract), contract : EventContract],
+  result: Bool,
+  body: ((0 <? (project contract key)) && ((0 <? (project contract version)) && (((project contract kind) <=? 2) && ((0 <? (project contract maximumBytes)) && (((project contract maximumBytes) <=? 65536) && ((0 <? (prim length (project contract producers) : Nat)) && ((0 <? (prim length (project contract consumers) : Nat)) && ((eventRoutesValid features (project contract producers) (project contract key)) && (eventRoutesValid features (project contract consumers) (project contract key))))))))))
+}
+
+definition{
+  name: eventBytesValid,
+  parameters: [bytes : (List Nat)],
+  result: Bool,
+  body: (match bytes
+    | List.nil => true
+    | List.cons head rest => ((head <=? 255) && (eventBytesValid rest))),
+  recursive_argument: bytes
+}
+
+definition{
+  name: eventPayloadValid,
+  parameters: [contract : EventContract, payload : EventPayload],
+  result: Bool,
+  body: (match payload
+    | EventPayload.natural value => (((project contract kind) =? 0) && ((value <=? 4294967295) && (4 <=? (project contract maximumBytes))))
+    | EventPayload.flag value => ((project contract kind) =? 1)
+    | EventPayload.bytes values => (((project contract kind) =? 2) && ((eventBytesValid values) && ((prim length values : Nat) <=? (project contract maximumBytes)))))
+}
+
+definition{
+  name: admitEvent,
+  parameters: [
+    features : (List FeatureComposition::FeatureContract),
+    policy : FeatureComposition::CompositionPolicy,
+    contract : EventContract,
+    expectedGeneration : Nat,
+    expectedSequence : Nat,
+    envelope : EventEnvelope
+  ],
+  result: (Result Nat EventError),
+  body: (match (FeatureComposition::admitComposition policy features)
+    | Result.error error => (ctor Result.error [Nat, EventError] (ctor EventError.compositionRejected error))
+    | Result.ok accepted => (if (eventContractValid features contract) then (if ((0 <? expectedGeneration) && (expectedSequence <? 4294967295)) then (if ((project envelope generation) =? expectedGeneration) then (if ((project envelope sequence) =? expectedSequence) then (if (((project envelope key) =? (project contract key)) && ((project envelope version) =? (project contract version))) then (if ((eventHasRef (project contract producers) (project envelope producer)) && (eventHasRef (project contract consumers) (project envelope consumer))) then (if (eventPayloadValid contract (project envelope payload)) then (ctor Result.ok [Nat, EventError] (expectedSequence + 1)) else (ctor Result.error [Nat, EventError] (ctor EventError.invalidPayload))) else (ctor Result.error [Nat, EventError] (ctor EventError.undeclaredRoute))) else (ctor Result.error [Nat, EventError] (ctor EventError.wrongEvent))) else (ctor Result.error [Nat, EventError] (ctor EventError.staleSequence))) else (ctor Result.error [Nat, EventError] (ctor EventError.staleGeneration))) else (ctor Result.error [Nat, EventError] (ctor EventError.invalidEventContext))) else (ctor Result.error [Nat, EventError] (ctor EventError.invalidEventContract))))
+}
+
+definition{
+  name: eventAdmissionBoundary,
+  parameters: [],
+  result: String,
+  body: "Pure admission rechecks the current declared composition policy, exact event and feature versions, declared routes, payload representation, generation and sequence. Natural payloads are uint32, flags one byte and byte arrays contain only 0..255; the declared maximum is 1..65536 bytes. A natural occupies four bytes. Sequence exhaustion refuses before uint32 increment. Feature event IDs must declare the routed event key; the event contract supplies its exact version. Acceptance returns the next sequence without mutation or delivery. The caller must authenticate declarations and participants, atomically compare and advance durable state and bind policy revisions to actual execution. This operation does not establish those facts, delivery, exactly-once effects, privacy, elapsed-time bounds or application completion. Event routes are separate from acyclic composition dependencies and may form feedback paths."
+}
+
+definition{
+  name: eventFixture1,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (nil Nat), state := (nil Nat), events := (cons 7 (nil Nat)), errors := (nil Nat), effects := (cons 9 (nil Nat)), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+definition{
+  name: eventFixture2,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (nil Nat), state := (nil Nat), events := (cons 7 (nil Nat)), errors := (nil Nat), effects := (cons 9 (nil Nat)), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+theorem{
+  name: naturalEventAdmitted,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.ok [Nat, EventError] 3)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: flagEventAdmitted,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 1, maximumBytes := 1, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.flag false)})) = (ctor Result.ok [Nat, EventError] 3)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: bytesEventAdmitted,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 2, maximumBytes := 2, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.bytes (cons 0 (cons 255 (nil Nat))))})) = (ctor Result.ok [Nat, EventError] 3)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: emptyBytesAdmitted,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 2, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.bytes (nil Nat))})) = (ctor Result.ok [Nat, EventError] 3)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: lastSequenceAdmitted,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 4294967294 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 4294967294, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.ok [Nat, EventError] 4294967295)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: revokedPermissionRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.compositionRejected (ctor FeatureComposition::CompositionError.permissionDenied)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: invalidContractRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 0, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidEventContract))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: duplicateRouteRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef))), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidEventContract))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: missingRouteFeatureRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 3, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidEventContract))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: undeclaredFeatureEventRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (record FeatureComposition::FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (nil Nat), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (cons 9 (nil Nat)), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1}) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidEventContract))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: staleGenerationRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 2, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.staleGeneration))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: replayedSequenceRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 1, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.staleSequence))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: futureSequenceRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 3, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.staleSequence))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongEventVersionRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 2, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.wrongEvent))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongEventKeyRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 8, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.wrongEvent))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongProducerRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.undeclaredRoute))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongConsumerRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.undeclaredRoute))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongFeatureVersionRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 2}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.undeclaredRoute))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongPayloadKindRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.flag true)})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidPayload))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: invalidByteRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 2, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.bytes (cons 256 (nil Nat)))})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidPayload))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: oversizedPayloadRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 2, maximumBytes := 1, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.bytes (cons 0 (cons 1 (nil Nat))))})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidPayload))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: oversizedNaturalRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 2 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 4294967296)})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidPayload))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: exhaustedSequenceRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 3 4294967295 (record EventEnvelope {key := 7, version := 1, generation := 3, sequence := 4294967295, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidEventContext))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: zeroGenerationRefused,
+  parameters: [],
+  statement: ((admitEvent (cons (eventFixture1) (cons (eventFixture2) (nil FeatureComposition::FeatureContract))) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 2, memory := 2}) (record EventContract {key := 7, version := 1, kind := 0, maximumBytes := 4, producers := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), consumers := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))}) 0 2 (record EventEnvelope {key := 7, version := 1, generation := 0, sequence := 2, producer := (record FeatureComposition::FeatureRef {key := 1, version := 1}), consumer := (record FeatureComposition::FeatureRef {key := 2, version := 1}), payload := (ctor EventPayload.natural 42)})) = (ctor Result.error [Nat, EventError] (ctor EventError.invalidEventContext))),
+  proof: reflexivity{},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}

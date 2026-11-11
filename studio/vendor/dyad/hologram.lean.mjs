@@ -172,23 +172,19 @@ const routerPatches = [
   },
 ];
 
-// The chat page on a narrow screen: chat and preview as the kit's two tabs, each the whole width, both kept
-// mounted so a switch keeps scroll, the stream and the preview's state. Side by side they were 95 px each at
-// 390 px. Which layout applies is asked of the kernel.
-// The panels no longer animate their width (a layout property); a collapse or expand is immediate.
+// The build screen's panels no longer animate their width (a layout property): a collapse or expand is
+// immediate. Its narrow layout is upstream's MobileBuild (hologram.screens.mjs), shown when the kernel says so.
 const CHAT = "src/pages/chat.tsx";
 const chatPatches = [
   {
     file: CHAT,
     from: `const DEFAULT_CHAT_PANEL_SIZE = 50;`,
-    to: `import React from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+    to: `const DEFAULT_CHAT_PANEL_SIZE = 50;
 
-const DEFAULT_CHAT_PANEL_SIZE = 50;
-
-// Whether chat and preview are tabs or side by side is the Forge kernel's decision for the window's width
-// (FK-16 and FK-17, proved by Lean: tabs under 768 px, split from 768). The last answer is kept, so a return
-// visit draws the right layout at once; the kernel is asked again on load and on every resize.
+// Whether the build screen shows one pane at a time or the two panels side by side is the Forge kernel's
+// decision for the window's width (FK-16 and FK-17, proved by Lean: one pane under 768 px). The host asks it
+// as soon as the kernel is ready and keeps the answer, so the screen starts in the kernel's layout; it is
+// asked again here on load and on every resize.
 const LAST_LAYOUT = "holo.layout.narrow";
 function useNarrow() {
   const [narrow, setNarrow] = useState(() => { try { return localStorage.getItem(LAST_LAYOUT) === "1"; } catch { return false; } });
@@ -208,34 +204,7 @@ function useNarrow() {
     return () => { live = false; removeEventListener("resize", decide); };
   }, []);
   return narrow;
-}
-
-function NarrowChat({ chatId }: { chatId: React.ComponentProps<typeof ChatPanel>["chatId"] }) {
-  const [pane, setPane] = useState("chat");
-  return (
-    <Tabs value={pane} onValueChange={setPane} className="h-full w-full min-w-0 gap-0">
-      <TabsList className="mx-3 mt-2 grid h-11 w-auto shrink-0 grid-cols-2">
-        <TabsTrigger value="chat">Chat</TabsTrigger>
-        <TabsTrigger value="preview">Preview</TabsTrigger>
-      </TabsList>
-      <TabsContent value="chat" forceMount className="min-h-0 flex-1 data-[state=inactive]:hidden">
-        <ChatPanel chatId={chatId} isPreviewOpen={pane === "preview"} onTogglePreview={() => setPane(pane === "chat" ? "preview" : "chat")} />
-      </TabsContent>
-      <TabsContent value="preview" forceMount className="min-h-0 flex-1 data-[state=inactive]:hidden">
-        <PreviewPanel />
-      </TabsContent>
-    </Tabs>
-  );
 }`,
-  },
-  {
-    file: CHAT,
-    from: `  return (
-    <PanelGroup autoSaveId="persistence" direction="horizontal">`,
-    to: `  const narrow = useNarrow();
-  if (narrow) return <NarrowChat chatId={chatId} />;
-  return (
-    <PanelGroup autoSaveId="persistence" direction="horizontal">`,
   },
   // Two identical passages, the chat panel's and the preview panel's: each patch takes the first left.
   { file: CHAT, from: `className={cn(!isResizing && "transition-all duration-100 ease-in-out")}`, to: `className={cn("min-w-0", isResizing && "select-none")}` },

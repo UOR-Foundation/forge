@@ -1,0 +1,367 @@
+\begin{lexlean}{FeatureComposition}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: FeatureRef,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: key, type: Nat}, {name: version, type: Nat}]
+}
+
+structure{
+  name: FeatureInput,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: producer, type: FeatureRef}, {name: schema, type: Nat}]
+}
+
+structure{
+  name: FeatureContract,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: key, type: Nat},
+    {name: version, type: Nat},
+    {name: vocabulary, type: (List Nat)},
+    {name: inputs, type: (List FeatureInput)},
+    {name: outputs, type: (List Nat)},
+    {name: state, type: (List Nat)},
+    {name: events, type: (List Nat)},
+    {name: errors, type: (List Nat)},
+    {name: effects, type: (List Nat)},
+    {name: needs, type: (List FeatureRef)},
+    {name: conflicts, type: (List Nat)},
+    {name: targets, type: (List Nat)},
+    {name: accessibility, type: (List Nat)},
+    {name: quality, type: (List Nat)},
+    {name: cpu, type: Nat},
+    {name: memory, type: Nat}
+  ]
+}
+
+structure{
+  name: CompositionPolicy,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: grants, type: (List Nat)},
+    {name: targets, type: (List Nat)},
+    {name: evidence, type: (List Nat)},
+    {name: cpu, type: Nat},
+    {name: memory, type: Nat}
+  ]
+}
+
+inductive{
+  name: CompositionError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: emptyComposition, fields: []},
+    {name: invalidDeclaration, fields: []},
+    {name: duplicateFeature, fields: []},
+    {name: missingDependency, fields: []},
+    {name: incompatibleInput, fields: []},
+    {name: featureConflict, fields: []},
+    {name: permissionDenied, fields: []},
+    {name: unsupportedTarget, fields: []},
+    {name: missingEvidence, fields: []},
+    {name: budgetExceeded, fields: []}
+  ]
+}
+
+definition{
+  name: containsId,
+  parameters: [ids : (List Nat), targetId : Nat],
+  result: Bool,
+  body: (match ids
+    | List.nil => false
+    | List.cons head rest => (if (head =? targetId) then true else (containsId rest targetId))),
+  recursive_argument: ids
+}
+
+definition{
+  name: validIds,
+  parameters: [ids : (List Nat)],
+  result: Bool,
+  body: (match ids
+    | List.nil => true
+    | List.cons head rest => (if (head =? 0) then false else (if (containsId rest head) then false else (validIds rest)))),
+  recursive_argument: ids
+}
+
+definition{
+  name: hasIds,
+  parameters: [ids : (List Nat), required : (List Nat)],
+  result: Bool,
+  body: (match required
+    | List.nil => true
+    | List.cons head rest => ((containsId ids head) && (hasIds ids rest))),
+  recursive_argument: required
+}
+
+definition{
+  name: hasKey,
+  parameters: [features : (List FeatureContract), key : Nat],
+  result: Bool,
+  body: (match features
+    | List.nil => false
+    | List.cons head rest => (if ((project head key) =? key) then true else (hasKey rest key))),
+  recursive_argument: features
+}
+
+definition{
+  name: hasRef,
+  parameters: [features : (List FeatureContract), reference : FeatureRef],
+  result: Bool,
+  body: (match features
+    | List.nil => false
+    | List.cons head rest => (if (((project head key) =? (project reference key)) && ((project head version) =? (project reference version))) then true else (hasRef rest reference))),
+  recursive_argument: features
+}
+
+definition{
+  name: hasNeeds,
+  parameters: [features : (List FeatureContract), needs : (List FeatureRef)],
+  result: Bool,
+  body: (match needs
+    | List.nil => true
+    | List.cons head rest => ((hasRef features head) && (hasNeeds features rest))),
+  recursive_argument: needs
+}
+
+definition{
+  name: hasInput,
+  parameters: [features : (List FeatureContract), input : FeatureInput],
+  result: Bool,
+  body: (match features
+    | List.nil => false
+    | List.cons head rest => (if (((project head key) =? (project (project input producer) key)) && ((project head version) =? (project (project input producer) version))) then (containsId (project head outputs) (project input schema)) else (hasInput rest input))),
+  recursive_argument: features
+}
+
+definition{
+  name: hasInputs,
+  parameters: [features : (List FeatureContract), inputs : (List FeatureInput)],
+  result: Bool,
+  body: (match inputs
+    | List.nil => true
+    | List.cons head rest => ((hasInput features head) && (hasInputs features rest))),
+  recursive_argument: inputs
+}
+
+definition{
+  name: hasConflict,
+  parameters: [features : (List FeatureContract), feature : FeatureContract],
+  result: Bool,
+  body: (match features
+    | List.nil => false
+    | List.cons head rest => (if ((containsId (project feature conflicts) (project head key)) || (containsId (project head conflicts) (project feature key))) then true else (hasConflict rest feature))),
+  recursive_argument: features
+}
+
+definition{
+  name: validFeature,
+  parameters: [feature : FeatureContract],
+  result: Bool,
+  body: ((0 <? (project feature key)) && ((0 <? (project feature version)) && ((match (project feature vocabulary)
+    | List.nil => false
+    | List.cons head rest => true) && ((match (project feature targets)
+    | List.nil => false
+    | List.cons head rest => true) && ((validIds (project feature vocabulary)) && ((validIds (project feature outputs)) && ((validIds (project feature state)) && ((validIds (project feature events)) && ((validIds (project feature errors)) && ((validIds (project feature effects)) && ((validIds (project feature conflicts)) && ((validIds (project feature targets)) && ((validIds (project feature accessibility)) && ((validIds (project feature quality)) && true))))))))))))))
+}
+
+definition{
+  name: admitFeature,
+  parameters: [
+    policy : CompositionPolicy,
+    accepted : (List FeatureContract),
+    feature : FeatureContract,
+    usedCpu : Nat,
+    usedMemory : Nat
+  ],
+  result: (Result Bool CompositionError),
+  body: (if (validFeature feature) then (if (if (hasKey accepted (project feature key)) then false else true) then (if (hasNeeds accepted (project feature needs)) then (if (hasInputs accepted (project feature inputs)) then (if (if (hasConflict accepted feature) then false else true) then (if (hasIds (project policy grants) (project feature effects)) then (if (hasIds (project policy targets) (project feature targets)) then (if ((hasIds (project policy evidence) (project feature accessibility)) && (hasIds (project policy evidence) (project feature quality))) then (if (((usedCpu + (project feature cpu)) <=? (project policy cpu)) && ((usedMemory + (project feature memory)) <=? (project policy memory))) then (ctor Result.ok [Bool, CompositionError] true) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.budgetExceeded))) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.missingEvidence))) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.unsupportedTarget))) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.permissionDenied))) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.featureConflict))) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.incompatibleInput))) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.missingDependency))) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.duplicateFeature))) else (ctor Result.error [Bool, CompositionError] (ctor CompositionError.invalidDeclaration)))
+}
+
+definition{
+  name: admitRemaining,
+  parameters: [
+    policy : CompositionPolicy,
+    accepted : (List FeatureContract),
+    remaining : (List FeatureContract),
+    usedCpu : Nat,
+    usedMemory : Nat
+  ],
+  result: (Result Bool CompositionError),
+  body: (match remaining
+    | List.nil => (ctor Result.ok [Bool, CompositionError] true)
+    | List.cons head rest => (match (admitFeature policy accepted head usedCpu usedMemory)
+      | Result.error error => (ctor Result.error [Bool, CompositionError] error)
+      | Result.ok admitted => (admitRemaining policy (cons head accepted) rest (usedCpu + (project head cpu)) (usedMemory + (project head memory))))),
+  recursive_argument: remaining
+}
+
+definition{
+  name: admitComposition,
+  parameters: [policy : CompositionPolicy, features : (List FeatureContract)],
+  result: (Result Bool CompositionError),
+  body: (match features
+    | List.nil => (ctor Result.error [Bool, CompositionError] (ctor CompositionError.emptyComposition))
+    | List.cons head rest => (admitRemaining policy (nil FeatureContract) features 0 0))
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "Feature identifiers, schemas, effects, targets and evidence obligations are positive interned registry symbols. Admission checks declarations, not registry authenticity or the validity of evidence. Input producers and explicit dependencies must precede consumers at their exact version, so accepted ordering is acyclic. Conflicts are checked in both directions. Resource costs are additive declared upper bounds, not measured runtime work. Pure features may have empty state, events, errors, effects and outputs. The two application surfaces pass separate policies and compositions. This module does not interpret natural language or generate a UI."
+}
+
+theorem{
+  name: emptyRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (nil FeatureContract)) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.emptyComposition))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: singleAdmitted,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract))) = (ctor Result.ok [Bool, CompositionError] true)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: dependencyAdmitted,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (cons (record FeatureInput {producer := (record FeatureRef {key := 1, version := 1}), schema := 7}) (nil FeatureInput)), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureRef {key := 1, version := 1}) (nil FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.ok [Bool, CompositionError] true)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: zeroIdentityRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 0, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.invalidDeclaration))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: zeroVersionRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 0, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.invalidDeclaration))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: emptyVocabularyRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (nil Nat), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.invalidDeclaration))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: duplicateIdentityRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 1, version := 2, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.duplicateFeature))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: missingDependencyRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (cons (record FeatureInput {producer := (record FeatureRef {key := 1, version := 1}), schema := 7}) (nil FeatureInput)), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureRef {key := 1, version := 1}) (nil FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.missingDependency))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongVersionRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 2, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (cons (record FeatureInput {producer := (record FeatureRef {key := 1, version := 1}), schema := 7}) (nil FeatureInput)), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureRef {key := 1, version := 1}) (nil FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.missingDependency))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: forwardDependencyRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (cons (record FeatureInput {producer := (record FeatureRef {key := 1, version := 1}), schema := 7}) (nil FeatureInput)), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureRef {key := 1, version := 1}) (nil FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.missingDependency))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: incompatibleInputRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 8 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (cons (record FeatureInput {producer := (record FeatureRef {key := 1, version := 1}), schema := 7}) (nil FeatureInput)), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureRef {key := 1, version := 1}) (nil FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.incompatibleInput))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: priorConflictRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (cons 2 (nil Nat)), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.featureConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: newConflictRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (cons 1 (nil Nat)), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.featureConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: permissionRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (cons 6 (nil Nat)), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.permissionDenied))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: targetRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 2 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.unsupportedTarget))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: evidenceRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (nil Nat)), cpu := 4, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.missingEvidence))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: cpuRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 3, memory := 6}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (cons (record FeatureInput {producer := (record FeatureRef {key := 1, version := 1}), schema := 7}) (nil FeatureInput)), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureRef {key := 1, version := 1}) (nil FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.budgetExceeded))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: memoryRefused,
+  parameters: [],
+  statement: ((admitComposition (record CompositionPolicy {grants := (cons 5 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (cons 10 (cons 11 (nil Nat))), cpu := 4, memory := 5}) (cons (record FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (cons (record FeatureContract {key := 2, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (cons (record FeatureInput {producer := (record FeatureRef {key := 1, version := 1}), schema := 7}) (nil FeatureInput)), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureRef {key := 1, version := 1}) (nil FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (cons 10 (nil Nat)), quality := (cons 11 (nil Nat)), cpu := 2, memory := 3}) (nil FeatureContract)))) = (ctor Result.error [Bool, CompositionError] (ctor CompositionError.budgetExceeded))),
+  proof: reflexivity{},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}

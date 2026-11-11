@@ -1,0 +1,290 @@
+\begin{lexlean}{ProposalAdmission}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{FeatureComposition}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Proposal,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: intent, type: Nat},
+    {name: registryRevision, type: Nat},
+    {name: selected, type: (List FeatureComposition::FeatureRef)},
+    {name: ambiguities, type: (List Nat)},
+    {name: unresolved, type: (List Nat)},
+    {name: confidence, type: Nat}
+  ]
+}
+
+inductive{
+  name: ProposalError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidRegistry, fields: []},
+    {name: invalidProposal, fields: []},
+    {name: staleIntent, fields: []},
+    {name: staleRegistry, fields: []},
+    {name: unresolvedAmbiguity, fields: []},
+    {name: unresolvedConstraint, fields: []},
+    {name: unregisteredFeature, fields: []},
+    {name: compositionRejected, fields: [FeatureComposition::CompositionError]}
+  ]
+}
+
+definition{
+  name: proposalRegistryValid,
+  parameters: [registry : (List FeatureComposition::FeatureContract)],
+  result: Bool,
+  body: (match registry
+    | List.nil => true
+    | List.cons head rest => ((FeatureComposition::validFeature head) && ((if (FeatureComposition::hasRef rest (record FeatureComposition::FeatureRef {key := (project head key), version := (project head version)})) then false else true) && (proposalRegistryValid rest)))),
+  recursive_argument: registry
+}
+
+definition{
+  name: findProposalFeature,
+  parameters: [
+    registry : (List FeatureComposition::FeatureContract),
+    reference : FeatureComposition::FeatureRef
+  ],
+  result: (Option FeatureComposition::FeatureContract),
+  body: (match registry
+    | List.nil => (ctor Option.none [FeatureComposition::FeatureContract])
+    | List.cons head rest => (if (((project head key) =? (project reference key)) && ((project head version) =? (project reference version))) then (ctor Option.some [FeatureComposition::FeatureContract] head) else (findProposalFeature rest reference))),
+  recursive_argument: registry
+}
+
+definition{
+  name: resolveProposalFeatures,
+  parameters: [
+    registry : (List FeatureComposition::FeatureContract),
+    references : (List FeatureComposition::FeatureRef)
+  ],
+  result: (Result (List FeatureComposition::FeatureContract) ProposalError),
+  body: (match references
+    | List.nil => (ctor Result.ok [(List FeatureComposition::FeatureContract), ProposalError] (nil FeatureComposition::FeatureContract))
+    | List.cons head rest => (match (findProposalFeature registry head)
+      | Option.none => (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.unregisteredFeature))
+      | Option.some feature => (match (resolveProposalFeatures registry rest)
+        | Result.error error => (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] error)
+        | Result.ok remaining => (ctor Result.ok [(List FeatureComposition::FeatureContract), ProposalError] (cons feature remaining))))),
+  recursive_argument: references
+}
+
+definition{
+  name: admitProposal,
+  parameters: [
+    registry : (List FeatureComposition::FeatureContract),
+    expectedIntent : Nat,
+    expectedRevision : Nat,
+    proposal : Proposal,
+    policy : FeatureComposition::CompositionPolicy
+  ],
+  result: (Result (List FeatureComposition::FeatureContract) ProposalError),
+  body: (if (proposalRegistryValid registry) then (if ((0 <? expectedIntent) && ((0 <? expectedRevision) && (((project proposal confidence) <=? 10000) && ((FeatureComposition::validIds (project proposal ambiguities)) && (FeatureComposition::validIds (project proposal unresolved)))))) then (if ((project proposal intent) =? expectedIntent) then (if ((project proposal registryRevision) =? expectedRevision) then (if ((prim length (project proposal ambiguities) : Nat) =? 0) then (if ((prim length (project proposal unresolved) : Nat) =? 0) then (match (resolveProposalFeatures registry (project proposal selected))
+    | Result.error error => (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] error)
+    | Result.ok features => (match (FeatureComposition::admitComposition policy features)
+      | Result.error error => (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.compositionRejected error))
+      | Result.ok accepted => (ctor Result.ok [(List FeatureComposition::FeatureContract), ProposalError] features))) else (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.unresolvedConstraint))) else (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.unresolvedAmbiguity))) else (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.staleRegistry))) else (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.staleIntent))) else (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.invalidProposal))) else (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.invalidRegistry)))
+}
+
+definition{
+  name: proposalFixtureOne,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+definition{
+  name: proposalFixtureOtherVersion,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 1, version := 2, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+definition{
+  name: proposalFixtureTwo,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 2, version := 1, vocabulary := (cons 2 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (cons 8 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+theorem{
+  name: zeroConfidenceAdmitted,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.ok [(List FeatureComposition::FeatureContract), ProposalError] (cons (proposalFixtureOne) (nil FeatureComposition::FeatureContract)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: maximumConfidenceAdmitted,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 10000}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.ok [(List FeatureComposition::FeatureContract), ProposalError] (cons (proposalFixtureOne) (nil FeatureComposition::FeatureContract)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: orderedDependenciesAdmitted,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef))), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.ok [(List FeatureComposition::FeatureContract), ProposalError] (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: duplicateRegistryRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureOne) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.invalidRegistry))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: malformedRegistryRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (record FeatureComposition::FeatureContract {key := 0, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1}) (nil FeatureComposition::FeatureContract)) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.invalidRegistry))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: invalidConfidenceRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 10001}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.invalidProposal))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: zeroExpectedIntentRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 0 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.invalidProposal))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: zeroExpectedRevisionRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 0 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.invalidProposal))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: staleIntentRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 8, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.staleIntent))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: staleRegistryRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 4, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.staleRegistry))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: ambiguityRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (cons 1 (nil Nat)), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.unresolvedAmbiguity))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: constraintRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (cons 1 (nil Nat)), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.unresolvedConstraint))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: unknownFeatureRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 9, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.unregisteredFeature))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongVersionRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 2}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.unregisteredFeature))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: emptySelectionRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (nil FeatureComposition::FeatureRef), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.emptyComposition)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: duplicateSelectionRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef))), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.duplicateFeature)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: missingDependencyRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.missingDependency)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: wrongOrderRefused,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 2, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef))), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.missingDependency)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: confidenceCannotGrantPermission,
+  parameters: [],
+  statement: ((admitProposal (cons (record FeatureComposition::FeatureContract {key := 1, version := 1, vocabulary := (cons 1 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (cons 6 (nil Nat)), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1}) (nil FeatureComposition::FeatureContract)) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 10000}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.permissionDenied)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: confidenceCannotIncreaseBudget,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureTwo) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 1}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 10000}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 0, memory := 4})) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalError] (ctor ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.budgetExceeded)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+definition{
+  name: proposalBoundary,
+  parameters: [],
+  result: String,
+  body: "A router proposal supplies selected versioned references in dependency order, an intent identifier, a registry revision, unresolved ambiguity and constraint identifiers, and confidence in 0..10000. Admission resolves canonical contracts from the supplied registry rather than accepting router-authored contracts. Duplicate key/version pairs or invalid registry declarations fail; distinct versions remain separately selectable. Expected intent and registry revision must match exactly; unresolved issues refuse acceptance. Confidence does not grant permissions, evidence, budget or composition validity. The authoritative composition admission runs on every resolved selection. This pure declaration check does not authenticate the registry, establish intent interpretation, run R4, measure relevance or latency, prove evidence authenticity, generate a UI or execute effects. Router ranking and held-out qualification remain independent requirements."
+}
+
+theorem{
+  name: exactVersionSelected,
+  parameters: [],
+  statement: ((admitProposal (cons (proposalFixtureOne) (cons (proposalFixtureOtherVersion) (nil FeatureComposition::FeatureContract))) 7 3 (record Proposal {intent := 7, registryRevision := 3, selected := (cons (record FeatureComposition::FeatureRef {key := 1, version := 2}) (nil FeatureComposition::FeatureRef)), ambiguities := (nil Nat), unresolved := (nil Nat), confidence := 0}) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 4, memory := 4})) = (ctor Result.ok [(List FeatureComposition::FeatureContract), ProposalError] (cons (proposalFixtureOtherVersion) (nil FeatureComposition::FeatureContract)))),
+  proof: reflexivity{},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}

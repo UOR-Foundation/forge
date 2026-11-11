@@ -116,41 +116,31 @@ for (const r of rows) {
 }
 console.log(`\n${rows.length} channels answered by the host, ${contracts.size} channels under contract, ${clash.length} mismatch(es)`);
 
-// Most of the renderer's channels belong to features this product does not have -- Supabase, Vercel, Neon,
-// Coolify, GitHub, MCP, a terminal, native windows -- and the host implements none of them. A channel
-// a screen reads on mount must still answer something that screen can use, or it dies the moment a
-// user opens it, which is the same defect class as a wrong shape. `shell/host.js` answers an
-// unimplemented channel with the empty value the channel's own contract accepts (no servers, no tests,
-// no cloud projects -- all true here), so what this checks is that every channel a screen reads either
-// has a handler or admits such a value. The only way to close a hole is a real handler.
-const EMPTY = [undefined, [], null, {}];
-const NAME = ["undefined (void)", "[] (empty list)", "null", "{} (empty object)"];
-const emptyFor = (schema) => {
-  for (let i = 0; i < EMPTY.length; i += 1) {
-    let parsed = null;
-    try { parsed = schema.safeParse(EMPTY[i]); } catch { parsed = null; }
-    if (parsed && parsed.success) return i;
-  }
-  return -1;
-};
-const holes = [];
-const cover = [0, 0, 0, 0];
-let unanswered = 0;
-for (const [channel, schema] of schemas) {
-  if (answers.has(channel)) continue;
-  unanswered += 1;
-  const which = emptyFor(schema);
-  if (which >= 0) cover[which] += 1;
-  else if (read.has(channel)) holes.push(channel);
+// Inventory unsupported reads explicitly. An output schema accepting [] does
+// not establish an implemented capability. Runtime refusal is tested separately.
+const unsupported = [...read].filter((channel) => !answers.has(channel)).sort();
+console.log(`\n${unsupported.length} read channels have no browser handler and return typed unsupportedChannel errors:`);
+for (const channel of unsupported) console.log("  " + channel);
+console.log("Shape inspection does not establish UI recovery or capability completeness.");
+// The declared adapter scope prevents a removed implemented read from silently
+// becoming an accepted refusal. Updating this scope is a reviewable model change.
+const scope = JSON.parse(fs.readFileSync(path.join(root, "model/host-read-scope.json"), "utf8"));
+const scopeErrors = [];
+if (scope.schema !== "foundry/host-read-scope/1" || Object.keys(scope).sort().join(",") !== "required,schema,unavailable") throw Error("invalid host read scope");
+for (const field of ["required", "unavailable"]) {
+  const values = scope[field];
+  if (!Array.isArray(values) || values.some(v => typeof v !== "string") || JSON.stringify(values) !== JSON.stringify([...new Set(values)].sort())) throw Error("invalid host read scope: " + field);
 }
-console.log(`\n${read.size} channels are read by a screen on mount; of the ${unanswered} contracted channels with no handler, an empty answer satisfies ${cover.reduce((a, b) => a + b, 0)}:`);
-for (let i = 0; i < NAME.length; i += 1) if (cover[i]) console.log(`  ${String(cover[i]).padStart(4)}  ${NAME[i]}`);
-if (holes.length) {
-  console.log(`\n${holes.length} channel(s) a screen reads have no handler and no empty answer their contract accepts -- that screen crashes:`);
-  for (const channel of holes.sort()) console.log("  " + channel + "  declared " + contracts.get(channel));
-} else {
-  console.log("\nevery channel a screen reads is answerable: a handler, or the empty value its contract accepts");
+for (const channel of scope.required) {
+  if (!read.has(channel) || !answers.has(channel)) scopeErrors.push("required read is missing: " + channel);
 }
+for (const channel of scope.unavailable) {
+  if (!read.has(channel) || answers.has(channel) || scope.required.includes(channel)) scopeErrors.push("unavailable read changed: " + channel);
+}
+for (const channel of read) {
+  if (!scope.required.includes(channel) && !scope.unavailable.includes(channel)) scopeErrors.push("unclassified read: " + channel);
+}
+for (const error of scopeErrors) console.error(error);
 fs.rmSync(entry, { force: true });
 fs.rmSync(bundled, { force: true });
-if ((clash.length || holes.length) && process.argv.includes("--check")) process.exit(1);
+if ((clash.length || scopeErrors.length) && process.argv.includes("--check")) process.exit(1);

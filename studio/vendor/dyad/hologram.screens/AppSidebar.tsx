@@ -20,7 +20,6 @@ import { Link, useLocation, useMatchRoute, useNavigate, useRouter } from "@tanst
 import { useAtomValue, useSetAtom } from "jotai";
 import { Fragment, useEffect, useMemo } from "react";
 
-import logo from "../../assets/logo.svg";
 import { selectedAppIdAtom } from "@/atoms/appAtoms";
 import { selectedChatIdAtom } from "@/atoms/chatAtoms";
 import { helpDialogAtom } from "@/atoms/helpDialogAtom";
@@ -61,6 +60,19 @@ import {
 // The product's name: the build's word transform (vite.shell.config.mts) writes the product's name for
 // Dyad's, here as on every Dyad screen, so the name has one source.
 const PRODUCT = "Dyad";
+const TITLE = `${PRODUCT} AI Foundry`;
+
+// Prism's mark: a triangle split into three lit faces. It is drawn in the text colour at three
+// strengths, so it follows every appearance without a colour of its own.
+function PrismMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M50 8 L50 60 L8 86 Z" />
+      <path d="M50 8 L92 86 L50 60 Z" fillOpacity={0.6} />
+      <path d="M8 86 L50 60 L92 86 Z" fillOpacity={0.3} />
+    </svg>
+  );
+}
 
 type Nav = { title: string; to: string; icon: LucideIcon; exact?: boolean };
 const NAV: Nav[] = [
@@ -116,11 +128,10 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip={tip(PRODUCT)}>
+            <SidebarMenuButton asChild size="lg" tooltip={tip(TITLE)}>
               <Link to="/" onClick={newApp}>
-                {/* The kit's mark is white; on the light paper it is drawn in ink. */}
-                <img src={logo} alt="" className="size-6 shrink-0 invert dark:invert-0" />
-                <span className="font-display text-base font-semibold">{PRODUCT}</span>
+                <PrismMark className="size-6 shrink-0" />
+                <span className="font-display text-base font-semibold">{TITLE}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

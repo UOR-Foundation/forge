@@ -141,6 +141,16 @@
 /* Voice to text is the renderer's Pro feature: the button and its recording states are not offered here. */
 button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button[aria-label^="Transcribing"] { display: none !important; }
 
+/* The build screen on a phone (the renderer's MobileBuild sets html[data-holo-pane]): the appearance switch
+   takes the bottom bar's right slot (the bar sits 16 px above the edge, the inset layout's margin) and its panel opens upwards; the desktop's panel toggles, the
+   notification tip, the preview panel's own mode tabs (the bar chooses the view) and its log footer step
+   aside, so the chat and the app fill the pane. */
+:root[data-holo-pane] .appearance { top: auto; right: 14px; bottom: calc(26px + env(safe-area-inset-bottom)); width: 44px; height: 44px; border-color: transparent; background: transparent; }
+:root[data-holo-pane] .popover { top: auto; left: 12px; right: 12px; width: auto; bottom: calc(88px + env(safe-area-inset-bottom)); }
+:root[data-holo-pane] :is([data-testid="toggle-terminal-button"], [data-testid="toggle-preview-panel-button"], [data-testid="notification-tip-banner"]) { display: none !important; }
+:root[data-holo-pane] #preview-panel div:has(> * > [data-testid="preview-mode-button"], > [data-testid="preview-mode-button"], > * > [data-testid="preview-mode-overflow-button"]):not(:has(iframe)) { display: none !important; }
+:root[data-holo-pane] #preview-panel div:has(> .lucide-logs) { display: none !important; }
+
 /* Touch: every small control the kit draws (icon buttons, switches, checkboxes, the sidebar's trigger and
    items, menu and select triggers, tabs) answers a 44 px square around its centre, drawn by nothing. Their
    look is the kit's; only the area a finger can hit grows. */
