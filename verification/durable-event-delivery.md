@@ -21,6 +21,8 @@ is idempotent. This acknowledges local receipt, not arbitrary effect execution,
 exactly-once delivery, authenticated same-origin callers or autonomous consumers.
 
 Registration, scenario and missing-oracle Rust failure preceded implementation.
+The full Rust meta-gate rejected the word `pending` in the scenario as a deferred
+step; the step now says `queued`, preserving its behavior without weakening the gate.
 Six Node controls cover guest delegation, private errors, source/configuration
 bounds, ordered acknowledgement and copied inputs. A negative control exposed
 property-order-sensitive consumer comparison; it now compares typed key/version
