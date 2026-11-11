@@ -32,7 +32,7 @@ expect_fail() { if "$@" >/tmp/plant.log 2>&1; then echo "GATE DID NOT FIRE: $*";
 
 case "${1:-}" in
   words)
-    sed -i 's/headline=s("Own Your Ideas")/headline=s("Own your ideas")/' tools/author.py
+    sed -i 's/headline=s("Prism AI Foundry")/headline=s("Prism AI foundry")/' tools/author.py
     python3 tools/author.py >/dev/null; "$LX" lock >/dev/null 2>&1
     expect_fail "$LX" verify ;;
   grant)
@@ -58,7 +58,7 @@ EOF
   shell)
     # The words gate compares the projected page against the index, so the hand edit is staged as a
     # commit would stage it; an unstaged edit is simply overwritten by the projector.
-    sed -i 's/<h1>Own Your Ideas<\/h1>/<h1>Own your ideas<\/h1>/' shell/index.html
+    sed -i 's/<h1>Prism AI Foundry<\/h1>/<h1>Prism AI foundry<\/h1>/' shell/index.html
     git add shell/index.html
     expect_fail bash -c "FORGE_LANE_WORK=${FORGE_LANE_WORK:-$HOME/.cache/hologram-forge-lane} ./scripts/lane.sh"
     git reset -q -- shell/index.html ;;

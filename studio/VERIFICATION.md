@@ -40,7 +40,7 @@ A gate is trusted only after a planted defect has been seen to trip it and a res
 
 ## Theorems (Lean 4.32.1, leanchecker replayed, proof by reflexivity)
 
-- `view_headline`: the View's headline is "Own Your Ideas".
+- `view_headline`: the View's headline is "Prism AI Foundry".
 - `admits_nothing_without_grants`: `admits [] origin = false`.
 - `refuses_without_grants`: `networkDecision {endpoints = []} origin = Refuse`.
 - `empty_project_preimage`: the preimage of a project with no entries unfolds to its literal shape.
