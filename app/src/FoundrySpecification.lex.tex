@@ -884,5 +884,27 @@ definition{
   result: String,
   body: "A portable build discloses its captured source identity, generated-code execution and fixed esm.sh and cdn.tailwindcss.com destinations before compiler execution or remote package retrieval. The user explicitly approves each build; denial, Escape, offline state and two-minute expiry refuse. The disclosure explains requests and data generated code may send, destination visibility, absence of configured provider credentials and inability to recall prior transfers or guarantee that remote work stops. Approval creates a temporary source-bound preview-consent grant used by the styling frame. The grant records its portable-build purpose and expiry; the worker refuses it after expiry even if the page crashed, and startup removes expired portable grant records and cached frames. Package requests and final promotion recheck the lease; a stop control aborts active fetches and closes the frame. Revocation is observed through the stored grant and prevents further authorized effects and output promotion. Source is compared before effects and before returning the result. Completion, failure and cancellation remove the temporary grant and frame. The styling probe recognizes element or nonempty text roots, and stable reports of uncovered rendered classes refuse portableBuildStyleIncomplete instead of promoting incomplete styling. The probe is a finite runtime check, not an independent proof of visual quality. The installed archive remains local; public GitHub publication has a separate authorization boundary. This permission does not establish semantic preservation of generated code, safe execution of arbitrary scripts or a locked production package closure."
 }
+
+inductive{
+  name: GitHubPublicationPermissionError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidPublicationPermission, fields: []},
+    {name: publicationPermissionMissing, fields: []},
+    {name: publicationPermissionDenied, fields: []},
+    {name: publicationPermissionExpired, fields: []},
+    {name: publicationPermissionOffline, fields: []},
+    {name: publicationPermissionUnavailable, fields: []},
+    {name: publicationSourceChanged, fields: []}
+  ]
+}
+
+definition{
+  name: githubPublicationPermissionBoundary,
+  parameters: [],
+  result: String,
+  body: "Public GitHub publication requires a permission adapter before any network request. The adapter captures at most one MiB of exact JSON model, axioms and attestation plus source identity before asynchronous work. Read-only authenticated account discovery identifies the exact destination; the configured visitor token is sent only to the GitHub API with redirects refused and ambient credentials omitted. Before creating a public repository, enabling Pages or changing its tree and branch, the native disclosure names the repository, public destination, template authority and exact model payload without containing the token. It explains generated model, proof, workflow and page publication, possible updates of an existing repository, provider account ownership and remote effects that stopping cannot undo. Denial and Escape refuse; approval must occur within five minutes and mutation permission expires within one hour. Each non-read GitHub operation rechecks approval, online state, cancellation and the current source-bound rule record. Caller mutation cannot change the approved captured payload. A missing or malformed authorization cannot issue writes. Monitoring and live artifact acceptance retain their separate bounded effect and identity checks. This boundary does not prove template reproducibility, certify generated workflow semantics, undo public writes or establish complete deployment acceptance."
+}
 \end{semanticmodule}
 \end{lexlean}

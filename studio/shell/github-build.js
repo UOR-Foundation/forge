@@ -14,9 +14,10 @@ const API = "https://api.github.com";
 export const TEMPLATE_REPOSITORY = "UOR-Foundation/template";
 export const WORKFLOWS = ["pages.yml", "bootstrap.yml"];
 
-export function gitHub(token, { fetch = globalThis.fetch, sleep, signal, timeoutMs = 30000 } = {}) {
+export function gitHub(token, { fetch = globalThis.fetch, sleep, signal, timeoutMs = 30000, beforeWrite } = {}) {
   const call = async (method, path, body, accept = "application/vnd.github+json") => {
-    const { response: r, body: text } = await requestBody(API + path, { method, headers: { Authorization: `Bearer ${token}`, Accept: accept, "X-GitHub-Api-Version": "2022-11-28", ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined }, { fetch, signal, timeoutMs });
+    if (method !== "GET" && method !== "HEAD" && beforeWrite) await beforeWrite();
+    const { response: r, body: text } = await requestBody(API + path, { method, redirect: "error", credentials: "omit", headers: { Authorization: `Bearer ${token}`, Accept: accept, "X-GitHub-Api-Version": "2022-11-28", ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined }, { fetch, signal, timeoutMs });
     if (!r.ok) {
       let already = false;
       try { already = /already/i.test(JSON.parse(text)?.message || ""); } catch {}
@@ -117,11 +118,24 @@ async function fetchLive(live, open, { fetch = globalThis.fetch, sleep, signal, 
 }
 
 // The whole build. `checked(bytes)` opens the holo and replays its vectors (prism-code's loadArchive).
-export async function buildOnGitHub({ token, spec, axioms = {}, attestation = null, templateCommit, open, step = () => {}, fetch = globalThis.fetch, sleep, signal, timeoutMs = 30000 }) {
-  const gh = gitHub(token, { fetch, sleep, signal, timeoutMs });
+export async function buildOnGitHub({ token, spec, axioms = {}, attestation = null, templateCommit, open, step = () => {}, fetch = globalThis.fetch, sleep, signal, timeoutMs = 30000, source, authorize }) {
+  if (typeof authorize !== "function") throw effectError("publicationPermissionMissing", "Publication permission is required");
+  try {
+    const copied=structuredClone({spec,axioms,attestation});
+    const bytes=JSON.stringify(copied);
+    if(new TextEncoder().encode(bytes).length>1024*1024||typeof source!=="string"||!/^blake3:[a-f0-9]{64}$/.test(source)||!copied.spec||typeof copied.spec.name!=="string"||! /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(copied.spec.name)||typeof copied.spec.purpose!=="string")throw Error();
+    ({spec,axioms,attestation}=JSON.parse(bytes));
+  } catch {throw effectError("invalidPublicationPermission", "Invalid publication payload");}
+  let permission, authorizedCheck;
+  const gh = gitHub(token, { fetch, sleep, signal, timeoutMs, beforeWrite:async()=>{checkCancellation(signal);if(!authorizedCheck)throw effectError("publicationPermissionMissing","Publication permission is required");await authorizedCheck();} });
+  try {
   const t0 = Date.now();
   const me = await gh.get("/user");
+  if(typeof me?.login!=="string"||! /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(me.login))throw effectError("invalidPublicationPermission","Invalid publication account");
   const name = `prism-${spec.name}`;
+  permission=await authorize({repository:`${me.login}/${name}`,source,spec:structuredClone(spec),axioms:structuredClone(axioms),attestation:structuredClone(attestation),templateRepository:TEMPLATE_REPOSITORY});
+  if(!permission||typeof permission.check!=="function"||typeof permission.close!=="function")throw effectError("invalidPublicationPermission","Invalid publication approval");
+  authorizedCheck=permission.check.bind(permission);await authorizedCheck();checkCancellation(signal);
   const { repository, head } = await instance(gh, me.login, name, spec.purpose, step);
   step("Writing the app", `${repository}: the LexLean model and proofs, the claims, the tests and the page`);
   const commit = await commitApp(gh, repository, head, { spec, axioms, attestation, templateCommit });
@@ -144,4 +158,5 @@ export async function buildOnGitHub({ token, spec, axioms = {}, attestation = nu
     repository, live, sha: commit.sha, runs, seconds: Math.round((Date.now() - t0) / 1000),
     holo: fetched.bytes, fingerprint, pageFingerprint: pageSays || null,
   };
+  } finally { if(typeof permission?.close === "function") permission.close(); }
 }

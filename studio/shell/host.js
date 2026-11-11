@@ -1,3 +1,4 @@
+import {authorizeGitHubPublication, bindPublicationSource} from "./github-publication-permission.mjs";
 import {withPortableBuildPermission, portablePermissionFailure} from "./portable-build-permission.mjs";
 import {commandRegistry, invokeBoundCommand} from "./command-registry.mjs";
 import {interactionPreset, interactionModule, validateInteractionDocument, interactionFailure} from "./interaction-application.mjs";
@@ -1121,7 +1122,11 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   };
   const stopped = new Promise((res) => abort.signal.addEventListener("abort", () => res("stopped")));
   const t0 = Date.now();
-  const build = buildOnGitHub({ token, spec, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: prism.templateCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
+  const authorize = async request => {
+    const permission=await authorizeGitHubPublication(request,{signal:abort.signal});
+    return bindPublicationSource(permission,rules,()=>rulesOf(appId));
+  };
+  const build = buildOnGitHub({ token, spec, source:rules.specKappa, authorize, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: prism.templateCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
     .catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
   const result = await Promise.race([build, stopped]);
   observing = false;
