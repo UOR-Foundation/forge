@@ -1,3 +1,4 @@
+import {routeWithGuest} from './routing-codec.mjs';
 import {runBuildWork,buildWorkStore} from './build-work.mjs';
 import {authorizeGitHubPublication, bindPublicationSource} from "./github-publication-permission.mjs";
 import {withPortableBuildPermission, portablePermissionFailure} from "./portable-build-permission.mjs";
@@ -909,6 +910,7 @@ handlers.set("forge:compose", async (input) => {
 });
 handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
 handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input));
+handlers.set("forge:route", input => routeWithGuest(kernelReady,input));
 handlers.set("forge:interact", input => executeInteraction(kernelReady, input));
 let interactionModelSource;
 async function loadInteractionModelSource(){

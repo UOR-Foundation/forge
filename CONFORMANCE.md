@@ -269,6 +269,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-09` | `build` | Rule status and asynchronous proof or publication completion remain bound to the current rule source |
 
+## semantic-routing-model
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-48` | `build` | Typed semantic proposals rank explicit concept relations and close dependencies while Prism independently admits ambiguity constraints and effects |
+
 ## snapshot-bound-builds
 
 | ID | Level | Statement |

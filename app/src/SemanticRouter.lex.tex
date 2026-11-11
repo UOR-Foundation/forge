@@ -1,0 +1,625 @@
+\begin{lexlean}{SemanticRouter}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{ProposalAdmission}
+\importmodule{FeatureComposition}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: SemanticIntent,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: id, type: Nat},
+    {name: registryRevision, type: Nat},
+    {name: concepts, type: (List Nat)},
+    {name: context, type: (List Nat)}
+  ]
+}
+
+structure{
+  name: SemanticRelation,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: fromConcept, type: Nat}, {name: toConcept, type: Nat}, {name: weight, type: Nat}]
+}
+
+structure{
+  name: Candidate,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: reference, type: FeatureComposition::FeatureRef}, {name: score, type: Nat}]
+}
+
+structure{
+  name: RoutingOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: ranked, type: (List Candidate)},
+    {name: proposal, type: ProposalAdmission::Proposal},
+    {
+      name: admission,
+      type: (Result (List FeatureComposition::FeatureContract) ProposalAdmission::ProposalError)
+    }
+  ]
+}
+
+inductive{
+  name: RoutingError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidSemanticIntent, fields: []},
+    {name: invalidSemanticCatalog, fields: []},
+    {name: invalidSemanticRelations, fields: []}
+  ]
+}
+
+definition{
+  name: negate,
+  parameters: [value : Bool],
+  result: Bool,
+  body: (if value then false else true)
+}
+
+definition{
+  name: referenceOf,
+  parameters: [feature : FeatureComposition::FeatureContract],
+  result: FeatureComposition::FeatureRef,
+  body: (record FeatureComposition::FeatureRef {key := (project feature key), version := (project feature version)})
+}
+
+definition{
+  name: sameReference,
+  parameters: [left : FeatureComposition::FeatureRef, right : FeatureComposition::FeatureRef],
+  result: Bool,
+  body: (((project left key) =? (project right key)) && ((project left version) =? (project right version)))
+}
+
+definition{
+  name: containsReference,
+  parameters: [
+    items : (List FeatureComposition::FeatureRef),
+    reference : FeatureComposition::FeatureRef
+  ],
+  result: Bool,
+  body: (match items
+    | List.nil => false
+    | List.cons head rest => (if (sameReference head reference) then true else (containsReference rest reference))),
+  recursive_argument: items
+}
+
+definition{
+  name: unionReferences,
+  parameters: [
+    items : (List FeatureComposition::FeatureRef),
+    acc : (List FeatureComposition::FeatureRef)
+  ],
+  result: (List FeatureComposition::FeatureRef),
+  body: (match items
+    | List.nil => acc
+    | List.cons head rest => (unionReferences rest (if (containsReference acc head) then acc else (prim append acc (cons head (nil FeatureComposition::FeatureRef)) : (List FeatureComposition::FeatureRef))))),
+  recursive_argument: items
+}
+
+definition{
+  name: inputReferences,
+  parameters: [inputs : (List FeatureComposition::FeatureInput)],
+  result: (List FeatureComposition::FeatureRef),
+  body: (match inputs
+    | List.nil => (nil FeatureComposition::FeatureRef)
+    | List.cons head rest => (cons (project head producer) (inputReferences rest))),
+  recursive_argument: inputs
+}
+
+definition{
+  name: dependencies,
+  parameters: [feature : FeatureComposition::FeatureContract],
+  result: (List FeatureComposition::FeatureRef),
+  body: (unionReferences (inputReferences (project feature inputs)) (project feature needs))
+}
+
+definition{
+  name: knownNeeds,
+  parameters: [
+    needs : (List FeatureComposition::FeatureRef),
+    prior : (List FeatureComposition::FeatureContract)
+  ],
+  result: Bool,
+  body: (match needs
+    | List.nil => true
+    | List.cons head rest => ((FeatureComposition::hasRef prior head) && (knownNeeds rest prior))),
+  recursive_argument: needs
+}
+
+definition{
+  name: orderedCatalog,
+  parameters: [
+    catalog : (List FeatureComposition::FeatureContract),
+    prior : (List FeatureComposition::FeatureContract)
+  ],
+  result: Bool,
+  body: (match catalog
+    | List.nil => true
+    | List.cons head rest => (((FeatureComposition::validFeature head) && ((negate (FeatureComposition::hasKey prior (project head key))) && ((knownNeeds (dependencies head) prior) && (((prim length (project head vocabulary) : Nat) <=? 32) && (((prim length (project head inputs) : Nat) <=? 32) && (((prim length (project head outputs) : Nat) <=? 32) && (((prim length (project head state) : Nat) <=? 32) && (((prim length (project head events) : Nat) <=? 32) && (((prim length (project head errors) : Nat) <=? 32) && (((prim length (project head effects) : Nat) <=? 32) && (((prim length (project head needs) : Nat) <=? 32) && (((prim length (project head conflicts) : Nat) <=? 32) && (((prim length (project head targets) : Nat) <=? 32) && (((prim length (project head accessibility) : Nat) <=? 32) && (((prim length (project head quality) : Nat) <=? 32) && true))))))))))))))) && (orderedCatalog rest (prim append prior (cons head (nil FeatureComposition::FeatureContract)) : (List FeatureComposition::FeatureContract))))),
+  recursive_argument: catalog
+}
+
+definition{
+  name: hasRelation,
+  parameters: [relations : (List SemanticRelation), fromConcept : Nat, toConcept : Nat],
+  result: Bool,
+  body: (match relations
+    | List.nil => false
+    | List.cons head rest => (if (((project head fromConcept) =? fromConcept) && ((project head toConcept) =? toConcept)) then true else (hasRelation rest fromConcept toConcept))),
+  recursive_argument: relations
+}
+
+definition{
+  name: validRelations,
+  parameters: [relations : (List SemanticRelation)],
+  result: Bool,
+  body: (match relations
+    | List.nil => true
+    | List.cons head rest => ((0 <? (project head fromConcept)) && ((0 <? (project head toConcept)) && ((0 <? (project head weight)) && (((project head weight) <=? 1000) && ((negate (hasRelation rest (project head fromConcept) (project head toConcept))) && (validRelations rest))))))),
+  recursive_argument: relations
+}
+
+definition{
+  name: relationWeight,
+  parameters: [relations : (List SemanticRelation), concept : Nat, target : Nat],
+  result: Nat,
+  body: (match relations
+    | List.nil => 0
+    | List.cons head rest => (if (((project head fromConcept) =? concept) && ((project head toConcept) =? target)) then (project head weight) else (relationWeight rest concept target))),
+  recursive_argument: relations
+}
+
+definition{
+  name: conceptWeight,
+  parameters: [vocabulary : (List Nat), relations : (List SemanticRelation), concept : Nat],
+  result: Nat,
+  body: (match vocabulary
+    | List.nil => 0
+    | List.cons head rest => (let here : Nat := (if (head =? concept) then 1000 else (relationWeight relations concept head)); (let remaining : Nat := (conceptWeight rest relations concept); (if (remaining <? here) then here else remaining)))),
+  recursive_argument: vocabulary
+}
+
+definition{
+  name: scoreConcepts,
+  parameters: [concepts : (List Nat), vocabulary : (List Nat), relations : (List SemanticRelation)],
+  result: Nat,
+  body: (match concepts
+    | List.nil => 0
+    | List.cons head rest => ((conceptWeight vocabulary relations head) + (scoreConcepts rest vocabulary relations))),
+  recursive_argument: concepts
+}
+
+definition{
+  name: featureScore,
+  parameters: [
+    intent : SemanticIntent,
+    feature : FeatureComposition::FeatureContract,
+    relations : (List SemanticRelation)
+  ],
+  result: Nat,
+  body: (let primary : Nat := (scoreConcepts (project intent concepts) (project feature vocabulary) relations); (if (primary =? 0) then 0 else ((prim multiply primary 32001 : Nat) + (scoreConcepts (project intent context) (project feature vocabulary) relations))))
+}
+
+definition{
+  name: candidateBefore,
+  parameters: [left : Candidate, right : Candidate],
+  result: Bool,
+  body: (if ((project right score) <? (project left score)) then true else (if ((project left score) =? (project right score)) then ((project (project left reference) key) <? (project (project right reference) key)) else false))
+}
+
+definition{
+  name: insertCandidate,
+  parameters: [candidate : Candidate, ranked : (List Candidate)],
+  result: (List Candidate),
+  body: (match ranked
+    | List.nil => (cons candidate (nil Candidate))
+    | List.cons head rest => (if (candidateBefore candidate head) then (cons candidate (cons head rest)) else (cons head (insertCandidate candidate rest)))),
+  recursive_argument: ranked
+}
+
+definition{
+  name: rankCandidates,
+  parameters: [
+    catalog : (List FeatureComposition::FeatureContract),
+    intent : SemanticIntent,
+    relations : (List SemanticRelation)
+  ],
+  result: (List Candidate),
+  body: (match catalog
+    | List.nil => (nil Candidate)
+    | List.cons head rest => (let score : Nat := (featureScore intent head relations); (let ranked : (List Candidate) := (rankCandidates rest intent relations); (if (score =? 0) then ranked else (insertCandidate (record Candidate {reference := (referenceOf head), score := score}) ranked))))),
+  recursive_argument: catalog
+}
+
+definition{
+  name: expandReferences,
+  parameters: [
+    catalog : (List FeatureComposition::FeatureContract),
+    references : (List FeatureComposition::FeatureRef)
+  ],
+  result: (List FeatureComposition::FeatureRef),
+  body: (match catalog
+    | List.nil => references
+    | List.cons head rest => (expandReferences rest (if (containsReference references (referenceOf head)) then (unionReferences (dependencies head) references) else references))),
+  recursive_argument: catalog
+}
+
+definition{
+  name: closeReferences,
+  parameters: [
+    fuel : Nat,
+    catalog : (List FeatureComposition::FeatureContract),
+    references : (List FeatureComposition::FeatureRef)
+  ],
+  result: (List FeatureComposition::FeatureRef),
+  body: (match fuel
+    | Nat.zero => references
+    | Nat.succ less => (closeReferences less catalog (expandReferences catalog references))),
+  recursive_argument: fuel
+}
+
+definition{
+  name: selectReferences,
+  parameters: [
+    catalog : (List FeatureComposition::FeatureContract),
+    references : (List FeatureComposition::FeatureRef)
+  ],
+  result: (List FeatureComposition::FeatureRef),
+  body: (match catalog
+    | List.nil => (nil FeatureComposition::FeatureRef)
+    | List.cons head rest => (if (containsReference references (referenceOf head)) then (cons (referenceOf head) (selectReferences rest references)) else (selectReferences rest references))),
+  recursive_argument: catalog
+}
+
+definition{
+  name: conceptKnown,
+  parameters: [
+    catalog : (List FeatureComposition::FeatureContract),
+    relations : (List SemanticRelation),
+    concept : Nat
+  ],
+  result: Bool,
+  body: (match catalog
+    | List.nil => false
+    | List.cons head rest => ((0 <? (conceptWeight (project head vocabulary) relations concept)) || (conceptKnown rest relations concept))),
+  recursive_argument: catalog
+}
+
+definition{
+  name: unknownConcepts,
+  parameters: [
+    concepts : (List Nat),
+    catalog : (List FeatureComposition::FeatureContract),
+    relations : (List SemanticRelation)
+  ],
+  result: (List Nat),
+  body: (match concepts
+    | List.nil => (nil Nat)
+    | List.cons head rest => (if (conceptKnown catalog relations head) then (unknownConcepts rest catalog relations) else (cons head (unknownConcepts rest catalog relations)))),
+  recursive_argument: concepts
+}
+
+definition{
+  name: tiedCandidates,
+  parameters: [ranked : (List Candidate), score : Nat],
+  result: (List Nat),
+  body: (match ranked
+    | List.nil => (nil Nat)
+    | List.cons head rest => (if ((project head score) =? score) then (cons (project (project head reference) key) (tiedCandidates rest score)) else (nil Nat))),
+  recursive_argument: ranked
+}
+
+definition{
+  name: proposalUnresolved,
+  parameters: [
+    concepts : (List Nat),
+    catalog : (List FeatureComposition::FeatureContract),
+    relations : (List SemanticRelation),
+    selected : (List FeatureComposition::FeatureRef)
+  ],
+  result: (List Nat),
+  body: (match (ProposalAdmission::resolveProposalFeatures catalog selected)
+    | Result.error error => concepts
+    | Result.ok features => (unknownConcepts concepts features relations))
+}
+
+definition{
+  name: routeValidated,
+  parameters: [
+    expectedIntent : Nat,
+    registryRevision : Nat,
+    intent : SemanticIntent,
+    catalog : (List FeatureComposition::FeatureContract),
+    relations : (List SemanticRelation),
+    policy : FeatureComposition::CompositionPolicy
+  ],
+  result: RoutingOutcome,
+  body: (let ranked : (List Candidate) := (rankCandidates catalog intent relations); (let selected : (List FeatureComposition::FeatureRef) := (match ranked
+    | List.nil => (nil FeatureComposition::FeatureRef)
+    | List.cons head rest => (selectReferences catalog (closeReferences (prim length catalog : Nat) catalog (cons (project head reference) (nil FeatureComposition::FeatureRef))))); (let ambiguities : (List Nat) := (match ranked
+    | List.nil => (nil Nat)
+    | List.cons head rest => (let tied : (List Nat) := (tiedCandidates rest (project head score)); (if ((prim length tied : Nat) =? 0) then (nil Nat) else (cons (project (project head reference) key) tied)))); (let proposal : ProposalAdmission::Proposal := (record ProposalAdmission::Proposal {intent := (project intent id), registryRevision := (project intent registryRevision), selected := selected, ambiguities := ambiguities, unresolved := (proposalUnresolved (project intent concepts) catalog relations selected), confidence := 0}); (record RoutingOutcome {ranked := ranked, proposal := proposal, admission := (ProposalAdmission::admitProposal catalog expectedIntent registryRevision proposal policy)})))))
+}
+
+definition{
+  name: propose,
+  parameters: [
+    expectedIntent : Nat,
+    registryRevision : Nat,
+    intent : SemanticIntent,
+    catalog : (List FeatureComposition::FeatureContract),
+    relations : (List SemanticRelation),
+    policy : FeatureComposition::CompositionPolicy
+  ],
+  result: (Result RoutingOutcome RoutingError),
+  body: (if (negate ((0 <? expectedIntent) && ((0 <? registryRevision) && ((0 <? (project intent id)) && ((0 <? (project intent registryRevision)) && ((0 <? (prim length (project intent concepts) : Nat)) && (((prim length (project intent concepts) : Nat) <=? 32) && (((prim length (project intent context) : Nat) <=? 32) && ((FeatureComposition::validIds (project intent concepts)) && (FeatureComposition::validIds (project intent context))))))))))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticIntent)) else (if (negate (((prim length catalog : Nat) <=? 32) && (orderedCatalog catalog (nil FeatureComposition::FeatureContract)))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticCatalog)) else (if (negate (((prim length relations : Nat) <=? 128) && (validRelations relations))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticRelations)) else (ctor Result.ok [RoutingOutcome, RoutingError] (routeValidated expectedIntent registryRevision intent catalog relations policy)))))
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "This finite R4-compatible proposal interface uses explicit directed semantic relations and integer activation, not content digests or imported relevance claims. A concept matches a feature vocabulary exactly at weight 1000 or through one declared relation of weight 1 through 1000. Direct intent score is weighted by 32001; context provides a smaller ranking contribution only for candidates with positive direct-intent support. This weighting is explicit, not probabilistic confidence; proposal confidence remains zero. The catalog has at most 32 unique feature keys in dependency-first order, with bounded fields; relations have unique directed pairs and at most 128 rows. Intent and context contain at most 32 unique positive concept IDs. Direct-intent concepts unsupported by the selected composition are unresolved; context never creates a candidate. Positive candidates rank by descending integer score and ascending key. Equal top scores expose every tied key as ambiguity. The highest candidate closes all transitive needs and input producers through at most 32 bounded passes and preserves catalog dependency order. Empty rankings abstain. ProposalAdmission independently rejects stale intent or catalog, ambiguity, unresolved concepts, invalid dependencies, permissions, evidence, target, conflicts or budgets. Routing never executes effects, changes feature meanings or grants authority. An alternative router must satisfy the same typed proposal/admission boundary. This model is a bounded explicit-relation adaptation informed by R4 mechanisms, not an imported learned R4 implementation or evidence of general natural-language relevance. Independent held-out judgments, dependency completeness, abstention and latency qualify only the declared catalog and interpretation profile."
+}
+
+definition{
+  name: routerBase,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 10, version := 1, vocabulary := (cons 900 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (cons 7 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+definition{
+  name: routerGallery,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 11, version := 1, vocabulary := (cons 101 (nil Nat)), inputs := (cons (record FeatureComposition::FeatureInput {producer := (record FeatureComposition::FeatureRef {key := 10, version := 1}), schema := 7}) (nil FeatureComposition::FeatureInput)), outputs := (nil Nat), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 2, memory := 1})
+}
+
+definition{
+  name: routerAudio,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 14, version := 1, vocabulary := (cons 901 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (cons 8 (nil Nat)), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (cons 9 (nil Nat)), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+definition{
+  name: routerGarden,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 12, version := 1, vocabulary := (cons 201 (cons 202 (nil Nat))), inputs := (cons (record FeatureComposition::FeatureInput {producer := (record FeatureComposition::FeatureRef {key := 14, version := 1}), schema := 8}) (nil FeatureComposition::FeatureInput)), outputs := (nil Nat), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureComposition::FeatureRef {key := 10, version := 1}) (nil FeatureComposition::FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+definition{
+  name: routerDecision,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 13, version := 1, vocabulary := (cons 301 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (nil Nat), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureComposition::FeatureRef {key := 10, version := 1}) (nil FeatureComposition::FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+definition{
+  name: routerCatalog,
+  parameters: [],
+  result: (List FeatureComposition::FeatureContract),
+  body: (cons (routerBase) (cons (routerGallery) (cons (routerAudio) (cons (routerGarden) (cons (routerDecision) (nil FeatureComposition::FeatureContract))))))
+}
+
+definition{
+  name: routerRelations,
+  parameters: [],
+  result: (List SemanticRelation),
+  body: (cons (record SemanticRelation {fromConcept := 102, toConcept := 101, weight := 900}) (cons (record SemanticRelation {fromConcept := 203, toConcept := 201, weight := 900}) (cons (record SemanticRelation {fromConcept := 100, toConcept := 101, weight := 500}) (cons (record SemanticRelation {fromConcept := 100, toConcept := 201, weight := 500}) (nil SemanticRelation)))))
+}
+
+definition{
+  name: routerPolicy,
+  parameters: [],
+  result: FeatureComposition::CompositionPolicy,
+  body: (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 100, memory := 100})
+}
+
+theorem{
+  name: router_exactGalleryClosure,
+  parameters: [],
+  statement: ((project (project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) proposal) selected) = (cons (record FeatureComposition::FeatureRef {key := 10, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 11, version := 1}) (nil FeatureComposition::FeatureRef)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_relationGalleryClosure,
+  parameters: [],
+  statement: ((project (project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 102 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) proposal) selected) = (cons (record FeatureComposition::FeatureRef {key := 10, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 11, version := 1}) (nil FeatureComposition::FeatureRef)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_multidomainClosure,
+  parameters: [],
+  statement: ((project (project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 201 (cons 202 (nil Nat))), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) proposal) selected) = (cons (record FeatureComposition::FeatureRef {key := 10, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 14, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 12, version := 1}) (nil FeatureComposition::FeatureRef))))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_contextDisambiguates,
+  parameters: [],
+  statement: ((project (project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 100 (nil Nat)), context := (cons 201 (nil Nat))}) (routerCatalog) (routerRelations) (routerPolicy)) proposal) selected) = (cons (record FeatureComposition::FeatureRef {key := 10, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 14, version := 1}) (cons (record FeatureComposition::FeatureRef {key := 12, version := 1}) (nil FeatureComposition::FeatureRef))))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_unknownAbstains,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 999 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) ranked) = (nil Candidate)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_unresolvedConstraint,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 999 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.unresolvedConstraint))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_unresolvedAmbiguity,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 100 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.unresolvedAmbiguity))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_staleIntent,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 2, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.staleIntent))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_staleRegistry,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 2, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.staleRegistry))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_permissionDenied,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 201 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (record FeatureComposition::CompositionPolicy {grants := (nil Nat), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 100, memory := 100})) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.permissionDenied)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_budgetExceeded,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (record FeatureComposition::CompositionPolicy {grants := (cons 9 (nil Nat)), targets := (cons 1 (nil Nat)), evidence := (nil Nat), cpu := 1, memory := 100})) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.budgetExceeded)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+definition{
+  name: routerWrongInput,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 11, version := 1, vocabulary := (cons 101 (nil Nat)), inputs := (cons (record FeatureComposition::FeatureInput {producer := (record FeatureComposition::FeatureRef {key := 10, version := 1}), schema := 99}) (nil FeatureComposition::FeatureInput)), outputs := (nil Nat), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (nil FeatureComposition::FeatureRef), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+theorem{
+  name: router_incompatibleInput,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (cons (routerBase) (cons (routerWrongInput) (nil FeatureComposition::FeatureContract))) (routerRelations) (routerPolicy)) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.incompatibleInput)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+definition{
+  name: routerMissingQuality,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 11, version := 1, vocabulary := (cons 101 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (nil Nat), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureComposition::FeatureRef {key := 10, version := 1}) (nil FeatureComposition::FeatureRef)), conflicts := (nil Nat), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (cons 77 (nil Nat)), cpu := 1, memory := 1})
+}
+
+theorem{
+  name: router_missingEvidence,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (cons (routerBase) (cons (routerMissingQuality) (nil FeatureComposition::FeatureContract))) (routerRelations) (routerPolicy)) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.missingEvidence)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+definition{
+  name: routerConflict,
+  parameters: [],
+  result: FeatureComposition::FeatureContract,
+  body: (record FeatureComposition::FeatureContract {key := 11, version := 1, vocabulary := (cons 101 (nil Nat)), inputs := (nil FeatureComposition::FeatureInput), outputs := (nil Nat), state := (nil Nat), events := (nil Nat), errors := (nil Nat), effects := (nil Nat), needs := (cons (record FeatureComposition::FeatureRef {key := 10, version := 1}) (nil FeatureComposition::FeatureRef)), conflicts := (cons 10 (nil Nat)), targets := (cons 1 (nil Nat)), accessibility := (nil Nat), quality := (nil Nat), cpu := 1, memory := 1})
+}
+
+theorem{
+  name: router_featureConflict,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (cons (routerBase) (cons (routerConflict) (nil FeatureComposition::FeatureContract))) (routerRelations) (routerPolicy)) admission) = (ctor Result.error [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (ctor ProposalAdmission::ProposalError.compositionRejected (ctor FeatureComposition::CompositionError.featureConflict)))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_emptyIntent,
+  parameters: [],
+  statement: ((propose 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (nil Nat), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) = (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticIntent))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_duplicateIntent,
+  parameters: [],
+  statement: ((propose 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (cons 101 (nil Nat))), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) = (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticIntent))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_forwardDependency,
+  parameters: [],
+  statement: ((propose 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (cons (routerGallery) (cons (routerBase) (nil FeatureComposition::FeatureContract))) (routerRelations) (routerPolicy)) = (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticCatalog))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_invalidRelation,
+  parameters: [],
+  statement: ((propose 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (routerCatalog) (cons (record SemanticRelation {fromConcept := 1, toConcept := 2, weight := 1001}) (nil SemanticRelation)) (routerPolicy)) = (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticRelations))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_unselectedIntentRemainsUnresolved,
+  parameters: [],
+  statement: ((project (project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 102 (cons 201 (nil Nat))), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) proposal) unresolved) = (cons 102 (nil Nat))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_noContextOnlyCandidate,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 999 (nil Nat)), context := (cons 101 (nil Nat))}) (routerCatalog) (routerRelations) (routerPolicy)) ranked) = (nil Candidate)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_exactRankScore,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) ranked) = (cons (record Candidate {reference := (record FeatureComposition::FeatureRef {key := 11, version := 1}), score := 32001000}) (nil Candidate))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: router_admissionIndependent,
+  parameters: [],
+  statement: ((project (routeValidated 1 1 (record SemanticIntent {id := 1, registryRevision := 1, concepts := (cons 101 (nil Nat)), context := (nil Nat)}) (routerCatalog) (routerRelations) (routerPolicy)) admission) = (ctor Result.ok [(List FeatureComposition::FeatureContract), ProposalAdmission::ProposalError] (cons (routerBase) (cons (routerGallery) (nil FeatureComposition::FeatureContract))))),
+  proof: reflexivity{},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}

@@ -381,3 +381,9 @@ id = "FA-47"
 level = "build"
 suite = "private-provider-credentials"
 statement = "Cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files"
+
+[[id]]
+id = "FA-48"
+level = "build"
+suite = "semantic-routing-model"
+statement = "Typed semantic proposals rank explicit concept relations and close dependencies while Prism independently admits ambiguity constraints and effects"

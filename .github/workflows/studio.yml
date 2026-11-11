@@ -96,6 +96,8 @@ jobs:
           node tools/durable_build_work_browser.mjs
           node tools/private_provider_credentials_browser.mjs
           node tools/private_provider_credentials_artifact.mjs
+          node tools/semantic_routing_runtime.mjs
+          node tools/semantic_routing_browser.mjs
           node tools/rules_source_browser.mjs
           node tools/inference_effects_browser.mjs
           node tools/inference_consent_browser.mjs

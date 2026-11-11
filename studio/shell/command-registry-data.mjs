@@ -251,6 +251,17 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Independent journey and release obligations apply; this inventory grants no effects."
+    },
+    {
+      "id": "semantic-routing",
+      "version": 1,
+      "owner": "SemanticRouter.boundary",
+      "effects": [],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Independent finite relevance and latency qualification; no permission authority."
     }
   ],
   "commands": [
@@ -1289,6 +1300,16 @@ export const commandRegistryData = {
       "feature": "representation",
       "version": 1,
       "owner": "FoundrySpecification.representationBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
+      "input": "product-boundary",
+      "output": "product-boundary"
+    },
+    {
+      "channel": "forge:route",
+      "feature": "semantic-routing",
+      "version": 1,
+      "owner": "SemanticRouter.boundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",
