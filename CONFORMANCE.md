@@ -197,6 +197,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-31` | `build` | The editor loads only from integrity-checked locked package bytes inside the active shell closure |
 
+## preview-permissions
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-39` | `build` | Networked previews require explicit source-bound permission with persistent revocation controls |
+
 ## proposal-admission
 
 | ID | Level | Statement |

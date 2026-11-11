@@ -758,6 +758,7 @@ definition{
   result: String,
   body: "For a captured project carrying prism/spec.json, generic generated-file batches cannot write, delete or rename the specification, its active canonical decision module or src/lib/prism.ts. Both rename endpoints are checked. If the current spec cannot identify its module, top-level canonical-module paths are protected until a canonical edit repairs it. A protected operation refuses the entire batch with canonicalGenerationRefused before storage mutation, including otherwise ordinary operations in that batch. Patch and caller-supplied source snapshots are copied before asynchronous work. Ordinary files and projects without a decision spec retain the existing atomic batch path with the same captured source and cancellation checks. Canonical module, JSON, patch and file-editor authoring still use the separate rules transaction; no public switch grants generic batches model authority. This boundary does not authenticate same-origin script callers or establish whole-application semantic ownership."
 }
+
 inductive{
   name: CanonicalBuildError,
   type_parameters: [],
@@ -770,6 +771,28 @@ definition{
   parameters: [],
   result: String,
   body: "After content identity and captured-source comparison, a build carrying prism/spec.json admits at most one MiB of UTF8 specification text through the decision checker. The checked model must reconstruct exactly the active canonical module bytes and src/lib/prism.ts runtime bytes in that snapshot. Missing, changed or invalid projections refuse with fixed private canonicalBuildMismatch before preview grants, compiler execution or portable output promotion. Nonmodel projects retain their existing build path. Imported and restored drafts can remain editable but cannot use inconsistent model projections for builds. This comparison binds the existing finite decision adapter profile; it does not prove compiler preservation, arbitrary source behavior or a non-decision model."
+}
+
+inductive{
+  name: PreviewPermissionError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidPreviewPermission, fields: []},
+    {name: previewPermissionDenied, fields: []},
+    {name: previewPermissionExpired, fields: []},
+    {name: previewPermissionOffline, fields: []},
+    {name: previewPermissionUnavailable, fields: []},
+    {name: previewPermissionChanged, fields: []},
+    {name: previewPermissionStorageFailed, fields: []}
+  ]
+}
+
+definition{
+  name: previewPermissionBoundary,
+  parameters: [],
+  result: String,
+  body: "A networked generated-code preview must disclose its exact captured source identity and at most 32 unique HTTPS origins before compilation or a network grant. Approval is per build, expires within five minutes, and is unavailable offline. Denial and Escape grant nothing. The dialog uses text-only labels, focuses denial by default and restores focus. Disclosures explain execution of generated code, destination visibility of request data and inability to recall prior transfers. The host compares source before installing the disclosed grant, whose source and destinations are copied. The grant transaction compares the previously captured permission record so a concurrent revocation or replacement refuses stale approval with previewPermissionChanged. A persistent preview-permission control lists stored preview grants after reload, revokes serving and network permission and unloads matching local frames. Revocation prevents future worker-authorized requests but cannot recall remote data or stop all already executing remote work. Local canonical projection with no network endpoints retains its existing path. Storage and UI failures are typed and private. This is a preview permission boundary, not authentication of same-origin callers or authorization for publication or portable builds."
 }
 \end{semanticmodule}
 \end{lexlean}

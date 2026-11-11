@@ -32,6 +32,7 @@ import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
 import * as lexlean from "./live/lexlean.mjs";
 import { canonicalEditPath, planCanonicalEdit } from "./canonical-edits.mjs";
+import { authorizePreview, commitPreviewPermission, previewPermissionFailure, mountPreviewPermissions } from "./preview-permissions.mjs";
 import { copyGenerationInput, assertCanonicalGeneration } from "./canonical-generation.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
@@ -396,15 +397,34 @@ function publish(appId, patch) {
   return m;
 }
 const esbuild = () => loadBrowserCompiler(BASE);
-// The grant a preview is served under. The worker asks the kernel's gate (proved by Lean) before it
-// serves a preview, and the gate refuses anything that has no record, so every preview gets one:
-// it may be served, and it may reach the hosts its build names: esm.sh for packages and the play
-// build of Tailwind. An app may carry its own list in app.grants; nothing else is reachable.
+// Generated-code previews disclose network destinations before compilation. The grant is
+// installed only after the captured source and prior permission record still match.
+// Canonical live projection keeps its separate network-free serving grant.
 const PREVIEW_ENDPOINTS = ["https://esm.sh", "https://cdn.tailwindcss.com"];
 const previewId = (pathname) => pathname.split("/").filter(Boolean).pop();
-async function grantPreview(id, endpoints) {
-  await put("refs", "capabilities:" + id, { serve: true, network: { endpoints: [...endpoints], denied: [] } });
+async function grantPreview(id, endpoints, permission = null, expected) {
+  if (permission) return commitPreviewPermission(await dbReady, id, permission, expected);
+  const record = { serve: true, network: { endpoints: [...endpoints], denied: [] } };
+  try { await put("refs", "capabilities:" + id, record); }
+  catch { throw previewPermissionFailure("previewPermissionStorageFailed"); }
 }
+mountPreviewPermissions({
+  list: async () => {
+    const rows = [];
+    for (const key of await keys("refs")) {
+      if (typeof key !== "string" || !key.startsWith("capabilities:")) continue;
+      const record = await get("refs", key);
+      if (record?.serve === true && record.previewConsent?.profile === "foundry/preview-consent/1") rows.push({ id: key.slice(13), source: record.previewConsent.source, endpoints: [...record.network.endpoints] });
+    }
+    return rows;
+  },
+  revoke: async id => {
+    try { await put("refs", "capabilities:" + id, { serve: false, network: { endpoints: [], denied: [] } }); }
+    catch { throw previewPermissionFailure("previewPermissionStorageFailed"); }
+    const prefix = new URL(`p/${id}/`, BASE).href;
+    for (const frame of document.querySelectorAll("iframe")) if (frame.src.startsWith(prefix)) frame.src = "about:blank";
+  },
+});
 
 async function verifiedBuildSource(appId) {
   return captureBuildSource(await dbReady, appId, {
@@ -418,7 +438,10 @@ async function buildPreview(appId) {
   const { path } = core.run({ op: "preview", kappa: source.reference });
   const appUrl = new URL(path.slice(1), BASE);
   const owner = await get("apps", appId);
-  await grantPreview(previewId(appUrl.pathname), Array.isArray(owner && owner.grants) ? owner.grants : PREVIEW_ENDPOINTS);
+  const endpoints = Array.isArray(owner && owner.grants) ? owner.grants : PREVIEW_ENDPOINTS;
+  const previousPermission = await get("refs", "capabilities:" + previewId(appUrl.pathname));
+  const permission = endpoints.length ? await authorizePreview({ id: previewId(appUrl.pathname), source: source.reference, endpoints }) : null;
+  const approvedEndpoints = permission ? permission.disclosure.endpoints : [];
   const files = new Map(source.files);
   const pkg = await (await fetch(new URL("scaffold/package.json", BASE))).json();
   const pkgs = Object.fromEntries(Object.entries(pkg.dependencies).map(([n, v]) => [n, v.replace(/^[\^~]/, "")]));
@@ -464,6 +487,8 @@ async function buildPreview(appId) {
   await assertBuildSourceCurrent(await dbReady, appId, source);
   const cache = await caches.open("previews");
   await cache.put(appUrl.pathname + "index.html", new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } }));
+  try { await grantPreview(previewId(appUrl.pathname), approvedEndpoints, permission, previousPermission); }
+  catch (error) { await cache.delete(appUrl.pathname + "index.html"); throw error; }
   return { appUrl: appUrl.href, bytes: js.length };
 }
 // ---- the live preview. An app with rules is not built: it is projected. One fixed frame on shadcn/ui

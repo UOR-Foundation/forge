@@ -42,6 +42,7 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if (["previewPermissionChanged", "invalidPreviewPermission", "previewPermissionDenied", "previewPermissionExpired", "previewPermissionOffline", "previewPermissionUnavailable", "previewPermissionStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "validation", "Preview permission was not granted or could not be changed");
     if (error?.code === "canonicalBuildMismatch") return refusal("canonicalBuildMismatch", channel, "validation", "Build source does not match its canonical model projections");
     if (error?.code === "canonicalGenerationRefused") return refusal("canonicalGenerationRefused", channel, "validation", "Use canonical authoring commands to change model-owned files");
     if (error?.code === "projectEditConflict") return refusal("projectEditConflict", channel, "validation", "The project changed during the edit");

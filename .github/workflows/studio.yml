@@ -87,6 +87,7 @@ jobs:
           node tools/canonical_model_edits_browser.mjs
           node tools/canonical_generation_ownership_browser.mjs
           node tools/canonical_build_closure_browser.mjs
+          node tools/preview_permissions_browser.mjs
           node tools/rules_source_browser.mjs
           node tools/inference_effects_browser.mjs
           node tools/inference_consent_browser.mjs

@@ -327,3 +327,9 @@ id = "FA-38"
 level = "build"
 suite = "canonical-build-closure"
 statement = "Decision builds require the canonical module and generated runtime to match the captured specification"
+
+[[id]]
+id = "FA-39"
+level = "build"
+suite = "preview-permissions"
+statement = "Networked previews require explicit source-bound permission with persistent revocation controls"
