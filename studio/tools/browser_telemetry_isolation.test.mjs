@@ -13,9 +13,9 @@ test("legacy settings cannot restore collection or leak a telemetry identifier",
   const result = browserSettings(value);
   assert.equal(result.telemetryConsent, "opted_out"); assert.ok(!Object.hasOwn(result, "telemetryUserId")); assert.deepEqual(result.selectedModel, value.selectedModel); assert.deepEqual(result.providerSettings, value.providerSettings); assert.equal(value.telemetryUserId, "secret");
 });
-test("enable and ambiguous consent writes refuse with a fixed typed failure", () => {
-  for (const telemetryConsent of ["opted_in", "unset", null, true, "secret"]) assert.throws(() => assertBrowserSettingsPatch({ telemetryConsent }), error => error.code === "browserTelemetryUnavailable" && !error.message.includes("secret"));
-  for (const patch of [{}, undefined, { telemetryConsent: "opted_out" }, { selectedModel: { name: "owned" } }]) assert.doesNotThrow(() => assertBrowserSettingsPatch(patch));
+test("enable and malformed consent writes refuse with a fixed typed failure", () => {
+  for (const telemetryConsent of ["opted_in", null, true, "secret"]) assert.throws(() => assertBrowserSettingsPatch({ telemetryConsent }), error => error.code === "browserTelemetryUnavailable" && !error.message.includes("secret"));
+  for (const patch of [{}, undefined, { telemetryConsent: "opted_out" }, { telemetryConsent: "unset" }, { selectedModel: { name: "owned" } }]) assert.doesNotThrow(() => assertBrowserSettingsPatch(patch));
 });
 test("actual host settings normalize reads and writes and refuse before storage", async () => {
   const start = host.indexOf('// ---- settings'), end = host.indexOf('// What the renderer takes', start);
@@ -26,6 +26,7 @@ test("actual host settings normalize reads and writes and refuse before storage"
   await assert.rejects(handlers.get("set-user-settings")({ telemetryConsent: "opted_in" }), { code: "browserTelemetryUnavailable" }); assert.equal(writes, 0);
   const saved = await handlers.get("set-user-settings")({ telemetryUserId: "secret replacement", autoExpandPreviewPanel: false });
   assert.equal(writes, 1); assert.equal(saved.telemetryConsent, "opted_out"); assert.equal(saved.telemetryUserId, undefined); assert.equal(stored.autoExpandPreviewPanel, false);
+  const reset = await handlers.get("set-user-settings")({ telemetryConsent: "unset" }); assert.equal(reset.telemetryConsent, "opted_out"); assert.equal(writes, 2);
 });
 test("typed host envelope preserves the policy refusal and never forwards private error text", async () => {
   const result = await invokeHost("set-user-settings", [{}], () => { throw Object.assign(new Error("secret provider prompt"), { code: "browserTelemetryUnavailable" }); }, null);

@@ -4,7 +4,7 @@ export function browserSettings(value) {
   return { ...settings, telemetryConsent: "opted_out" };
 }
 export function assertBrowserSettingsPatch(patch) {
-  if (patch?.telemetryConsent !== undefined && patch.telemetryConsent !== "opted_out") {
+  if (patch?.telemetryConsent !== undefined && !["opted_out", "unset"].includes(patch.telemetryConsent)) {
     throw Object.assign(new Error("Vendor telemetry is unavailable in this browser"), { code: "browserTelemetryUnavailable" });
   }
 }
