@@ -114,6 +114,7 @@ function firstDiff(a, b) {
     if (s.split(",").some((part) => !/^(\.prism-card|:where\(\.prism-card\))/.test(part.trim()))) { fail("card files", `card.css lets Tailwind's base rule \`${s}\` out of the card`); break; }
   }
   if (!/#stage \.prism-card \*[^{]*\{all:revert-layer\}/.test(css)) fail("card files", "card.css does not reset the page's own rules inside the card");
+  if (!css.includes("#stage .prism-card:not([data-started]) .animate-in{animation:none}") || !mjs.includes('setAttribute("data-started"')) fail("card files", "the card fades in at load, so the page's first paint is not its largest (the template's LCP gate)");
   // Outside every layer only the card's own rules may stand: any other unlayered rule is undone inside the
   // card by its reset, so the card would not draw what the frame draws.
   for (const sel of unlayered(css)) if (!sel.startsWith("#stage ")) { fail("card files", `card.css has an unlayered rule \`${sel}\` the card's reset would undo`); break; }

@@ -187,5 +187,9 @@ export async function start(card, interp, { app, show, $ }) {
   const styles = () => { for (const el of main.querySelectorAll("[data-style]")) if (el.style.cssText !== el.dataset.style) el.style.cssText = el.dataset.style; };
   styles();
   if (app) guest.passes = await examplesPass(card, ask);
+  // What loaded at rest stays at rest (card.css): pinned here before the card is marked started, so only
+  // what the page mounts from now on enters as it does in the preview.
+  for (const el of main.querySelectorAll(".animate-in")) el.style.setProperty("animation", "none");
+  main.parentElement.setAttribute("data-started", "");
   await draw();
 }

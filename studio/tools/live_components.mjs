@@ -136,7 +136,11 @@ export function cardSheet(css) {
   const scoped = (body) => body.replace(/(^|[{};])([^{};@]+)\{/g, (m, before, sel) => before + scope(sel) + "{");
   const base = css.slice(start, i - 1);
   const card = "#stage .prism-card,#stage .prism-card *,#stage .prism-card :before,#stage .prism-card :after{all:revert-layer}" +
-    "#stage .board-fit>.prism-card{width:100%;height:100%;overflow-y:auto;place-self:stretch}";
+    "#stage .board-fit>.prism-card{width:100%;height:100%;overflow-y:auto;place-self:stretch}" +
+    // What the page holds when it loads is drawn at rest: the page's first paint is its largest one, which the
+    // template's Lighthouse gate times (LCP under 1.5 s), so nothing may fade in from transparent. card.mjs
+    // marks the card started; what it mounts after that enters as in the preview.
+    "#stage .prism-card:not([data-started]) .animate-in{animation:none}";
   return css.slice(0, start) + scoped(base) + css.slice(i - 1) + card;
 }
 
