@@ -21,12 +21,19 @@ const server = http.createServer((req, res) => {
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${server.address().port}/foundry/`, origin = new URL(base).origin;
 const executablePath = process.env.CHROME_BIN || ["/usr/bin/chromium", "/usr/bin/google-chrome"].find(p => fs.existsSync(p));
-let browser;
+let browser;const held=[];
 try {
   browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox"] });
   const context = await browser.newContext({ serviceWorkers: "block" }), page = await context.newPage(), errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  let submitted=0;
+  await context.route("**/*", async route => {
+    const url=new URL(route.request().url());
+    if(url.href==='https://api.featherless.ai/v1/chat/completions'){
+      submitted++;await new Promise(resolve=>held.push(resolve));try{await route.abort();}catch{}return;
+    }
+    return url.origin===origin?route.continue():route.abort();
+  });
   await page.goto(base); await page.waitForFunction(() => !!window.__host && !!window.__prism && !!window.electron);
   const made=await page.evaluate(async()=>{
     const call=(channel,input)=>window.electron.ipcRenderer.invoke(channel,input);
@@ -42,7 +49,7 @@ try {
     if(snapshot.encodedState.queue.length!==3||!snapshot.encodedState.queuePaused)throw Error('durable paused queue missing');
     return {...made,actor:snapshot.actorInstanceId};
   });
-  const peer=await context.newPage();await peer.goto(base);await peer.waitForFunction(()=>!!window.__host&&!!window.electron);
+  const peer=await context.newPage();peer.on("pageerror",error=>errors.push(error.message));await peer.goto(base);await peer.waitForFunction(()=>!!window.__host&&!!window.electron);
   const first=await peer.evaluate(async made=>window.electron.ipcRenderer.invoke('distributed-machine:subscribe',{protocolVersion:1,machineId:'chat_stream',encodedKey:{chatId:made.chatId}}),made);
   assert.equal(first.encodedState.queue.length,3);assert.equal(first.encodedState.queueRevision,4);
   const edited=await peer.evaluate(async made=>{
@@ -66,6 +73,52 @@ try {
     const j=await window.__host.get('refs',`chat-queue:${made.chatId}`);if(j.entries.length||j.state.revision!==8)throw Error('clear failed');
     await call('delete-chat',made.chatId);if(await window.__host.get('refs',`chat-queue:${made.chatId}`)!==undefined)throw Error('deleted chat retained queue');
   },made);
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({actualHost:true,actualGuest:true,tabs:2,persistedPrompts:3,edit:true,reorder:true,remove:true,staleRevisionRefused:true,reload:true,staleActorRefused:true,clear:true,delete:true,pageExceptions:0}));
+  // Exercise actual chatTurn and the paid adapter, keeping the transport pending.
+  await page.evaluate(async()=>{const inference=await import('./inference.js');await inference.settingsPut({selectedModel:{provider:'featherless',name:'fixture'},providerSettings:{featherless:{apiKey:{value:'browser-fixture-key'}}}});});
+  const call=(tab,channel,input)=>tab.evaluate(({channel,input})=>window.electron.ipcRenderer.invoke(channel,input),{channel,input});
+  const send=(tab,chatId,event)=>call(tab,'distributed-machine:dispatch',{protocolVersion:1,machineId:'chat_stream',encodedKey:{chatId},messageId:crypto.randomUUID(),encodedEvent:event});
+  const submit=async(tab,made,name,stop=0)=>{
+    const intent=await tab.evaluate(async({made,name})=>{
+      const {bindQueuePayload}=await import('./chat-queue-store.mjs'),{serializeImmutableChatTurnPayload}=await import('./chat-contracts.mjs');
+      return bindQueuePayload({schemaVersion:1,intentId:name,chatId:made.chatId,appId:made.app.id,invocationRef:{kind:'chat-stream',entityKey:made.chatId,operationId:name},prompt:`Explain ${name}`,requestedChatMode:'build'},serializeImmutableChatTurnPayload);
+    },{made,name});
+    await send(tab,made.chatId,{type:'SUBMIT',intent,observedStopPolicyVersion:stop});return intent;
+  };
+  const journal=(tab,chatId)=>tab.evaluate(chatId=>window.__host.get('refs',`chat-queue:${chatId}`),chatId);
+  const waitJournal=async(tab,chatId,condition)=>{for(let n=0;n<500;n++){const j=await journal(tab,chatId);if(j&&condition(j))return j;await new Promise(r=>setTimeout(r,10));}throw Error('queue settlement timed out: '+condition);};
+  const active=await call(page,'create-app',{name:'active-queue',initialChatMode:'build'});
+  const firstIntent=await submit(page,active,'active-first');
+  // Either tab may own the execution Web Lock after the broadcast.
+  const consentTab=async()=>{for(let n=0;n<300;n++){for(const tab of context.pages())if(await tab.getByRole('dialog',{name:'Review cloud request'}).count())return tab;await new Promise(r=>setTimeout(r,20));}throw Error('actual chat did not reach cloud consent');};
+  let owner=await consentTab();await owner.getByRole('button',{name:'Send this request',exact:true}).click();
+  for(let n=0;submitted<1&&n<300;n++)await new Promise(r=>setTimeout(r,10));assert.equal(submitted,1);
+  const other=owner===page?peer:page;
+  await submit(other,active,'busy-second');await waitJournal(other,active.chatId,j=>j.entries.length===2&&j.state.active!==0);
+  await send(other,active.chatId,{type:'CANCEL',invocationRef:firstIntent.invocationRef,pauseQueue:true,observedStopPolicyVersion:0});
+  await waitJournal(other,active.chatId,j=>!j.state.active&&j.state.paused===1&&j.receipts.some(r=>r.intentId==="active-first"&&r.outcome==="cancelled"));
+  assert.equal((await journal(other,active.chatId)).entries[0].intent.intentId,'busy-second');assert.equal(submitted,1);
+  for(const resolve of held.splice(0))resolve();
+  // Request success is not durable success: abort the real IDB transaction after put.
+  const before=await journal(other,active.chatId);
+  const aborted=await other.evaluate(async({chatId,revision})=>{
+    const original=IDBObjectStore.prototype.put;let injected=false;
+    IDBObjectStore.prototype.put=function(value,key){const request=original.call(this,value,key);if(this.name==='refs'&&key===`chat-queue:${chatId}`){injected=true;request.addEventListener('success',()=>this.transaction.abort(),{once:true});}return request;};
+    try{await window.electron.ipcRenderer.invoke('distributed-machine:dispatch',{protocolVersion:1,machineId:'chat_stream',encodedKey:{chatId},messageId:'late-abort',encodedEvent:{type:'CLEAR_QUEUE',expectedQueueRevision:revision,mutationId:'late-abort'}});return {injected,refused:false};}catch{return {injected,refused:true};}finally{IDBObjectStore.prototype.put=original;}
+  },{chatId:active.chatId,revision:before.state.revision});
+  assert.deepEqual(aborted,{injected:true,refused:true});assert.deepEqual(await journal(other,active.chatId),before);
+  // Close an actual owner while consent is pending. A fresh tab must recover paused,
+  // retaining the prompt without transmitting it again automatically.
+  await send(other,active.chatId,{type:'RESUME_QUEUE',expectedQueueRevision:before.state.revision,mutationId:'resume',observedStopPolicyVersion:1});
+  owner=await consentTab();await waitJournal(owner,active.chatId,j=>j.state.active!==0);
+  const survivor=owner===page?peer:page;await owner.close();
+  await call(survivor,'distributed-machine:subscribe',{protocolVersion:1,machineId:'chat_stream',encodedKey:{chatId:active.chatId}});
+  await waitJournal(survivor,active.chatId,j=>!j.state.active&&j.state.paused===1&&j.entries.length===1);
+  assert.equal(submitted,1);
+  const recovered=await journal(survivor,active.chatId);
+  await send(survivor,active.chatId,{type:'RESUME_QUEUE',expectedQueueRevision:recovered.state.revision,mutationId:'resume-recovered',observedStopPolicyVersion:recovered.state.stopPolicy});
+  owner=await consentTab();await call(survivor,'delete-chat',active.chatId);
+  await owner.waitForFunction(()=>!document.querySelector('[aria-label="Review cloud request"]'));
+  assert.equal(await journal(survivor,active.chatId),undefined);assert.equal(submitted,1);
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({actualHost:true,actualGuest:true,tabs:2,persistedPrompts:3,edit:true,reorder:true,remove:true,staleRevisionRefused:true,reload:true,staleActorRefused:true,clear:true,delete:true,activeBusySubmit:true,crossTabStop:true,ownerCloseRecovery:true,activeDeletion:true,actualLateAbort:true,pageExceptions:0}));
 
-}finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+}catch(error){console.error(error);throw error;}finally{for(const resolve of held.splice(0))resolve();if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
