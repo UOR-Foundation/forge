@@ -1,3 +1,4 @@
+import { browserSettings, assertBrowserSettingsPatch } from "./privacy-policy.mjs";
 import { prepareProjectImport } from "./project-import.mjs";
 import { withBuildModules } from "./build-modules.mjs";
 import { captureBuildSource, assertBuildSourceCurrent, requiresRulePublication } from "./build-source.mjs";
@@ -71,8 +72,8 @@ const DEFAULT_SETTINGS = {
 // turn that writes files, so that is the mode the record always carries: an agent mode would promise
 // tool calls this host does not make.
 const BUILD_MODE = { selectedChatMode: "build", defaultChatMode: "build" };
-handlers.set("get-user-settings", async () => ({ ...DEFAULT_SETTINGS, ...((await get("settings", "user")) || {}), ...BUILD_MODE }));
-handlers.set("set-user-settings", async (patch) => { const s = { ...DEFAULT_SETTINGS, ...((await get("settings", "user")) || {}), ...(patch || {}), ...BUILD_MODE }; await put("settings", "user", s); return s; });
+handlers.set("get-user-settings", async () => browserSettings({ ...DEFAULT_SETTINGS, ...((await get("settings", "user")) || {}), ...BUILD_MODE }));
+handlers.set("set-user-settings", async (patch) => { assertBrowserSettingsPatch(patch); const s = browserSettings({ ...DEFAULT_SETTINGS, ...((await get("settings", "user")) || {}), ...(patch || {}), ...BUILD_MODE }); await put("settings", "user", s); return s; });
 // What the renderer takes as "set up": the site's included key counts as OpenRouter's, the device's
 // GPU counts as the local provider's, so no connect dialog stands between the first prompt and the
 // answer. The values are words, never the key itself.

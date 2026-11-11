@@ -261,3 +261,9 @@ id = "FA-29"
 level = "build"
 suite = "verified-shell-cache"
 statement = "Worker activation requires bounded independently verified shell bytes including renderer and scaffold closure"
+
+[[id]]
+id = "FA-30"
+level = "build"
+suite = "browser-telemetry-isolation"
+statement = "The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings"

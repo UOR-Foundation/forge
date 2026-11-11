@@ -52,6 +52,7 @@ const hologramUi: Plugin = {
   // components with Base UI's props, are rewritten for the kit's, which are Radix (hologram.radix.mjs).
   transform(code, id) {
     const file = id.replace(/\\/g, "/").split("?")[0];
+    if (file === src + "/lib/settingsSearchIndex.ts") return { code: screenSource(file, code), map: null };
     if (!file.startsWith(src) || !/\.tsx$/.test(file)) return null;
     const shell = screenSource(file, code);
     if (file.includes("/components/ui/")) return shell === code ? null : { code: shell, map: null };
