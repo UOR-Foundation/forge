@@ -5,6 +5,7 @@ import http from "node:http";
 import { chromium } from "../vendor/dyad/node_modules/playwright-core/index.mjs";
 const files = new Map([
   ["/kernel.js", "../shell/kernel.js"],
+  ["/preview-vectors.json", "../../verification/version-preview-vectors.json"],
   ["/queue-vectors.json", "../../verification/chat-queue-vectors.json"],
   ["/routing-vectors.json", "../../verification/routing-vectors.json"],
   ["/kernel/kernel.json", "../shell/kernel/kernel.json"],
@@ -65,9 +66,11 @@ const exercise = async () => {
   for (const vector of routing) if (decoder.decode(await guest.dispatch(new TextEncoder().encode(vector.request))) !== vector.response) throw Error("routing: " + vector.name);
   const queue = (await (await fetch("/queue-vectors.json")).json()).vectors;
   for (const vector of queue) if (decoder.decode(await guest.dispatch(new TextEncoder().encode(vector.request))) !== vector.response) throw Error("queue: " + vector.name);
+  const previews=(await (await fetch("/preview-vectors.json")).json()).vectors;
+  for(const vector of previews)if(decoder.decode(await guest.dispatch(new TextEncoder().encode(vector.request)))!==vector.response)throw Error("preview: "+vector.name);
   if (await guest.ask("drafting check") !== "checked") throw Error("legacy phase");
   for (const phase of ["drafting", "checked", "proving", "proved", "published"]) if (await guest.ask(phase + " reword") !== phase) throw Error("reword phase");
-  return { queue: queue.length, routing: routing.length, vectors: vectors.length, work: work.length, events: events.length, interactions: interactions.length, embedded: guest.vectors, digest: guest.digest };
+  return { previews: previews.length, queue: queue.length, routing: routing.length, vectors: vectors.length, work: work.length, events: events.length, interactions: interactions.length, embedded: guest.vectors, digest: guest.digest };
 };
 const workerSource = `importScripts('/kernel.js'); (${exercise.toString()})().then(result => postMessage({result}), error => postMessage({error: String(error)}));`;
 const server = http.createServer((request, response) => {
@@ -99,7 +102,8 @@ try {
   assert.equal(documentResult.interactions, 21);
   assert.equal(documentResult.routing, 32);
   assert.equal(documentResult.queue, 38);
-  assert.equal(documentResult.embedded, 215);
+  assert.equal(documentResult.previews, 30);
+  assert.equal(documentResult.embedded, 245);
   console.log(JSON.stringify({ page: documentResult, worker: workerResult }));
 } finally {
   if (browser) await browser.close();
