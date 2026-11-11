@@ -34,6 +34,13 @@ model does not sanction.
 | `FK-10` | `build` | The app always answers proved when event is reword and phase is proved |
 | `FK-11` | `build` | The app always answers published when event is reword and phase is published |
 
+## live-lexlean
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `LL-01` | `build` | Every guarantee holds on every request in the bounds when every local obligation passes |
+| `LL-02` | `build` | Every guarantee of the Verdant Resonance fixture holds on every request in its bounds |
+
 ## Cited authorities
 
 Never re-derived, vendored, or gated on.

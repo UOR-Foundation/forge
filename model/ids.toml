@@ -86,3 +86,15 @@ id = "FK-11"
 level = "build"
 suite = "forge_kernel"
 statement = "The app always answers published when event is reword and phase is published"
+
+[[id]]
+id = "LL-01"
+level = "build"
+suite = "live-lexlean"
+statement = "Every guarantee holds on every request in the bounds when every local obligation passes"
+
+[[id]]
+id = "LL-02"
+level = "build"
+suite = "live-lexlean"
+statement = "Every guarantee of the Verdant Resonance fixture holds on every request in its bounds"
