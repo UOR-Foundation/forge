@@ -351,3 +351,9 @@ id = "FA-42"
 level = "build"
 suite = "stateful-application-journeys"
 statement = "Stored gallery and garden applications execute canonical guest transitions with atomic recovery and explicit audio consent"
+
+[[id]]
+id = "FA-43"
+level = "build"
+suite = "command-ownership-registry"
+statement = "Every imported and browser command is classified by canonical ownership and dispatch refuses missing or changed bindings"

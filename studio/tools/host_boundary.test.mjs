@@ -1,3 +1,4 @@
+import {commandRegistry, invokeBoundCommand} from "../shell/command-registry.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -5,7 +6,7 @@ import { test } from "node:test";
 import { invokeHost, unwrapHost } from "../shell/host-boundary.mjs";
 
 const arraySchema = { safeParse: (value) => ({ success: Array.isArray(value) }) };
-const channel = "test:boundary";
+const channel = "list-apps";
 function refused(envelope, code) {
   assert.equal(envelope.__dyadIpcEnvelope, "dyad-ipc-envelope-v1");
   assert.equal(envelope.ok, false);
@@ -77,8 +78,8 @@ test("the shipped host dispatch uses the real boundary and both entrypoints pres
   assert.ok(begin >= 0 && end > begin);
   const handlers = new Map();
   const seen = new Map();
-  const dispatch = vm.runInNewContext(source.slice(begin, end) + "\ndispatch", { handlers, seen, invokeHost, window: { __contracts: { [channel]: arraySchema }, __inputContracts: { [channel]: { safeParse: data => ({ success: true, data }) } } } });
-  refused(await dispatch(channel, []), "unsupportedChannel");
+  const dispatch = vm.runInNewContext(source.slice(begin, end) + "\ndispatch", { handlers, seen, invokeHost, commandRegistry, invokeBoundCommand, window: { __contracts: { [channel]: arraySchema }, __inputContracts: { [channel]: { safeParse: data => ({ success: true, data }) } } } });
+  refused(await dispatch(channel, []), "commandBindingMismatch");
   handlers.set(channel, () => ({}));
   refused(await dispatch(channel, []), "invalidResponse");
   handlers.set(channel, () => [1]);
