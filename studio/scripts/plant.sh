@@ -15,6 +15,10 @@
 #   ./scripts/plant.sh hole      # drop a handler a screen reads on mount: the Contract gate must refuse
 #   ./scripts/plant.sh live      # make a node's kappa ignore its content: the Live gate must refuse
 #   ./scripts/plant.sh shadcn    # change one class in a vendored shadcn component: the components gate must refuse
+#   ./scripts/plant.sh kitfile   # add a component of our own to the vendored registry: the components gate must refuse
+#   ./scripts/plant.sh rolled    # a screen imports Base UI itself: the renderer's build must refuse the bundle
+#   ./scripts/plant.sh rewrite   # a screen calls a ui component in a way the Radix rewrite cannot convert: the typecheck must refuse
+#   ./scripts/plant.sh passage   # Dyad changes a passage the shell patches: the shell's screens must refuse rather than skip it
 #   ./scripts/plant.sh table     # invert a condition mask in the decision table: the Table gate must refuse
 #   ./scripts/plant.sh edit      # keep a patch that does not check: the Edit gate must refuse
 #   ./scripts/plant.sh look      # let the build screen fall back to the home look: the Build look check must refuse
@@ -112,6 +116,30 @@ EOF
     sed -i 's/rounded-md text-sm font-medium/rounded-full text-sm font-medium/' vendor/shadcn-ui/registry/new-york-v4/ui/button.tsx
     expect_fail node tools/live_components.mjs --check
     cp /tmp/plant-button.tsx vendor/shadcn-ui/registry/new-york-v4/ui/button.tsx ;;
+  kitfile)
+    # A component written here and dropped beside the kit's: it would read as shadcn/ui and not be.
+    printf 'export function Fancy() { return null }
+' > vendor/shadcn-ui/registry/new-york-v4/ui/fancy.tsx
+    expect_fail node tools/live_components.mjs --check
+    rm -f vendor/shadcn-ui/registry/new-york-v4/ui/fancy.tsx ;;
+  rolled)
+    # A screen that reaches for a primitive library itself instead of the kit's component.
+    cp vendor/dyad/src/pages/home.tsx /tmp/plant-home.tsx
+    sed -i '1i import { Tooltip as Rolled } from "@base-ui/react/tooltip"; console.log(Rolled);' vendor/dyad/src/pages/home.tsx
+    expect_fail bash -c 'cd vendor/dyad && MSYS_NO_PATHCONV=1 npx vite build --config vite.shell.config.mts --base /foundry/ --outDir /tmp/plant-dist --emptyOutDir'
+    cp /tmp/plant-home.tsx vendor/dyad/src/pages/home.tsx ;;
+  rewrite)
+    # A Base UI render prop given a call, not an element: Radix's asChild cannot take it.
+    cp vendor/dyad/src/components/chat/AttachmentsList.tsx /tmp/plant-attachments.tsx
+    sed -i 's#<TooltipTrigger render={<div className="flex" />}>#<TooltipTrigger render={wrap()}>#' vendor/dyad/src/components/chat/AttachmentsList.tsx
+    expect_fail bash -c 'cd vendor/dyad && node hologram.typecheck.mjs'
+    cp /tmp/plant-attachments.tsx vendor/dyad/src/components/chat/AttachmentsList.tsx ;;
+  passage)
+    # An upstream edit to the layout the shell puts in the sidebar's inset: the patch must not silently miss.
+    cp vendor/dyad/src/app/layout.tsx /tmp/plant-layout.tsx
+    sed -i 's/<SubscriptionStatusBanner \/>/<SubscriptionStatusBanner compact \/>/' vendor/dyad/src/app/layout.tsx
+    expect_fail bash -c 'cd vendor/dyad && node hologram.typecheck.mjs'
+    cp /tmp/plant-layout.tsx vendor/dyad/src/app/layout.tsx ;;
   table)
     # A table that answers differently from the rules: every answer, guarantee and diff built on it is wrong.
     cp shell/live/table.mjs /tmp/plant-table.mjs
@@ -136,7 +164,7 @@ EOF
     sed -i 's/n.index === lit ? "on" : "off"/n.index === lit + 1 ? "on" : "off"/' shell/live/card-runtime.mjs
     expect_fail node tools/published_preview.mjs --check
     cp /tmp/plant-card-runtime.mjs shell/live/card-runtime.mjs ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|table|edit|look|published" >&2; exit 2 ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|look|published" >&2; exit 2 ;;
 esac
 restore
 echo "restored"

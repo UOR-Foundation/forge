@@ -1,21 +1,22 @@
-// The live frame's components: real shadcn/ui, compiled once. Which style is one line, `style` in
-// live-src/style.json (with the `ui` and `lib` paths that style keeps in the registry); everything else
-// follows from it.
+// The shadcn/ui components, one copy for the whole site: the live frame compiles its own from it, and the
+// renderer (vendor/dyad/hologram.ui.mjs) builds every screen from it. Which style is one line, `style` in
+// live-src/style.json (with the `ui` and `lib` paths that style keeps in the registry, and the `vendor`
+// directories taken whole); everything else follows from it.
 //
-//   node tools/live_components.mjs --vendor   copy the style's components, verbatim, from the brand kit's
+//   node tools/live_components.mjs --vendor   copy the style's directories, verbatim, from the brand kit's
 //                                             vendored shadcn registry at style.json's kit commit, and
 //                                             record their digests (needs the GitHub CLI, signed in)
-//   node tools/live_components.mjs --build    compile them into shell/live/components.js (React, Radix and
-//                                             the components, one script) and shell/live/components.css
+//   node tools/live_components.mjs --build    compile the frame's into shell/live/components.js (React, Radix
+//                                             and the components, one script) and shell/live/components.css
 //                                             (Tailwind, against the brand kit's tokens); and, for the
 //                                             published page, shell/live/card-render.mjs (the same view,
 //                                             rendered to markup at publish) and shell/live/card.css (the
 //                                             same sheet, its base layer kept inside the card)
-//   node tools/live_components.mjs --check    the vendored files match their record, and a fresh build is
-//                                             byte for byte the committed one
+//   node tools/live_components.mjs --check    the vendored files are exactly the recorded ones, and a fresh
+//                                             build is byte for byte the committed one
 //
-// To change the style: set `style`, `ui` and `lib` in live-src/style.json, run --vendor, then --build. The
-// toolchain is live-src/package.json, pinned to the brand kit showcase's own lockfile, installed with
+// To take a newer kit: set `kit` in live-src/style.json, run --vendor, then --build, then build the renderer.
+// The toolchain is live-src/package.json, pinned to the brand kit showcase's own lockfile, installed with
 // `npm ci` in live-src.
 import fs from "node:fs";
 import path from "node:path";
@@ -33,8 +34,22 @@ const out = path.join(root, "shell", "live");
 const sha = (bytes) => crypto.createHash("sha256").update(bytes).digest("hex");
 const text = (p) => fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n");
 
-// The vendored files: each component, the `cn` helper, and any sibling component a component imports.
-function vendoredPaths() {
+// The vendored files: every file under the style's directories (style.json `vendor`), taken whole from the
+// kit, so the live frame and the renderer read one canonical set and updating it is one --vendor run. The
+// record lists them; the check refuses a recorded file that drifted or went missing, and a file in the
+// registry that the record does not list (a hand-added component).
+const recordedPaths = () => text(record).split("\n").filter(Boolean).map((l) => l.split(/\s+/)[1].replace(/^registry\//, "")).sort();
+function onDisk(dir = registry, out = []) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) onDisk(p, out);
+    else out.push(path.relative(registry, p).replace(/\\/g, "/"));
+  }
+  return out.sort();
+}
+
+// The live frame's own closure: its components, the `cn` helper, and any sibling component they import.
+function framePaths() {
   const paths = new Set([style.lib]);
   const queue = style.components.map((c) => `${style.ui}/${c}.tsx`);
   while (queue.length) {
@@ -54,19 +69,17 @@ function gh(p) {
 
 if (process.argv.includes("--vendor")) {
   fs.rmSync(registry, { recursive: true, force: true });
-  const done = new Set();
-  const queue = [style.lib, ...style.components.map((c) => `${style.ui}/${c}.tsx`)];
-  while (queue.length) {
-    const p = queue.shift();
-    if (done.has(p)) continue;
-    done.add(p);
-    const bytes = gh(p);
+  const tree = JSON.parse(execFileSync("gh", ["api", `repos/Hologram-Technologies/hologram-brand-kit/git/trees/${style.kit}?recursive=1`], { maxBuffer: 1 << 26 }));
+  if (tree.truncated) throw new Error("the kit's tree listing was truncated");
+  const prefix = style.registry + "/";
+  const wanted = tree.tree.filter((e) => e.type === "blob" && e.path.startsWith(prefix)).map((e) => e.path.slice(prefix.length))
+    .filter((p) => style.vendor.some((d) => p.startsWith(d + "/")));
+  for (const p of wanted) {
     fs.mkdirSync(path.dirname(path.join(registry, p)), { recursive: true });
-    fs.writeFileSync(path.join(registry, p), bytes);
-    for (const m of bytes.toString("utf8").matchAll(/from "@\/registry\/([^"]+)"/g)) queue.push(m[1] + ".tsx");
+    fs.writeFileSync(path.join(registry, p), gh(p));
   }
   fs.writeFileSync(path.join(vendor, "LICENSE.md"), execFileSync("gh", ["api", `repos/Hologram-Technologies/hologram-brand-kit/contents/brand/vendor/shadcn-ui/LICENSE.md?ref=${style.kit}`, "-H", "Accept: application/vnd.github.raw"]));
-  const rows = vendoredPaths().map((p) => `${sha(text(path.join(registry, p)))}  registry/${p}`);
+  const rows = onDisk().map((p) => `${sha(text(path.join(registry, p)))}  registry/${p}`);
   fs.writeFileSync(record, rows.join("\n") + "\n");
   console.log(`vendored ${rows.length} files of shadcn/ui ${style.style} from the brand kit at ${style.kit.slice(0, 12)}`);
 }
@@ -106,9 +119,11 @@ async function build() {
   const work = path.join(src, ".build");
   fs.mkdirSync(work, { recursive: true });
   const rel = (p) => path.relative(work, p).replace(/\\/g, "/");
-  // source(none): Tailwind scans only the two sources named here, never whatever else sits in the
-  // working directory, so the sheet depends on the components and the frame alone.
-  const entry = `@import "tailwindcss" source(none);\n@import "tw-animate-css";\n@source "${rel(path.join(registry, style.ui))}";\n@source "${rel(path.join(src, "src"))}";\n` + text(path.join(src, "theme.css"));
+  // source(none): Tailwind scans only the sources named here, never whatever else sits in the working
+  // directory, so the sheet depends on the frame and the components it uses alone (the registry holds the
+  // whole style, which the renderer also reads).
+  const sources = framePaths().filter((p) => p.startsWith(style.ui + "/")).map((p) => `@source "${rel(path.join(registry, p))}";\n`).join("");
+  const entry = `@import "tailwindcss" source(none);\n@import "tw-animate-css";\n${sources}@source "${rel(path.join(src, "src"))}";\n` + text(path.join(src, "theme.css"));
   fs.writeFileSync(path.join(work, "entry.css"), entry);
   const cli = path.join(src, "node_modules", "@tailwindcss", "cli", "dist", "index.mjs");
   execFileSync(process.execPath, [cli, "-i", path.join(work, "entry.css"), "-o", path.join(work, "out.css"), "--minify"], { cwd: src, stdio: ["ignore", "ignore", "pipe"] });
@@ -148,11 +163,13 @@ if (process.argv.includes("--build") || process.argv.includes("--check")) {
   const bad = [];
   if (process.argv.includes("--check")) {
     const recorded = new Map(text(record).split("\n").filter(Boolean).map((l) => { const [h, p] = l.split(/\s+/); return [p, h]; }));
-    for (const p of vendoredPaths()) {
+    for (const p of recordedPaths()) {
       const file = path.join(registry, p);
       if (!fs.existsSync(file)) bad.push(`registry/${p} is not vendored`);
       else if (recorded.get(`registry/${p}`) !== sha(text(file))) bad.push(`registry/${p} differs from its record`);
     }
+    for (const p of onDisk()) if (!recorded.has(`registry/${p}`)) bad.push(`registry/${p} is not the kit's (not in the record)`);
+    for (const p of framePaths()) if (!recorded.has(`registry/${p}`)) bad.push(`registry/${p} is imported by the frame but not vendored`);
   }
   const t0 = performance.now();
   const built = await build();
@@ -166,7 +183,7 @@ if (process.argv.includes("--build") || process.argv.includes("--check")) {
       if (!fs.existsSync(p) || text(p) !== body) bad.push(`shell/live/${name} differs from a fresh build`);
     }
     if (bad.length) { console.log("components refused:\n" + bad.join("\n")); process.exit(1); }
-    console.log(`components: shadcn/ui ${style.style}, ${vendoredPaths().length} vendored files match, the build is byte for byte the committed one (${ms} ms)`);
+    console.log(`components: shadcn/ui ${style.style}, ${recordedPaths().length} vendored files match, the build is byte for byte the committed one (${ms} ms)`);
   } else {
     for (const [name, body] of Object.entries(files)) fs.writeFileSync(path.join(out, name), body);
     console.log(`built shell/live/components.js (${js.length} bytes) and components.css (${css.length} bytes) in ${ms} ms, shadcn/ui ${style.style}`);

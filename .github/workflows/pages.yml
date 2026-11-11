@@ -209,6 +209,8 @@ jobs:
         run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py
       - name: The host answers the renderer's own contracts (the renderer's node_modules are installed by now)
         run: node tools/contract_shapes.mjs --check
+      - name: Every screen calls the kit's shadcn/ui components as Radix takes them (the build above refuses Base UI or a Dyad copy in the bundle)
+        run: cd vendor/dyad && node hologram.typecheck.mjs
       - name: The served site names nothing outside this repository
         run: node tools/self_contained.mjs shell
       - name: Keep Forge's site, deployed at the root

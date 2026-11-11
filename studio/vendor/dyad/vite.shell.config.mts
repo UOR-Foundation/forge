@@ -19,6 +19,9 @@ import fs from "fs";
 import path from "path";
 import { mergeConfig, type Plugin } from "vite";
 import base from "./vite.renderer.config.mts";
+import { audit, kitUi, registry, resolveUi } from "./hologram.ui.mjs";
+import { toRadix } from "./hologram.radix.mjs";
+import { screenSource } from "./hologram.screens.mjs";
 
 const src = path.resolve(__dirname, "src").replace(/\\/g, "/");
 const mark = path.resolve(__dirname, "../../shell/mark.svg");
@@ -28,6 +31,40 @@ const importDialog = path.resolve(__dirname, "hologram.ImportAppDialog.tsx");
 const contracts = path.resolve(__dirname, "hologram.contracts.ts").split(path.sep).join("/");
 const theme = fs.readFileSync(path.resolve(__dirname, "hologram.theme.css"), "utf8");
 const arbitrary: Record<string, string> = JSON.parse(fs.readFileSync(path.resolve(__dirname, "hologram.arbitrary.json"), "utf8"));
+
+// The ui components are the brand kit's shadcn/ui new-york-v4 files, verbatim (hologram.ui.mjs says how);
+// the bundle is refused if a Dyad copy of one of them, or Base UI, got into it anyway.
+const entry = path.resolve(__dirname, "src", "renderer.tsx");
+const hologramUi: Plugin = {
+  name: "hologram-ui",
+  enforce: "pre",
+  async resolveId(id, importer) {
+    const hit = resolveUi(id, importer);
+    if (hit) return hit;
+    // The kit's files import React, Radix and the rest by bare name; they are the renderer's packages.
+    if (importer && importer.replace(/\\/g, "/").startsWith(registry) && !id.startsWith(".") && !id.startsWith("@/")) {
+      return this.resolve(id, entry, { skipSelf: true });
+    }
+    if (id.startsWith("@/registry/") || id.replace(/\\/g, "/").startsWith(src + "/registry/")) throw new Error(`not vendored: ${id} (run node tools/live_components.mjs --vendor)`);
+    return null;
+  },
+  // The shell's own screens and patches first (hologram.screens.mjs); then Dyad's screens, which call the
+  // components with Base UI's props, are rewritten for the kit's, which are Radix (hologram.radix.mjs).
+  transform(code, id) {
+    const file = id.replace(/\\/g, "/").split("?")[0];
+    if (!file.startsWith(src) || !/\.tsx$/.test(file)) return null;
+    const shell = screenSource(file, code);
+    if (file.includes("/components/ui/")) return shell === code ? null : { code: shell, map: null };
+    const r = toRadix(shell, path.relative(__dirname, file));
+    if (r.problems.length) this.error("not rewritten for Radix:\n" + r.problems.join("\n"));
+    return r.code === code ? null : { code: r.code, map: null };
+  },
+  generateBundle() {
+    const bad = audit(this.getModuleIds(), (id) => [...(this.getModuleInfo(id)?.importers ?? [])]);
+    if (bad.length) this.error("ui components refused:\n" + bad.join("\n"));
+  },
+};
+const kitSource = path.relative(path.join(src, "styles"), kitUi).replace(/\\/g, "/");
 
 const hologramWords: Plugin = {
   name: "hologram-words",
@@ -59,6 +96,8 @@ const hologramWords: Plugin = {
       };
       cut(":root {");
       cut("\n.dark {");
+      // Tailwind scans the kit's components too: they live outside this tree.
+      out = out.replace('@import "tw-animate-css";', `@import "tw-animate-css";\n@source "${kitSource}";`);
       return { code: out + "\n" + theme, map: null };
     }
     if (!/\.(tsx?|jsx?|json|md)$/.test(file)) return null;
@@ -121,5 +160,5 @@ const merged = mergeConfig(base, {
     },
   },
 });
-merged.plugins = [hologramWords, ...(merged.plugins ?? [])];
+merged.plugins = [hologramUi, hologramWords, ...(merged.plugins ?? [])];
 export default merged;

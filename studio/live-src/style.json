@@ -4,5 +4,6 @@
   "registry": "brand/vendor/shadcn-ui/registry",
   "ui": "new-york-v4/ui",
   "lib": "new-york-v4/lib/utils.ts",
-  "components": ["badge", "button", "card", "input", "label", "native-select", "separator", "toggle", "toggle-group"]
+  "components": ["badge", "button", "card", "input", "label", "native-select", "separator", "toggle", "toggle-group"],
+  "vendor": ["new-york-v4/ui", "new-york-v4/lib", "new-york-v4/hooks"]
 }
