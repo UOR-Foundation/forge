@@ -435,3 +435,9 @@ id = "FA-56"
 level = "build"
 suite = "studio-pr-concurrency"
 statement = "Only superseded pull-request Studio runs are cancelled while every main and release run retains its full acceptance boundary"
+
+[[id]]
+id = "FA-57"
+level = "build"
+suite = "browser-window-coordination"
+statement = "Browser window registration focus visibility interests and invalidation recovery replace empty acknowledgements with bounded origin coordination"

@@ -1,3 +1,6 @@
+import {createWindowDelivery} from "./window-delivery.mjs";
+import {createWindowCoordinator,windowJournalStore,windowRecoveryScopes} from "./window-coordination.mjs";
+import {VisibleEntitySchema,ChatTabOwnershipSchema,WindowInterestSchema,QueryInvalidationScopeSchema,QueryInvalidationBatchSchema} from "./chat-contracts.mjs";
 import {prepareMessageRestoration} from "./message-restoration.mjs";
 import {prepareSnapshot} from "./snapshot-restore.mjs";
 import {createVersionPreviewController} from "./version-preview-controller.mjs";
@@ -64,7 +67,9 @@ const BASE = new URL("./", import.meta.url); // the shell's directory, wherever 
 const listeners = new Map();
 const handlers = new Map();
 const seen = new Map();
-const emit = (channel, payload) => { const set = listeners.get(channel); if (set) for (const fn of set) { try { fn(payload); } catch (e) { console.error(e); } } };
+let relayWindowEvent=()=>{};
+const emitLocal = (channel, payload) => { const set = listeners.get(channel); if (set) for (const fn of set) { try { fn(payload); } catch (e) { console.error(e); } } };
+const emit = (channel,payload)=>{emitLocal(channel,payload);relayWindowEvent(channel,payload);};
 
 // ---- the generated core, the addresses and the store come from the shared inference module: one
 // core.wasm, one BLAKE3, one database ("hologram-forge" v2) for the builder's records and the seals.
@@ -117,17 +122,16 @@ handlers.set("nodejs-status", () => ({ nodeVersion: "browser (esbuild in the tab
 // was refused, so the window session never initialised and every screen that keys off it -- the
 // version controls among them -- reported itself unavailable. The id lasts as long as the tab, which
 // is what a window session is, so a reload finds the same one.
-const windowSessionId = (() => {
-  let id = null;
-  try { id = sessionStorage.getItem("holo.window.session"); } catch (e) { id = null; }
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || "")) {
-    id = crypto.randomUUID();
-    try { sessionStorage.setItem("holo.window.session", id); } catch (e) {}
-  }
-  return id;
-})();
-handlers.set("window-infrastructure:bootstrap", () => ({ windowSessionId, currentQueryInvalidationEpoch: 0, missedInvalidations: [], recoveryScopes: [], mayMigrateLegacyChatTabSession: false, restorableWindowSessionIds: [] }));
-for (const c of ["window-infrastructure:set-focused", "window-infrastructure:set-visible-entities", "window-infrastructure:set-chat-tab-ownership", "add-log", "renderer:error-toast-ready", "clear-logs"]) handlers.set(c, () => undefined);
+const windowsStore=dbReady.then(windowJournalStore);
+const windowSchemas={visible:VisibleEntitySchema.array().max(100),tabs:ChatTabOwnershipSchema.array().max(100),interest:WindowInterestSchema,scopes:QueryInvalidationScopeSchema.array().min(1).max(128),batch:QueryInvalidationBatchSchema};
+const windowCoordination=createWindowCoordinator({store:{read:()=>windowsStore.then(s=>s.read()),commit:(...args)=>windowsStore.then(s=>s.commit(...args))},locks:navigator.locks,channel:typeof BroadcastChannel==="function"?new BroadcastChannel("foundry:windows:v1"):null,storage:{getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value)},mintId:()=>crypto.randomUUID(),validate:(kind,value)=>windowSchemas[kind].safeParse(value),deliver:createWindowDelivery({emit:emitLocal,chatMachine:chatMachineOf,chatActor:id=>chatActorId(id),appMachine:machineOf}),exists:entity=>get(entity.kind==="app"?"apps":"chats",entity.id).then(Boolean)});
+handlers.set("window-infrastructure:bootstrap", input => windowCoordination.bootstrap(input));
+handlers.set("window-infrastructure:set-focused", () => windowCoordination.setFocused());
+handlers.set("window-infrastructure:set-visible-entities", input => windowCoordination.setVisible(input));
+handlers.set("window-infrastructure:set-chat-tab-ownership", input => windowCoordination.setTabs(input));
+for (const c of ["add-log", "renderer:error-toast-ready", "clear-logs"]) handlers.set(c, () => undefined);
+relayWindowEvent=(channel,payload)=>{windowCoordination.relay(channel,payload);if(channel==="version-created"&&Number.isSafeInteger(payload?.appId))void windowCoordination.invalidate([{family:"app",appId:payload.appId},{family:"versions",appId:payload.appId}]).catch(()=>{});if(channel==="chat:stream:end"&&Number.isSafeInteger(payload?.chatId))void windowCoordination.invalidate([{family:"chat",chatId:payload.chatId},{family:"chats"}]).catch(()=>{});};
+window.addEventListener("pagehide",()=>windowCoordination.dispose(),{once:true});
 handlers.set("does-release-note-exist", () => ({ exists: false }));
 handlers.set("get-user-budget", () => null);
 handlers.set("get-subscription-status", () => null);
@@ -760,8 +764,8 @@ handlers.set("distributed-machine:dispatch", async (envelope) => {
   return { kind: "ignored", actorInstanceId: "web-app_run-" + appId, revision: machineOf(appId).revision, messageId, reason: "unknown intent " + type };
 });
 handlers.set("connection-flow:get-states", () => ({ github: { status: "disconnected", revision: 0 }, supabase: { status: "disconnected", revision: 0 }, neon: { status: "disconnected", revision: 0 } }));
-handlers.set("window-infrastructure:attach-interest", () => undefined);
-handlers.set("window-infrastructure:detach-interest", () => undefined);
+handlers.set("window-infrastructure:attach-interest", input => windowCoordination.attach(input));
+handlers.set("window-infrastructure:detach-interest", input => windowCoordination.detach(input));
 const previewEpoch=crypto.randomUUID();
 const previewActorId=appId=>`web-version_preview-${appId}-${previewEpoch}`;
 const previewEnvelope=appId=>({protocolVersion:1,machineId:"version_preview",encodedKey:{appId},actorInstanceId:previewActorId(appId),revision:versionPreview.snapshot(appId).revision,encodedState:VersionPreviewRemoteSnapshotSchema.parse(versionPreview.snapshot(appId))});
@@ -1406,7 +1410,14 @@ function dispatch(channel, args) {
   seen.set(channel, (seen.get(channel) || 0) + 1);
   const output = window.__contracts && window.__contracts[channel];
   const input = window.__inputContracts && window.__inputContracts[channel];
-  return invokeBoundCommand(commandRegistry, channel, args, handlers.get(channel), (name, values, handler) => invokeHost(name, values, handler, output, output || input ? { schema: input } : null));
+  let captured;try{captured=structuredClone(args);}catch{captured=null;}
+  return invokeBoundCommand(commandRegistry, channel, args, handlers.get(channel), (name, values, handler) => invokeHost(name, values, handler, output, output || input ? { schema: input } : null)).then(async envelope=>{
+    const binding=commandRegistry.entries.find(c=>c.channel===channel),feature=commandRegistry.features.find(f=>f.id===binding?.feature);
+    if(envelope.ok&&feature?.effects.includes("storage")&&!/^(get-|list-|read-|count-|check-|window-infrastructure:|distributed-machine:(subscribe|unsubscribe))/.test(channel)){
+      const value=captured?.[0],appId=value?.appId??value?.encodedKey?.appId??envelope.value?.app?.id,chatId=value?.chatId??value?.encodedKey?.chatId??envelope.value?.chatId;
+      const scopes=windowRecoveryScopes();if(Number.isSafeInteger(appId)&&appId>0)scopes.push({family:"app",appId});if(Number.isSafeInteger(chatId)&&chatId>0)scopes.push({family:"chat",chatId});await windowCoordination.invalidate(scopes).catch(()=>{});
+    }return envelope;
+  });
 }
 
 

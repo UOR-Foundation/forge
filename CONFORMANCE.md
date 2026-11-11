@@ -66,6 +66,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-30` | `build` | The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings |
 
+## browser-window-coordination
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-57` | `build` | Browser window registration focus visibility interests and invalidation recovery replace empty acknowledgements with bounded origin coordination |
+
 ## canonical-build-closure
 
 | ID | Level | Statement |

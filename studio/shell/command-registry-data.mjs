@@ -353,6 +353,19 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Verified source and message restoration share atomic acknowledgement; busy queues and changed history refuse."
+    },
+    {
+      "id": "window-coordination",
+      "version": 1,
+      "owner": "FoundrySpecification.windowCoordinationBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Committed bounded origin window ownership, interest relay and query invalidation recovery; browser platform locks are cooperative, not authentication."
     }
   ],
   "commands": [
@@ -3548,9 +3561,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "window-infrastructure:attach-interest",
-      "feature": "local-acknowledgement",
+      "feature": "window-coordination",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.windowCoordinationBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -3568,9 +3581,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "window-infrastructure:bootstrap",
-      "feature": "local-read",
+      "feature": "window-coordination",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.windowCoordinationBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -3588,9 +3601,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "window-infrastructure:detach-interest",
-      "feature": "local-acknowledgement",
+      "feature": "window-coordination",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.windowCoordinationBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -3628,9 +3641,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "window-infrastructure:set-chat-tab-ownership",
-      "feature": "local-acknowledgement",
+      "feature": "window-coordination",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.windowCoordinationBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -3638,9 +3651,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "window-infrastructure:set-focused",
-      "feature": "local-acknowledgement",
+      "feature": "window-coordination",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.windowCoordinationBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -3648,9 +3661,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "window-infrastructure:set-visible-entities",
-      "feature": "local-acknowledgement",
+      "feature": "window-coordination",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.windowCoordinationBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",

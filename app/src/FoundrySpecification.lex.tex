@@ -1074,5 +1074,26 @@ definition{
   result: String,
   body: "GitHub Actions concurrency is an imported scheduling mechanism. The Studio workflow groups only pull-request runs by pull request number and permits cancellation only for pull-request events. Other events use a unique run identity and cannot cancel another main or release run. This removes superseded PR work without filtering tests, reusing evidence or weakening the full acceptance lane. The project-owned workflow projects its exact concurrency block from studioConcurrencyYaml and rejects drift. It does not change universal template policy and does not claim adoption of the still-unqualified PrismPM factory consumer."
 }
+
+inductive{
+  name: WindowCoordinationError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: windowCoordinationUnavailable, fields: []},
+    {name: invalidWindowCoordination, fields: []},
+    {name: windowCoordinationStorageFailed, fields: []},
+    {name: windowCoordinationConflict, fields: []},
+    {name: windowCoordinationLimitExceeded, fields: []},
+    {name: windowTabOwnershipConflict, fields: []}
+  ]
+}
+
+definition{
+  name: windowCoordinationBoundary,
+  parameters: [],
+  result: String,
+  body: "Browser window bootstrap holds an exclusive origin Web Lock for its UUID session and uses a fresh actor identity on every document. A duplicated sessionStorage UUID obtains a different session rather than sharing a live identity. A second short Web Lock serializes bounded journal compare-and-swap transactions; commit completion is the only acknowledgement. The journal retains at most 32 windows, 100 visible entities, 100 tab ownership entries and 100 interests per window, and 256 recent query invalidations with monotonically increasing safe-integer epochs. Dead window records can be reclaimed only after origin Web Locks establish absence; they are not treated as active owners. Imported schemas bind bootstrap, visibility, chat tab ownership, interests and invalidation batches. Focus and interests are recorded rather than silently acknowledged. Duplicate tab identities cannot be owned by two live windows. Bootstrap returns missed retained invalidations or explicit broad recovery scopes when its epoch predates retention; malformed future epochs refuse. Cross-window messages announce durable invalidations and relay only bounded allowlisted chat/app stream events to matching interests; they grant no effects and never relay credential settings or arbitrary channels. Peer snapshots pass imported schemas and are assimilated with the receiving actor identity and monotonic local revision; stale, mismatched and malformed snapshots are ignored without echo. Oversized stream events request durable query invalidation instead of an oversized relay. Source mutations invalidate relevant app/chat/version query scopes after commit; failure to announce invalidation does not roll back a completed source mutation. This is cooperative same-origin coordination, not remote authentication, native window control, cross-origin state or tab transfer acceptance. Tab transfer and new-window navigation require separately modeled protocols."
+}
 \end{semanticmodule}
 \end{lexlean}
