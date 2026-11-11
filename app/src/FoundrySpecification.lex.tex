@@ -3,6 +3,7 @@
 \useglossary{lexlean.std.nat@1.2.0}
 \title{Boolean}
 \begin{semanticmodule}
+
 inductive{
   name: Obligation,
   type_parameters: [],
@@ -758,6 +759,7 @@ definition{
   result: String,
   body: "For a captured project carrying prism/spec.json, generic generated-file batches cannot write, delete or rename the specification, its active canonical decision module or src/lib/prism.ts. Both rename endpoints are checked. If the current spec cannot identify its module, top-level canonical-module paths are protected until a canonical edit repairs it. A protected operation refuses the entire batch with canonicalGenerationRefused before storage mutation, including otherwise ordinary operations in that batch. Patch and caller-supplied source snapshots are copied before asynchronous work. Ordinary files and projects without a decision spec retain the existing atomic batch path with the same captured source and cancellation checks. Canonical module, JSON, patch and file-editor authoring still use the separate rules transaction; no public switch grants generic batches model authority. This boundary does not authenticate same-origin script callers or establish whole-application semantic ownership."
 }
+
 inductive{
   name: CanonicalBuildError,
   type_parameters: [],
