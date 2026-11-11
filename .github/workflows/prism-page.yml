@@ -6,13 +6,23 @@
 # someone traced it. Here it runs on the pull request, where its author sees it. The page is built exactly as
 # pages.yml builds it (the locked SDK, the drawn images, page.mjs and precache.mjs), except that nothing is
 # signed: a pull request has no deploy to attest, so the page names this run in place of the signed
-# statement. A pull request that changes only studio/ (Forge, which the page never reads) is not measured.
+# statement. Only pull requests that change what the page is built from are measured.
 name: prism page
 
 on:
   pull_request:
-    paths-ignore:
-      - "studio/**"
+    # Only what the page is built from: the kernel, the page, its frame and brand, and the SDK lock. Proving the
+    # kernel takes some 15 minutes, so a pull request that cannot change the page does not pay for it.
+    paths:
+      - "app/**"
+      - "site/**"
+      - "bootstrap/**"
+      - "try/**"
+      - "lighthouserc.json"
+      - "frame.lock"
+      - "brand.lock"
+      - "prismpm.lock"
+      - ".github/workflows/prism-page.yml"
   workflow_dispatch:
 
 permissions:
