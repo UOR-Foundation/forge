@@ -4,7 +4,7 @@
 // (shell/live/components.*, built by tools/live_components.mjs), and the interpreter every app's rule
 // module ships. Pure: the same files give the same bytes, so the frame's address (the kappa of these
 // bytes) changes only when the shell does.
-export const FONTS = ["fonts/Geist-Regular.woff2", "fonts/Geist-Medium.woff2", "fonts/Geist-SemiBold.woff2", "fonts/Archivo-SemiBold.woff2"];
+export const FONTS = ["fonts/Geist-Regular.woff2", "fonts/Geist-Medium.woff2", "fonts/Geist-SemiBold.woff2", "fonts/Archivo-SemiBold.woff2", "fonts/GeistMono-Regular.woff2", "fonts/GeistMono-Medium.woff2"];
 
 const scriptSafe = (text) => text.replace(/<\/script/gi, "<\\/script");
 const styleSafe = (text) => text.replace(/<\/style/gi, "<\\/style");

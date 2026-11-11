@@ -3,7 +3,9 @@
 // publish into the app's own card, so the published page draws the same components with the same classes.
 // What a node shows comes from `Live`, the state of the screen: the frame fills it from what the user
 // typed, the card renderer once for each state a node can be in. Interactions are marked in the markup
-// (data-value, data-step, data-fill) so the published page, which runs no React, can wire the same ones.
+// (data-value, data-step, data-fill) so the published page, which runs no React, can wire the same ones,
+// and an element React remounts when a value changes (a `key`) says so (data-remount), so the page
+// remounts it too and it enters as it does in the preview.
 import { createContext, useContext } from "react";
 import { CheckIcon, MinusIcon, PlusIcon, XIcon } from "lucide-react";
 import { Badge } from "@/ui/badge";
@@ -51,7 +53,7 @@ function Answer({ data }) {
     <Card className="mt-2 gap-3">
       <CardHeader>
         <CardDescription>{data.label}</CardDescription>
-        <CardTitle key={answer} className={cn("font-display text-4xl tracking-tight animate-in fade-in-0 slide-in-from-bottom-1 duration-200", answer === "invalid" || !ready ? "text-muted-foreground" : "text-brand")}>{ready ? answer : "—"}</CardTitle>
+        <CardTitle key={answer} data-remount={String(answer)} className={cn("font-display text-4xl tracking-tight animate-in fade-in-0 slide-in-from-bottom-1 duration-200", answer === "invalid" || !ready ? "text-muted-foreground" : "text-brand")}>{ready ? answer : "—"}</CardTitle>
       </CardHeader>
       {(meaning || because) && <CardContent className="grid gap-1">{meaning && <p>{meaning}</p>}{because && <p className="text-sm text-muted-foreground">{because}</p>}</CardContent>}
     </Card>

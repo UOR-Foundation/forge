@@ -56,5 +56,8 @@
 /* In a layer, so the published card's reset of the page's own rules (card.css) leaves it in force. */
 @layer utilities {
   .dark [class*="shadow"] { box-shadow: none; }
+  /* Display type takes the kit's display tracking, as Forge's brand.css sets it: here too, so the published
+     card, whose page carries the kit's sheet without that rule, sets it the same. Over tracking-tight. */
+  .font-display[class] { letter-spacing: var(--tracking-display); }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

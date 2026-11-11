@@ -55,6 +55,7 @@ export function renderCard(projection, interp) {
       out.variants.off = at({ fires: -1 });
     } else if (node.kind === "example") {
       out.request = node.data.request;
+      out.response = node.data.response;
       for (const p of ["1", "0", "n"]) for (const c of ["1", "0"]) {
         out.variants[p + c] = at({ ready: p !== "n", passes: () => p === "1", request: c === "1" ? node.data.request : "" });
       }

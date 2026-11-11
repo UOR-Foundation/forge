@@ -21,7 +21,7 @@ export async function cardFiles(spec, { load }) {
   const values = runtime.defaults(card.logic, {});
   // The default state as the page first draws it, before the verified app has answered: as the rules say,
   // which is how the app answers every acceptance vector. card.mjs then asks the app and redraws.
-  const guest = { verified: true, answer: prismDecide(card.logic, values), passes: new Map(spec.examples.map((e) => [e.request, prismAnswer(card.logic, e.request) === e.response])) };
+  const guest = { verified: true, answer: prismDecide(card.logic, values), passes: await runtime.examplesPass(card, (request) => prismAnswer(card.logic, request)) };
   const html = `<div data-slot="surface" class="prism-card">${runtime.compose(card, values, guest, interp)}</div>\n`;
   const mjs = `// ${projection.title || spec.name}: this app's card, written by Forge from its spec. The answer shown is the verified app's.\n` +
     `${INTERPRETER}const CARD = ${JSON.stringify(card)};\n${runtimeText.replace(/\r\n/g, "\n")}\nexport default (context) => start(CARD, { prismAnswer, prismDecide }, context);\n`;

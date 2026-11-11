@@ -72,6 +72,13 @@ export function keysFor(card, values, guest, interp) {
   return keys;
 }
 
+/** Which examples the app answers as they say: `ask(request)` is the app's answer, or throws. */
+export async function examplesPass(card, ask) {
+  const passes = new Map();
+  for (const n of card.nodes) if (n.kind === "example") passes.set(n.request, (await Promise.resolve().then(() => ask(n.request)).catch(() => null)) === n.response);
+  return passes;
+}
+
 // React's escaping, so a filled value is the bytes React would have written.
 const escape = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" })[c]);
 
@@ -92,7 +99,8 @@ export function compose(card, values, guest, interp) {
 
 // Makes `from` look like `to` in place: same elements kept, so focus, selection and typed text survive.
 function morph(from, to) {
-  if (from.nodeType !== to.nodeType || from.nodeName !== to.nodeName) { from.replaceWith(to.cloneNode(true)); return; }
+  // A new element where React would make one: another tag, or a keyed element whose key changed.
+  if (from.nodeType !== to.nodeType || from.nodeName !== to.nodeName || (to.nodeType === 1 && from.getAttribute("data-remount") !== to.getAttribute("data-remount"))) { from.replaceWith(to.cloneNode(true)); return; }
   if (from.nodeType === 3) { if (from.data !== to.data) from.data = to.data; return; }
   if (from.nodeType !== 1) return;
   // `style` is the page's to keep: it is set from data-style, never written as markup.
@@ -113,7 +121,6 @@ export async function start(card, interp, { app, show, $ }) {
   const ask = async (request) => show(await app.dispatch(encoder.encode(request)));
   let values = defaults(card.logic, {});
   const guest = { verified: !!app, answer: null, passes: new Map() };
-  const examples = card.nodes.filter((n) => n.kind === "example");
   const out = $("out"), hist = $("hist");
   let seq = 0, last = "", settle = 0;
   async function draw() {
@@ -179,6 +186,6 @@ export async function start(card, interp, { app, show, $ }) {
   // Inline styles the view sets travel as data-style, since the page's policy refuses style attributes.
   const styles = () => { for (const el of main.querySelectorAll("[data-style]")) if (el.style.cssText !== el.dataset.style) el.style.cssText = el.dataset.style; };
   styles();
-  if (app) for (const e of examples) guest.passes.set(e.request, (await ask(e.request).catch(() => null)) === e.response);
+  if (app) guest.passes = await examplesPass(card, ask);
   await draw();
 }

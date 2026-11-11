@@ -53,7 +53,7 @@ states.push({ attending: "yes", party: "7", seats: "2" }, { attending: "yes", pa
 let same = 0;
 for (const values of states) {
   const want = renderScreen(projection, values, interp);
-  const got = runtime.compose(card, values, guestOf(agreeing, values), interp);
+  const got = runtime.compose(card, values, await guestOf(agreeing, values), interp);
   if (got === want) same++;
   else fail("same screen", `state ${JSON.stringify(values)}: the card composes ${firstDiff(got, want)}`);
 }
@@ -70,9 +70,11 @@ function unlayered(css) {
   }
   return out;
 }
-function guestOf(guest, values) {
+// What the page knows of the guest, found as the page finds it (card-runtime.mjs examplesPass), from the
+// card's own data: a card that lost what an example expects shows it failing here as it would on the page.
+async function guestOf(guest, values) {
   const request = runtime.requestOf(logic, values);
-  return { verified: guest.verified, answer: guest.verified ? guest.answer(request) : null, passes: new Map(spec.examples.map((e) => [e.request, guest.verified ? guest.answer(e.request) === e.response : null])) };
+  return { verified: guest.verified, answer: guest.verified ? guest.answer(request) : null, passes: guest.verified ? await runtime.examplesPass(card, guest.answer) : new Map() };
 }
 function firstDiff(a, b) {
   let i = 0;
@@ -84,15 +86,15 @@ function firstDiff(a, b) {
 {
   const values = runtime.defaults(logic, {});
   const liar = { verified: true, answer: () => "<none>" };
-  const shown = runtime.compose(card, values, guestOf(liar, values), interp);
+  const shown = runtime.compose(card, values, await guestOf(liar, values), interp);
   if (!shown.includes("&lt;none&gt;")) fail("guest decides", "an answer from the guest that the rules disagree with is not the one shown");
   if (!shown.includes(runtime.MISMATCH)) fail("guest decides", "a guest that disagrees with the rules is not said to");
-  const keys = runtime.keysFor(card, values, guestOf(liar, values), interp);
+  const keys = runtime.keysFor(card, values, await guestOf(liar, values), interp);
   if (Object.entries(keys).some(([k, v]) => (k.startsWith("rule:") || k === "otherwise") && v === "on")) fail("guest decides", "a rule is lit although the guest disagrees with the rules");
-  const none = runtime.compose(card, values, guestOf({ verified: false }, values), interp);
+  const none = runtime.compose(card, values, await guestOf({ verified: false }, values), interp);
   if (!none.includes(runtime.UNVERIFIED)) fail("guest decides", "a page that did not verify does not say so");
   const answerNode = card.nodes.find((n) => n.kind === "answer");
-  const answerShown = runtime.nodeHtml(card, answerNode, "unverified", values, guestOf({ verified: false }, values));
+  const answerShown = runtime.nodeHtml(card, answerNode, "unverified", values, await guestOf({ verified: false }, values));
   if (spec.outcomes.some((o) => answerShown.includes(`>${o}<`))) fail("guest decides", "a page that did not verify still shows an answer");
 }
 
@@ -102,7 +104,7 @@ function firstDiff(a, b) {
   if (!html || !css || !mjs) fail("card files", `Forge writes ${files.map((f) => f.path).join(", ") || "nothing"}`);
   const surface = /^<div data-slot="surface" class="prism-card[^"]*">([\s\S]*)<\/div>$/.exec(html.trim());
   if (!surface) fail("card files", "card.html is not one surface slot holding the card");
-  else if (surface[1] !== runtime.compose(card, states[0], guestOf(agreeing, states[0]), interp)) fail("card files", "card.html is not the default state");
+  else if (surface[1] !== runtime.compose(card, states[0], await guestOf(agreeing, states[0]), interp)) fail("card files", "card.html is not the default state");
   if (/<script/i.test(html)) fail("card files", "card.html has a script");
   if (/\sstyle=/i.test(html)) fail("card files", "card.html has a style attribute, which the page's policy refuses");
   const base = /@layer base\{([\s\S]*?)\}@layer components/.exec(css);
