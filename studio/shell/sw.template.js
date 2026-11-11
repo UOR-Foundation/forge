@@ -210,7 +210,7 @@ self.addEventListener("fetch", (event) => {
     // The chat app under ui/ routes on the client: every navigation there is its one page, from the closure first.
     if (path.startsWith("ui/") && event.request.mode === "navigate") { event.respondWith((async () => (await matchShell(BASE + "ui/index.html")) || fetch(new Request(BASE + "ui/index.html")))()); return; }
     // Renderer and scaffold bytes come from this worker's verified version, even offline.
-    if (path.startsWith("assets/") || path.startsWith("scaffold/") || path.startsWith("editor/")) {
+    if (path.startsWith("assets/") || path.startsWith("scaffold/") || path.startsWith("editor/") || path.startsWith("compiler/")) {
       event.respondWith((async () => (await (await caches.open("shell-" + CLOSURE)).match(event.request, { ignoreSearch: true })) || new Response("File absent from the active shell", { status: 404 }))()); return;
     }
     // The hash list is the staleness oracle: the page compares the closure it was projected with

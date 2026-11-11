@@ -134,3 +134,8 @@ Author completeness reviews are recorded and these PRs are ready for review.
 FA-31 adds locked local editor assets and real offline worker/Settings acceptance;
 its feature verification is `local-editor-closure.md`. Whole conversion and
 qualified factory consumer adoption remain open.
+
+FA-31 is in PR #66; exact-head Studio 43051703705, Try-page 43051704071
+and codespace 43051703928 passed, with full SDK pending. FA-32 brings the
+existing browser compiler into a locked independently checked local closure
+and adds initialization recovery; see `local-browser-compiler.md`.

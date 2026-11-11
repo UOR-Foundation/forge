@@ -142,6 +142,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-11` | `build` | Cloud inference bounds requests and streamed responses and refuses cancellation, malformed data and provider failures explicitly |
 
+## local-browser-compiler
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-32` | `build` | The browser compiler loads locked verified local bytes and recovers after failed initialization |
+
 ## local-editor-closure
 
 | ID | Level | Statement |

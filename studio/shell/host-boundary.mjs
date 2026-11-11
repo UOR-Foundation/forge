@@ -42,6 +42,7 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if (error?.code === "browserCompilerUnavailable") return refusal("browserCompilerUnavailable", channel, "internal", "The browser compiler could not initialize");
     if (error?.code === "browserTelemetryUnavailable") return refusal("browserTelemetryUnavailable", channel, "validation", "Vendor telemetry is unavailable in this browser");
     const known = providerKeyFailure(error);
     if (known) return refusal(known.code, channel, known.kind, known.message);

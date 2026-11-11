@@ -1,3 +1,4 @@
+import { loadBrowserCompiler } from "./browser-compiler.mjs";
 import { browserSettings, assertBrowserSettingsPatch } from "./privacy-policy.mjs";
 import { prepareProjectImport } from "./project-import.mjs";
 import { withBuildModules } from "./build-modules.mjs";
@@ -381,11 +382,7 @@ function publish(appId, patch) {
   emit("distributed-machine:snapshot", { protocolVersion: 1, machineId: "app_run", encodedKey: { appId }, actorInstanceId: "web-app_run-" + appId, revision: m.revision, encodedState: m.state });
   return m;
 }
-let esbuildReady = null;
-async function esbuild() {
-  if (!esbuildReady) esbuildReady = import("https://cdn.jsdelivr.net/npm/esbuild-wasm@0.25.5/esm/browser.min.js").then(async (m) => { await m.initialize({ wasmURL: "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.25.5/esbuild.wasm" }); return m; });
-  return esbuildReady;
-}
+const esbuild = () => loadBrowserCompiler(BASE);
 // The grant a preview is served under. The worker asks the kernel's gate (proved by Lean) before it
 // serves a preview, and the gate refuses anything that has no record, so every preview gets one:
 // it may be served, and it may reach the hosts its build names: esm.sh for packages and the play
