@@ -51,3 +51,9 @@ The probe initially expected the theorem name in the compiler text; the actual
 source location and expected staleGeneration bytes identify that control. The
 original model was restored. The environment restarted during the subsequent
 whole-project verification, so that interrupted run is not a passing receipt.
+
+Build 43055159790 admitted the closed vectors but exposed the selected SDK's
+flat Rust symbol namespace: event `encodeResult`/`dispatchWords` collided with
+existing work/composition functions. Event-specific parser/result symbols now
+have unique names. This changes no wire bytes or admission rule and does not
+replace the SDK compiler. New signed compilation remains required.

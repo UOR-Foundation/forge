@@ -9,83 +9,83 @@
 \title{Boolean}
 \begin{semanticmodule}
 structure{
-  name: PayloadRead,
+  name: EventPayloadRead,
   type_parameters: [],
   parameters: [],
   fields: [{name: value, type: EventAdmission::EventPayload}, {name: rest, type: Nat}]
 }
 
 structure{
-  name: ContractRead,
+  name: EventContractRead,
   type_parameters: [],
   parameters: [],
   fields: [{name: value, type: EventAdmission::EventContract}, {name: rest, type: Nat}]
 }
 
 structure{
-  name: EnvelopeRead,
+  name: EventEnvelopeRead,
   type_parameters: [],
   parameters: [],
   fields: [{name: value, type: EventAdmission::EventEnvelope}, {name: rest, type: Nat}]
 }
 
 definition{
-  name: readPayload,
+  name: readEventPayload,
   parameters: [words : (List Nat), offset : Nat],
-  result: (Option PayloadRead),
+  result: (Option EventPayloadRead),
   body: (match (CompositionProtocol::readScalar words offset)
-    | Option.none => (ctor Option.none [PayloadRead])
+    | Option.none => (ctor Option.none [EventPayloadRead])
     | Option.some kind => (if ((project kind value) =? 0) then (match (CompositionProtocol::readScalar words (project kind rest))
-      | Option.none => (ctor Option.none [PayloadRead])
-      | Option.some value => (ctor Option.some [PayloadRead] (record PayloadRead {value := (ctor EventAdmission::EventPayload.natural (project value value)), rest := (project value rest)}))) else (if ((project kind value) =? 1) then (match (CompositionProtocol::readScalar words (project kind rest))
-      | Option.none => (ctor Option.none [PayloadRead])
-      | Option.some value => (if ((project value value) <=? 1) then (ctor Option.some [PayloadRead] (record PayloadRead {value := (ctor EventAdmission::EventPayload.flag ((project value value) =? 1)), rest := (project value rest)})) else (ctor Option.none [PayloadRead]))) else (if ((project kind value) =? 2) then (match (CompositionProtocol::readScalar words (project kind rest))
-      | Option.none => (ctor Option.none [PayloadRead])
-      | Option.some count => (if ((project count value) <=? 1024) then (let values : CompositionProtocol::NatsRead := (CompositionProtocol::readNats words (project count rest) (project count value) (nil Nat)); (if (project values valid) then (ctor Option.some [PayloadRead] (record PayloadRead {value := (ctor EventAdmission::EventPayload.bytes (project values value)), rest := (project values rest)})) else (ctor Option.none [PayloadRead]))) else (ctor Option.none [PayloadRead]))) else (ctor Option.none [PayloadRead])))))
+      | Option.none => (ctor Option.none [EventPayloadRead])
+      | Option.some value => (ctor Option.some [EventPayloadRead] (record EventPayloadRead {value := (ctor EventAdmission::EventPayload.natural (project value value)), rest := (project value rest)}))) else (if ((project kind value) =? 1) then (match (CompositionProtocol::readScalar words (project kind rest))
+      | Option.none => (ctor Option.none [EventPayloadRead])
+      | Option.some value => (if ((project value value) <=? 1) then (ctor Option.some [EventPayloadRead] (record EventPayloadRead {value := (ctor EventAdmission::EventPayload.flag ((project value value) =? 1)), rest := (project value rest)})) else (ctor Option.none [EventPayloadRead]))) else (if ((project kind value) =? 2) then (match (CompositionProtocol::readScalar words (project kind rest))
+      | Option.none => (ctor Option.none [EventPayloadRead])
+      | Option.some count => (if ((project count value) <=? 1024) then (let values : CompositionProtocol::NatsRead := (CompositionProtocol::readNats words (project count rest) (project count value) (nil Nat)); (if (project values valid) then (ctor Option.some [EventPayloadRead] (record EventPayloadRead {value := (ctor EventAdmission::EventPayload.bytes (project values value)), rest := (project values rest)})) else (ctor Option.none [EventPayloadRead]))) else (ctor Option.none [EventPayloadRead]))) else (ctor Option.none [EventPayloadRead])))))
 }
 
 definition{
-  name: readContract,
+  name: readEventContract,
   parameters: [words : (List Nat), offset : Nat],
-  result: (Option ContractRead),
+  result: (Option EventContractRead),
   body: (match (CompositionProtocol::readScalar words offset)
-    | Option.none => (ctor Option.none [ContractRead])
+    | Option.none => (ctor Option.none [EventContractRead])
     | Option.some key => (match (CompositionProtocol::readScalar words (project key rest))
-      | Option.none => (ctor Option.none [ContractRead])
+      | Option.none => (ctor Option.none [EventContractRead])
       | Option.some version => (match (CompositionProtocol::readScalar words (project version rest))
-        | Option.none => (ctor Option.none [ContractRead])
+        | Option.none => (ctor Option.none [EventContractRead])
         | Option.some kind => (match (CompositionProtocol::readScalar words (project kind rest))
-          | Option.none => (ctor Option.none [ContractRead])
+          | Option.none => (ctor Option.none [EventContractRead])
           | Option.some maximumBytes => (match (CompositionProtocol::listReferences words (project maximumBytes rest))
-            | Option.none => (ctor Option.none [ContractRead])
+            | Option.none => (ctor Option.none [EventContractRead])
             | Option.some producers => (match (CompositionProtocol::listReferences words (project producers rest))
-              | Option.none => (ctor Option.none [ContractRead])
-              | Option.some consumers => (ctor Option.some [ContractRead] (record ContractRead {value := (record EventAdmission::EventContract {key := (project key value), version := (project version value), kind := (project kind value), maximumBytes := (project maximumBytes value), producers := (project producers value), consumers := (project consumers value)}), rest := (project consumers rest)}))))))))
+              | Option.none => (ctor Option.none [EventContractRead])
+              | Option.some consumers => (ctor Option.some [EventContractRead] (record EventContractRead {value := (record EventAdmission::EventContract {key := (project key value), version := (project version value), kind := (project kind value), maximumBytes := (project maximumBytes value), producers := (project producers value), consumers := (project consumers value)}), rest := (project consumers rest)}))))))))
 }
 
 definition{
-  name: readEnvelope,
+  name: readEventEnvelope,
   parameters: [words : (List Nat), offset : Nat],
-  result: (Option EnvelopeRead),
+  result: (Option EventEnvelopeRead),
   body: (match (CompositionProtocol::readScalar words offset)
-    | Option.none => (ctor Option.none [EnvelopeRead])
+    | Option.none => (ctor Option.none [EventEnvelopeRead])
     | Option.some key => (match (CompositionProtocol::readScalar words (project key rest))
-      | Option.none => (ctor Option.none [EnvelopeRead])
+      | Option.none => (ctor Option.none [EventEnvelopeRead])
       | Option.some version => (match (CompositionProtocol::readScalar words (project version rest))
-        | Option.none => (ctor Option.none [EnvelopeRead])
+        | Option.none => (ctor Option.none [EventEnvelopeRead])
         | Option.some generation => (match (CompositionProtocol::readScalar words (project generation rest))
-          | Option.none => (ctor Option.none [EnvelopeRead])
+          | Option.none => (ctor Option.none [EventEnvelopeRead])
           | Option.some sequence => (match (CompositionProtocol::readReference words (project sequence rest))
-            | Option.none => (ctor Option.none [EnvelopeRead])
+            | Option.none => (ctor Option.none [EventEnvelopeRead])
             | Option.some producer => (match (CompositionProtocol::readReference words (project producer rest))
-              | Option.none => (ctor Option.none [EnvelopeRead])
-              | Option.some consumer => (match (readPayload words (project consumer rest))
-                | Option.none => (ctor Option.none [EnvelopeRead])
-                | Option.some payload => (ctor Option.some [EnvelopeRead] (record EnvelopeRead {value := (record EventAdmission::EventEnvelope {key := (project key value), version := (project version value), generation := (project generation value), sequence := (project sequence value), producer := (project producer value), consumer := (project consumer value), payload := (project payload value)}), rest := (project payload rest)})))))))))
+              | Option.none => (ctor Option.none [EventEnvelopeRead])
+              | Option.some consumer => (match (readEventPayload words (project consumer rest))
+                | Option.none => (ctor Option.none [EventEnvelopeRead])
+                | Option.some payload => (ctor Option.some [EventEnvelopeRead] (record EventEnvelopeRead {value := (record EventAdmission::EventEnvelope {key := (project key value), version := (project version value), generation := (project generation value), sequence := (project sequence value), producer := (project producer value), consumer := (project consumer value), payload := (project payload value)}), rest := (project payload rest)})))))))))
 }
 
 definition{
-  name: encodeResult,
+  name: encodeEventResult,
   parameters: [result : (Result Nat EventAdmission::EventError)],
   result: Bytes,
   body: (match result
@@ -102,29 +102,29 @@ definition{
 }
 
 definition{
-  name: dispatchWords,
+  name: dispatchEventWords,
   parameters: [words : (List Nat)],
   result: Bytes,
   body: (match (CompositionProtocol::readPolicy words 0)
     | Option.none => 0x6d616c666f726d65644576656e74
     | Option.some policy => (match (CompositionProtocol::listFeatures words (project policy rest))
       | Option.none => 0x6d616c666f726d65644576656e74
-      | Option.some features => (match (readContract words (project features rest))
+      | Option.some features => (match (readEventContract words (project features rest))
         | Option.none => 0x6d616c666f726d65644576656e74
         | Option.some contract => (match (CompositionProtocol::readScalar words (project contract rest))
           | Option.none => 0x6d616c666f726d65644576656e74
           | Option.some generation => (match (CompositionProtocol::readScalar words (project generation rest))
             | Option.none => 0x6d616c666f726d65644576656e74
-            | Option.some sequence => (match (readEnvelope words (project sequence rest))
+            | Option.some sequence => (match (readEventEnvelope words (project sequence rest))
               | Option.none => 0x6d616c666f726d65644576656e74
-              | Option.some envelope => (if ((project envelope rest) =? (prim length words : Nat)) then (encodeResult (EventAdmission::admitEvent (project features value) (project policy value) (project contract value) (project generation value) (project sequence value) (project envelope value))) else 0x6d616c666f726d65644576656e74)))))))
+              | Option.some envelope => (if ((project envelope rest) =? (prim length words : Nat)) then (encodeEventResult (EventAdmission::admitEvent (project features value) (project policy value) (project contract value) (project generation value) (project sequence value) (project envelope value))) else 0x6d616c666f726d65644576656e74)))))))
 }
 
 definition{
   name: dispatchEvent,
   parameters: [bytes : Bytes],
   result: Bytes,
-  body: (if (32768 <? (prim length bytes : Nat)) then 0x6576656e74546f6f4c61726765 else (let decoded : CompositionProtocol::DecodedWords := (CompositionProtocol::decodeWords bytes 0 4096 (nil Nat)); (if (project decoded valid) then (dispatchWords (project decoded value)) else 0x6d616c666f726d65644576656e74))),
+  body: (if (32768 <? (prim length bytes : Nat)) then 0x6576656e74546f6f4c61726765 else (let decoded : CompositionProtocol::DecodedWords := (CompositionProtocol::decodeWords bytes 0 4096 (nil Nat)); (if (project decoded valid) then (dispatchEventWords (project decoded value)) else 0x6d616c666f726d65644576656e74))),
   axioms: [Quot.sound, propext]
 }
 
