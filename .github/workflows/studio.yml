@@ -95,5 +95,13 @@ jobs:
         run: node tools/live_table.mjs --check
       - name: Every word on the live screen is edited in the spec, and only there
         run: node tools/live_edit.mjs --check
+      - name: An app's canonical LexLean module is its source, and its obligations agree with the table
+        run: node tools/live_lexlean.mjs --check
+      - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
+        run: |
+          node tools/live_proof.mjs --check
+          export PATH="$HOME/.elan/bin:$PATH"
+          cd proof && lake build && lake env lean PrismLive/Axioms.lean | tee axioms.txt
+          test "$(grep -c 'depends on axioms: \[propext, Quot.sound\]' axioms.txt)" = 2
       - name: Nothing in this repository names Forge's old home
         run: node tools/self_contained.mjs

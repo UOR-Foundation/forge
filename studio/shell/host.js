@@ -26,6 +26,7 @@ import { viewReady, lookup, routeOf, refusalWord, seal as sealAnswer, sealPaid, 
 import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
 import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
+import * as lexlean from "./live/lexlean.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
@@ -904,8 +905,23 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   const source = options.source || await captureProjectSource(await dbReady, appId);
   const files = new Map(source.files), writes = [];
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
+  // A LexLean module, when the model wrote one, carries the rules: the spec is read from it, keeping the
+  // screen's words (purpose, view, meanings) the spec already had, since the module holds only the logic.
+  const lex = lexlean.specFromTurn(text);
+  if (lex && lex.error) return { changed: 0, source, card: `**Rules** · not read\n\n- ${lex.error}\n\nAsk me to fix the module.` };
+  if (lex) {
+    let words = {};
+    try { const prev = JSON.parse(files.get("prism/spec.json") || "{}"); words = Object.fromEntries(["purpose", "view", "meanings"].filter((k) => prev[k] !== undefined).map((k) => [k, prev[k]])); } catch (e) {}
+    text = "<dyad-spec>" + JSON.stringify({ ...lex.spec, ...words }) + "</dyad-spec>";
+  }
   const tag = prism.parseSpecTag(text);
   if (tag && tag.spec) stage("prism/spec.json", JSON.stringify(tag.spec, null, 2) + "\n");
+  // Every app's rules have a canonical LexLean source, whatever wrote them (a module, the on-device
+  // model's JSON, a click or an agent's patch): the same meaning is always the same module bytes. It is
+  // staged with the spec, so both land in the one source transaction.
+  if (files.get("prism/spec.json")) {
+    try { const c = lexlean.canonicalSource(JSON.parse(files.get("prism/spec.json"))); stage(`prism/${c.name}.lex.tex`, c.source); } catch (e) {}
+  }
   const current = files.get("prism/spec.json"), snapshot = await rulesSnapshotOf(appId), before = snapshot.state;
   if (!current) return { changed: 0, source, card: tag && tag.error ? `**Rules** · not checked\n\n- ${tag.error}\n\nAsk me to fix the rules.` : null };
   const specKappa = await kappa(enc.encode(current));
@@ -1147,6 +1163,13 @@ async function chatTurn(chatId, intent) {
       if (full.includes("<dyad-spec>")) {
         const raw = live.partialSpec(full);
         if (raw) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } pushLive(appId, raw, "draft"); }
+      } else if (full.includes("<prism-lexlean>")) {
+        // A canonical LexLean module is the source: whatever declarations are whole are projected now.
+        // The frame opens on the tag, not on the first whole declaration (thousands of characters
+        // later), so it has mounted by the time there is something to paint.
+        if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); }
+        const part = lexlean.partialFromTurn(full);
+        if (part) pushLive(appId, part.spec, "draft");
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = full; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
@@ -1156,6 +1179,18 @@ async function chatTurn(chatId, intent) {
     let pendingText = null, frame = 0;
     const onTextSoon = (t) => { pendingText = t; if (!frame) frame = requestAnimationFrame(() => { frame = 0; const next = pendingText; pendingText = null; if (next !== null) onText(next); }); };
     const settleText = () => { if (frame) cancelAnimationFrame(frame); frame = 0; pendingText = null; };
+    // A LexLean module that does not read gets one repair turn from the same model, with the reader's
+    // words, streamed into this answer, so the user sees a fixed app rather than an error to relay.
+    const repaired = async (genBody) => {
+      const before = full;
+      const next = await lexlean.withRepair(before, async (prompt) => {
+        const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: prompt }] };
+        const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
+        settleText();
+        return text;
+      });
+      if (next !== before) await onText(next);
+    };
     // Warm up: the local model is chosen but not resident yet; a held key (the visitor's, or the
     // site's) answers through OpenRouter meanwhile, and the local model starts loading for the next turn.
     const warm = route === "Local" && !engine.instance && core.run({ op: "warmup", localReady: !!engine.instance, keyPresent: !!(await inference.keyGet()), online: navigator.onLine }).warmup;
@@ -1171,6 +1206,7 @@ async function chatTurn(chatId, intent) {
         const { text, rec } = await paidGenerate(warmBody, onTextSoon, abort.signal);
         settleText();
         await onText(text);
+        await repaired(warmBody);
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
@@ -1180,6 +1216,7 @@ async function chatTurn(chatId, intent) {
       const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
       settleText();
       await onText(text);
+      await repaired(body);
       // An answer cut at the token limit is not sealed, so the same request is never served it again.
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
     } else {

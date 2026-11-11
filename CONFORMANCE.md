@@ -146,6 +146,13 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-11` | `build` | Cloud inference bounds requests and streamed responses and refuses cancellation, malformed data and provider failures explicitly |
 
+## live-lexlean
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `LL-01` | `build` | Every guarantee holds on every request in the bounds when every local obligation passes |
+| `LL-02` | `build` | Every guarantee of the Verdant Resonance fixture holds on every request in its bounds |
+
 ## proposal-admission
 
 | ID | Level | Statement |

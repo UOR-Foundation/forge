@@ -309,3 +309,15 @@ id = "FK-21"
 level = "build"
 suite = "forge_kernel"
 statement = "The kernel never counts as this week what is older than 7 days"
+
+[[id]]
+id = "LL-01"
+level = "build"
+suite = "live-lexlean"
+statement = "Every guarantee holds on every request in the bounds when every local obligation passes"
+
+[[id]]
+id = "LL-02"
+level = "build"
+suite = "live-lexlean"
+statement = "Every guarantee of the Verdant Resonance fixture holds on every request in its bounds"
