@@ -1,6 +1,6 @@
 # Performance
 
-What the shell costs a visitor, measured before and after the work on branch `forge-ux-perf`, and what is still open. The Performance gate (`tools/perf_budget.mjs`, budgets in `tools/perf_budget.json`, row in `VERIFICATION.md`) holds the result.
+What the shell costs a visitor, measured before and after the work on branch `forge-ux-perf`, and what is still open. The Performance gate (`tools/perf_budget.mjs`, row in `VERIFICATION.md`) holds the result. Its budgets are the Forge kernel's (FK-12 to FK-15), not a file of this tree: see "What the kernel decides" below.
 
 ## How it was measured
 
@@ -129,6 +129,26 @@ Each finding gives the screen, viewport and appearance, the problem, the fix and
 - Cmd/Ctrl+K: not exercised. Cmd/Ctrl+B and Enter were.
 - Other browsers. Everything was measured in Chrome. Safari and Firefox were not run.
 - CI. The browser budgets were recorded on this workstation. A GitHub runner may be slower and need the budgets recalibrated on its first run.
+
+## What the kernel decides
+
+Foundry is a Prism app: its decisions are FK requirements in `app/src/ForgeKernel.lex.tex`, with theorems in `ForgeKernelProofs.lex.tex` that Lean proves for every request (`prismpm --project app verify`). The words the page shows stay in the View (`studio/src`). The kernel's guest runs in the page and in the worker, pinned by `KERNEL_REV`, and replays all 100 acceptance vectors before it answers anything.
+
+| Rule | Kernel request and answer | Theorems (Lean) | Who asks |
+|---|---|---|---|
+| Performance budgets: mobile cold and warm LCP, INP, first token (ms); first-load JS per route (gzip KB) | `budget JOURNEY VALUE`: `within` or `over` | FK-12 never within when over, FK-13 never over when within, FK-14 INP budget at most 500 ms, FK-15 no route below the first load | the Performance gate, for every verdict; the numbers exist nowhere else |
+| Chat and preview stack under 768 px | `layout WIDTH`: `tabs` or `split` | FK-16, FK-17 | the chat page, on load and on resize |
+| Motion: at most 200 ms, none when reduced motion is asked | `motion MS REDUCED`: `allow` or `deny` | FK-18, FK-19 | the Experience gate, for every duration in `appearance.css` |
+| Tap targets at least 44 px | `target PX`: `ok` or `small` | FK-20 | the Experience gate, for the touch hit area |
+| "This week" on the Apps page: seven days | `recent SECONDS`: `yes` or `no` | FK-21 | the Apps page, for each date |
+
+What stays outside the kernel, and why:
+
+- Pixel layout, the hit area's CSS and the reduced-motion media query: a stylesheet cannot ask anything. They are adapters the Experience gate holds to the kernel's answers.
+- The sidebar's active item and the breadcrumb trail: route matching is the router's, from its own route tree. A second copy in the kernel would be a second source.
+- Which panels load lazily: a property of the build's chunk graph. The Performance gate measures it, through FK-12.
+- The model ladder (warm-up and promote) and the sealed-answer cache: already decisions in the View model (`studio/src`, `Inference.warmup`, `Object.promote`, `Inference.route`), proved there. Moving them into the kernel was not attempted.
+- The preview cache: admission is the kernel's gate already (FK-05 to FK-09).
 
 ## Hologram's lookup-table inference
 

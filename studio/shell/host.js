@@ -895,6 +895,12 @@ const kernelReady = import(new URL("kernel.js", BASE).href).then(() => self.Forg
 // counts as this week): the answer is the kernel's, the screen only draws it. Nothing is asked before the
 // guest has passed its pin and every acceptance vector.
 window.__forgeKernel = Object.freeze({ ask: (line) => kernelReady.then((k) => k.ask(line)) });
+// The chat page draws whichever layout the kernel last answered for this window's width, then asks again: the
+// answer is asked here as soon as the kernel is ready, and on every resize, so the chat page starts in the
+// kernel's layout instead of drawing the other one and remounting.
+const askLayout = () => kernelReady.then((k) => k.ask("layout " + Math.max(0, Math.round(innerWidth)))).then((a) => { if (a === "tabs" || a === "split") { try { localStorage.setItem("holo.layout.narrow", a === "tabs" ? "1" : "0"); } catch (e) {} } }).catch(() => {});
+askLayout();
+addEventListener("resize", askLayout);
 const PHASES = ["drafting", "checked", "proving", "proved", "published"];
 async function nextPhase(phase, event) {
   const answer = await (await kernelReady).ask(phase + " " + event);
