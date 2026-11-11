@@ -1,7 +1,7 @@
 {
  "spec": "hologram-forge/kernel/1",
  "application": "Forge kernel",
- "source": "https://raw.githubusercontent.com/UOR-Foundation/foundry/bcfec5da4d892159061e260f7877fb1204194575/studio/shell/kernel/kernel.holo",
+ "source": "https://raw.githubusercontent.com/UOR-Foundation/foundry/9ec45a5664b5d892540e9f5e396a0863f13b8e54/studio/shell/kernel/kernel.holo",
  "digest": "blake3:e6d7d213205a80b126f8ec3483ecc5e19acf09f6c5f04b700062deb9ed301b84",
  "guest": {
   "path": "kernel/guest.wasm",
