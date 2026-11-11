@@ -166,6 +166,12 @@ model does not sanction.
 | `FK-10` | `build` | The app always answers proved when event is reword and phase is proved |
 | `FK-11` | `build` | The app always answers published when event is reword and phase is published |
 
+## github-publication-permission
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-45` | `build` | Public GitHub writes require explicit repository and source-bound approval rechecked before each mutation |
+
 ## host-input-boundary
 
 | ID | Level | Statement |
