@@ -245,6 +245,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-31` | `build` | The editor loads only from integrity-checked locked package bytes inside the active shell closure |
 
+## message-linked-restoration
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-55` | `build` | Message-linked restoration atomically binds verified source preview to exact chat truncation or a history-preserving fork |
+
 ## portable-build-permission
 
 | ID | Level | Statement |

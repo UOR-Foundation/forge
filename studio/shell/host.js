@@ -1,7 +1,9 @@
+import {prepareMessageRestoration} from "./message-restoration.mjs";
+import {prepareSnapshot} from "./snapshot-restore.mjs";
 import {createVersionPreviewController} from "./version-preview-controller.mjs";
 import {previewProjectStore,previewFailure} from "./version-preview-store.mjs";
 import {previewWithGuest} from "./version-preview-codec.mjs";
-import {listStoredVersions,setStoredVersionMetadata,verifiedVersionChanges,resolveStoredVersion} from "./version-history.mjs";
+import {versionAddress,listStoredVersions,setStoredVersionMetadata,verifiedVersionChanges,resolveStoredVersion} from "./version-history.mjs";
 import {createChatQueueController} from "./chat-queue-controller.mjs";
 import {readStoredChatQueue,commitStoredChatQueue,bindQueuePayload,chatQueueFailure} from "./chat-queue-store.mjs";
 import {VersionPreviewIntentEventSchema,VersionPreviewRemoteSnapshotSchema,ChatStreamIntentEventSchema,SerializableChatTurnIntentSchema,serializeImmutableChatTurnPayload} from "./chat-contracts.mjs";
@@ -363,7 +365,7 @@ handlers.set("checkout-version", async ({ appId, purpose, versionId, branch }) =
   if(purpose!=="preview")throw previewFailure("invalidPreviewCommand");if(!(await versionPreview.acquire(appId)).acquired)throw previewFailure("previewWindowBusy");return versionPreview.dispatch(appId,{type:"SELECT_VERSION",versionId,operationId:crypto.randomUUID()});
 });
 handlers.set("revert-version", async ({appId,previousVersionId,expectedHeadOid,currentChatMessageId,targetBranchName}) => {
-  if(currentChatMessageId)throw previewFailure("invalidPreviewCommand");if(targetBranchName!==undefined&&targetBranchName!=="main")throw previewFailure("previewUnsupportedBranch");if(!(await versionPreview.acquire(appId)).acquired)throw previewFailure("previewWindowBusy");return versionPreview.dispatch(appId,{type:"RESTORE",versionId:previousVersionId,...(expectedHeadOid?{expectedHeadOid}:{}),operationId:crypto.randomUUID()});
+  if(targetBranchName!==undefined&&targetBranchName!=="main")throw previewFailure("previewUnsupportedBranch");if(!(await versionPreview.acquire(appId)).acquired)throw previewFailure("previewWindowBusy");return versionPreview.dispatch(appId,{type:"RESTORE",versionId:previousVersionId,...(currentChatMessageId?{currentChatMessageId}:{}),...(expectedHeadOid?{expectedHeadOid}:{}),operationId:crypto.randomUUID()});
 });
 
 // ---- chats as records; the stream is the next slice
@@ -763,10 +765,18 @@ handlers.set("window-infrastructure:detach-interest", () => undefined);
 const previewEpoch=crypto.randomUUID();
 const previewActorId=appId=>`web-version_preview-${appId}-${previewEpoch}`;
 const previewEnvelope=appId=>({protocolVersion:1,machineId:"version_preview",encodedKey:{appId},actorInstanceId:previewActorId(appId),revision:versionPreview.snapshot(appId).revision,encodedState:VersionPreviewRemoteSnapshotSchema.parse(versionPreview.snapshot(appId))});
+async function previewModelBoundary(){await coreReady;return {guest:kernelReady,core,derive:kappa,readObject:key=>get("objects",key),admit:async(derived,expected)=>core.run({op:"restore",derived,expected}).decision==="Accept"};}
 const versionPreview=createVersionPreviewController({
   locks:navigator.locks,
   store:async appId=>{await coreReady;return previewProjectStore(await dbReady,appId,{guest:kernelReady,core,derive:kappa,readObject:key=>get("objects",key),admit:async(derived,expected)=>core.run({op:"restore",derived,expected}).decision==="Accept"});},
   mintOwner:()=>{let owner=0;while(!owner)owner=crypto.getRandomValues(new Uint32Array(1))[0];return owner;},
+  prepareMessageCommand:async(appId,event)=>{
+    const db=await dbReady,model=await previewModelBoundary(),fork=event.type==="RESTORE_TO_MESSAGE",chatId=fork?event.chatId:event.currentChatMessageId.chatId,messageId=fork?event.messageId:event.currentChatMessageId.messageId;
+    const prepared=await prepareMessageRestoration(db,{appId,chatId,messageId,mode:fork?"fork":"truncate",restoreCodebase:fork?event.restoreCodebase:true,...(!fork?{versionId:event.versionId}:{})},{resolve:reference=>resolveStoredVersion(db,appId,reference),verify:reference=>prepareSnapshot(reference,model)});
+    const effectIdentity=await kappa(new TextEncoder().encode(JSON.stringify(event)));
+    const request={kind:prepared.versionId?4:3,...(prepared.versionId?{versionId:prepared.versionId}:{}),effectIdentity,...(event.expectedHeadOid?{expectedHeadOid:versionAddress(event.expectedHeadOid)}:{})};
+    return {request,boundary:previewProjectStore(db,appId,model,{chatUpdate:prepared.chatUpdate})};
+  },
   validateEvent:value=>VersionPreviewIntentEventSchema.safeParse(value),
   publish:(appId,snapshot)=>emit("distributed-machine:snapshot",{protocolVersion:1,machineId:"version_preview",encodedKey:{appId},actorInstanceId:previewActorId(appId),revision:snapshot.revision,encodedState:VersionPreviewRemoteSnapshotSchema.parse(snapshot)}),
   created:(appId,oid)=>emit("version-created",{appId,oid}),

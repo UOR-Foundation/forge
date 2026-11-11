@@ -339,6 +339,20 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Origin window ownership and guest-admitted atomic source preview; imported version actor transport and independent recovery journeys apply."
+    },
+    {
+      "id": "message-restoration",
+      "version": 1,
+      "owner": "FoundrySpecification.messageRestorationBoundary",
+      "effects": [
+        "storage",
+        "execution"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Verified source and message restoration share atomic acknowledgement; busy queues and changed history refuse."
     }
   ],
   "commands": [
@@ -2784,9 +2798,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "revert-version",
-      "feature": "durable-version-preview",
+      "feature": "message-restoration",
       "version": 1,
-      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
+      "owner": "FoundrySpecification.messageRestorationBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",

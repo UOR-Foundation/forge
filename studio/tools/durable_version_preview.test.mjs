@@ -23,7 +23,7 @@ test('journal captures exact owner and full identities and rejects corrupt persi
 test('captured acquire commits guest state and exact duplicate cannot perform effects twice',async()=>{
  const f=fixture(),request={...f.request,operationId:'acquire'};const pending=operateVersionPreview(request,f.boundary);request.owner=99;
  const answer=await pending;assert.equal(f.writes,1);assert.equal(answer.journal.state.owner,7);assert.equal(answer.result.repositoryOutcome,'unchanged');
- assert.equal((await operateVersionPreview({...f.request,operationId:'acquire'},f.boundary)).replayed,true);assert.equal(f.writes,1);
+ f.raw.receipts[0].result={createdChatId:2,affectedChatId:null};const replay=await operateVersionPreview({...f.request,operationId:'acquire'},f.boundary);assert.equal(replay.replayed,true);assert.equal(replay.result.createdChatId,2);assert.equal(f.writes,1);
  await assert.rejects(()=>operateVersionPreview({...f.request,kind:3,operationId:'acquire'},f.boundary),{code:'previewOperationConflict'});
 });
 test('changed files identity dependencies and guest failure refuse before source commit',async()=>{

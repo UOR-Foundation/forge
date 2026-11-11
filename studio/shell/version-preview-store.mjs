@@ -16,18 +16,19 @@ const zero=()=>Array(8).fill(0);
 const result=(changed,notification=null)=>({repositoryOutcome:changed?'target-applied':'unchanged',notification,runtimeAction:changed?'restart':'none',affectedChatId:null,createdChatId:null});
 export function readPreviewJournal(raw,appId){
  id(appId);if(raw===undefined)return {profile:'foundry/version-preview/1',appId,state:{revision:0,active:0,owner:0,origin:zero(),current:zero()},receipts:[]};
- try{const j=copy(raw);if(!exact(j,'profile,appId,state,receipts')||j.profile!=='foundry/version-preview/1'||j.appId!==appId||!Array.isArray(j.receipts)||j.receipts.length>128)throw Error();j.state=capturePreviewState(j.state);const ids=new Set();for(const receipt of j.receipts){if(!exact(receipt,'operationId,identity')||typeof receipt.operationId!=='string'||!receipt.operationId||receipt.operationId.length>256||!identity(receipt.identity)||ids.has(receipt.operationId))throw Error();ids.add(receipt.operationId);}return j;}catch{throw previewFailure('invalidStoredPreview');}
+ try{const j=copy(raw);if(!exact(j,'profile,appId,state,receipts')||j.profile!=='foundry/version-preview/1'||j.appId!==appId||!Array.isArray(j.receipts)||j.receipts.length>128)throw Error();j.state=capturePreviewState(j.state);const ids=new Set();for(const receipt of j.receipts){if((!exact(receipt,'operationId,identity')&&!exact(receipt,'operationId,identity,result'))||typeof receipt.operationId!=='string'||!receipt.operationId||receipt.operationId.length>256||!identity(receipt.identity)||ids.has(receipt.operationId))throw Error();if(receipt.result!==undefined&&(!exact(receipt.result,'createdChatId,affectedChatId')||[receipt.result.createdChatId,receipt.result.affectedChatId].some(n=>n!==null&&(!Number.isSafeInteger(n)||n<1))))throw Error();ids.add(receipt.operationId);}return j;}catch{throw previewFailure('invalidStoredPreview');}
 }
 const sameFiles=(left,right)=>JSON.stringify([...left].sort(([a],[b])=>a<b?-1:a>b?1:0))===JSON.stringify([...right].sort(([a],[b])=>a<b?-1:a>b?1:0));
 export async function operateVersionPreview(raw,boundary){
- const request=copy(raw);if(!request||Object.keys(request).some(k=>!['appId','owner','kind','versionId','operationId','expectedHeadOid','mode'].includes(k))||!Number.isInteger(request.owner)||request.owner<1||request.owner>0xffffffff||![1,2,3,4,5].includes(request.kind))throw previewFailure('invalidPreviewCommand');
+ const request=copy(raw);if(!request||Object.keys(request).some(k=>!['appId','owner','kind','versionId','operationId','expectedHeadOid','mode','effectIdentity'].includes(k))||!Number.isInteger(request.owner)||request.owner<1||request.owner>0xffffffff||![1,2,3,4,5].includes(request.kind))throw previewFailure('invalidPreviewCommand');
+ if(request.effectIdentity!==undefined&&!identity(request.effectIdentity))throw previewFailure('invalidPreviewCommand');
  id(request.appId);if(request.operationId!==undefined&&(typeof request.operationId!=='string'||!request.operationId||request.operationId.length>256))throw previewFailure('invalidPreviewCommand');
  if(request.mode!==undefined&&!(request.kind===4&&['accept','checkpoint'].includes(request.mode)))throw previewFailure('invalidPreviewCommand');
  if(request.kind===2||request.kind===4&&!request.mode){if(typeof request.versionId!=='string')throw previewFailure('invalidPreviewCommand');}else if(request.versionId!==undefined)throw previewFailure('invalidPreviewCommand');
  if(request.expectedHeadOid!==undefined&&(request.kind!==4||!identity(request.expectedHeadOid)))throw previewFailure('invalidPreviewCommand');
  const captured=await boundary.capture(),journal=readPreviewJournal(captured.expected,request.appId);
  const {owner,...intent}=request;let operationIdentity;
- if(request.operationId!==undefined){try{operationIdentity=await boundary.derive(new TextEncoder().encode(JSON.stringify(Object.fromEntries(Object.entries(intent).sort(([a],[b])=>a<b?-1:a>b?1:0)))));}catch{throw previewFailure('previewUnavailable');}if(!identity(operationIdentity))throw previewFailure('previewUnavailable');const receipt=journal.receipts.find(r=>r.operationId===request.operationId);if(receipt){if(receipt.identity!==operationIdentity)throw previewFailure('previewOperationConflict');return {journal,result:result(false),replayed:true};}}
+ if(request.operationId!==undefined){try{operationIdentity=await boundary.derive(new TextEncoder().encode(JSON.stringify(Object.fromEntries(Object.entries(intent).sort(([a],[b])=>a<b?-1:a>b?1:0)))));}catch{throw previewFailure('previewUnavailable');}if(!identity(operationIdentity))throw previewFailure('previewUnavailable');const receipt=journal.receipts.find(r=>r.operationId===request.operationId);if(receipt){if(receipt.identity!==operationIdentity)throw previewFailure('previewOperationConflict');return {journal,result:{...result(false),...(receipt.result||{})},replayed:true};}}
  const current=await boundary.prepare(captured.source.reference);
  if(current.name!==captured.source.name||!sameFiles(current.files,captured.source.files)||JSON.stringify(snapshotDependencies(current.files))!==JSON.stringify(captured.source.dependencies))throw previewFailure('previewSourceChanged');
  if(journal.state.active&&request.kind!==5&&!request.mode&&previewAddressIdentity(journal.state.current)!==captured.source.reference)throw previewFailure('previewSourceChanged');
@@ -43,10 +44,10 @@ export async function operateVersionPreview(raw,boundary){
  const answer=await previewWithGuest(boundary.guest,{state:journal.state,expectedRevision:journal.state.revision,command:{kind:request.kind,owner,target}});if(!answer.ok)throw previewFailure(answer.code);
  if(answer.writeRequested&&previewAddressIdentity(answer.target)!==prepared.oid)throw previewFailure('invalidStoredPreview');
  journal.state=answer.state;if(request.operationId!==undefined){journal.receipts.push({operationId:request.operationId,identity:operationIdentity});if(journal.receipts.length>128)journal.receipts.shift();}
- const next=readPreviewJournal(journal,request.appId);await boundary.commit(captured,prepared,next,{writeRequested:answer.writeRequested,recordVersion});
- return {journal:next,result:result(answer.writeRequested&&prepared.oid!==captured.source.reference),replayed:false,createdVersion:recordVersion?prepared.oid:null};
+ const next=readPreviewJournal(journal,request.appId);const committed=await boundary.commit(captured,prepared,next,{writeRequested:answer.writeRequested,recordVersion});
+ return {journal:next,result:{...result(answer.writeRequested&&prepared.oid!==captured.source.reference),...(committed&&typeof committed==="object"?{createdChatId:committed.createdChatId??null,affectedChatId:committed.affectedChatId??null}:{})},replayed:false,createdVersion:recordVersion?prepared.oid:null};
 }
-export function previewProjectStore(db,appId,model){
+export function previewProjectStore(db,appId,model,{chatUpdate}={}){
  id(appId);return {
   guest:model.guest,derive:model.derive,
   read:async()=>{if(!await storageRequest(db,'apps','readonly',s=>s.get(appId)))throw previewFailure('previewMissing');return readPreviewJournal(await storageRequest(db,'refs','readonly',s=>s.get(`preview:${appId}`)),appId);},
@@ -55,7 +56,7 @@ export function previewProjectStore(db,appId,model){
   prepareChild:(snapshot,parent)=>prepareExistingProject({name:snapshot.name,files:Object.fromEntries(snapshot.files)},model,parent),
   commit:async(captured,prepared,journal,{writeRequested,recordVersion})=>{
    const changedPaths=writeRequested?[...new Set([...captured.source.files.map(([p])=>p),...prepared.files.map(([p])=>p),'prism/spec.json'])]:[];
-   try{return await commitPreparedProject(db,appId,changedPaths,captured.source,prepared,{recordVersion:writeRequested&&recordVersion,previewUpdate:{expected:captured.expected,state:journal},...(writeRequested?{name:prepared.name,dependencies:snapshotDependencies(prepared.files),message:'Restore historical source'}:{})});}catch(error){if(error?.code==='projectEditConflict')throw previewFailure('previewSourceChanged');if(error?.code==='projectEditStorageFailed')throw previewFailure('previewStorageFailed');throw error;}
+   try{return await commitPreparedProject(db,appId,changedPaths,captured.source,prepared,{recordVersion:writeRequested&&recordVersion,chatUpdate,previewUpdate:{expected:captured.expected,state:journal},...(writeRequested?{name:prepared.name,dependencies:snapshotDependencies(prepared.files),message:'Restore historical source'}:{})});}catch(error){if(error?.code==='projectEditConflict')throw chatUpdate?Object.assign(new Error('Source or chat history changed; review the restoration again'),{code:'messageRestoreConflict'}):previewFailure('previewSourceChanged');if(error?.code==='projectEditStorageFailed')throw previewFailure('previewStorageFailed');throw error;}
   },
  };
 }

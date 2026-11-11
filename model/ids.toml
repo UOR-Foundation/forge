@@ -423,3 +423,9 @@ id = "FA-54"
 level = "build"
 suite = "durable-version-preview"
 statement = "Version preview ownership binds guest transitions to atomic source restoration and exclusive recoverable browser sessions"
+
+[[id]]
+id = "FA-55"
+level = "build"
+suite = "message-linked-restoration"
+statement = "Message-linked restoration atomically binds verified source preview to exact chat truncation or a history-preserving fork"

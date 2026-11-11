@@ -1039,5 +1039,26 @@ definition{
   result: String,
   body: "Version-preview window interest requires a live exclusive origin Web Lock and an existing project. The journal binds the app, exact VersionPreview guest state and at most 128 recent operation identities/results. Acquire captures the verified current source; selection verifies a project-owned target snapshot and all files. Guest state, exact files, reference, dependencies and source-bound evidence invalidation commit together with both source and journal compare-and-swap. Only that owner may select, return or restore. Other source-changing operations refuse projectPreviewActive while ownership is active; source-neutral work metadata may still commit. Closing or switching apps returns the original verified source before releasing ownership. A new owner may recover an abandoned journal only while holding the exclusive lock; it preserves both identities, returns the exact original source and then starts a fresh session. Source mismatch refuses automatic restoration. Explicit acceptance of a changed current repository requires independently verified current snapshot/file bytes and an admitted restore transition; checkpoint acceptance creates a canonical child instead. A completed transaction is the only acknowledgement; late abort or project deletion cannot publish a successful state or resurrect a journal. Renderer event and snapshot schemas come from locked imported source, and obsolete actor identities refuse. Imported branch requests support only main; no Git branch management is claimed. The finite operation receipt window prevents duplicate recent effects only when captured operation identity matches. Owner integers and same-origin locks are cooperative ownership, not authentication. This boundary covers source preview/return/restore; chat-message restoration requires its separately modeled transaction and cannot be silently acknowledged here."
 }
+
+inductive{
+  name: MessageRestoreError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidMessageRestore, fields: []},
+    {name: messageRestoreMissing, fields: []},
+    {name: messageRestoreBusy, fields: []},
+    {name: messageRestoreConflict, fields: []},
+    {name: messageRestoreVersionMissing, fields: []},
+    {name: messageRestoreStorageFailed, fields: []}
+  ]
+}
+
+definition{
+  name: messageRestorationBoundary,
+  parameters: [],
+  result: String,
+  body: "Message-linked restoration validates positive app, chat and message identities, captured history bounded to 10000 messages and 48 MiB per target chat, at most 1024 project chats and 64 MiB captured project history, project membership and queue inactivity before changing anything. The source version before a message is the following assistant source identity when present, otherwise the nearest preceding assistant final identity, otherwise the chat initial identity; the resolved version must belong to the project and all snapshot and file bytes must verify. A fork copies only preceding messages, preserving content, source/final identities, model, display time and compaction markers; it resets message IDs and live quota/delivery identities and preserves chat mode, selected model and referenced applications. A truncation retains only messages strictly before the specified message. Source restoration creates a canonical child of the original live version; fork-only closes historical preview back to that original and does not create a source version. The existing VersionPreview guest owns every source transition. Source, preview journal, exact chat update and monotonic fork ID allocation share one IndexedDB transaction. All project chats and their queue journals are compared again inside that transaction; active work or pending queue entries refuse until the user stops and clears them. No partial source/chat acknowledgement, stale history substitution, chat resurrection or duplicate fork on exact operation replay is permitted. The operation identity includes the captured message intent identity; its bounded receipt retains the affected or created chat ID for exact replay. The result identifies the affected or created chat only after transaction completion. Stored message identities are data, not authority to access another project. This browser adapter does not claim native Git, database rollback, infinite history, exactly-once external effects or cross-origin execution ownership."
+}
 \end{semanticmodule}
 \end{lexlean}
