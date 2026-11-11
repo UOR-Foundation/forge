@@ -15,6 +15,7 @@
 #   ./scripts/plant.sh hole      # drop a handler a screen reads on mount: the Contract gate must refuse
 #   ./scripts/plant.sh live      # make a node's kappa ignore its content: the Live gate must refuse
 #   ./scripts/plant.sh shadcn    # change one class in a vendored shadcn component: the components gate must refuse
+#   ./scripts/plant.sh published # make the published card light the rule after the one that decides: the Published gate must refuse
 # `hole` runs the Contract gate, which bundles the vendored contracts with the renderer's own esbuild,
 # so run it where those dependencies were installed for this platform -- otherwise esbuild refuses to
 # start and the gate looks like it fired when it never ran.
@@ -108,7 +109,13 @@ EOF
     sed -i 's/rounded-md text-sm font-medium/rounded-full text-sm font-medium/' vendor/shadcn-ui/registry/new-york-v4/ui/button.tsx
     expect_fail node tools/live_components.mjs --check
     cp /tmp/plant-button.tsx vendor/shadcn-ui/registry/new-york-v4/ui/button.tsx ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn" >&2; exit 2 ;;
+  published)
+    # The page lights the wrong rule: the preview, drawn by React from the view, would not light it.
+    cp shell/live/card-runtime.mjs /tmp/plant-card-runtime.mjs
+    sed -i 's/n.index === lit ? "on" : "off"/n.index === lit + 1 ? "on" : "off"/' shell/live/card-runtime.mjs
+    expect_fail node tools/published_preview.mjs --check
+    cp /tmp/plant-card-runtime.mjs shell/live/card-runtime.mjs ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|published" >&2; exit 2 ;;
 esac
 restore
 echo "restored"

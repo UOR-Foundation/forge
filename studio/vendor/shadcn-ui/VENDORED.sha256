@@ -4,7 +4,7 @@ cc36af0f8b5019c33cc039fbf03bb952a513072b15b55b53c592b78af3e5f4c4  registry/new-y
 c48dd3b96be90a7066f1aebf294f0af9d00ebcdc367d5d4aca55429ade570c1c  registry/new-york-v4/ui/card.tsx
 8c4612a7c41319ac5049daa3b34b080f9784b6245c17780eb87c127e58e473db  registry/new-york-v4/ui/input.tsx
 a476e41f08b9de5bd447de66a33d8bc2ad18f2fa6b96c064778bab4b6f439f4c  registry/new-york-v4/ui/label.tsx
-0b796a108a4eb5ba52d9ad938b7aea36dc56ae66c703a6d0a23dbc24f96daff3  registry/new-york-v4/ui/select.tsx
+007516b111fca8c98a6c40c94ab91bb68cc5b52afce1ed1f5e510c3d86e7347c  registry/new-york-v4/ui/native-select.tsx
 6da346505c8629a4668420d2a5ca48891383bbe0b0ceb14163537c671879427e  registry/new-york-v4/ui/separator.tsx
 674bb386fb56b6cf67fa2b9120d26e8a1afc8e4a975ad9fe02c6b4a2053d8707  registry/new-york-v4/ui/toggle-group.tsx
 ba4d0b0a2b2fee75dc36dfc19e32082e721024b919050c97fd5dc70faa924e16  registry/new-york-v4/ui/toggle.tsx

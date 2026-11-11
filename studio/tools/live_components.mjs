@@ -7,7 +7,10 @@
 //                                             record their digests (needs the GitHub CLI, signed in)
 //   node tools/live_components.mjs --build    compile them into shell/live/components.js (React, Radix and
 //                                             the components, one script) and shell/live/components.css
-//                                             (Tailwind, against the brand kit's tokens)
+//                                             (Tailwind, against the brand kit's tokens); and, for the
+//                                             published page, shell/live/card-render.mjs (the same view,
+//                                             rendered to markup at publish) and shell/live/card.css (the
+//                                             same sheet, its base layer kept inside the card)
 //   node tools/live_components.mjs --check    the vendored files match their record, and a fresh build is
 //                                             byte for byte the committed one
 //
@@ -91,6 +94,12 @@ async function build() {
     define: { "process.env.NODE_ENV": '"production"', __STYLE__: JSON.stringify(style.style) }, logLevel: "error",
   });
   const js = result.outputFiles[0].text;
+  const render = await esbuild.build({
+    entryPoints: [path.join(src, "src", "card-render.jsx")], bundle: true, write: false, format: "esm", platform: "neutral", mainFields: ["module", "main"], conditions: ["browser"], target: "es2020",
+    minify: true, jsx: "automatic", legalComments: "none", plugins: [alias], nodePaths: [path.join(src, "node_modules")], absWorkingDir: src,
+    define: { "process.env.NODE_ENV": '"production"' }, logLevel: "error",
+  });
+  const cardRender = render.outputFiles[0].text;
 
   // Tailwind scans the frame and the vendored components; the theme maps the kit's variables (brand.css,
   // inlined before this sheet in the frame) onto Tailwind's slots, as the kit's own showcase does.
@@ -105,7 +114,30 @@ async function build() {
   execFileSync(process.execPath, [cli, "-i", path.join(work, "entry.css"), "-o", path.join(work, "out.css"), "--minify"], { cwd: src, stdio: ["ignore", "ignore", "pipe"] });
   const css = text(path.join(work, "out.css"));
   const banner = `/* shadcn/ui ${style.style} (MIT, (c) shadcn) from the Hologram brand kit at ${style.kit}; React and Radix (MIT). Built by tools/live_components.mjs; do not edit. */\n`;
-  return { js: banner + js + "\n", css: banner + css + "\n" };
+  return { js: banner + js + "\n", css: banner + css + "\n", cardRender: banner + cardRender + "\n", cardCss: banner + cardSheet(css) + "\n" };
+}
+
+// The card's sheet, for the published page, where it sits beside the page's own (prism-page.css): the
+// same compiled sheet with Tailwind's base layer (preflight, and theme.css's base rules) kept inside the
+// card, so the page's chrome is untouched, and a reset that takes the page's own unlayered rules (button,
+// input, h1, main...) off the card, so inside it only this sheet applies, as in the preview.
+export function cardSheet(css) {
+  const open = css.indexOf("@layer base{");
+  if (open < 0) throw new Error("card.css: the sheet has no base layer");
+  const start = open + "@layer base{".length;
+  let depth = 1, i = start;
+  for (; depth; i++) depth += css[i] === "{" ? 1 : css[i] === "}" ? -1 : 0;
+  const scope = (sel) => sel.split(",").map((part) => {
+    const s = part.trim();
+    if (/^(html|:host|body)$/.test(s)) return ".prism-card";
+    if (s === "*") return ".prism-card,:where(.prism-card) *";
+    return ":where(.prism-card) " + s;
+  }).join(",");
+  const scoped = (body) => body.replace(/(^|[{};])([^{};@]+)\{/g, (m, before, sel) => before + scope(sel) + "{");
+  const base = css.slice(start, i - 1);
+  const card = "#stage .prism-card,#stage .prism-card *,#stage .prism-card :before,#stage .prism-card :after{all:revert-layer}" +
+    "#stage .board-fit>.prism-card{width:100%;height:100%;overflow-y:auto;place-self:stretch}";
+  return css.slice(0, start) + scoped(base) + css.slice(i - 1) + card;
 }
 
 if (process.argv.includes("--build") || process.argv.includes("--check")) {
@@ -119,9 +151,11 @@ if (process.argv.includes("--build") || process.argv.includes("--check")) {
     }
   }
   const t0 = performance.now();
-  const { js, css } = await build();
+  const built = await build();
+  const { js, css } = built;
   const ms = Math.round(performance.now() - t0);
-  const files = { "components.js": js, "components.css": css };
+  const { cardRender, cardCss } = built;
+  const files = { "components.js": js, "components.css": css, "card-render.mjs": cardRender, "card.css": cardCss };
   if (process.argv.includes("--check")) {
     for (const [name, body] of Object.entries(files)) {
       const p = path.join(out, name);
