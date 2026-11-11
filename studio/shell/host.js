@@ -1362,6 +1362,7 @@ const chatQueue=createChatQueueController({
 });
 queueChannel?.addEventListener("message",event=>{const chatId=event.data?.chatId;if(Number.isSafeInteger(chatId)&&chatId>0)void chatQueue.refresh(chatId).catch(()=>{});});
 window.addEventListener("pagehide",()=>{chatQueue.dispose();queueChannel?.close();},{once:true});
+window.addEventListener("pageshow",event=>{if(event.persisted)location.reload();});
 const chatSubscribe=async({machineId,encodedKey})=>{await chatQueue.snapshot(encodedKey.chatId);const m=chatMachineOf(encodedKey.chatId);return {protocolVersion:1,machineId,encodedKey,actorInstanceId:chatActorId(encodedKey.chatId),revision:m.revision,encodedState:m.state};};
 async function chatDispatch(raw){
   const {encodedKey,messageId,expectedActorInstanceId,encodedEvent}=structuredClone(raw),chatId=encodedKey?.chatId;

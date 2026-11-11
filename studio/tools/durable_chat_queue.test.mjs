@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {test} from 'node:test';
-import {emptyChatQueue,readChatQueue,captureQueueIntent,bindQueuePayload,stageChatQueue,queueSnapshot,commitStoredChatQueue} from '../shell/chat-queue-store.mjs';
+import {emptyChatQueue,readChatQueue,captureQueueIntent,bindQueuePayload,stageChatQueue,queueSnapshot,commitStoredChatQueue,readStoredChatQueue} from '../shell/chat-queue-store.mjs';
 import {encodeQueueRequest} from '../shell/chat-queue-codec.mjs';
 import {createChatQueueController} from '../shell/chat-queue-controller.mjs';
 import {SerializableChatTurnIntentSchema,ChatStreamIntentEventSchema,serializeImmutableChatTurnPayload} from '../shell/chat-contracts.mjs';
@@ -41,12 +41,14 @@ test('guest-approved edits reorder clear receipts and replay bind exact durable 
 });
 test('stale revisions Stop ownership and corrupt journals refuse without mutation',async()=>{
  for(const [name,op,code] of [['staleRevision',{type:'pause',expectedRevision:2},'queueRevisionConflict'],['wrongOwner',{type:'complete',item:11,owner:8},'queueOwnerConflict'],['activeRemove',{type:'remove',item:11},'queueActiveConflict'],['staleResume',{type:'resume',observedStop:1},'queueStopConflict']]){const j=await journal(name),before=structuredClone(j);await refuses(()=>stageChatQueue(fixtureGuest,j,op,boundary),code);assert.deepEqual(j,before);}
+ const exhausted=emptyChatQueue(1,2);exhausted.nextItem=0x100000000;await refuses(async()=>stageChatQueue(fixtureGuest,exhausted,{type:'enqueue',intent:await intent(),observedStop:0},boundary),'chatQueueLimitExceeded');
  const j=await journal();await refuses(()=>stageChatQueue(fixtureGuest,j,{type:'stop',observedStop:1},boundary),'queueStopConflict');
  for(const patch of [{nextItem:1},{entries:[]},{receipts:[{}]},{state:{...j.state,owner:3}}])assert.throws(()=>readChatQueue({...j,...patch},1,2),{code:'chatQueueJournalInvalid'});
  j.entries[0].identity='tampered';await refuses(()=>stageChatQueue(fixtureGuest,j,{type:'pause'},boundary),'chatQueueJournalInvalid');
 });
 test('transaction commit is the only success and late abort CAS and deletion stay typed',async()=>{
  const j=emptyChatQueue(1,2);
+ await refuses(()=>readStoredChatQueue({transaction(){throw Error('private');}},1),'chatQueueStorageFailed');
  function database({old,missing=false,late=false}={}){let puts=0;const tx={abort(){queueMicrotask(()=>tx.onabort());},objectStore(name){return {get(){const req={};queueMicrotask(()=>{req.result=name==='chats'?(missing?undefined:{appId:2}):name==='apps'?{}:old;req.onsuccess();});return req;},put(){puts++;queueMicrotask(()=>late?tx.onabort():tx.oncomplete());}};}};return {transaction:()=>tx,get puts(){return puts;}};}
  const db=database();assert.deepEqual(await commitStoredChatQueue(db,undefined,j),j);assert.equal(db.puts,1);
  await refuses(()=>commitStoredChatQueue(database({late:true}),undefined,j),'chatQueueStorageFailed');

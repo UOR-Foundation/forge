@@ -15,7 +15,7 @@ export function readChatQueue(raw,chatId,appId){
   if(j.state.paused>1||new Set(j.state.items).size!==j.state.items.length||j.state.items.some(n=>!n)||(j.state.active?j.state.items[0]!==j.state.active||!j.state.owner:j.state.owner!==0))throw Error();
   if(!Array.isArray(j.entries)||j.entries.length!==j.state.items.length||!Array.isArray(j.receipts)||j.receipts.length>128)throw Error();
   const identities=new Set();for(let i=0;i<j.entries.length;i++){const e=j.entries[i];if(!exact(e,'id,intent,identity')||e.id!==j.state.items[i]||e.id<1||e.id>=j.nextItem||typeof e.intent?.intentId!=='string'||!e.intent.intentId||e.intent.chatId!==chatId||typeof e.identity!=='string'||!e.identity||identities.has(e.intent.intentId))throw Error();identities.add(e.intent.intentId);}
-  for(const e of j.receipts){if(!exact(e,'intentId,identity,outcome')||typeof e.intentId!=='string'||!e.intentId||typeof e.identity!=='string'||!['completed','cancelled','removed'].includes(e.outcome)||identities.has(e.intentId))throw Error();identities.add(e.intentId);}
+  for(const e of j.receipts){if(!exact(e,'intentId,identity,outcome')||typeof e.intentId!=='string'||!e.intentId||typeof e.identity!=='string'||!e.identity||!['completed','cancelled','removed'].includes(e.outcome)||identities.has(e.intentId))throw Error();identities.add(e.intentId);}
   if(j.lastMutation!==null&&(!exact(j.lastMutation,'mutationId,outcome')||typeof j.lastMutation.mutationId!=='string'||j.lastMutation.outcome!=='applied'))throw Error();
   if(bytes(j).length>maximumBytes)throw Error();return j;
  }catch{throw chatQueueFailure('chatQueueJournalInvalid');}
