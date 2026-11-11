@@ -162,7 +162,8 @@ function sse() {
   let body = "";
   const parts = []; for (let i = 0; i < 200; i++) parts.push(`T${i} `);
   parts.push("\n<dyad-write path=\"src/pages/Index.tsx\" description=\"page\">\nexport default function Index() {\n  return <h1>Streaks</h1>;\n}\n</dyad-write>\nDone.");
-  for (const p of parts) body += "data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: p }, finish_reason: null }] }) + "\n\n";
+  // The last chunk carries finish_reason "stop": the host refuses a stream that ends without one (inference-effects.mjs).
+  parts.forEach((p, i) => { body += "data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: p }, finish_reason: i === parts.length - 1 ? "stop" : null }] }) + "\n\n"; });
   return body + "data: [DONE]\n\n";
 }
 function serve() {
