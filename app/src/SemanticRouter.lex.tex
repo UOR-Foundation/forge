@@ -78,7 +78,7 @@ inductive{
 }
 
 definition{
-  name: negate,
+  name: routingNegate,
   parameters: [value : Bool],
   result: Bool,
   body: (if value then false else true)
@@ -163,7 +163,7 @@ definition{
   result: Bool,
   body: (match catalog
     | List.nil => true
-    | List.cons head rest => (((FeatureComposition::validFeature head) && ((negate (FeatureComposition::hasKey prior (project head key))) && ((knownNeeds (project (dependencies head) value) prior) && (((prim length (project head vocabulary) : Nat) <=? 32) && (((prim length (project head inputs) : Nat) <=? 32) && (((prim length (project head outputs) : Nat) <=? 32) && (((prim length (project head state) : Nat) <=? 32) && (((prim length (project head events) : Nat) <=? 32) && (((prim length (project head errors) : Nat) <=? 32) && (((prim length (project head effects) : Nat) <=? 32) && (((prim length (project head needs) : Nat) <=? 32) && (((prim length (project head conflicts) : Nat) <=? 32) && (((prim length (project head targets) : Nat) <=? 32) && (((prim length (project head accessibility) : Nat) <=? 32) && (((prim length (project head quality) : Nat) <=? 32) && true))))))))))))))) && (orderedCatalog rest (prim append prior (cons head (nil FeatureComposition::FeatureContract)) : (List FeatureComposition::FeatureContract))))),
+    | List.cons head rest => (((FeatureComposition::validFeature head) && ((routingNegate (FeatureComposition::hasKey prior (project head key))) && ((knownNeeds (project (dependencies head) value) prior) && (((prim length (project head vocabulary) : Nat) <=? 32) && (((prim length (project head inputs) : Nat) <=? 32) && (((prim length (project head outputs) : Nat) <=? 32) && (((prim length (project head state) : Nat) <=? 32) && (((prim length (project head events) : Nat) <=? 32) && (((prim length (project head errors) : Nat) <=? 32) && (((prim length (project head effects) : Nat) <=? 32) && (((prim length (project head needs) : Nat) <=? 32) && (((prim length (project head conflicts) : Nat) <=? 32) && (((prim length (project head targets) : Nat) <=? 32) && (((prim length (project head accessibility) : Nat) <=? 32) && (((prim length (project head quality) : Nat) <=? 32) && true))))))))))))))) && (orderedCatalog rest (prim append prior (cons head (nil FeatureComposition::FeatureContract)) : (List FeatureComposition::FeatureContract))))),
   recursive_argument: catalog
 }
 
@@ -183,7 +183,7 @@ definition{
   result: Bool,
   body: (match relations
     | List.nil => true
-    | List.cons head rest => ((0 <? (project head fromConcept)) && ((0 <? (project head toConcept)) && ((0 <? (project head weight)) && (((project head weight) <=? 1000) && ((negate (hasRelation rest (project head fromConcept) (project head toConcept))) && (validRelations rest))))))),
+    | List.cons head rest => ((0 <? (project head fromConcept)) && ((0 <? (project head toConcept)) && ((0 <? (project head weight)) && (((project head weight) <=? 1000) && ((routingNegate (hasRelation rest (project head fromConcept) (project head toConcept))) && (validRelations rest))))))),
   recursive_argument: relations
 }
 
@@ -380,7 +380,7 @@ definition{
     policy : FeatureComposition::CompositionPolicy
   ],
   result: (Result RoutingOutcome RoutingError),
-  body: (if (negate ((0 <? expectedIntent) && ((0 <? registryRevision) && ((0 <? (project intent id)) && ((0 <? (project intent registryRevision)) && ((0 <? (prim length (project intent concepts) : Nat)) && (((prim length (project intent concepts) : Nat) <=? 32) && (((prim length (project intent context) : Nat) <=? 32) && ((FeatureComposition::validIds (project intent concepts)) && (FeatureComposition::validIds (project intent context))))))))))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticIntent)) else (if (negate (((prim length catalog : Nat) <=? 32) && (orderedCatalog catalog (nil FeatureComposition::FeatureContract)))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticCatalog)) else (if (negate (((prim length relations : Nat) <=? 128) && (validRelations relations))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticRelations)) else (ctor Result.ok [RoutingOutcome, RoutingError] (routeValidated expectedIntent registryRevision intent catalog relations policy)))))
+  body: (if (routingNegate ((0 <? expectedIntent) && ((0 <? registryRevision) && ((0 <? (project intent id)) && ((0 <? (project intent registryRevision)) && ((0 <? (prim length (project intent concepts) : Nat)) && (((prim length (project intent concepts) : Nat) <=? 32) && (((prim length (project intent context) : Nat) <=? 32) && ((FeatureComposition::validIds (project intent concepts)) && (FeatureComposition::validIds (project intent context))))))))))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticIntent)) else (if (routingNegate (((prim length catalog : Nat) <=? 32) && (orderedCatalog catalog (nil FeatureComposition::FeatureContract)))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticCatalog)) else (if (routingNegate (((prim length relations : Nat) <=? 128) && (validRelations relations))) then (ctor Result.error [RoutingOutcome, RoutingError] (ctor RoutingError.invalidSemanticRelations)) else (ctor Result.ok [RoutingOutcome, RoutingError] (routeValidated expectedIntent registryRevision intent catalog relations policy)))))
 }
 
 definition{
