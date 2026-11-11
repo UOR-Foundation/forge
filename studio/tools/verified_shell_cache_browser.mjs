@@ -9,7 +9,7 @@ const verifier = fs.readFileSync(new URL("../shell/shell-cache.js", import.meta.
 const kernel = fs.readFileSync(new URL("../shell/kernel.js", import.meta.url));
 let generation = 1, corrupt = false, cookies = 0;
 const fixture = () => {
-  const files = { "index.html": "<!doctype html><title>Shell cache acceptance</title>", "host.js": "// host", "core.wasm": "fixture", "assets/index.js": `// renderer ${generation}`, "assets/index.css": "body{}", "scaffold/files.json": "[]", "shell-cache.js": verifier, "kernel.js": kernel };
+  const files = { "index.html": "<!doctype html><title>Shell cache acceptance</title>", "host.js": "// host", "core.wasm": "fixture", "assets/index.js": `// renderer ${generation}`, "assets/index.css": "body{}", "scaffold/files.json": "[]", "editor/vs/loader.js": "// editor", "editor/package.json": "{}", "shell-cache.js": verifier, "kernel.js": kernel };
   const rows = Object.entries(files).sort(([a], [b]) => a < b ? -1 : 1).map(([path, body]) => ({ bytes: Buffer.byteLength(body), path, sha256: sha(body) }));
   const closure = sha(JSON.stringify(rows)); return { files, closure, manifest: { spec: "hologram-forge/shell/1", closure, files: rows } };
 };

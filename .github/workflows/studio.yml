@@ -54,6 +54,8 @@ jobs:
         run: (cd vendor/dyad && node node_modules/vite/bin/vite.js build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir) && python3 scripts/stamp_shell.py
       - name: The lane, byte compared against the committed artifacts
         run: ./scripts/lane.sh
+      - name: Independently verify staged editor bytes against the locked npm archive
+        run: python3 scripts/editor_assets.py --check
       - name: Verify every staged renderer, scaffold and shell byte before acceptance
         run: node tools/check_shell_closure.mjs
       - name: Byte identity corpus
@@ -66,6 +68,7 @@ jobs:
           node tools/privacy_projection.mjs
           node tools/privacy_browser.mjs
           node tools/privacy_shell_browser.mjs
+          node tools/editor_browser.mjs
       - name: Verify snapshot rollback in browser storage
         run: |
           node tools/snapshot_restore_browser.mjs

@@ -11,7 +11,7 @@ const { prepare } = globalThis.ShellClosure;
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
 const base = "https://example.test/foundry/";
 const fixture = (extra = {}) => {
-  const files = { "index.html": "<h1>Foundry</h1>", "host.js": "// host", "core.wasm": "wasm", "assets/index.js": "// renderer", "assets/index.css": "body{}", "scaffold/files.json": "[]", ...extra };
+  const files = { "index.html": "<h1>Foundry</h1>", "host.js": "// host", "core.wasm": "wasm", "assets/index.js": "// renderer", "assets/index.css": "body{}", "scaffold/files.json": "[]", "editor/vs/loader.js": "// editor", "editor/package.json": "{}", ...extra };
   const rows = Object.entries(files).sort(([a], [b]) => a < b ? -1 : 1).map(([path, body]) => ({ bytes: Buffer.byteLength(body), path, sha256: sha(body) }));
   const closure = sha(JSON.stringify(rows));
   const manifest = { spec: "hologram-forge/shell/1", closure, files: rows };

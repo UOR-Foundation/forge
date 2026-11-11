@@ -126,3 +126,11 @@ remain pending. FA-30 removes vendor telemetry initialization from the browser
 projection and qualifies its settings boundary and actual SDK behavior. Its
 subsequent live-preview diagnostic passed the unchanged budgets; the earlier
 performance failure remains recorded. Neither is whole-release acceptance.
+
+FA-28 (#60), FA-29 (#62), and FA-30 (#65) now pass exact-head full SDK,
+Studio, Try-page and codespace gates. SDK runs are 43048148137, 43048527603
+and 43048517428; Studio runs are 43048147624, 43048527944 and 43048517622.
+Author completeness reviews are recorded and these PRs are ready for review.
+FA-31 adds locked local editor assets and real offline worker/Settings acceptance;
+its feature verification is `local-editor-closure.md`. Whole conversion and
+qualified factory consumer adoption remain open.
