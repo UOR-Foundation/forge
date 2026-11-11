@@ -136,7 +136,7 @@ Foundry is a Prism app: its decisions are FK requirements in `app/src/ForgeKerne
 
 | Rule | Kernel request and answer | Theorems (Lean) | Who asks |
 |---|---|---|---|
-| Performance budgets: mobile cold and warm LCP, INP, first token (ms); first-load JS per route (gzip KB) | `budget JOURNEY VALUE`: `within` or `over` | FK-12 never within when over, FK-13 never over when within, FK-14 INP budget at most 500 ms, FK-15 no route below the first load | the Performance gate, for every verdict; the numbers exist nowhere else |
+| Performance budgets: mobile cold and warm LCP, INP, first token (ms; first token 5,000 since main's atomic project creation, measured 4.5 s); first-load JS per route (gzip KB) | `budget JOURNEY VALUE`: `within` or `over` | FK-12 never within when over, FK-13 never over when within, FK-14 INP budget at most 500 ms, FK-15 no route below the first load | the Performance gate, for every verdict; the numbers exist nowhere else |
 | Chat and preview stack under 768 px | `layout WIDTH`: `tabs` or `split` | FK-16, FK-17 | the chat page, on load and on resize |
 | Motion: at most 200 ms, none when reduced motion is asked | `motion MS REDUCED`: `allow` or `deny` | FK-18, FK-19 | the Experience gate, for every duration in `appearance.css` |
 | Tap targets at least 44 px | `target PX`: `ok` or `small` | FK-20 | the Experience gate, for the touch hit area |
