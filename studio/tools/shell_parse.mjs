@@ -20,10 +20,10 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // sw.template.js is sw.js before the projector writes the closure digest into it; both are checked,
 // because a defect in the template reaches every future release.
-const GOAL = { "host.js": "mjs", "appearance.js": "mjs", "holo.js": "mjs", "inference.js": "mjs", "prompts.js": "mjs", "prism.js": "mjs", "github-build.js": "mjs", "sw.js": "cjs", "sw.template.js": "cjs", "kernel.js": "cjs" };
+const GOAL = { "build-modules.mjs": "mjs", "build-source.mjs": "mjs", "project-lifecycle.mjs": "mjs", "generation-patch.mjs": "mjs", "project-edit.mjs": "mjs", "project-creation.mjs": "mjs", "storage-request.mjs": "mjs", "work-codec.mjs": "mjs", "provider-key-validation.mjs": "mjs", "exact-representation.mjs": "mjs", "inference-effects.mjs": "mjs", "rules-source.mjs": "mjs", "composition-codec.mjs": "mjs", "snapshot-restore.mjs": "mjs", "publication-identity.mjs": "mjs", "publication-effects.mjs": "mjs", "host-boundary.mjs": "mjs", "host.js": "mjs", "appearance.js": "mjs", "holo.js": "mjs", "inference.js": "mjs", "prompts.js": "mjs", "prism.js": "mjs", "github-build.js": "mjs", "sw.js": "cjs", "sw.template.js": "cjs", "kernel.js": "cjs" };
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "shell-parse-"));
 let bad = 0;
-for (const name of fs.readdirSync(path.join(root, "shell")).filter((f) => f.endsWith(".js")).sort()) {
+for (const name of fs.readdirSync(path.join(root, "shell")).filter((f) => /\.(mjs|js)$/.test(f)).sort()) {
   const goal = GOAL[name];
   if (!goal) { console.log(`${name.padEnd(18)} no goal recorded -- add it to GOAL in tools/shell_parse.mjs`); bad += 1; continue; }
   const copy = path.join(dir, name.replace(/\.js$/, "." + goal));

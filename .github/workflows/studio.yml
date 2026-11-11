@@ -42,7 +42,7 @@ jobs:
             ~/.elan
           key: lane-${{ hashFiles('studio/PRISMPM_REV', 'studio/lean-toolchain') }}
       - name: The authored model is what the author script writes
-        run: python3 tools/author.py && git diff --exit-code -- src/Forge.lex.tex
+        run: python3 tools/author.py --check
       - name: The lane, byte compared against the committed artifacts
         run: ./scripts/lane.sh
       - name: Byte identity corpus
@@ -50,12 +50,37 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
+          cache: npm
+          cache-dependency-path: studio/vendor/dyad/package-lock.json
+      - name: Install locked renderer contracts for boundary verification
+        run: npm ci --prefix vendor/dyad --ignore-scripts --no-audit --no-fund
+      - name: Check the declared host scope and real renderer error recovery
+        run: |
+          node tools/contract_shapes.mjs --check
+          node tools/renderer_boundary.mjs
+          node tools/renderer_inputs.mjs
+      - name: Verify snapshot rollback in browser storage
+        run: |
+          node tools/snapshot_restore_browser.mjs
+          node tools/storage_request_browser.mjs
+          node tools/project_creation_browser.mjs
+          node tools/project_edit_browser.mjs
+          node tools/project_lifecycle_browser.mjs
+          node tools/build_source_browser.mjs
+          node tools/build_modules_browser.mjs
+          node tools/generation_patch_browser.mjs
+          node tools/rules_source_browser.mjs
+          node tools/inference_effects_browser.mjs
+          node tools/exact_representation_browser.mjs
+          node tools/provider_key_browser.mjs
       - name: Every shell script parses the way the browser parses it
         run: node tools/shell_parse.mjs
       - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone
         run: node tools/build_look.mjs
       - name: The kernel in the shell is the holo KERNEL_REV pins, and every vector replays
-        run: node tools/kernel.mjs --check
+        run: |
+          node tools/kernel.mjs --check
+          node tools/kernel_browser.mjs
       - name: The Prism journey in the shell is prism-code's, byte for byte
         run: node tools/prism_journey.mjs --check
       - name: The commit Forge makes on a template instance is prism-code's, byte for byte
