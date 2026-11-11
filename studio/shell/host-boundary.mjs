@@ -48,6 +48,7 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if (["portableBuildStyleIncomplete", "invalidPortableBuildPermission", "portableBuildPermissionDenied", "portableBuildPermissionExpired", "portableBuildPermissionRevoked", "portableBuildPermissionOffline", "portableBuildPermissionUnavailable"].includes(error?.code)) return refusal(error.code, channel, "validation", "Portable build permission was refused");
     if (error?.code === "unsupportedChannel") return refusal("unsupportedChannel", channel, "not_found", "This capability is unavailable in the browser");
     if (["commandRegistryInvalid", "commandBindingMissing", "commandBindingMismatch"].includes(error?.code)) return refusal(error.code, channel, "internal", "The command differs from its canonical ownership binding");
     if (["invalidInteractionModel", "invalidInteractionState", "unknownInteractionEvent", "malformedInteraction", "interactionTooLarge", "interactionRuntimeFailed", "invalidInteractionResponse", "invalidInteractionApplication", "interactionApplicationMismatch", "interactionStateChanged", "interactionStateStale", "interactionAudioUnavailable"].includes(error?.code)) return refusal(error.code, channel, "validation", "Interaction application was refused");

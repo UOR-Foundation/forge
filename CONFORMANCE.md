@@ -209,6 +209,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-31` | `build` | The editor loads only from integrity-checked locked package bytes inside the active shell closure |
 
+## portable-build-permission
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-44` | `build` | Portable builds require revocable source-bound consent before package retrieval or generated-code execution |
+
 ## preview-permissions
 
 | ID | Level | Statement |

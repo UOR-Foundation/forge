@@ -127,7 +127,11 @@ const ENDPOINT_FORM = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:[0-9]{1,5})?$/;
 function previewGrantValid(record, id) {
   const endpoints = record?.network?.endpoints;
   if (!Array.isArray(endpoints)) return false;
-  if (endpoints.length === 0) return true;
+  if (endpoints.length === 0 && record?.previewConsent?.purpose !== "portable-build") return true;
+  if (record?.previewConsent?.purpose === "portable-build") {
+    const {expires,grantedAt} = record.previewConsent, at = Date.now();
+    if (!Number.isFinite(expires) || !Number.isFinite(grantedAt) || at < grantedAt || at >= expires || expires > grantedAt + 120000) return false;
+  }
   return record?.previewConsent?.profile === "foundry/preview-consent/1" && record.previewConsent.id === id && /^blake3:[0-9a-f]{64}$/.test(record.previewConsent.source);
 }
 function policyOf(endpoints) {
