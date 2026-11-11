@@ -213,6 +213,26 @@ Verified: reading a request is tested, not proved.
 - **WHEN** the request is not 2 fields in this order
 - **THEN** the answer SHALL be `invalid`
 
+### Requirement: Always answers proved when event is reword and phase is proved
+
+The app always answers proved when event is reword and phase is proved: a reword is an edit that leaves the logic kappa unchanged (the words, labels and view of the screen, never a field, rule, answer or guarantee), so the proof, which is about the logic, still holds.
+
+Verified: proved by Lean for every request (FK-10, theorem `rewordKeepsProofHolds`).
+
+#### Scenario: FK-10
+- **WHEN** the Lean kernel checks `rewordKeepsProofHolds` during prismpm verify
+- **THEN** no request meets `breaksRewordKeepsProof`
+
+### Requirement: Always answers published when event is reword and phase is published
+
+The app always answers published when event is reword and phase is published: a reword is an edit that leaves the logic kappa unchanged (the words, labels and view of the screen, never a field, rule, answer or guarantee), so the proof, which is about the logic, still holds.
+
+Verified: proved by Lean for every request (FK-11, theorem `rewordKeepsPublishedHolds`).
+
+#### Scenario: FK-11
+- **WHEN** the Lean kernel checks `rewordKeepsPublishedHolds` during prismpm verify
+- **THEN** no request meets `breaksRewordKeepsPublished`
+
 ### Requirement: Capability gate, deny by default
 
 A request `gate ORIGIN EFFECT RECORD GRANTED DENIED` asks whether ORIGIN (`forge`, `preview` or `published`) may use EFFECT (`store`, `fetch`, `infer`, `build`, `frame` or `serve`). RECORD says whether a grant record exists for that origin, GRANTED whether it grants the resource, and DENIED whether it denies it, each `yes` or `no`. The app SHALL answer `allow` or `deny`.

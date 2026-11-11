@@ -9,7 +9,7 @@ definition{
   name: breaksInv001,
   parameters: [request : ForgeKernel::Request],
   result: Bool,
-  body: ((((((project request phase) <? 5) && ((project request event) <? 7)) && (not ((project request phase) =? (ForgeKernel::phaseProved)))) && (not ((project request event) =? (ForgeKernel::eventAttest)))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerProved)))
+  body: ((((((project request phase) <? 5) && ((project request event) <? 8)) && (not ((project request phase) =? (ForgeKernel::phaseProved)))) && (not ((project request event) =? (ForgeKernel::eventAttest)))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerProved)))
 }
 
 theorem{
@@ -29,6 +29,7 @@ theorem{
       ForgeKernel::eventEdit,
       ForgeKernel::eventFail,
       ForgeKernel::eventPublish,
+      ForgeKernel::eventReword,
       ForgeKernel::eventWait,
       ForgeKernel::judge,
       ForgeKernel::phaseChecked,
@@ -56,7 +57,7 @@ definition{
   name: breaksInv002,
   parameters: [request : ForgeKernel::Request],
   result: Bool,
-  body: ((((((project request phase) <? 5) && ((project request event) <? 7)) && (not ((project request phase) =? (ForgeKernel::phaseProved)))) && (not ((project request phase) =? (ForgeKernel::phasePublished)))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerPublished)))
+  body: ((((((project request phase) <? 5) && ((project request event) <? 8)) && (not ((project request phase) =? (ForgeKernel::phaseProved)))) && (not ((project request phase) =? (ForgeKernel::phasePublished)))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerPublished)))
 }
 
 theorem{
@@ -76,6 +77,7 @@ theorem{
       ForgeKernel::eventEdit,
       ForgeKernel::eventFail,
       ForgeKernel::eventPublish,
+      ForgeKernel::eventReword,
       ForgeKernel::eventWait,
       ForgeKernel::judge,
       ForgeKernel::phaseChecked,
@@ -103,7 +105,7 @@ definition{
   name: breaksInv003,
   parameters: [request : ForgeKernel::Request],
   result: Bool,
-  body: (((((project request phase) <? 5) && ((project request event) <? 7)) && ((project request event) =? (ForgeKernel::eventEdit))) && (not ((ForgeKernel::judge request) =? (ForgeKernel::answerDrafting))))
+  body: (((((project request phase) <? 5) && ((project request event) <? 8)) && ((project request event) =? (ForgeKernel::eventEdit))) && (not ((ForgeKernel::judge request) =? (ForgeKernel::answerDrafting))))
 }
 
 theorem{
@@ -123,6 +125,7 @@ theorem{
       ForgeKernel::eventEdit,
       ForgeKernel::eventFail,
       ForgeKernel::eventPublish,
+      ForgeKernel::eventReword,
       ForgeKernel::eventWait,
       ForgeKernel::judge,
       ForgeKernel::phaseChecked,
@@ -150,7 +153,7 @@ definition{
   name: breaksInv004,
   parameters: [request : ForgeKernel::Request],
   result: Bool,
-  body: (((((project request phase) <? 5) && ((project request event) <? 7)) && ((project request phase) =? (ForgeKernel::phaseDrafting))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerProving)))
+  body: (((((project request phase) <? 5) && ((project request event) <? 8)) && ((project request phase) =? (ForgeKernel::phaseDrafting))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerProving)))
 }
 
 theorem{
@@ -170,6 +173,7 @@ theorem{
       ForgeKernel::eventEdit,
       ForgeKernel::eventFail,
       ForgeKernel::eventPublish,
+      ForgeKernel::eventReword,
       ForgeKernel::eventWait,
       ForgeKernel::judge,
       ForgeKernel::phaseChecked,
@@ -188,6 +192,102 @@ theorem{
       ForgeKernel::rule8,
       ForgeKernel::rule9,
       breaksInv004
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksRewordKeepsProof,
+  parameters: [request : ForgeKernel::Request],
+  result: Bool,
+  body: ((((((project request phase) <? 5) && ((project request event) <? 8)) && ((project request event) =? (ForgeKernel::eventReword))) && ((project request phase) =? (ForgeKernel::phaseProved))) && (not ((ForgeKernel::judge request) =? (ForgeKernel::answerProved))))
+}
+
+theorem{
+  name: rewordKeepsProofHolds,
+  parameters: [request : ForgeKernel::Request],
+  statement: ((breaksRewordKeepsProof request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::answerChecked,
+      ForgeKernel::answerDrafting,
+      ForgeKernel::answerProved,
+      ForgeKernel::answerProving,
+      ForgeKernel::answerPublished,
+      ForgeKernel::eventApprove,
+      ForgeKernel::eventAttest,
+      ForgeKernel::eventCheck,
+      ForgeKernel::eventEdit,
+      ForgeKernel::eventFail,
+      ForgeKernel::eventPublish,
+      ForgeKernel::eventReword,
+      ForgeKernel::eventWait,
+      ForgeKernel::judge,
+      ForgeKernel::phaseChecked,
+      ForgeKernel::phaseDrafting,
+      ForgeKernel::phaseProved,
+      ForgeKernel::phaseProving,
+      ForgeKernel::phasePublished,
+      ForgeKernel::rule1,
+      ForgeKernel::rule10,
+      ForgeKernel::rule2,
+      ForgeKernel::rule3,
+      ForgeKernel::rule4,
+      ForgeKernel::rule5,
+      ForgeKernel::rule6,
+      ForgeKernel::rule7,
+      ForgeKernel::rule8,
+      ForgeKernel::rule9,
+      breaksRewordKeepsProof
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksRewordKeepsPublished,
+  parameters: [request : ForgeKernel::Request],
+  result: Bool,
+  body: ((((((project request phase) <? 5) && ((project request event) <? 8)) && ((project request event) =? (ForgeKernel::eventReword))) && ((project request phase) =? (ForgeKernel::phasePublished))) && (not ((ForgeKernel::judge request) =? (ForgeKernel::answerPublished))))
+}
+
+theorem{
+  name: rewordKeepsPublishedHolds,
+  parameters: [request : ForgeKernel::Request],
+  statement: ((breaksRewordKeepsPublished request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::answerChecked,
+      ForgeKernel::answerDrafting,
+      ForgeKernel::answerProved,
+      ForgeKernel::answerProving,
+      ForgeKernel::answerPublished,
+      ForgeKernel::eventApprove,
+      ForgeKernel::eventAttest,
+      ForgeKernel::eventCheck,
+      ForgeKernel::eventEdit,
+      ForgeKernel::eventFail,
+      ForgeKernel::eventPublish,
+      ForgeKernel::eventReword,
+      ForgeKernel::eventWait,
+      ForgeKernel::judge,
+      ForgeKernel::phaseChecked,
+      ForgeKernel::phaseDrafting,
+      ForgeKernel::phaseProved,
+      ForgeKernel::phaseProving,
+      ForgeKernel::phasePublished,
+      ForgeKernel::rule1,
+      ForgeKernel::rule10,
+      ForgeKernel::rule2,
+      ForgeKernel::rule3,
+      ForgeKernel::rule4,
+      ForgeKernel::rule5,
+      ForgeKernel::rule6,
+      ForgeKernel::rule7,
+      ForgeKernel::rule8,
+      ForgeKernel::rule9,
+      breaksRewordKeepsPublished
     ]
   },
   axioms: [Quot.sound, propext]

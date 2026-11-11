@@ -74,3 +74,15 @@ id = "FK-09"
 level = "build"
 suite = "forge_kernel"
 statement = "The gate never lets a preview fetch without a grant"
+
+[[id]]
+id = "FK-10"
+level = "build"
+suite = "forge_kernel"
+statement = "The app always answers proved when event is reword and phase is proved"
+
+[[id]]
+id = "FK-11"
+level = "build"
+suite = "forge_kernel"
+statement = "The app always answers published when event is reword and phase is published"

@@ -34,14 +34,34 @@ const isBuiltIn = (photo) => BUILT_IN.some((p) => p.id === photo.id);
 const fullOf = (photo) => (isBuiltIn(photo) ? `${FRAME_HOST}backdrops/${photo.id}.jpg` : `${PROXY}image?${new URLSearchParams({ src: photo.image, w: "2400" })}`);
 const thumbOf = (photo) => (isBuiltIn(photo) ? `${FRAME_HOST}backdrops/${photo.id}-thumb.jpg` : `${PROXY}image?${new URLSearchParams({ src: photo.image, w: "240", h: "150" })}`);
 
-function readTheme() { try { return JSON.parse(localStorage.getItem(KEY) || "null") || {}; } catch (e) { return {}; } }
+// The build screen (the renderer's chat route: chat beside the live preview) keeps its own look, Dark until
+// one is chosen there, kept under BUILD_KEY; every other screen keeps the home look under KEY. The photo,
+// wallpaper and recent picks are one set, shared by both. The pre paint script in index.html reads the same.
+const BUILD_KEY = "holo.theme.build.v1";
+const onBuild = () => /\/chat\/?$/.test(location.pathname);
+function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch (e) { return null; } }
+function readTheme() {
+  const home = readJson(KEY) || {};
+  if (!onBuild()) return home;
+  const b = readJson(BUILD_KEY) || { palette: "dark", immersive: false };
+  return { ...home, palette: b.palette === "light" ? "light" : "dark", immersive: !!b.immersive };
+}
+// A choice: kept for the screen it was made on, then shown.
 function applyTheme(s) {
+  try {
+    if (onBuild()) {
+      localStorage.setItem(KEY, JSON.stringify({ ...(readJson(KEY) || {}), look: 3, wallpaper: s.wallpaper, photo: s.photo, recent: s.recent }));
+      localStorage.setItem(BUILD_KEY, JSON.stringify({ palette: s.palette === "light" ? "light" : "dark", immersive: !!s.immersive }));
+    } else localStorage.setItem(KEY, JSON.stringify({ look: 3, ...s }));
+  } catch (e) {}
+  showTheme(s);
+}
+function showTheme(s) {
   const palette = s.palette === "light" ? "light" : "dark";
   root.setAttribute("data-holo-palette", palette);
   root.setAttribute("data-holo-immersive", s.immersive ? "on" : "off");
   root.style.setProperty("color-scheme", palette);
   if (s.wallpaper) root.style.setProperty("--holo-wallpaper", `url(${JSON.stringify(s.wallpaper)})`);
-  try { localStorage.setItem(KEY, JSON.stringify({ look: 3, ...s })); } catch (e) {}
   // the renderer's theme follows the palette: its provider reads the class it set and its stored choice.
   if (!root.classList.contains(palette)) { root.classList.remove("light", "dark"); root.classList.add(palette); }
   try { localStorage.setItem("theme", palette); } catch (e) {}
@@ -147,7 +167,21 @@ $("appearance").onclick = (e) => {
 document.addEventListener("click", (e) => { if (!$("popover").contains(e.target)) close(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("popover").hidden) close(); });
 for (const b of document.querySelectorAll("#popover .mode")) b.onclick = () => setMode(b.dataset.mode);
-applyTheme({ ...readTheme() });
+showTheme(readTheme());
+
+// The renderer moves between screens without loading a page (pushState, replaceState, back and forward), so
+// the look follows the route: entering or leaving the build screen shows that screen's look.
+let wasBuild = onBuild();
+function routed() {
+  if (onBuild() === wasBuild) return;
+  wasBuild = onBuild();
+  showTheme(readTheme());
+}
+for (const name of ["pushState", "replaceState"]) {
+  const move = history[name];
+  history[name] = function (...args) { const r = move.apply(this, args); routed(); return r; };
+}
+addEventListener("popstate", routed);
 
 // When the renderer's own settings switch its theme class, the palette follows (and Immersive, which is a
 // dark look, steps aside for Light).

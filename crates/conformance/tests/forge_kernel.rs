@@ -50,7 +50,7 @@ fn pinned(breaks: &str, condition: &str, theorem: &str) {
 fn forge_kernel_fk_01() {
     pinned(
         "breaksInv001",
-        "body: ((((((project request phase) <? 5) && ((project request event) <? 7)) && (not ((project request phase) =? (ForgeKernel::phaseProved)))) && (not ((project request event) =? (ForgeKernel::eventAttest)))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerProved)))",
+        "body: ((((((project request phase) <? 5) && ((project request event) <? 8)) && (not ((project request phase) =? (ForgeKernel::phaseProved)))) && (not ((project request event) =? (ForgeKernel::eventAttest)))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerProved)))",
         "inv001Holds",
     );
 }
@@ -60,7 +60,7 @@ fn forge_kernel_fk_01() {
 fn forge_kernel_fk_02() {
     pinned(
         "breaksInv002",
-        "body: ((((((project request phase) <? 5) && ((project request event) <? 7)) && (not ((project request phase) =? (ForgeKernel::phaseProved)))) && (not ((project request phase) =? (ForgeKernel::phasePublished)))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerPublished)))",
+        "body: ((((((project request phase) <? 5) && ((project request event) <? 8)) && (not ((project request phase) =? (ForgeKernel::phaseProved)))) && (not ((project request phase) =? (ForgeKernel::phasePublished)))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerPublished)))",
         "inv002Holds",
     );
 }
@@ -70,7 +70,7 @@ fn forge_kernel_fk_02() {
 fn forge_kernel_fk_03() {
     pinned(
         "breaksInv003",
-        "body: (((((project request phase) <? 5) && ((project request event) <? 7)) && ((project request event) =? (ForgeKernel::eventEdit))) && (not ((ForgeKernel::judge request) =? (ForgeKernel::answerDrafting))))",
+        "body: (((((project request phase) <? 5) && ((project request event) <? 8)) && ((project request event) =? (ForgeKernel::eventEdit))) && (not ((ForgeKernel::judge request) =? (ForgeKernel::answerDrafting))))",
         "inv003Holds",
     );
 }
@@ -80,7 +80,7 @@ fn forge_kernel_fk_03() {
 fn forge_kernel_fk_04() {
     pinned(
         "breaksInv004",
-        "body: (((((project request phase) <? 5) && ((project request event) <? 7)) && ((project request phase) =? (ForgeKernel::phaseDrafting))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerProving)))",
+        "body: (((((project request phase) <? 5) && ((project request event) <? 8)) && ((project request phase) =? (ForgeKernel::phaseDrafting))) && ((ForgeKernel::judge request) =? (ForgeKernel::answerProving)))",
         "inv004Holds",
     );
 }
@@ -132,5 +132,25 @@ fn forge_kernel_fk_09() {
         "breaksGatePreviewNoNetworkWithoutGrant",
         "body: (((((project request origin) =? (ForgeKernel::originPreview)) && ((project request effect) =? (ForgeKernel::effectFetch))) && (not ((project request granted) =? 1))) && ((ForgeKernel::gateAllows request) =? 1))",
         "previewNoNetworkWithoutGrantHolds",
+    );
+}
+
+/// `FK-10`: The app always answers proved when event is reword and phase is proved
+#[test]
+fn forge_kernel_fk_10() {
+    pinned(
+        "breaksRewordKeepsProof",
+        "body: ((((((project request phase) <? 5) && ((project request event) <? 8)) && ((project request event) =? (ForgeKernel::eventReword))) && ((project request phase) =? (ForgeKernel::phaseProved))) && (not ((ForgeKernel::judge request) =? (ForgeKernel::answerProved))))",
+        "rewordKeepsProofHolds",
+    );
+}
+
+/// `FK-11`: The app always answers published when event is reword and phase is published
+#[test]
+fn forge_kernel_fk_11() {
+    pinned(
+        "breaksRewordKeepsPublished",
+        "body: ((((((project request phase) <? 5) && ((project request event) <? 8)) && ((project request event) =? (ForgeKernel::eventReword))) && ((project request phase) =? (ForgeKernel::phasePublished))) && (not ((ForgeKernel::judge request) =? (ForgeKernel::answerPublished))))",
+        "rewordKeepsPublishedHolds",
     );
 }

@@ -310,7 +310,18 @@ const OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
 const FEATHERLESS = "https://api.featherless.ai/v1/chat/completions";
 // A reasoning model (GLM 5.3 Flash) streams its reasoning in `delta.reasoning` for minutes before the
 // answer starts; onReasoning receives it so the chat can show the work instead of an empty message.
+const GLM_LOCK = "forge-featherless-glm";
 export async function paidGenerate(body, onDelta, signal, onReasoning) {
+  // One GLM request per browser: this browser's tabs and turns queue for it in order (Web Locks), rather
+  // than racing each other for the shared plan's one slot.
+  if (providerOf(body.model) !== "featherless" || !(navigator.locks && navigator.locks.request)) return paidGenerateOnce(body, onDelta, signal, onReasoning);
+  const run = () => paidGenerateOnce(body, onDelta, signal, onReasoning);
+  const first = await navigator.locks.request(GLM_LOCK, { ifAvailable: true }, async (lock) => (lock ? { done: await run() } : null));
+  if (first) return first.done;
+  if (onReasoning) onReasoning("Waiting for this browser's other GLM 5.3 Flash request to finish…");
+  return navigator.locks.request(GLM_LOCK, signal ? { signal } : {}, run);
+}
+async function paidGenerateOnce(body, onDelta, signal, onReasoning) {
   const provider = providerOf(body.model);
   const c = await coreReady(); const key = await keyFor(body.model); const V = await viewReady();
   let bytes = c.run({ op: "encode-openrouter-request", model: paidId(body.model), request: body, stream: true }).bytes;
@@ -319,17 +330,18 @@ export async function paidGenerate(body, onDelta, signal, onReasoning) {
   if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; bytes = JSON.stringify(j); }
   const headers = provider === "featherless" ? { Authorization: "Bearer " + key, "content-type": "application/json" } : { Authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": location.origin, "X-Title": "hologram-forge" };
   // A shared Featherless plan runs one GLM request at a time; another visitor's request answers 429
-  // "concurrency limit". That is a queue, not a failure: wait for the slot (about five minutes at most),
-  // saying so where the reasoning shows.
+  // "concurrency limit". That is a queue, not a failure: wait for the slot (up to fifteen minutes, as long as
+  // a whole GLM build can take), saying so where the reasoning shows, and say plainly if it never frees.
   let r;
   for (let attempt = 0; ; attempt++) {
     r = await fetch(provider === "featherless" ? FEATHERLESS : OPENROUTER, { method: "POST", signal, headers, body: bytes });
-    if (!(provider === "featherless" && r.status === 429) || attempt >= 60) break;
+    if (!(provider === "featherless" && r.status === 429) || attempt >= 180) break;
     const said = await r.text().catch(() => "");
     if (!/concurren/i.test(said)) { r = new Response(said, { status: 429 }); break; }
-    if (onReasoning) onReasoning(`Waiting for a free slot on the shared Featherless plan (another request is running), ${attempt * 5} s…`);
+    if (onReasoning) onReasoning(`GLM 5.3 Flash is finishing another request on the shared plan. Waiting for it: ${attempt * 5} s (up to 15 min)…`);
     await new Promise((res, rej) => { const t = setTimeout(res, 5000); if (signal) signal.addEventListener("abort", () => { clearTimeout(t); rej(new DOMException("aborted", "AbortError")); }, { once: true }); });
   }
+  if (!r.ok && provider === "featherless" && r.status === 429) throw Object.assign(new Error("GLM 5.3 Flash stayed busy with another request on the shared plan for 15 minutes. Try again shortly, or pick BitNet 2B (Local)."), { status: 429 });
   if (!r.ok) {
     let msg = ""; try { msg = (await r.json()).error.message; } catch (e) {}
     const word = r.status === 401 ? V.noKeyLabel : r.status === 402 ? V.noCreditLabel : V.providerBusyLabel;

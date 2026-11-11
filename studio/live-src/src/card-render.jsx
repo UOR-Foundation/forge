@@ -12,8 +12,11 @@ import { NUMBER, ANSWER, MISMATCH, UNVERIFIED, defaults, evaluate } from "../../
 const markup = (element) => renderToStaticMarkup(element).replace(/ style="/g, ' data-style="');
 const noop = () => {};
 
+// A published app is proved by Lean (Forge publishes nothing else), and its page tabulates nothing: its
+// guarantees say so, and no rule is marked broken.
+const PUBLISHED = { set: noop, trust: "published", checks: null, broken: new Set(), size: 0, reason: null };
 function nodeHtml(node, gap, live) {
-  return markup(<Live.Provider value={{ set: noop, ...live }}><div {...nodeProps(node, gap)}><NodeBody node={node} /></div></Live.Provider>);
+  return markup(<Live.Provider value={{ ...PUBLISHED, ...live }}><div {...nodeProps(node, gap)}><NodeBody node={node} /></div></Live.Provider>);
 }
 const shell = () => {
   const [open, close] = markup(<main className={mainClass}>{"\u0000"}</main>).split("\u0000");
