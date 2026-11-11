@@ -341,6 +341,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-20` | `build` | Host storage requests report success only after transaction completion and refuse aborted or invalid operations |
 
+## studio-pr-concurrency
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-56` | `build` | Only superseded pull-request Studio runs are cancelled while every main and release run retains its full acceptance boundary |
+
 ## verified-project-import
 
 | ID | Level | Statement |

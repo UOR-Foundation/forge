@@ -1060,5 +1060,19 @@ definition{
   result: String,
   body: "Message-linked restoration validates positive app, chat and message identities, captured history bounded to 10000 messages and 48 MiB per target chat, at most 1024 project chats and 64 MiB captured project history, project membership and queue inactivity before changing anything. The source version before a message is the following assistant source identity when present, otherwise the nearest preceding assistant final identity, otherwise the chat initial identity; the resolved version must belong to the project and all snapshot and file bytes must verify. A fork copies only preceding messages, preserving content, source/final identities, model, display time and compaction markers; it resets message IDs and live quota/delivery identities and preserves chat mode, selected model and referenced applications. A truncation retains only messages strictly before the specified message. Source restoration creates a canonical child of the original live version; fork-only closes historical preview back to that original and does not create a source version. The existing VersionPreview guest owns every source transition. Source, preview journal, exact chat update and monotonic fork ID allocation share one IndexedDB transaction. All project chats and their queue journals are compared again inside that transaction; active work or pending queue entries refuse until the user stops and clears them. No partial source/chat acknowledgement, stale history substitution, chat resurrection or duplicate fork on exact operation replay is permitted. The operation identity includes the captured message intent identity; its bounded receipt retains the affected or created chat ID for exact replay. The result identifies the affected or created chat only after transaction completion. Stored message identities are data, not authority to access another project. This browser adapter does not claim native Git, database rollback, infinite history, exactly-once external effects or cross-origin execution ownership."
 }
+
+definition{
+  name: studioConcurrencyYaml,
+  parameters: [],
+  result: String,
+  body: "concurrency:\n  group: ${{ github.event_name == 'pull_request' && format('studio-pr-{0}', github.event.pull_request.number) || format('studio-run-{0}', github.run_id) }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n"
+}
+
+definition{
+  name: studioConcurrencyBoundary,
+  parameters: [],
+  result: String,
+  body: "GitHub Actions concurrency is an imported scheduling mechanism. The Studio workflow groups only pull-request runs by pull request number and permits cancellation only for pull-request events. Other events use a unique run identity and cannot cancel another main or release run. This removes superseded PR work without filtering tests, reusing evidence or weakening the full acceptance lane. The project-owned workflow projects its exact concurrency block from studioConcurrencyYaml and rejects drift. It does not change universal template policy and does not claim adoption of the still-unqualified PrismPM factory consumer."
+}
 \end{semanticmodule}
 \end{lexlean}

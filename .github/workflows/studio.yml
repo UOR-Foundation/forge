@@ -15,6 +15,12 @@ on:
 permissions:
   contents: read
 
+# BEGIN FoundrySpecification.studioConcurrencyYaml
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('studio-pr-{0}', github.event.pull_request.number) || format('studio-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# END FoundrySpecification.studioConcurrencyYaml
+
 jobs:
   lane:
     runs-on: ubuntu-24.04
@@ -41,6 +47,8 @@ jobs:
             ~/.cache/hologram-forge-lane
             ~/.elan
           key: lane-${{ hashFiles('studio/PRISMPM_REV', 'studio/lean-toolchain') }}
+      - name: Verify the canonical PR concurrency boundary
+        run: python3 tools/studio_concurrency_projection.py --check
       - name: The authored model is what the author script writes
         run: python3 tools/author.py --check
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

@@ -429,3 +429,9 @@ id = "FA-55"
 level = "build"
 suite = "message-linked-restoration"
 statement = "Message-linked restoration atomically binds verified source preview to exact chat truncation or a history-preserving fork"
+
+[[id]]
+id = "FA-56"
+level = "build"
+suite = "studio-pr-concurrency"
+statement = "Only superseded pull-request Studio runs are cancelled while every main and release run retains its full acceptance boundary"
