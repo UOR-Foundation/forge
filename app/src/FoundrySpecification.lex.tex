@@ -928,5 +928,23 @@ definition{
   result: String,
   body: "The portable build adapter acquires an exclusive browser Web Lock before executing work. Its owner is minted inside the adapter and never selected by a renderer command. This is cooperative same-origin browser ownership, not external user authentication or protection against malicious same-origin scripts. The verified WorkProtocol guest alone initializes, reserves, starts, pauses, transfers, resumes, progresses and finishes semantic work. One semantic unit denotes one completed source-bound portable artifact; attempt counts and elapsed time are separate physical observations, not guest spent work. IndexedDB atomically compares the prior work record and project source before saving each transition. A completed bounded output and its independently recomputed content identity commit atomically with the guest completion. Reuse recomputes that identity and requires the same captured source. Failures retain unused reservation, remaining obligation and a private interruption reason; after reload a newly minted owner pauses interrupted running state, transfers and resumes through the guest. Retries re-enter the actual permission boundary and never claim that prior network effects were undone. A bounded journal retains up to 32 distinct project sources; exhaustion refuses explicitly. Missing Web Locks, stale source, concurrent owners, corrupt artifacts, invalid records and guest refusal cannot execute or promote work. Deleted projects remove work records atomically. This adapter does not authenticate remote operators, measure CPU cost as semantic work, provide arbitrary-stage checkpointing or establish whole-release acceptance."
 }
+
+inductive{
+  name: PrivateProviderCredentialError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidStoredProviderCredential, fields: []},
+    {name: unsupportedCredentialProvider, fields: []},
+    {name: providerCredentialArtifact, fields: []}
+  ]
+}
+
+definition{
+  name: privateProviderCredentialBoundary,
+  parameters: [],
+  result: String,
+  body: "OpenRouter and Featherless inference use only a visitor credential read from device settings. No public site file is fetched or used as a credential fallback. A missing credential is empty and the existing inferenceUnauthorized refusal prevents paid requests before disclosure; a present credential must be a printable non-whitespace ASCII string of at most 8192 characters. Unknown providers and malformed stored values have fixed private failures. The exact captured credential has visitor ownership in the inference disclosure; cloud warmup uses that visitor credential under the existing explicit permission boundary. The environment projection reports only configured presence, never credential bytes. Pages assembly does not expose repository provider secrets. Both the shell projector and independent staged inventory refuse any legacy warmup.json credential file, including an empty file, with providerCredentialArtifact. Workflow and actual browser controls reject public-key fallback and staged credential leakage. This boundary does not encrypt browser storage, protect against malicious same-origin scripts, retroactively withdraw an already published key or perform external provider credential rotation."
+}
 \end{semanticmodule}
 \end{lexlean}

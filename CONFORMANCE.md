@@ -233,6 +233,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-39` | `build` | Networked previews require explicit source-bound permission with persistent revocation controls |
 
+## private-provider-credentials
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-47` | `build` | Cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files |
+
 ## proposal-admission
 
 | ID | Level | Statement |
