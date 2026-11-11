@@ -66,6 +66,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-27` | `build` | Portable builds fetch only bounded approved-origin modules and retain exact module-byte receipts |
 
+## bounded-kernel-execution
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-60` | `build` | Fresh guest instances execute in bounded browser worker lifetimes without exhausting compiler memory reservations |
+
 ## browser-telemetry-isolation
 
 | ID | Level | Statement |

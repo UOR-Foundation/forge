@@ -24,9 +24,9 @@ const executablePath = process.env.CHROME_BIN || ["/usr/bin/chromium", "/usr/bin
 let browser;
 try {
   browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox"] });
-  const context = await browser.newContext({ serviceWorkers: "allow" }), page = await context.newPage(), external = [], errors = [], workers = [];
+  const context = await browser.newContext({ serviceWorkers: "allow" }), page = await context.newPage(), external = [], errors = [], workers = [], closedWorkers = new Set();
   page.on("pageerror", error => errors.push(error.message));
-  page.on("worker", worker => workers.push(worker));
+  page.on("worker", worker => {workers.push(worker);worker.on("close",()=>closedWorkers.add(worker));});
   await context.route("**/*", route => {
     const url = new URL(route.request().url()); if (url.origin === origin) return route.continue(); external.push(url.href);
     return route.abort();
@@ -40,6 +40,8 @@ try {
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   await context.setOffline(true);
   const result = await page.evaluate(async base => {
+    const kernel = await window.ForgeKernel.load(path => fetch(base + path));
+    for (let i=0;i<80;i++) if (await kernel.ask("drafting check")!=="checked") throw Error("Repeated pure execution changed semantics");
     const { createCompilerLoader } = await import(base + "browser-compiler.mjs");
     let first = true;
     const load = createCompilerLoader(url => { const target = first ? base + "compiler/missing.js" : url; first = false; return import(target); });
@@ -63,10 +65,10 @@ try {
   await page.waitForTimeout(1000);
   if (errors.length) console.error(JSON.stringify({ errors, external }));
   assert.deepEqual(errors, []);
-  const workerResources = (await Promise.all(workers.map(worker => worker.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name))))).flat();
+  const workerResources = (await Promise.all(workers.filter(worker=>!closedWorkers.has(worker)).map(worker => worker.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name))))).flat();
   assert.ok(workerResources.some(url => url === base + "compiler/esbuild.wasm"), JSON.stringify(workerResources));
   // The declared decorative background is a separate product request.
   const unexpected = external.filter(url => !url.startsWith("https://uor-foundation.github.io/template/frame/backdrops/") && !url.startsWith("https://images.unsplash.com/"));
   assert.deepEqual(unexpected, []);
-  console.log(JSON.stringify({ compiler: result.version, offlineTransform: result.transformedAnswer, offlineBundle: result.bundledAnswer, invalidSource: "refused", failedImport: "recovered", wasmWorker: true, pageExceptions: 0 }));
+  console.log(JSON.stringify({ compiler: result.version, offlineTransform: result.transformedAnswer, offlineBundle: result.bundledAnswer, invalidSource: "refused", failedImport: "recovered", wasmWorker: true, repeatedKernelRequests:80, pageExceptions: 0 }));
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

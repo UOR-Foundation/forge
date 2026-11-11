@@ -44,6 +44,51 @@
     }
     return result;
   }
+  // A small number of instances in a worker bounds V8's virtual Wasm reservations.
+  // Terminating the worker releases its isolate; every run still instantiates the exact module afresh.
+  function browserExecutor(module) {
+    let worker = null, workerURL = null, uses = 0, pending = 0, queuedBytes = 0, sequence = 0, tail = Promise.resolve();
+    const retire = () => { if (worker) worker.terminate(); if (workerURL) URL.revokeObjectURL(workerURL); worker = null; workerURL = null; uses = 0; };
+    const workerMain = function () {
+      let module;
+      self.onmessage = async ({ data }) => {
+        try {
+          if (data.module) module = data.module;
+          const result = await run(module, data.request, data.maximum);
+          self.postMessage({ id: data.id, ok: true, result }, [result.buffer]);
+        } catch (error) { self.postMessage({ id: data.id, ok: false, code: error?.code === "kernelResponseTooLarge" ? error.code : "kernelExecutionFailed" }); }
+      };
+    };
+    const execute = (request, maximum) => {
+      if (pending >= 64 || queuedBytes + request.length > 64 * 1024 * 1024) return Promise.reject(fail("kernelExecutionFailed"));
+      pending++; queuedBytes += request.length;
+      const next = tail.then(() => new Promise((resolve, reject) => {
+        let timer;
+        const refuse = code => { clearTimeout(timer); retire(); reject(fail(code)); };
+        try {
+          if (uses >= 16) retire();
+          if (!worker) {
+            workerURL = URL.createObjectURL(new Blob([`const fail = ${fail.toString()}; const run = ${run.toString()}; (${workerMain.toString()})();`], { type: "text/javascript" }));
+            worker = new Worker(workerURL);
+          }
+          const active = worker, id = ++sequence, first = uses++ === 0;
+          timer = setTimeout(() => refuse("kernelExecutionFailed"), 30000);
+          active.onerror = event => { event.preventDefault?.(); refuse("kernelExecutionFailed"); };
+          active.onmessage = ({ data }) => {
+            if (!data || data.id !== id || typeof data.ok !== "boolean") { refuse("kernelExecutionFailed"); return; }
+            clearTimeout(timer);
+            if (!data.ok) { refuse(data.code === "kernelResponseTooLarge" ? data.code : "kernelExecutionFailed"); return; }
+            if (!(data.result instanceof Uint8Array) || data.result.length > maximum) { refuse(data.result?.length > maximum ? "kernelResponseTooLarge" : "kernelExecutionFailed"); return; }
+            resolve(data.result.slice());
+          };
+          active.postMessage({ id, ...(first ? { module } : {}), request, maximum });
+        } catch { refuse("kernelExecutionFailed"); }
+      })).finally(() => { pending--; queuedBytes -= request.length; });
+      tail = next.catch(() => {});
+      return next;
+    };
+    return { execute, retire };
+  }
   async function load(get) {
     let meta, bytes;
     try {
@@ -66,10 +111,14 @@
     catch { throw fail("kernelLoadFailed"); }
     const names = WebAssembly.Module.exports(module).map(e => e.name).sort().join(",");
     if (WebAssembly.Module.imports(module).length || names !== "holo_alloc,holo_run,memory") throw fail("kernelExportsMismatch");
-    for (const [request, response] of vectors) {
-      try { if (!same(await run(module, request, limits.response), response)) throw Error(); }
+    // Headless Node diagnostics have no browser location. Browsers must use a worker.
+    if (typeof location !== "undefined" && typeof Worker !== "function") throw fail("kernelExecutionFailed");
+    const executor = typeof Worker === "function" ? browserExecutor(module) : { execute: (request, maximum) => run(module, request, maximum), retire() {} };
+    try { for (const [request, response] of vectors) {
+      try { if (!same(await executor.execute(request, limits.response), response)) throw Error(); }
       catch { throw fail("kernelAcceptanceFailed"); }
     }
+    } finally { executor.retire(); }
     const dispatch = async request => {
       if (!(request instanceof Uint8Array)) throw fail("invalidKernelRequest");
       let length, copy;
@@ -78,7 +127,7 @@
       if (length > limits.request) throw fail("kernelRequestTooLarge");
       try { copy = new Uint8Array(length); Uint8Array.prototype.set.call(copy, request); }
       catch { throw fail("invalidKernelRequest"); }
-      return run(module, copy, limits.response);
+      return executor.execute(copy, limits.response);
     };
     return Object.freeze({
       digest: meta.digest, vectors: vectors.length, dispatch,

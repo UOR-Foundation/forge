@@ -513,3 +513,9 @@ id = "FA-59"
 level = "build"
 suite = "application-main-integration"
 statement = "Current-main experience rules and renderer improvements coexist with complete application protocols and verified private offline closure"
+
+[[id]]
+id = "FA-60"
+level = "build"
+suite = "bounded-kernel-execution"
+statement = "Fresh guest instances execute in bounded browser worker lifetimes without exhausting compiler memory reservations"
