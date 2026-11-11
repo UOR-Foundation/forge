@@ -1,3 +1,4 @@
+import {deviceProviderCredential} from './private-provider-credentials.mjs';
 import { authorizeInference } from "./inference-consent.mjs";
 import { cloudCompletion } from "./inference-effects.mjs";
 // Inference on the page, shared by the landing page (shell.js) and the builder's host (host.js).
@@ -87,20 +88,9 @@ async function byPrompt(promptKappa) {
 // ---- settings: the renderer's own record, one place for the key and the chosen model
 export async function settingsGet() { const d = await db(); return new Promise((res, rej) => { const r = d.transaction("settings").objectStore("settings").get("user"); r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error); }); }
 export async function settingsPut(s) { const d = await db(); await new Promise((res, rej) => { const t = d.transaction("settings", "readwrite"); t.objectStore("settings").put(s, "user"); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
-export async function deviceKeyGet() { const s = await settingsGet(); const v = s && s.providerSettings && s.providerSettings.openrouter && s.providerSettings.openrouter.apiKey && s.providerSettings.openrouter.apiKey.value; return v ? String(v) : ""; }
-// The site may include a key of its own (warmup.json, written at deploy time from a repository secret,
-// never in the tree): it counts as a key for the route and warm up rules and answers every visitor
-// while their local model loads; the visitor's own key wins over it.
-export const site = { key: "", model: "", featherless: "", ready: null };
-export function siteKeyReady() {
-  if (!site.ready) site.ready = fetch(new URL("warmup.json", BASE), { cache: "no-store" }).then(async (r) => { if (r.ok) { const j = await r.json(); site.key = String(j.key || ""); site.model = String(j.model || ""); site.featherless = String(j.featherless || ""); } }).catch(() => {}).then(() => site.key);
-  return site.ready;
-}
-export async function keyGet() { return (await deviceKeyGet()) || (await siteKeyReady()); }
-// Featherless is the second cloud provider. The visitor's own key (providerSettings.featherless, on this
-// device) wins; without one, the site's shared key answers (warmup.json's "featherless", written at deploy
-// time from the FEATHERLESS_SITE_KEY repository secret, never in the tree). It is public by design.
-export async function featherlessKeyGet() { const s = await settingsGet(); const v = s && s.providerSettings && s.providerSettings.featherless && s.providerSettings.featherless.apiKey && s.providerSettings.featherless.apiKey.value; return v ? String(v) : (await siteKeyReady(), site.featherless); }
+export async function deviceKeyGet() { return deviceProviderCredential(await settingsGet(), "openrouter"); }
+export async function keyGet() { return deviceKeyGet(); }
+export async function featherlessKeyGet() { return deviceProviderCredential(await settingsGet(), "featherless"); }
 export const providerOf = (model) => (String(model).startsWith("featherless/") ? "featherless" : "openrouter");
 export const keyFor = (model) => (providerOf(model) === "featherless" ? featherlessKeyGet() : keyGet());
 export async function keySet(value) { const s = (await settingsGet()) || {}; s.providerSettings = { ...(s.providerSettings || {}), openrouter: { ...((s.providerSettings || {}).openrouter || {}), apiKey: { value } } }; await settingsPut(s); }
@@ -313,7 +303,7 @@ export function withEngine(fn) { const run = gpuBusy.then(fn, fn); gpuBusy = run
 const GLM_LOCK = "forge-featherless-glm";
 export async function paidGenerate(body, onDelta, signal, onReasoning) {
   // One GLM request per browser: this browser's tabs and turns queue for it in order (Web Locks), rather
-  // than racing each other for the shared plan's one slot.
+  // than racing each other for the configured account's provider capacity.
   if (providerOf(body.model) !== "featherless" || !(navigator.locks && navigator.locks.request)) return paidGenerateOnce(body, onDelta, signal, onReasoning);
   const run = () => paidGenerateOnce(body, onDelta, signal, onReasoning);
   const first = await navigator.locks.request(GLM_LOCK, { ifAvailable: true }, async (lock) => (lock ? { done: await run() } : null));
@@ -323,14 +313,14 @@ export async function paidGenerate(body, onDelta, signal, onReasoning) {
 }
 async function paidGenerateOnce(body, onDelta, signal, onReasoning) {
   const provider = providerOf(body.model);
-  const c = await coreReady(); const key = await keyFor(body.model); const V = await viewReady();
+  const key = await keyFor(body.model);
+  if (!key) throw Object.assign(new Error("The provider requires a valid API key"), {code:"inferenceUnauthorized"});
+  const c = await coreReady(); const V = await viewReady();
   let bytes = c.run({ op: "encode-openrouter-request", model: paidId(body.model), request: body, stream: true }).bytes;
   // Featherless speaks plain OpenAI chat completions: the core's request without the three fields only
   // OpenRouter reads (usage.include, reasoning, provider), and the standard usage option in their place.
   if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; bytes = JSON.stringify(j); }
-  const settings = await settingsGet();
-  const configured = settings?.providerSettings?.[provider]?.apiKey?.value;
-  const credentialOwner = configured && String(configured) === key ? "visitor" : "site";
+  const credentialOwner = "visitor";
   const permission = await authorizeInference({ provider, model: paidId(body.model), bytes, credentialOwner, signal });
   let result;
   try { result = await cloudCompletion({ provider, key, bytes: permission.disclosure.bytes, origin: location.origin, signal: permission.signal, onDelta, onReasoning }); }
