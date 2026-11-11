@@ -97,11 +97,13 @@ export function siteKeyReady() {
 }
 export async function keyGet() { return (await deviceKeyGet()) || (await siteKeyReady()); }
 // Featherless is the second cloud provider. The visitor's own key (providerSettings.featherless, on this
-// device) wins; without one, the site's shared key answers (warmup.json's "featherless", written at deploy
-// time from the FEATHERLESS_SITE_KEY repository secret, never in the tree). It is public by design.
-export async function featherlessKeyGet() { const s = await settingsGet(); const v = s && s.providerSettings && s.providerSettings.featherless && s.providerSettings.featherless.apiKey && s.providerSettings.featherless.apiKey.value; return v ? String(v) : (await siteKeyReady(), site.featherless); }
+// device) wins and goes to Featherless itself; without one, the site's relay answers (RELAY in
+// inference-effects.mjs), which holds the site's key, so no key is ever in the page.
+export async function featherlessKeyGet() { const s = await settingsGet(); const v = s && s.providerSettings && s.providerSettings.featherless && s.providerSettings.featherless.apiKey && s.providerSettings.featherless.apiKey.value; return v ? String(v) : ""; }
 export const providerOf = (model) => (String(model).startsWith("featherless/") ? "featherless" : "openrouter");
-export const keyFor = (model) => (providerOf(model) === "featherless" ? featherlessKeyGet() : keyGet());
+// The site's relay counts as a key for the route rules: GLM answers every visitor. It is a marker, not a credential.
+export const SITE_RELAY = "site-relay";
+export const keyFor = async (model) => (providerOf(model) === "featherless" ? (await featherlessKeyGet()) || SITE_RELAY : keyGet());
 export async function keySet(value) { const s = (await settingsGet()) || {}; s.providerSettings = { ...(s.providerSettings || {}), openrouter: { ...((s.providerSettings || {}).openrouter || {}), apiKey: { value } } }; await settingsPut(s); }
 // Who answers: local (the Q engine) or paid (an OpenRouter model). Read from and written to the same
 // selectedModel the renderer's settings page and composer use.
@@ -328,7 +330,8 @@ async function paidGenerateOnce(body, onDelta, signal, onReasoning) {
   // OpenRouter reads (usage.include, reasoning, provider), and the standard usage option in their place.
   if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; bytes = JSON.stringify(j); }
   let result;
-  try { result = await cloudCompletion({ provider, key, bytes, origin: location.origin, signal, onDelta, onReasoning }); }
+  const relayed = provider === "featherless" && key === SITE_RELAY;
+  try { result = await cloudCompletion({ provider: relayed ? "featherlessSite" : provider, key: relayed ? "" : key, bytes, origin: location.origin, signal, onDelta, onReasoning }); }
   catch (error) {
     if (error.code === "inferenceUnauthorized") error.message = V.noKeyLabel;
     if (error.code === "inferencePaymentRequired") error.message = V.noCreditLabel;

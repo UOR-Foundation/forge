@@ -18,6 +18,7 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { execSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { RELAY } from "../shell/inference-effects.mjs";
 
 const studio = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const shell = path.join(studio, "shell");
@@ -108,7 +109,12 @@ if (process.argv.includes("--browser")) {
       new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__lcp = e.startTime; }).observe({ type: "largest-contentful-paint", buffered: true });
       new PerformanceObserver((l) => { for (const e of l.getEntries()) if (e.interactionId) window.__inp = Math.max(window.__inp, e.duration); }).observe({ type: "event", buffered: true, durationThreshold: 16 });
     });
+    // The provider, reached directly with a visitor's own key or through the site's relay without one: both
+    // answer with the same mocked stream, with the relay's CORS answer for the page's origin.
     await ctx.route("https://api.featherless.ai/**", (r) => r.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: sse() }));
+    await ctx.route(new URL("/**", RELAY).href, (r) => r.request().method() === "OPTIONS"
+      ? r.fulfill({ status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "POST, OPTIONS", "access-control-allow-headers": "content-type" } })
+      : r.fulfill({ status: 200, headers: { "content-type": "text/event-stream", "access-control-allow-origin": "*" }, body: sse() }));
     page = await ctx.newPage();
     const cdp = await ctx.newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
@@ -156,7 +162,8 @@ function sse() {
   let body = "";
   const parts = []; for (let i = 0; i < 200; i++) parts.push(`T${i} `);
   parts.push("\n<dyad-write path=\"src/pages/Index.tsx\" description=\"page\">\nexport default function Index() {\n  return <h1>Streaks</h1>;\n}\n</dyad-write>\nDone.");
-  for (const p of parts) body += "data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: p }, finish_reason: null }] }) + "\n\n";
+  // The last chunk carries finish_reason "stop": the host refuses a stream that ends without one (inference-effects.mjs).
+  parts.forEach((p, i) => { body += "data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: p }, finish_reason: i === parts.length - 1 ? "stop" : null }] }) + "\n\n"; });
   return body + "data: [DONE]\n\n";
 }
 function serve() {

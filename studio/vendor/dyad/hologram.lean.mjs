@@ -274,6 +274,25 @@ const quietPatches = [
     from: `      void hydrate().catch((error) => showErrorToast(error));`,
     to: `      void hydrate().catch((error) => { if ((error as { code?: string } | null)?.code !== "unsupportedChannel") showErrorToast(error); });`,
   },
+  // A typed error's class name is a protocol identifier the host and renderer share, not a word for the
+  // visitor: toasts and messages built with \`\${error}\` printed "DyadError: ...". The error reads as its message.
+  {
+    file: "src/errors/dyad_error.ts",
+    from: `    this.name = "DyadError";
+    this.kind = kind;
+    this.cause = options?.cause;
+  }
+}`,
+    to: `    this.name = "DyadError";
+    this.kind = kind;
+    this.cause = options?.cause;
+  }
+
+  toString(): string {
+    return this.message;
+  }
+}`,
+  },
 ];
 
 export const LEAN = [...quietPatches, ...settlePatches, ...chipPatches, ...routePatches, ...panelPatches, ...shikiPatches, ...i18nPatches, ...monacoPatches, ...routerPatches, ...chatPatches];

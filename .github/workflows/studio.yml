@@ -79,6 +79,8 @@ jobs:
           node tools/exact_representation_browser.mjs
           node tools/provider_key_browser.mjs
           node tools/covers_browser.mjs
+      - name: The site's Featherless relay takes only the site's offered, bounded chat requests, and keeps its key private
+        run: node --test relay/featherless/worker.test.mjs
       - name: Every shell script parses the way the browser parses it
         run: node tools/shell_parse.mjs
       - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone

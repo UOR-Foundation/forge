@@ -45,6 +45,10 @@ for p in dst.rglob("*"):
         new = WORD.sub("Prism", text).replace("https://www.dyad.sh/", "https://uor-foundation.github.io/foundry/")
         if new != text:
             p.write_text(new, encoding="utf-8", newline="\n")
+# Every app built here wears the Hologram brand kit (the host adds shell/scaffold-brand.css to its page), so
+# the model is told to style through the theme, not around it.
+rules = dst / "AI_RULES.md"
+rules.write_text(rules.read_text(encoding="utf-8").rstrip("\n") + "\n\n## Brand\n\n- The app wears the Hologram brand kit: its colours, fonts and radius are set for you. Use the shadcn/ui components and the theme classes (`bg-background`, `text-foreground`, `bg-primary`, `text-muted-foreground`, `border-border`, `bg-card`, `text-destructive`); never raw palette colours (`bg-blue-500`), hex values, or a new `:root` theme.\n", encoding="utf-8", newline="\n")
 app = dst / "src" / "App.tsx"
 app.write_text(app.read_text(encoding="utf-8").replace("<BrowserRouter>", "<BrowserRouter basename={import.meta.env.BASE_URL}>", 1), encoding="utf-8", newline="\n")
 files = sorted(str(p.relative_to(dst)).replace("\\", "/") for p in (dst / "src").rglob("*") if p.is_file())
