@@ -82,3 +82,12 @@ lists inside typed records, using the existing SDK representation. All finite
 model obligations remain unchanged and pass after this representation change.
 The selected-composition mutation is rejected by its concrete Lean obligation;
 restoring the model restores verification. No SDK implementation is replaced.
+
+The next exact-SDK build (43094326648) reports a failed construction step, but
+its run has not finalized and GitHub's log endpoint repeatedly times out. The
+project build workflow now preserves SDK output as a separate diagnostic
+artifact even on failure. Existing `set -euo pipefail` retains the SDK exit
+status; no acceptance check is skipped or weakened. The previous guest remains
+installed and this feature remains unqualified until the failure is resolved.
+
+The second exact-SDK build (43094326648, source e3b00f0) reached generated Rust checking and rejected duplicate helper `negate` (E0428). The router helper is now named `routingNegate` in the canonical source to preserve a unique public generated symbol. No generated Rust or SDK implementation was patched. A fresh signed build remains required.
