@@ -291,3 +291,15 @@ id = "FA-34"
 level = "build"
 suite = "inference-consent"
 statement = "Cloud inference requires per-request disclosure and approval with cancellation before and after submission"
+
+[[id]]
+id = "LL-01"
+level = "build"
+suite = "live-lexlean"
+statement = "Every guarantee holds on every request in the bounds when every local obligation passes"
+
+[[id]]
+id = "LL-02"
+level = "build"
+suite = "live-lexlean"
+statement = "Every guarantee of the Verdant Resonance fixture holds on every request in its bounds"

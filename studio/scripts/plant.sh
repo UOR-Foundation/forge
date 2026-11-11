@@ -21,6 +21,9 @@
 #   ./scripts/plant.sh passage   # Dyad changes a passage the shell patches: the shell's screens must refuse rather than skip it
 #   ./scripts/plant.sh table     # invert a condition mask in the decision table: the Table gate must refuse
 #   ./scripts/plant.sh edit      # keep a patch that does not check: the Edit gate must refuse
+#   ./scripts/plant.sh lexlean   # drop the upper piece of a box subtraction in the obligations: the LexLean gate must refuse
+#   ./scripts/plant.sh lexread   # read LexLean <? as <=: the LexLean gate must refuse
+#   ./scripts/plant.sh proof     # rule 2 breaking two guarantees in the Lean fixture: the kernel must refuse to decide it
 #   ./scripts/plant.sh look      # let the build screen fall back to the home look: the Build look check must refuse
 # `hole` runs the Contract gate, which bundles the vendored contracts with the renderer's own esbuild,
 # so run it where those dependencies were installed for this platform -- otherwise esbuild refuses to
@@ -151,13 +154,31 @@ EOF
     sed -i 's/      if (!verdict.ok) return/      if (false) return/' shell/live/edit.mjs
     expect_fail node tools/live_edit.mjs --check
     cp /tmp/plant-edit.mjs shell/live/edit.mjs ;;
+  lexlean)
+    # Obligations that forget part of a box: a rule's region is under-covered, so a broken guarantee passes.
+    cp shell/live/obligations.mjs /tmp/plant-obligations.mjs
+    sed -i 's/if (bh < cur\[k\]\[1\]) { const p = cur.map((q) => q.slice()); p\[k\] = \[bh + 1, cur\[k\]\[1\]\]; out.push(p); cur\[k\]\[1\] = bh; }/if (bh < cur[k][1]) { cur[k][1] = bh; }/' shell/live/obligations.mjs
+    expect_fail node tools/live_lexlean.mjs --check
+    cp /tmp/plant-obligations.mjs shell/live/obligations.mjs ;;
+  lexread)
+    # A reader that takes < for <=: the app would decide differently from its LexLean source.
+    cp shell/live/lexlean.mjs /tmp/plant-lexlean.mjs
+    sed -i 's/const op = lf ? { "=?": "=", "<?": "<", "<=?": "<=" }\[b.op\]/const op = lf ? { "=?": "=", "<?": "<=", "<=?": "<=" }[b.op]/' shell/live/lexlean.mjs
+    expect_fail node tools/live_lexlean.mjs --check
+    cp /tmp/plant-lexlean.mjs shell/live/lexlean.mjs ;;
+  proof)
+    # A fixture whose rule 2 breaks two guarantees: Lean's kernel must refuse to decide its obligations.
+    cp proof/PrismLive/VerdantRegions.lean /tmp/plant-verdant.lean
+    node tools/live_proof.mjs --planted > proof/PrismLive/VerdantRegions.lean
+    expect_fail bash -c 'cd proof && PATH="$HOME/.elan/bin:$PATH" lake build'
+    cp /tmp/plant-verdant.lean proof/PrismLive/VerdantRegions.lean ;;
   look)
     # The build screen, with no look chosen there, borrowing the home look (Immersive, or Light) instead of
     # opening Dark: the default the user asked for, quietly gone, and every screen still draws.
     perl -pi -e 's/readJson\(BUILD_KEY\) \|\| \{ palette: "dark", immersive: false \}/readJson(BUILD_KEY) || home/' shell/appearance.js
     grep -q 'readJson(BUILD_KEY) || home;' shell/appearance.js || { echo "anchor not found"; exit 1; }
     expect_fail node tools/build_look.mjs ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|look" >&2; exit 2 ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|lexlean|lexread|proof|look" >&2; exit 2 ;;
 esac
 restore
 echo "restored"
