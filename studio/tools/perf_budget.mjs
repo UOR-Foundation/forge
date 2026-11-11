@@ -122,7 +122,7 @@ if (process.argv.includes("--browser")) {
 }
 
 if (failures.length) { console.log("\nPerformance gate refused:\n  " + failures.join("\n  ")); process.exit(1); }
-console.log("\nPerformance gate: every route and journey is within its budget");
+console.log(process.argv.includes("--browser") ? "\nPerformance gate: every route and journey is within its budget" : "\nPerformance gate: every route is within its budget (the journeys run with --browser)");
 
 // ---- a stand-in for Pages: the shell under /foundry/, 404.html for any other path, gzip, one throttled link
 var server, link;

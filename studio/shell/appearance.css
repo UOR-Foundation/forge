@@ -98,8 +98,8 @@ button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button
    items, menu and select triggers, tabs) answers a 44 px square around its centre, drawn by nothing. Their
    look is the kit's; only the area a finger can hit grows. */
 @media (pointer: coarse) {
-  :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button][data-size^=icon], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link], #appearance):not(.absolute, .fixed) { position: relative; }
-  :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button][data-size^=icon], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link], #appearance)::after {
+  :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link], #appearance):not(.absolute, .fixed) { position: relative; }
+  :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link], #appearance)::after {
     content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
   }
 }

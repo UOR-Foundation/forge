@@ -234,4 +234,32 @@ const settlePatches = [
   { file: "src/app/layout.tsx", from: `settleDelayMs={settings?.isTestMode ? 0 : 2_000}`, to: `settleDelayMs={0}` },
 ];
 
-export const LEAN = [...settlePatches,...routePatches, ...panelPatches, ...shikiPatches, ...i18nPatches, ...monacoPatches, ...routerPatches, ...chatPatches];
+// The idea chips under the home composer were hand-styled <button>s: they are the kit's outline Button, pill
+// shaped, so they press, focus and disable the way every other control does.
+const HOME = "src/pages/home.tsx";
+const chipPatches = [
+  {
+    file: HOME,
+    retag: `<button
+                type="button"
+                key={item.label}
+                disabled={isCheckingProviders}
+                onClick={() => setInputValue(item.prompt)}
+                className="flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:bg-accent hover:text-foreground disabled:cursor-default disabled:opacity-50"
+              >`,
+    to: `<Button type="button" variant="outline" size="sm" key={item.label} disabled={isCheckingProviders} onClick={() => setInputValue(item.prompt)} className="rounded-full text-muted-foreground">`,
+    imports: `import { Button } from "@/components/ui/button";`,
+  },
+  {
+    file: HOME,
+    retag: `<button
+              type="button"
+              disabled={isCheckingProviders}
+              onClick={() => setRandomPrompts(getRandomPrompts())}
+              className="group flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:bg-accent hover:text-foreground disabled:cursor-default disabled:opacity-50"
+            >`,
+    to: `<Button type="button" variant="outline" size="sm" disabled={isCheckingProviders} onClick={() => setRandomPrompts(getRandomPrompts())} className="group rounded-full text-muted-foreground">`,
+  },
+];
+
+export const LEAN = [...settlePatches, ...chipPatches, ...routePatches, ...panelPatches, ...shikiPatches, ...i18nPatches, ...monacoPatches, ...routerPatches, ...chatPatches];
