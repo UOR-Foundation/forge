@@ -60,7 +60,7 @@ try {
       check(before===after,"refused build changed storage or grants");
       await call("edit-app-file",{appId:id,filePath:"prism/spec.json",content:JSON.stringify(fixture)});
       await captureBuildSource(await db(),id,boundary);
-      await call("checkout-version",{appId:id,versionId:importedRef});
+      await call("checkout-version",{purpose:"preview",appId:id,versionId:importedRef});
       for (const build of [window.__preview,window.__portable]) {
         let code;try { await build(id); } catch(error) { code=error.code; }
         check(code === "canonicalBuildMismatch", "restored inconsistent build accepted");refused++;
