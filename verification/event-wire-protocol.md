@@ -77,3 +77,11 @@ worker contexts, retaining all five reword phases. The structured event adapter
 also replays its independently encoded cases against this actual guest.
 Full feature CI and independent same-source reproduction remain pending.
 The existing reproduction receipt still describes the earlier 114-vector guest.
+
+Independent signed run 43058757410, artifact 13875875310, now reproduces the
+complete 408521-byte event archive byte for byte from the same source. Its
+Sigstore provenance independently verifies against the same source/workflow
+and self-hosted-runner prohibition. The current reproduction receipt names
+both event builds. Independent retrieval of KERNEL_REV's pinned public URL also
+returns exactly the verified bytes. Full application release closure remains
+separate from this component reproduction.
