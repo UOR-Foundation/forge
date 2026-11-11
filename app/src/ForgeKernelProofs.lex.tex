@@ -403,5 +403,171 @@ theorem{
   },
   axioms: [Quot.sound, propext]
 }
+
+definition{
+  name: breaksBudgetOverWithin,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  result: Bool,
+  body: (((ForgeKernel::budgetOf (project request journey)) <? (project request value)) && ((ForgeKernel::budgetWithin request) =? 1))
+}
+
+theorem{
+  name: budgetOverWithinHolds,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  statement: ((breaksBudgetOverWithin request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::budgetOf, ForgeKernel::budgetWithin, breaksBudgetOverWithin]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksBudgetWithinOver,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  result: Bool,
+  body: ((not ((ForgeKernel::budgetOf (project request journey)) <? (project request value))) && ((ForgeKernel::budgetWithin request) =? 0))
+}
+
+theorem{
+  name: budgetWithinOverHolds,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  statement: ((breaksBudgetWithinOver request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::budgetOf, ForgeKernel::budgetWithin, breaksBudgetWithinOver]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksInpBudgetBound,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  result: Bool,
+  body: (((project request journey) =? 2) && (500 <? (ForgeKernel::budgetOf (project request journey))))
+}
+
+theorem{
+  name: inpBudgetBoundHolds,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  statement: ((breaksInpBudgetBound request) = false),
+  proof: linear_arithmetic{definitions: [ForgeKernel::budgetOf, breaksInpBudgetBound]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksRouteBelowFirstLoad,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  result: Bool,
+  body: (((4 <? (project request journey)) && ((project request journey) <? 11)) && ((ForgeKernel::budgetOf (project request journey)) <? (ForgeKernel::budgetOf 4)))
+}
+
+theorem{
+  name: routeBelowFirstLoadHolds,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  statement: ((breaksRouteBelowFirstLoad request) = false),
+  proof: linear_arithmetic{definitions: [ForgeKernel::budgetOf, breaksRouteBelowFirstLoad]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksNarrowSplit,
+  parameters: [request : ForgeKernel::LayoutRequest],
+  result: Bool,
+  body: (((project request width) <? 768) && ((ForgeKernel::layoutTabs request) =? 0))
+}
+
+theorem{
+  name: narrowSplitHolds,
+  parameters: [request : ForgeKernel::LayoutRequest],
+  statement: ((breaksNarrowSplit request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::layoutTabs, ForgeKernel::narrowBreakpoint, breaksNarrowSplit]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksWideTabs,
+  parameters: [request : ForgeKernel::LayoutRequest],
+  result: Bool,
+  body: ((not ((project request width) <? 768)) && ((ForgeKernel::layoutTabs request) =? 1))
+}
+
+theorem{
+  name: wideTabsHolds,
+  parameters: [request : ForgeKernel::LayoutRequest],
+  statement: ((breaksWideTabs request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::layoutTabs, ForgeKernel::narrowBreakpoint, breaksWideTabs]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksReducedMotion,
+  parameters: [request : ForgeKernel::MotionRequest],
+  result: Bool,
+  body: (((project request reduced) =? 1) && ((ForgeKernel::motionAllows request) =? 1))
+}
+
+theorem{
+  name: reducedMotionHolds,
+  parameters: [request : ForgeKernel::MotionRequest],
+  statement: ((breaksReducedMotion request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::motionAllows, ForgeKernel::motionMaximum, breaksReducedMotion]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksLongMotion,
+  parameters: [request : ForgeKernel::MotionRequest],
+  result: Bool,
+  body: ((200 <? (project request duration)) && ((ForgeKernel::motionAllows request) =? 1))
+}
+
+theorem{
+  name: longMotionHolds,
+  parameters: [request : ForgeKernel::MotionRequest],
+  statement: ((breaksLongMotion request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::motionAllows, ForgeKernel::motionMaximum, breaksLongMotion]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksSmallTarget,
+  parameters: [request : ForgeKernel::TargetRequest],
+  result: Bool,
+  body: (((project request size) <? 44) && ((ForgeKernel::targetOk request) =? 1))
+}
+
+theorem{
+  name: smallTargetHolds,
+  parameters: [request : ForgeKernel::TargetRequest],
+  statement: ((breaksSmallTarget request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::tapMinimum, ForgeKernel::targetOk, breaksSmallTarget]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksOldRecent,
+  parameters: [request : ForgeKernel::RecentRequest],
+  result: Bool,
+  body: ((604800 <? (project request age)) && ((ForgeKernel::recentYes request) =? 1))
+}
+
+theorem{
+  name: oldRecentHolds,
+  parameters: [request : ForgeKernel::RecentRequest],
+  statement: ((breaksOldRecent request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::recentYes, ForgeKernel::weekSeconds, breaksOldRecent]
+  },
+  axioms: [Quot.sound, propext]
+}
 \end{semanticmodule}
 \end{lexlean}

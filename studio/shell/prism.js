@@ -8,6 +8,15 @@
 import { SpecError, validateSpec, unreachableRules, counterexample, describeConditions, requestLimits, decodeRequest, respond } from "./prism/spec.mjs";
 import { names, renderModel, renderProofs, acceptanceVectors, renderSpecDocument } from "./prism/render.mjs";
 import { TEMPLATE_EXAMPLE, appJson, conformanceText, featureText, idsToml, lexleanLockText, rustTestText, suiteOf } from "./prism/template.mjs";
+import { toLexLean } from "./live/lexlean.mjs";
+import { checkObligations } from "./live/obligations.mjs";
+import { tableKernel } from "./live/table.mjs";
+
+// prism-code's checker (prism/spec.mjs, byte for byte) keeps a spec to 24 rules, because its proofs are one
+// linear_arithmetic theorem per guarantee over the whole first-match chain. Past that, Forge checks the
+// guarantees itself, by local obligations (live/obligations.mjs), or the table when a rule is not a box,
+// and never offers the rules for proof until LexLean can prove them locally (UOR-Foundation/PrismPM#605).
+export const PROVE_RULES_MAX = 24;
 
 // prism/render.mjs names bytes in hex through Node's Buffer; this is the one use it makes of it.
 if (!globalThis.Buffer) globalThis.Buffer = { from: (bytes) => ({ toString: (encoding) => { if (encoding !== "hex") throw new Error("only hex"); return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(""); } }) };
@@ -18,16 +27,28 @@ const PROTOCOL = "2026-07-28";
 const PROFILE = "prism-app";
 
 // ---- what the model is told
+// The rules are written as the app's canonical LexLean module (shell/live/lexlean.mjs): declarations
+// only; the per-guarantee theorems are derived when the module is stored. The example is written by the
+// same writer that stores modules, so the prompt can never show a module Forge would not read.
+const PARKING = {
+  name: "parking-fee", title: "Parking Fee",
+  fields: [{ name: "hours", kind: "number", min: 0, max: 24 }, { name: "vehicle", kind: "choice", values: ["car", "motorcycle", "truck"] }],
+  outcomes: ["free", "standard", "premium"],
+  rules: [{ when: [{ field: "hours", op: "=", value: 0 }], then: "free" }, { when: [{ field: "vehicle", op: "is", value: "truck" }], then: "premium" }, { when: [{ field: "hours", op: ">", value: 12 }], then: "premium" }],
+  otherwise: "standard",
+  properties: [{ kind: "never", when: [{ field: "hours", op: "=", value: 0 }], then: "premium" }],
+};
+const PARKING_LEXLEAN = toLexLean(PARKING).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
 export const SPEC_RULES = `# Proved rules
-When the app decides an answer from a few inputs (a price tier, an eligibility, a grade, a risk level), state its rules as a Prism spec, so Lean can prove them, and make the screen use them.
-- Before the files, write one <dyad-spec> block of JSON: name (kebab-case), title, purpose (one sentence), fields (1 to 8, each {"name","kind":"number"|"choice","min","max","values","means"}), outcomes (lower-case words), rules (in order, the first that matches decides; each {"when":[{"field","op","value"}],"then","why"}), otherwise, otherwiseWhy, properties (what must never or always happen; each {"kind":"never"|"always","when","then","why"}), examples ([{"request":"<field values separated by spaces>","response"}]), limits (a list of sentences).
-- op is "is" or "is not" for a choice field, and "<", "<=", ">", ">=", "=" or "!=" for a number field, against a whole number or {"field":"<other number field>"}. Numbers are whole and not negative.
-- Forge draws the app's screen from the spec, live, as you write it. Write no files for an app with a spec: no page, no component, never src/lib/prism.ts or prism/spec.json.
-- Write the keys in this order, so the screen assembles top down as you write: name, title, purpose, view, fields, outcomes, meanings (optional, {"<outcome>": "what it means for the user"}), rules, otherwise, otherwiseWhy, properties, examples, limits.
-- view (optional) sets the screen's words and order: {"blocks":[...]}, each block one of {"kind":"heading","text"}, {"kind":"text","text"}, {"kind":"input","field","label"}, {"kind":"answer","label"}, {"kind":"guarantees"}, {"kind":"rules"}, {"kind":"examples"}. Without it the screen shows the title, purpose, one input per field, the answer, the guarantees, the rules and the examples.
-- To change one part of the spec (a word, an answer, one rule), write a patch instead of the whole spec: <dyad-spec-patch>[{"op":"set","path":["rules",2,"then"],"value":"none"}]</dyad-spec-patch>. Ops are set, insert (into a list, at an index) and remove; a path names keys and list indices in the spec as you wrote it. When the user points at something on the screen, its paths are given with the request.
-- To change the rules or the screen wholesale, write a whole new <dyad-spec> block. When the app decides nothing (a landing page, a gallery), write no spec and write its files.
-Example: <dyad-spec>{"name":"parking-fee","title":"Parking fee tier","purpose":"Decide the fee tier from hours parked and vehicle type.","fields":[{"name":"hours","kind":"number","min":0,"max":24,"means":"hours parked"},{"name":"vehicle","kind":"choice","values":["car","motorcycle","truck"],"means":"vehicle type"}],"outcomes":["free","standard","premium"],"rules":[{"when":[{"field":"hours","op":"=","value":0}],"then":"free","why":"nothing was parked"},{"when":[{"field":"vehicle","op":"is","value":"truck"}],"then":"premium","why":"a truck takes two bays"}],"otherwise":"standard","otherwiseWhy":"a car or motorcycle pays the standard rate","properties":[{"kind":"never","when":[{"field":"hours","op":"=","value":0}],"then":"premium","why":"no one pays for zero hours"}],"examples":[{"request":"0 truck","response":"free"},{"request":"3 car","response":"standard"}]}</dyad-spec>`;
+When the app decides an answer from a few inputs (a price tier, an eligibility, a grade, a risk level), write its rules as one LexLean module, so Lean can prove them, and Forge draws the app's screen from it, live, as you write.
+- Before the files, write one <prism-lexlean> block holding the module, its declarations in this order, so the screen assembles as you write: a \`definition\` per choice value and per answer, each a Nat code numbered from 0 within its group (the value \`chime-lily\` of field \`plant\` is \`plantChimeLily\`; the answer \`wind-whisper\` is \`answerWindWhisper\`); the \`Request\` structure, one Nat field per input; \`inBounds\` (each choice below its count, each number at most its maximum, and at least its minimum when that is above 0); one \`rule<N>\` per rule, a conjunction of conditions; \`judge\`, an if-chain in rule order (the first rule that matches decides; the last else is the answer when none does); and one \`breaks<Id>\` per guarantee: \`inBounds\`'s conditions, the guarantee's conditions, then the judge compared with an answer (\`=?\` for never, \`not (... =? ...)\` for always). Write no theorem: Forge derives the proofs.
+- A condition compares \`(project request <field>)\` with a whole number or a choice code using \`=?\`, \`<?\` or \`<=?\`; write > and >= with the sides swapped, and != as \`not (... =? ...)\`. Two number fields may be compared with each other.
+- Write no files for an app with rules: no page, no component, never src/lib/prism.ts, prism/spec.json or the .lex.tex file.
+- The screen's words come from the module (the title from the module's name) and from patches: to set the screen's words or order, or change one part (a word, an answer, one rule), write a patch on the spec read from the module: <dyad-spec-patch>[{"op":"set","path":["rules",2,"then"],"value":"none"}]</dyad-spec-patch>. Ops are set, insert and remove; \`view\` ({"blocks":[...]}, each one of {"kind":"heading","text"}, {"kind":"text","text"}, {"kind":"input","field","label"}, {"kind":"answer","label"}, {"kind":"guarantees"}, {"kind":"rules"}, {"kind":"examples"}), \`purpose\` and \`meanings\` are set this way. When the user points at something on the screen, its paths are given with the request.
+- To change the rules wholesale, write a whole new <prism-lexlean> block. When the app decides nothing (a landing page, a gallery), write no module and write its files.
+Example: <prism-lexlean>
+${PARKING_LEXLEAN.trim()}
+</prism-lexlean>`;
 
 // ---- the device. The on-device model holds about 3,000 tokens and writes at most 900, so it is asked
 // for the one thing it can write well, the rules, and Forge draws the screen from them (screenSource).
@@ -248,10 +269,38 @@ function lowerAnswers(input) {
   return { spec, respelled };
 }
 
+/** A spec over prism-code's rule limit, checked by Forge: obligations first, the table for every request. */
+function checkLarge(input, notes) {
+  const pad = (i) => String(i + 1).padStart(3, "0");
+  const spec = { examples: [], limits: [], ...input, rules: input.rules.map((r, i) => ({ id: `REQ-${pad(i)}`, ...r })), properties: (input.properties || []).map((p, i) => ({ id: `INV-${pad(i)}`, ...p })) };
+  const issues = [];
+  const ob = checkObligations(spec);
+  let how;
+  if (ob.ok && ob.holds) how = `${ob.total} local obligations, each keyed by what it depends on`;
+  else {
+    // A break the obligations report, or rules they do not cover, is settled exactly, request by request.
+    const K = tableKernel(), table = K.build(spec);
+    if (table.reason) return { ok: false, issues: [`More than ${PROVE_RULES_MAX} rules, and ${table.reason}, so Forge cannot check every request.`] };
+    how = `every one of its ${table.size.toLocaleString()} requests`;
+    K.check(spec, table).forEach((c, i) => { if (!c.ok) issues.push(`${spec.properties[i].id} does not hold: \`${c.request}\` answers ${c.outcome}.`); });
+  }
+  const vectors = acceptanceVectors(spec);
+  let failed = 0;
+  for (const v of vectors) {
+    let text;
+    try { text = new TextDecoder("utf-8", { fatal: true }).decode(v.bytes); } catch { if (v.response !== "invalid") failed++; continue; }
+    if (prismAnswer(spec, text) !== v.response) failed++;
+  }
+  if (failed) issues.push(`The rule module disagrees with ${failed} of ${vectors.length} acceptance vectors. This is a Forge bug.`);
+  notes.push(`${spec.rules.length} rules, more than prism-code's ${PROVE_RULES_MAX}: every guarantee was checked by ${how}. Lean proves at most ${PROVE_RULES_MAX} rules until LexLean proves them locally (UOR-Foundation/PrismPM#605).`);
+  return { ok: issues.length === 0, spec, issues, notes, vectors: vectors.length, module: issues.length ? null : moduleSource(spec, vectors.length) };
+}
+
 export function checkSpec(raw) {
   const issues = [], notes = [];
   const lowered = lowerAnswers(raw);
   let input = lowered.spec;
+  if (Array.isArray(input.rules) && input.rules.length > PROVE_RULES_MAX) return checkLarge(input, notes);
   const words = [...lowered.respelled].filter(([a, b]) => b && a !== b);
   if (words.length) notes.push("Forge respelled " + words.map(([a, b]) => `\`${a}\` as \`${b}\``).join(", ") + ", the form Prism words take.");
   // `limits` is a list; a model that writes one sentence means a list of one.
@@ -350,6 +399,7 @@ const callTool = (tool, args, tasks = false) => rpc("tools/call", tool, { name: 
 
 /** Ask Lean to prove the spec's guarantees. Resolves { ok, record, seconds } or { ok: false, error }. */
 export async function prove(spec, { onWait = () => {} } = {}) {
+  if (spec.rules.length > PROVE_RULES_MAX) throw new Error(`These ${spec.rules.length} rules are checked on every request, but Lean proves at most ${PROVE_RULES_MAX} rules today: its proofs are one theorem per guarantee over the whole rule chain. Proving more waits for local proofs in LexLean (UOR-Foundation/PrismPM#605).`);
   const t0 = Date.now();
   const axioms = {};
   for (let round = 1; round <= 6; round++) {
@@ -438,7 +488,7 @@ const PHASE_WORD = { drafting: "not checked", checked: "checked, not yet proved"
 export function card(state) {
   const spec = state.spec;
   if (!spec) return `**Rules** · not checked\n\n${state.issues.map((i) => "- " + i).join("\n")}\n\nAsk me to fix the rules.`;
-  const lines = [`**Rules: ${spec.title}** · ${PHASE_WORD[state.phase] || state.phase}`, "", spec.purpose, ""];
+  const lines = [`**Rules: ${spec.title}** · ${state.phase === "published" && state.publicationCurrent === false ? "proved by Lean; wording changed since publication" : PHASE_WORD[state.phase] || state.phase}`, "", spec.purpose, ""];
   if (spec.properties.length) {
     lines.push(state.phase === "proved" || state.phase === "published" ? "Guarantees, proved by Lean for every request:" : "Guarantees Lean will prove for every request:");
     spec.properties.forEach((p, i) => lines.push(`${i + 1}. ${said(p)}${p.why ? ` *${p.why}*` : ""}`));
@@ -451,6 +501,7 @@ export function card(state) {
   if (spec.examples.length) lines.push("", `Examples: ${spec.examples.map((e) => `\`${e.request}\` → ${e.response}`).join(" · ")}`);
   if (state.notes && state.notes.length) lines.push("", ...state.notes.map((n) => "*" + n + "*"));
   if (state.issues && state.issues.length) lines.push("", "Not checked:", ...state.issues.map((i) => "- " + i), "", "Ask me to fix the rules.");
+  else if (state.phase === "checked" && spec.rules.length > PROVE_RULES_MAX) lines.push("", `Checked on every request: ${(state.notes || []).find((n) => /checked by/.test(n)) || ""}`, "", `Lean proving waits: it proves at most ${PROVE_RULES_MAX} rules until LexLean proves them locally (UOR-Foundation/PrismPM#605).`);
   else if (state.phase === "checked") lines.push("", `Checked: consistent, ${spec.examples.length} examples pass, ${state.vectors} acceptance vectors replayed through the app's rule module.`, "", "Reply **approve** to have Lean prove the guarantees. The rules go to the hosted verifier, unlisted.");
   return lines.join("\n");
 }

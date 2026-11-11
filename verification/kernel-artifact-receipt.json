@@ -1,0 +1,41 @@
+{
+  "schema": "foundry/kernel-artifact-review/1",
+  "source": "686c09b89757fa3a924dd71bd17e53dd43509a73",
+  "run": 43033504480,
+  "artifact": 13862847178,
+  "archiveFingerprint": {
+    "algorithm": "blake3",
+    "profile": "hologram-archive-body",
+    "digest": "4e9d80d52a73916bcdf9163902b31a520e4e42eaad227b087fda0e1a7c5e7cac"
+  },
+  "archiveFile": {
+    "algorithm": "sha256",
+    "profile": "whole-file",
+    "digest": "c1da2933403ff457fded52a6a21a3d9c4d5164783b2881bd63a0d5570f3ab9da"
+  },
+  "provenance": {
+    "verifier": "GitHub CLI 2.103.3",
+    "verifierArchiveSha256": "4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d",
+    "trustedRootSource": "https://raw.githubusercontent.com/sigstore/root-signing/c9bda74ad2221f938f7d2e0295ca3aad2da710a8/targets/trusted_root.json",
+    "trustedRootFileSha256": "6494e21ea73fa7ee769f85f57d5a3e6a08725eae1e38c755fc3517c9e6bc0b66",
+    "repository": "UOR-Foundation/foundry",
+    "workflow": "UOR-Foundation/foundry/.github/workflows/build.yml",
+    "denySelfHostedRunners": true,
+    "positive": "verified",
+    "wrongSource": "refused",
+    "changedArchiveByte": "refused"
+  },
+  "runtime": {
+    "embeddedVectors": 114,
+    "wireVectors": 26,
+    "maximumPayloadBytes": 32768,
+    "maximumPayloadOutcome": "malformedComposition",
+    "browserContexts": [
+      "document",
+      "dedicated-worker"
+    ],
+    "workWireVectors": 30,
+    "rewordPhases": 5
+  },
+  "claimScope": "Executed qualification of this artifact and the browser adapter; not independent review approval, registry authenticity, R4 routing, or whole-application release acceptance."
+}

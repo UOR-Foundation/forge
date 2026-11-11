@@ -1,0 +1,590 @@
+\begin{lexlean}{FoundrySpecification}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+inductive{
+  name: Obligation,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: authority, fields: []},
+    {name: features, fields: []},
+    {name: routing, fields: []},
+    {name: composition, fields: []},
+    {name: projection, fields: []},
+    {name: proofScope, fields: []},
+    {name: effects, fields: []},
+    {name: identity, fields: []},
+    {name: packaging, fields: []},
+    {name: journeys, fields: []},
+    {name: quality, fields: []},
+    {name: release, fields: []},
+    {name: representation, fields: []},
+    {name: ownership, fields: []},
+    {name: factory, fields: []}
+  ]
+}
+
+definition{
+  name: requirement,
+  parameters: [obligation : Obligation],
+  result: String,
+  body: (match obligation
+    | Obligation.authority => "Every product-owned behavior has exactly one canonical semantic owner. An imported behavior names its external authority and an independently checked typed boundary. Authoring front ends and generated projections cannot independently redefine behavior."
+    | Obligation.features => "Features declare versioned identity, vocabulary, inputs, outputs, state, events, errors, effects, dependencies, conflicts, projection targets, resource budgets, accessibility and applicable quality obligations."
+    | Obligation.routing => "A replaceable semantic router proposes ranked features, dependencies, ambiguities and unresolved constraints from typed intent. Held-out relevance, dependency completeness, abstention and latency measurements qualify routing; proposal confidence grants no acceptance authority."
+    | Obligation.composition => "Prism independently admits interfaces, dependency closure, conflicts, permissions, budgets and evidence obligations. Both the Foundry application and each generated application have separate finite declared release scopes."
+    | Obligation.projection => "Product behavior is generated from the accepted model or crosses a declared typed adapter. Independent runtime comparison and qualified compiler evidence bind execution to the exact accepted semantics. An unsupported channel cannot report empty success as capability fulfillment."
+    | Obligation.proofScope => "Every assurance claim binds its property, model, source, executable, toolchain, oracle and dependency identities. Specification proofs, projection preservation, runtime acceptance, measurements and live release acceptance remain separate claims."
+    | Obligation.effects => "Network, inference, storage, preview, build and publication effects require explicit permission, transmitted-data disclosure, provider and credential ownership, timeout, malformed-response, revocation and offline behavior."
+    | Obligation.identity => "An identity includes object kind, canonicalization profile, algorithm, digest and version. Recompute identities independently and retain transformation relationships among model, source, executable, assets, evidence, archive and deployment."
+    | Obligation.packaging => "A complete locked production dependency closure reproduces the accepted artifacts. Independently validate the archive and reconstruction. Dependency or manifest mutation prevents promotion."
+    | Obligation.journeys => "Declared creation, editing, preview, verification, restore, cancellation, recovery and publication journeys have positive and negative runtime acceptance. State, view, effects, diagnostics, focus and publication decisions share an authoritative command boundary."
+    | Obligation.quality => "Functional correctness does not imply accessibility, audiovisual fidelity, usability or performance. Each declared quality requirement has an appropriate independent oracle, measurement or human assessment and a threshold fixed before acceptance."
+    | Obligation.release => "The release receipt binds the declared scope to exact models, source, toolchain, dependencies, artifacts, evidence and destination. Independent retrieval and live replay establish deployment acceptance; a successful process exit alone does not."
+    | Obligation.representation => "Exact byte compression retains original-object identity separately from representation, decoder and basis identities. Self-contained and conditional-basis accounting are distinct. Missing bases fail explicitly. Application optimization requires its own behavioral-preservation contract."
+    | Obligation.ownership => "Admit and reserve work before executing effects. Retain achieved state, outstanding owners, spent work, unused reservations and resumable obligations after failure or cancellation. Semantic work, scheduling reservations and physical resource measurements remain distinct."
+    | Obligation.factory => "Use the qualified PrismPM factory for dependency-scoped obligations. Bind declared input closures, prerequisite identities, commands, environments, policy and oracles. Materialized closures reject undeclared inputs. Scheduling weights affect order only; receipt reuse never weakens the complete acceptance boundary.")
+}
+
+definition{
+  name: scope,
+  parameters: [],
+  result: String,
+  body: "The semantic graph defines required behavior, not evidence that every requirement has been implemented. A source declaration, registered claim, theorem, diagnostic, accepted export and live release are distinct. Only separately executed obligations establish acceptance."
+}
+
+definition{
+  name: adaptation,
+  parameters: [],
+  result: String,
+  body: "An accepted bounded policy may permit parameter adaptation. Changes to transitions, interfaces, permissions or meaning require renewed model acceptance. Learned weights cannot authorize effects or certify themselves."
+}
+
+definition{
+  name: intent,
+  parameters: [],
+  result: String,
+  body: "Intent interpretation precedes accepted requirements. Exact reconstruction of known bytes does not establish that an interpretation captures a user intention. Ambiguity must be represented and resolved before affected behavior is accepted."
+}
+
+definition{
+  name: claims,
+  parameters: [],
+  result: String,
+  body: "Composition validity, model theorem, projection conformance, exact reconstruction, best observed candidate, scoped minimum, measured improvement, journey acceptance and live release are separate claims. A minimum certificate covers only its sealed admissible universe and objective."
+}
+
+definition{
+  name: authorityBoundary,
+  parameters: [],
+  result: String,
+  body: "The authority admission function checks a typed declaration. It does not discover source owners, verify an external checker, bind runtime artifacts or establish whole-product acceptance. Those operations have their own modeled obligations."
+}
+
+definition{
+  name: priorArt,
+  parameters: [],
+  result: String,
+  body: "Design references: afflom/rule30@916669a9b430698c143528ca723c28d9998cef95; afflom/verdant-resonance@a7bf893e325600805d44fa02c163015e8eaeb497; Casey-allard/lexlean-r4@f6f9ac02b596c4b29b4d947088a74a639ce51829; UOR-Foundation/compression@efd3d174f5983409e5ecef892210bf6f92e7e2c6. UOR-Foundation/uor-r4 README blob 7d7245e108e75fd5279bd9bc7876ecebf8a01114 is context only; pin its complete closure before reuse. Imported claims are not local acceptance evidence."
+}
+
+inductive{
+  name: Ownership,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: product, fields: [Nat]}, {name: external, fields: [Nat, Bool]}]
+}
+
+inductive{
+  name: AuthorityError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: missingOwner, fields: []},
+    {name: competingOwners, fields: []},
+    {name: uncheckedBoundary, fields: []}
+  ]
+}
+
+definition{
+  name: admitOwnerCount,
+  parameters: [owners : Nat],
+  result: (Result Bool AuthorityError),
+  body: (if (owners =? 0) then (ctor Result.error [Bool, AuthorityError] (ctor AuthorityError.missingOwner)) else (if (owners =? 1) then (ctor Result.ok [Bool, AuthorityError] true) else (ctor Result.error [Bool, AuthorityError] (ctor AuthorityError.competingOwners))))
+}
+
+definition{
+  name: admitAuthority,
+  parameters: [ownership : Ownership],
+  result: (Result Bool AuthorityError),
+  body: (match ownership
+    | Ownership.product owners => (admitOwnerCount owners)
+    | Ownership.external owners boundaryChecked => (match (admitOwnerCount owners)
+      | Result.error error => (ctor Result.error [Bool, AuthorityError] error)
+      | Result.ok accepted => (if boundaryChecked then (ctor Result.ok [Bool, AuthorityError] true) else (ctor Result.error [Bool, AuthorityError] (ctor AuthorityError.uncheckedBoundary)))))
+}
+
+theorem{
+  name: missingProductOwner,
+  parameters: [],
+  statement: ((admitAuthority (ctor Ownership.product 0)) = (ctor Result.error [Bool, AuthorityError] (ctor AuthorityError.missingOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: oneProductOwner,
+  parameters: [],
+  statement: ((admitAuthority (ctor Ownership.product 1)) = (ctor Result.ok [Bool, AuthorityError] true)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: competingProductOwners,
+  parameters: [],
+  statement: ((admitAuthority (ctor Ownership.product 2)) = (ctor Result.error [Bool, AuthorityError] (ctor AuthorityError.competingOwners))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: uncheckedExternalBoundary,
+  parameters: [],
+  statement: ((admitAuthority (ctor Ownership.external 1 false)) = (ctor Result.error [Bool, AuthorityError] (ctor AuthorityError.uncheckedBoundary))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: checkedExternalBoundary,
+  parameters: [],
+  statement: ((admitAuthority (ctor Ownership.external 1 true)) = (ctor Result.ok [Bool, AuthorityError] true)),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: missingExternalOwner,
+  parameters: [],
+  statement: ((admitAuthority (ctor Ownership.external 0 true)) = (ctor Result.error [Bool, AuthorityError] (ctor AuthorityError.missingOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: competingExternalOwners,
+  parameters: [],
+  statement: ((admitAuthority (ctor Ownership.external 2 true)) = (ctor Result.error [Bool, AuthorityError] (ctor AuthorityError.competingOwners))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+inductive{
+  name: HostResponseError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: unsupportedChannel, fields: []},
+    {name: invalidResponse, fields: []},
+    {name: validatorFailed, fields: []},
+    {name: handlerFailed, fields: []}
+  ]
+}
+
+definition{
+  name: hostResponseBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser IPC adapter refuses absent handlers with unsupportedChannel, handler exceptions with handlerFailed, invalid contracted output with invalidResponse and validator exceptions with validatorFailed. A schema accepting an empty value never authorizes synthesizing success. Valid handler output is preserved exactly; schema parsing is validation and cannot replace it. Both envelope and direct invocation retain typed error codes. Unsupported errors map to the imported not_found category; other boundary failures map to internal. Error messages name the channel without including request, response or exception data. Legacy handlers without imported output schemas retain their output, but this is not schema coverage or application acceptance. The external adapter inventory studio/model/host-read-scope.json classifies discovered renderer reads as required or unavailable. Required reads must retain handlers, unavailable reads must remain explicit refusals, and new or stale entries fail scope validation. This inventory declares the current adapter scope, not complete feature coverage. Renderer error-state recovery requires separate runtime journey evidence."
+}
+
+inductive{
+  name: PublicationEffectError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: cancelled, fields: []},
+    {name: timedOut, fields: []},
+    {name: invalidDeadline, fields: []},
+    {name: networkFailed, fields: []},
+    {name: httpRejected, fields: []},
+    {name: malformedResponse, fields: []}
+  ]
+}
+
+definition{
+  name: publicationEffectsBoundary,
+  parameters: [],
+  result: String,
+  body: "Browser publication requests and response-body reads have a 30000 millisecond default deadline and an explicit cancellation signal. Cancellation prevents subsequent requests, interrupts browser polling and attempts to abort in-flight network work. It does not roll back committed remote work or cancel GitHub jobs. The UI states this distinction. Invalid deadlines, timeout, cancellation, network failure, HTTP refusal and malformed successful JSON produce typed errors. HTTP status remains available for documented recovery; response bodies and credentials are not copied into error messages. Live artifact retrieval uses the same bounded request adapter and cannot swallow cancellation. Cancellation before or after local acceptance replay prevents reporting publication success. This boundary does not establish permission admission, complete provider schema validation, durable resume accounting or remote cancellation."
+}
+
+inductive{
+  name: PublicationIdentityError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidArchiveIdentity, fields: []},
+    {name: archiveIdentityMismatch, fields: []},
+    {name: invalidAcceptance, fields: []},
+    {name: acceptanceFailed, fields: []}
+  ]
+}
+
+definition{
+  name: publicationIdentityBoundary,
+  parameters: [],
+  result: String,
+  body: "Publication compares the page build identity and the imported Prism reader's recomputed archive fingerprint by full equality. Both fields contain exactly 64 lowercase hexadecimal characters, as emitted by the current template. Prefixes, suffixes, missing values, coercions and alternate algorithms are refused. The resulting typed identity has kind archiveFingerprint, algorithm blake3, profile holo-v4-body and version 1: BLAKE3 of the Hologram v4 bytes preceding the 32-byte footer, not a hash of the entire archive. Runtime acceptance must have a positive safe-integer total, a nonnegative safe-integer passed count no greater than total, and a failed array whose length accounts for every remaining vector. Every vector must pass. Malformed identity, mismatch, inconsistent or empty acceptance, and failed acceptance are distinct errors. This binds page and retrieved artifact; it does not authenticate publisher provenance or bind the artifact to a source commit. Those remain independent release obligations."
+}
+
+inductive{
+  name: SnapshotRestoreError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidSnapshot, fields: []},
+    {name: missingSnapshotObject, fields: []},
+    {name: snapshotIdentityMismatch, fields: []},
+    {name: missingFileObject, fields: []},
+    {name: fileIdentityMismatch, fields: []},
+    {name: invalidFileEncoding, fields: []},
+    {name: snapshotLimitExceeded, fields: []},
+    {name: snapshotStorageFailed, fields: []},
+    {name: snapshotCoreRefused, fields: []}
+  ]
+}
+
+definition{
+  name: snapshotRestoreBoundary,
+  parameters: [],
+  result: String,
+  body: "Snapshot restoration checks the exact BLAKE3 address of the snapshot and every referenced file object before changing working files. The existing generated core independently admits the snapshot identity. Snapshot JSON has exactly entries, name and parent; each entry is a unique portable relative path, canonical blake3 address and exact byte length. Limits fixed before admission are 2 MiB snapshot bytes, 4096 files, 16 MiB per file and 64 MiB total file bytes. Text files must decode as fatal UTF-8 with BOM preserved and re-encode to identical bytes. Missing bases, corrupt bytes, malformed shape, noncanonical addresses and exceeded bounds refuse explicitly. An empty entries list is a valid empty project. The browser adapter uses a single IndexedDB transaction for deleting current files, inserting all verified files advancing the main reference and clearing cached rule/proof state for that project; abort leaves all of these unchanged. Other projects are untouched. Snapshot/object reads, hashing and core checks occur before that transaction. Storage exceptions expose no content or credential data. Typed adapter failures map to the IPC host's handlerFailed boundary. Snapshot restoration establishes exact reconstruction of stored text bytes, not compression optimality, parent-history closure, concurrent edit merging or overall release acceptance."
+}
+
+inductive{
+  name: ProjectionError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: missingProjection, fields: []},
+    {name: unreadableProjection, fields: []},
+    {name: divergedProjection, fields: []}
+  ]
+}
+
+definition{
+  name: authoringBoundary,
+  parameters: [],
+  result: String,
+  body: "The authoring front end deterministically constructs every canonical Studio module and its ordered export roots. Check mode compares all expected bytes without creating, repairing or rewriting output, reports every missingProjection, unreadableProjection or divergedProjection by path, and fails if any comparison fails. Canonical sources remain what LexLean consumes. Source conformance executes the actual checker against independent mutations of each module, export roots, newline encoding and authoring declarations; a changed declaration requires explicit regeneration before acceptance."
+}
+
+inductive{
+  name: RulesBindingError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidRulesState, fields: []},
+    {name: rulesIdentityFailed, fields: []},
+    {name: rulesStorageFailed, fields: []}
+  ]
+}
+
+definition{
+  name: rulesSourceBoundary,
+  parameters: [],
+  result: String,
+  body: "Cached rule status is usable only when its canonical blake3 specKappa equals the independently recomputed identity of the project's current prism/spec.json bytes and its phase is declared by the kernel. Reads capture file and state together. Writes first check source identity and then compare the exact source again inside the same IndexedDB transaction that writes status. Asynchronous approval, proof and publication also compare their expected prior status in that transaction, so intervening edits, restores or competing completions cannot promote stale state. A stale completion returns false and never changes the current preview or claims current publication. An optional generation cancellation signal refuses status writes before commit and aborts an active status transaction; cancellation returns false, while already completed writes remain committed. Imported files may be reconstructed, but imported cached approval, proof and publication state is discarded; they require fresh checking and approval. Invalid state, identity engine failure and storage failure are typed and contain no source, credential or exception payloads. The IPC boundary maps these exceptions to handlerFailed. Publication progress callbacks belong to their captured active operation; after stop or completion they cannot overwrite its final message. Remote publication may already be live when current-state promotion or local verification fails; the UI states this explicitly. These checks bind lifecycle state to current source; they do not verify the hosted prover, authenticate build provenance or undo remote effects."
+}
+
+inductive{
+  name: KernelBoundaryError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidKernelMetadata, fields: []},
+    {name: kernelLoadFailed, fields: []},
+    {name: kernelIntegrityMismatch, fields: []},
+    {name: kernelExportsMismatch, fields: []},
+    {name: kernelAcceptanceFailed, fields: []},
+    {name: invalidKernelRequest, fields: []},
+    {name: kernelRequestTooLarge, fields: []},
+    {name: kernelExecutionFailed, fields: []},
+    {name: kernelResponseTooLarge, fields: []}
+  ]
+}
+
+definition{
+  name: compositionHostBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser forge:compose handler serializes declarations through CompositionProtocol and invokes the same pinned generated kernel used for phase and effect decisions. It never implements semantic admission itself. Kernel loading requires a canonical archive label and guest SHA256, the exact kernel/guest.wasm path and byte length, a pure core-wasm export set, coherent positive limits, and nonempty acceptance. All committed vectors replay before a request is exposed. Metadata limits are 4096 vectors, 16 MiB guest bytes, 1 MiB request/response/allocation bounds, and 64 MiB total decoded vector bytes. Caller requests must be Uint8Array, are copied before asynchronous execution and cannot exceed the declared request limit. Text ask encodes only strings through the same checked dispatch. Each request uses a fresh instance. Runtime, loading, identity, metadata, export, acceptance and bounds failures are typed without exception payloads. The host IPC maps loader exceptions to handlerFailed; guest execution failures during composition become compositionRuntimeFailed. Vector replay may exercise the declared allocation bound, which is separate from the public request bound. Runtime loading checks the guest against committed metadata; the repository kernel gate binds both to KERNEL_REV and the archive. This does not authenticate an arbitrary network origin or establish registry, routing, UI generation or application release completeness."
+}
+
+inductive{
+  name: InferenceEffectError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidInferenceRequest, fields: []},
+    {name: inferenceCancelled, fields: []},
+    {name: inferenceTimedOut, fields: []},
+    {name: inferenceNetworkFailed, fields: []},
+    {name: inferenceUnauthorized, fields: []},
+    {name: inferencePaymentRequired, fields: []},
+    {name: inferenceRateLimited, fields: []},
+    {name: inferenceProviderFailed, fields: []},
+    {name: malformedInferenceResponse, fields: []},
+    {name: inferenceResponseTooLarge, fields: []},
+    {name: inferenceConsumerFailed, fields: []}
+  ]
+}
+
+definition{
+  name: inferenceEffectsBoundary,
+  parameters: [],
+  result: String,
+  body: "The cloud inference adapter sends only the model-encoded request to the declared OpenRouter or Featherless chat-completion endpoint with the selected credential. It refuses missing credentials and requests above 2 MiB before network work. One 600-second deadline covers headers, error bodies, concurrency retries and the entire stream. Cancellation aborts local work and prevents late progress callbacks; already submitted remote inference may continue and incur charges. Featherless concurrency responses may retry at most 60 times, five seconds apart, within that same deadline. Error response bodies are bounded to 64 KiB and never exposed. Successful responses must be UTF8 event streams with structurally valid single-choice records, nonnegative usage, string deltas, an allowed stop or length finish and a final DONE frame. Truncated, malformed, unknown-finish, oversized or provider-error streams never become successful answers. Total stream bytes are at most 8 MiB; lines and data frames are at most 65536 UTF16 units. Callback, transport, cancellation, deadline, credential, billing, rate, provider and representation failures use InferenceEffectError with no credential or provider exception payload. The adapter releases listeners and timers, aborts outstanding fetch work and cancels held readers on every exit. The existing generated route and request encoder retain semantic ownership; this boundary does not establish general intent interpretation, model truthfulness, complete effect permission governance or live provider availability."
+}
+
+inductive{
+  name: HostInputError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidInput, fields: []},
+    {name: inputContractUnavailable, fields: []},
+    {name: inputValidatorFailed, fields: []}
+  ]
+}
+
+definition{
+  name: hostInputBoundary,
+  parameters: [],
+  result: String,
+  body: "Commands with imported renderer contracts must validate input before invoking any handler. The owned renderer bridge publishes the actual imported input and output schemas separately. An imported command carries at most one argument; omitted input is undefined. The adapter clones input before validation so caller mutation cannot change pending effects, rejects nontransferable values, and passes the schema's parsed value including declared defaults and transformations to the handler. Missing input validators for contracted outputs and throwing or malformed validators refuse without effects. Invalid arguments use invalidInput and the imported validation error category; missing or failed validators use inputContractUnavailable or inputValidatorFailed and internal. Refusals include the channel but never arguments, schema diagnostics or exception contents. Output validation still runs independently and never replaces successful handler output. Absent handlers remain unsupportedChannel. Legacy channels without imported input or output schemas retain their declared legacy behavior; their input is not claimed validated. This boundary checks representation, not permission, entity ownership, transaction isolation or full journey completeness."
+}
+
+inductive{
+  name: RepresentationError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidRepresentation, fields: []},
+    {name: identityMismatch, fields: []},
+    {name: missingBasis, fields: []},
+    {name: basisMismatch, fields: []},
+    {name: unsupportedDecoder, fields: []},
+    {name: representationTooLarge, fields: []},
+    {name: decodeFailed, fields: []},
+    {name: representationCancelled, fields: []},
+    {name: representationTimedOut, fields: []}
+  ]
+}
+
+definition{
+  name: representationBoundary,
+  parameters: [],
+  result: String,
+  body: "The byte-representation adapter accepts at most 2 MiB of original or basis bytes and a 4 MiB JSON archive. RFC1950 deflate encodes either original bytes or their bytewise XOR with an equal-length basis. Reconstruction checks typed raw-byte SHA256 identities for original, compressed payload, decoder specification and basis, exact output length, and bounded decompression before returning bytes. Representation identity hashes the entire serialized archive and reconstruction requires its separately supplied expected identity. Missing or wrong bases fail explicitly. The decoder identity identifies the specified transformation, not the browser executable or toolchain. Accounting reports payload, archive and basis bytes separately; reconstructionBytes sums archive and basis and excludes the shared native decoder implementation. Compression ratio, optimality, application equivalence and complete production dependency closure are not claimed. The host exposes forge:pack-bytes and forge:unpack-bytes with explicit basis and bytes fields, plus the expected representation identity for unpacking. These pure byte operations neither write storage nor perform network requests."
+}
+
+structure{
+  name: ByteIdentity,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: kind, type: String},
+    {name: canonicalization, type: String},
+    {name: algorithm, type: String},
+    {name: version, type: Nat},
+    {name: digest, type: String},
+    {name: byteLength, type: Nat}
+  ]
+}
+
+definition{
+  name: representationDecoderSpecification,
+  parameters: [],
+  result: String,
+  body: "foundry/deflate-xor/1: RFC1950 inflate; without basis return inflated bytes; with basis require equal lengths and XOR corresponding bytes; verify exact original length and SHA256"
+}
+
+definition{
+  name: unavailableBrowserQueries,
+  parameters: [],
+  result: (List String),
+  body: (cons "prompts:list" (cons "list-all-media" (cons "free-agent-quota:get-status" (cons "get-themes" (cons "get-custom-themes" (cons "user-input:get-pending" (cons "get-app-upgrades" (cons "get-app-env-vars" (cons "get-templates" (cons "check-problems" (cons "app:list-screenshots" (cons "app:list-thumbnails" (cons "appCollections:list" (cons "coolify:get-status" (cons "coolify:discover" (cons "coolify-setup:snapshot" (cons "coolify-setup:get-server-key" (cons "coolify-setup:reveal-credentials" (cons "local-models:list-ollama" (cons "local-models:list-lmstudio" (cons "mcp:list-catalog" (cons "mcp:is-oauth-storage-encrypted" (cons "mcp:probe-callback-port" (cons "neon:get-project" (cons "neon:get-branch-env-vars" (cons "neon:get-email-password-config" (cons "supabase:detect-legacy-app-key" (cons "tests:list" (cons "tests:detect-legacy" (cons "vercel:get-sync-preview" (cons "get-latest-security-review" (cons "free-model-quota:get-status" (nil String)))))))))))))))))))))))))))))))))
+}
+
+definition{
+  name: capabilityAvailabilityBoundary,
+  parameters: [],
+  result: String,
+  body: "The declared unavailable browser queries return HostResponseError.unsupportedChannel through both IPC entrypoints. Empty findings, quota values, connection details and resource lists cannot stand in for unimplemented checks or external reads. Renderer error recovery must preserve the failure rather than substitute empty success. This negative scope is not implementation of the excluded capabilities, and it is not a complete inventory of every renderer command. Each added capability requires a new modeled boundary and executed acceptance before removing its unavailable declaration."
+}
+
+inductive{
+  name: ProviderKeyError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: unsupportedProvider, fields: []},
+    {name: invalidCredential, fields: []},
+    {name: credentialRejected, fields: []},
+    {name: keyValidationRateLimited, fields: []},
+    {name: keyValidationProviderFailed, fields: []},
+    {name: keyValidationMalformed, fields: []},
+    {name: keyValidationTooLarge, fields: []},
+    {name: keyValidationNetworkFailed, fields: []},
+    {name: keyValidationTimedOut, fields: []},
+    {name: keyValidationCancelled, fields: []}
+  ]
+}
+
+definition{
+  name: providerKeyBoundary,
+  parameters: [],
+  result: String,
+  body: "Credential validation supports only OpenRouter authentication metadata. Other providers fail explicitly before network effects. A nonempty printable ASCII key of at most 8192 characters is transmitted only as a Bearer header to the fixed HTTPS OpenRouter auth/key endpoint, with redirect refusal, no cookies and no caching. Success requires HTTP 200 and a JSON data object with a nonempty label and Boolean is_free_tier. A 20 second maximum deadline covers headers and body; the body is bounded to 65536 bytes with fatal UTF8 decoding. Cancellation, network failure, credential rejection, rate limits, provider failure and malformed responses return typed fixed messages without provider exception bodies or credentials. The browser does not store keys in this command. Authentication metadata does not establish inference access, model availability, sufficient balance or permissions for subsequent effects."
+}
+
+inductive{
+  name: StorageRequestError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: storageTransactionFailed, fields: []}]
+}
+
+definition{
+  name: storageCommitBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser host's single-store transaction helper captures the request result but returns success only after IndexedDB transaction completion. A later abort or error cannot become success. Opening the transaction, invoking its synchronous operation, obtaining the request and reading its result all fail closed. Synchronous exceptions and request or transaction errors abort queued writes. Abort, missing request, completion without request success and storage failures use storageTransactionFailed with a fixed public message; exception contents and stored values are not exposed. Undefined delete results are valid after commit. The host IPC boundary maps this failure to handlerFailed. This is the shared host helper's transaction acknowledgement boundary, not atomicity of multi-transaction journeys, durable storage beyond browser guarantees, quota availability, authorization, or cross-device persistence."
+}
+
+inductive{
+  name: ProjectCreationError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: projectScaffoldFailed, fields: []},
+    {name: projectPreparationFailed, fields: []},
+    {name: projectStorageFailed, fields: []}
+  ]
+}
+
+definition{
+  name: projectCreationBoundary,
+  parameters: [],
+  result: String,
+  body: "New browser projects prepare all file objects and the initial snapshot before storage writes. The generated core remains the authority for snapshot preimage bytes; the existing BLAKE3 implementation derives object identities. Inputs are copied before asynchronous hashing. Names are nonempty and at most 255 UTF16 units; portable relative file paths exclude empty, dot and parent segments, backslash, colon and control characters. At most 1000 exact UTF8 files, 16 MiB per file, 64 MiB total and a 1 MiB snapshot are accepted. Scaffold loading requires a unique valid manifest and every named file including AI_RULES.md, with redirects refused, credentials omitted, fatal UTF8 decoding, a 64 KiB manifest and one 30-second header/body deadline; failures never cache a partial scaffold. A single IndexedDB write transaction allocates app and chat IDs from the current store keys and commits the app, files, file objects, snapshot object, main reference, initial version and initial chat together. Concurrent creations serialize allocation within that transaction. Chat-only creation also allocates in its transaction and requires an existing app. Import uses insert-only app/chat writes, so a stale allocated ID refuses the transaction instead of replacing an existing record. Completion is acknowledged only after commit; abort leaves previous data unchanged. Scaffold, preparation and storage errors are fixed-message ProjectCreationError values, mapped to handlerFailed by IPC. This establishes local creation atomicity and complete requested scaffold retrieval, not authenticated scaffold provenance, global project identity, atomic later edits or imports beyond collision refusal, storage durability beyond IndexedDB, or complete application generation."
+}
+
+inductive{
+  name: ProjectEditError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidProjectEdit, fields: []},
+    {name: projectEditConflict, fields: []},
+    {name: projectEditStorageFailed, fields: []},
+    {name: projectEditStateInvalid, fields: []},
+    {name: projectMutationCancelled, fields: []}
+  ]
+}
+
+definition{
+  name: projectEditBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser file-edit command copies its input and captures the app name, complete file set and main reference from one read transaction. It prepares exact file objects and generated snapshot bytes outside storage transactions, with the captured main reference as parent and the same preparation bounds as creation. A single write transaction compares the app name, reference and complete file contents to the capture; a rename, changed, added or removed file or changed reference refuses as projectEditConflict. It then writes the edited file, all prepared objects, snapshot reference, new version and app update atomically. Editing prism/spec.json also deletes cached rule status in that same transaction; other edits do not change the rule-source-specific claim. Existing version metadata is read within the write transaction and preserved. Failed writes abort all queued changes. Invalid input, conflict, invalid stored state and storage failure use fixed-message ProjectEditError values, while preparation retains ProjectCreationError.projectPreparationFailed; IPC maps these to handlerFailed. A conflict is not silently retried. The comparison binds bytes and reference at commit, not a history of intervening changes that returned to identical state. This boundary covers the explicit edit-app-file command, not streamed generation, deletion, renaming or every other project mutation, nor whole-application proof validity or durable storage beyond IndexedDB."
+}
+
+inductive{
+  name: GenerationPatchError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidGenerationPatch, fields: []},
+    {name: unlockedDependencyRequest, fields: []},
+    {name: generationCancelled, fields: []}
+  ]
+}
+
+definition{
+  name: generationPatchBoundary,
+  parameters: [],
+  result: String,
+  body: "Model-supplied file batches contain at most 1000 write, delete and rename operations and 128 direct dependency requests. Operations use portable paths, cannot overlap and cannot overwrite a rename target or delete a missing source. Staging copies inputs and leaves storage unchanged. Direct dependency requests require exact stable numeric package versions, reject conflicting versions, and are serialized in sorted order as foundry/direct-dependency-requests/1 in prism/dependencies.json; explicit file operations cannot replace that reserved file. Dependency metadata and that snapshot file commit together. These requests are not a transitive dependency lock or authenticated package closure. The request context uses one captured project file set and reference. Each generated batch compares that source inside its atomic write transaction; the resulting exact source is carried to the next rules batch, including when the first batch is a no-op. A stale source refuses. Rules files, generated module, generated screen and source-bound rule status are staged and committed together. The rules batch compares its exact captured lifecycle predecessor inside the source transaction; a competing lifecycle change refuses as projectEditConflict without changing files or status. A status-only batch still compares source and lifecycle and creates no source version. Cancellation is checked before preparation and commit, and an abort signal aborts an active write transaction. A completed transaction remains committed; the chat records its last committed snapshot and states that committed changes were retained when later work is cancelled or fails. Cancellation does not undo earlier commits, stop already submitted remote or device inference, or claim zero physical work. Invalid batches, unversioned dependency requests and pre-commit cancellation use GenerationPatchError; transaction cancellation uses ProjectEditError.projectMutationCancelled, with other edit/preparation failures preserved. This qualifies generation file batches and their source/cancellation boundary, not the complete chat admission lifecycle, authenticated dependency closure, inference truth, whole-turn atomicity or every effect in generation."
+}
+
+definition{
+  name: currentMainIntegrationBoundary,
+  parameters: [],
+  result: String,
+  body: "Live edits, undo, redo and agent spec patches use captured project source and the atomic generation batch boundary. No second seal captures unrelated concurrent files. A refused write discards optimistic history and reloads committed state. A rejected live edit redraws through the same exact-source and publication-current trust check as a normal refresh. Agent patches carry the preceding committed source and cancellation signal. Checked wording changes retain proof state only when the checked candidate logic identity and the recomputed prior checked-spec logic identity both equal the recorded identity, and the compiled lifecycle guest accepts reword. Logical changes drop proof through edit and check. Proof completion compares current source-bound logic identity and uses compare-and-set on the current state; competing completions cannot overwrite it. Source and retained lifecycle state commit atomically, without a deleted-status interval. A completed proof preceding that transaction makes a stale reword refuse without losing the proof. A completion racing after a matching reword retries its already-completed result only on a distinct matching predecessor; unchanged state or changed semantics terminates. Continual matching edits can delay completion. Reword preserves published semantic phase while publicationCurrent becomes false when source bytes differ; the card identifies that wording changed since publication. A successful new publication resets that marker. The signed guest must replay at least 114 acceptance vectors and retain lifecycle reword, composition and work protocols. These checks qualify integration of current main, not authenticated proof records, full publication closure or whole-journey conversion. Existing GenerationPatchError and ProjectEditError refusals remain authoritative."
+}
+
+inductive{
+  name: ProjectLifecycleError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidProjectLifecycle, fields: []},
+    {name: projectLifecycleStorageFailed, fields: []},
+    {name: projectLifecycleMissing, fields: []}
+  ]
+}
+
+definition{
+  name: projectLifecycleBoundary,
+  parameters: [],
+  result: String,
+  body: "Rename captures current source, prepares a snapshot with the new name and current parent, and commits metadata, snapshot, reference and version together only while captured source still matches. Checkout and revert validate all snapshot and file identities before touching the project, compare the captured source in the committing transaction, restore name and snapshot-bound direct dependencies, and invalidate source-bound proof status. Checkout selects the exact validated target reference without adding a history entry; revert creates one child of the previously current reference containing target files. Deletion removes app, its files, main and proof references, versions and dependent chats in one transaction while retaining shared content-addressed objects. Persistent allocation high-water marks prevent subsequent automatic app/chat ID reuse after deletion, including legacy records. Import refuses an allocation at or below the persisted mark and advances marks in its committing transaction. Chat updates require both the chat and its owning app in one transaction and return false after deletion, so late generation cannot resurrect deleted records. Missing projects, malformed lifecycle arguments and storage errors have typed fixed public refusals; edit conflicts and snapshot validation errors retain their existing types. Storage failure aborts the transaction. This is browser-local lifecycle consistency, not authenticated ownership, garbage collection, cross-device identity or a whole-product release claim."
+}
+
+inductive{
+  name: BuildSourceError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: buildSourceMismatch, fields: []}, {name: buildSourceChanged, fields: []}]
+}
+
+definition{
+  name: snapshotBuildBoundary,
+  parameters: [],
+  result: String,
+  body: "Preview and portable publication capture project name, main reference, files and direct dependency metadata in one transaction. They independently validate the snapshot and every file object using the existing restoration identity and generated-core admission boundary, then require exact name and file-byte agreement with captured source and exact dependency agreement with the snapshot declaration. Build adapters consume that captured source rather than rereading each file or metadata. Before promoting a current preview or installing a portable archive they compare current source against the capture; a change refuses with buildSourceChanged. Identity, basis and storage failures retain existing snapshot and project error types; disagreement uses buildSourceMismatch. A captured snapshot containing prism/spec.json always takes the Prism rule publication route, irrespective of whether cached rule state exists or is valid, so invalidation cannot bypass proof publication. The portable receipt names the captured project and reference. This qualifies source coherence and publication routing, not transitive package integrity, browser compiler preservation, atomic coordination between CacheStorage and IndexedDB, or complete live release acceptance."
+}
+
+inductive{
+  name: BuildModuleError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: buildModuleOriginRefused, fields: []},
+    {name: buildModuleResponseInvalid, fields: []},
+    {name: buildModuleUnavailable, fields: []},
+    {name: buildModuleTooLarge, fields: []},
+    {name: buildModuleLimitExceeded, fields: []},
+    {name: buildModuleTimedOut, fields: []},
+    {name: buildModuleCancelled, fields: []},
+    {name: buildModuleNetworkFailed, fields: []},
+    {name: buildModuleEncodingInvalid, fields: []},
+    {name: buildModuleIdentityFailed, fields: []}
+  ]
+}
+
+definition{
+  name: buildModuleBoundary,
+  parameters: [],
+  result: String,
+  body: "Portable browser builds retrieve external module text only from https://esm.sh with no URL credentials or fragment and at most 8192 URL characters. Every request is GET with redirects refused, credentials omitted and cache disabled. Only status 200 and JavaScript or CSS media types are accepted. One deadline of at most 120 seconds covers the module operation and callback completion, including stalled headers and bodies. At most 512 distinct URLs, 8 MiB per module and 64 MiB total are admitted. UTF8 decoding is fatal and byte roundtrip exact, including BOM. Each completed module retains its requested URL, media type, exact bytes, whole-file SHA256 and an archive path derived from that digest. Repeated requests share one in-flight operation. The portable view carries a sorted foundry/build-module-closure/1 receipt and those exact module sources. Errors and cancellation abort outstanding fetches and prevent return of a successful closure; errors have fixed public messages and never expose provider bodies. These are retrieved-byte receipts, not prior authenticity guarantees, a transitive NPM lock, compiler/toolchain closure, remote package availability, proof of browser compiler preservation or termination of already running physical work."
+}
+\end{semanticmodule}
+\end{lexlean}

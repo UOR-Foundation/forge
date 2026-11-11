@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { LEAN } from "./hologram.lean.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const slash = (p) => p.replace(/\\/g, "/");
@@ -16,13 +17,16 @@ export const SCREENS = {
   "src/pages/apps.tsx": "hologram.screens/AppsPage.tsx",
   // The site header's breadcrumb leads back; a page draws no back link of its own.
   "src/components/ui/back-button.tsx": "hologram.screens/BackButton.tsx",
+  // App covers: the card shows the app's own first screen, its tag and one two row sentence (shell/covers.mjs).
+  "src/components/AppShowcaseCard.tsx": "hologram.screens/AppShowcaseCard.tsx",
+  "src/hooks/useAppThumbnails.ts": "hologram.screens/useAppThumbnails.ts",
 };
 
 // A page's body in the inset, as dashboard-01 spaces it: the site header names the page, so the page keeps
 // its description and its actions, not a second title.
 const PAGE = "w-full overflow-y-auto px-4 py-4 md:py-6 lg:px-6";
 
-export const PATCHES = [
+const SCREEN_PATCHES = [
   {
     file: "src/pages/settings.tsx",
     from: `    <section
@@ -188,20 +192,20 @@ export const PATCHES = [
     from: `<span>{selectedApp.updatedAt.toString()}</span>`,
     to: `<span>{new Date(selectedApp.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span>`,
   },
-  // The build screen on a phone (the kit's useIsMobile, the sidebar's own breakpoint): one pane at a time and
-  // a bar at the bottom (hologram.screens/MobileBuild.tsx) instead of the two resizable panels.
+  // The build screen on a narrow screen: one pane at a time and a bar at the bottom
+  // (hologram.screens/MobileBuild.tsx) instead of the two resizable panels. Which applies is the Forge kernel's
+  // answer for the window's width (FK-16, FK-17; useNarrow, hologram.lean.mjs).
   {
     file: "src/pages/chat.tsx",
     from: `import { ipc } from "@/ipc/types";`,
     to: `import { ipc } from "@/ipc/types";
-import { useIsMobile } from "@/registry/new-york-v4/hooks/use-mobile";
 import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
   },
   {
     file: "src/pages/chat.tsx",
     from: `  return (
     <PanelGroup autoSaveId="persistence" direction="horizontal">`,
-    to: `  const isMobile = useIsMobile();
+    to: `  const isMobile = useNarrow();
   if (isMobile) {
     return (
       <MobileBuild
@@ -213,7 +217,163 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
   return (
     <PanelGroup autoSaveId="persistence" direction="horizontal">`,
   },
+  // Home's one entry point is the composer: importing an app is an item in its + menu, not a button above it.
+  {
+    file: "src/pages/home.tsx",
+    from: `            <div className="mt-4 flex justify-center">
+              <ImportAppButton
+                className="px-0 pb-0"
+                variant="outline"
+                size="sm"
+              />
+            </div>
+`,
+    to: ``,
+  },
+  {
+    file: "src/pages/home.tsx",
+    from: `import { ImportAppButton } from "@/components/ImportAppButton";\n`,
+    to: ``,
+  },
+  // The suggestion chips' row is named, so the shell can give the chips glass that reads over any photo.
+  {
+    file: "src/pages/home.tsx",
+    from: `<div className="mt-4 flex flex-wrap justify-center gap-2">`,
+    to: `<div className="mt-4 flex flex-wrap justify-center gap-2" data-slot="home-suggestions">`,
+  },
+  // On a phone the page keeps the inset's 16 px gutter instead of 32 px, so the composer has the room.
+  {
+    file: "src/pages/home.tsx",
+    from: `max-w-3xl w-full m-auto p-8 relative`,
+    to: `max-w-3xl w-full m-auto px-4 py-8 sm:p-8 relative`,
+  },
+  {
+    file: "src/components/chat/HomeChatInput.tsx",
+    from: `<AuxiliaryActionsMenu onFileSelect={handleFileSelect} />`,
+    to: `<AuxiliaryActionsMenu onFileSelect={handleFileSelect} showImport />`,
+  },
+  // The + menu's submenus open in a portal: inside the menu (which scrolls, and transforms as it animates in)
+  // they were clipped to its box, so their items could not be seen. A long list scrolls within the screen.
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";`,
+    to: `  DropdownMenuItem,
+  DropdownMenuPortal,
+} from "@/components/ui/dropdown-menu";
+import { Upload } from "lucide-react";
+import { ImportAppDialog } from "@/components/ImportAppDialog";`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `  onGenerateImage?: () => void;
+}`,
+    to: `  onGenerateImage?: () => void;
+  showImport?: boolean;
+}`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `  onGenerateImage,
+}: AuxiliaryActionsMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);`,
+    to: `  onGenerateImage,
+  showImport,
+}: AuxiliaryActionsMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);`,
+  },
+  // The + sits at the composer's left: the menu opens under the composer, clear of the screen's edge.
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `<DropdownMenuContent align="end">`,
+    to: `<DropdownMenuContent align="start" collisionPadding={8}>`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `            <DropdownMenuSubContent>
+              <FileAttachmentDropdown
+                onFileSelect={onFileSelect}
+                closeMenu={() => setIsOpen(false)}
+              />
+            </DropdownMenuSubContent>`,
+    to: `            <DropdownMenuPortal>
+              <DropdownMenuSubContent className="max-h-(--radix-dropdown-menu-content-available-height) overflow-y-auto">
+                <FileAttachmentDropdown
+                  onFileSelect={onFileSelect}
+                  closeMenu={() => setIsOpen(false)}
+                />
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                onClick={() => handleThemeSelect(null)}`,
+    to: `            <DropdownMenuPortal>
+            <DropdownMenuSubContent className="max-h-(--radix-dropdown-menu-content-available-height) overflow-y-auto">
+              <DropdownMenuItem
+                onClick={() => handleThemeSelect(null)}`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `              </>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+`,
+    to: `              </>
+            </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+
+          {showImport && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsOpen(false);
+                  setImportOpen(true);
+                }}
+                className="py-2 px-3"
+                data-testid="import-app-menu-item"
+              >
+                <Upload size={16} className="mr-2" />
+                Import app
+              </DropdownMenuItem>
+            </>
+          )}
+`,
+  },
+  {
+    file: "src/components/chat/AuxiliaryActionsMenu.tsx",
+    from: `      </Dialog>
+    </>
+  );
+}`,
+    to: `      </Dialog>
+
+      {showImport && <ImportAppDialog isOpen={importOpen} onClose={() => setImportOpen(false)} />}
+    </>
+  );
+}`,
+  },
+  // The home's featured row holds the 2:1 cover cards (hologram.screens/AppShowcaseCard.tsx): wide enough
+  // for the sentence's two rows, and the "See more" tile the cover's own shape.
+  {
+    file: "src/components/FeaturedAppShowcase.tsx",
+    from: `            <div key={app.id} className="w-56 flex-shrink-0">`,
+    to: `            <div key={app.id} className="w-72 flex-shrink-0">`,
+  },
+  {
+    file: "src/components/FeaturedAppShowcase.tsx",
+    from: `              className="flex flex-col items-center justify-center w-56 aspect-[4/3] flex-shrink-0`,
+    to: `              className="flex flex-col items-center justify-center w-72 aspect-[2/1] flex-shrink-0`,
+  },
 ];
+
+// The screens' patches, then the ones that keep the first load lean (hologram.lean.mjs).
+export const PATCHES = [...SCREEN_PATCHES, ...LEAN];
 
 // A retag patch: the one JSX element whose opening tag is exactly `retag` becomes `to`, its closing tag
 // renamed with it (found by the parser, so the children are kept whole).
@@ -246,9 +406,17 @@ export function screenSource(file, code) {
   let out = code.replace(/\r\n/g, "\n");
   for (const p of PATCHES) {
     if (p.file !== rel) continue;
-    if (p.retag) { out = retag(out, rel, p); continue; }
+    if (p.retag) { out = retag(out, rel, p); applied.add(p); continue; }
     if (!out.includes(p.from)) throw new Error(`${rel}: the passage the shell patches was not found:\n${p.from.split("\n")[0]}`);
     out = out.replace(p.from, p.to);
+    applied.add(p);
   }
   return out;
+}
+
+// A patch whose file the build never read did nothing, silently: the build and the typecheck ask for these
+// once every file is read, and refuse when any is left.
+const applied = new Set();
+export function unapplied() {
+  return PATCHES.filter((p) => !applied.has(p)).map((p) => `${p.file}: ${(p.from ?? p.retag).split("\n")[0]}`);
 }

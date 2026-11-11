@@ -1,3 +1,5 @@
+import { sameArchiveIdentity, admitPublication } from "./publication-identity.mjs";
+import { requestBody, publicationDelay, checkCancellation, effectError } from "./publication-effects.mjs";
 // Build an app with the Prism SDK on GitHub Actions, from the tab: what prism-code's buildFromTemplate does
 // with gh and git (journey/engine.mjs, journey/github.mjs), done through api.github.com, which answers web
 // pages. The repository is `<login>/prism-<name>`, public, made from UOR-Foundation/template; its pages and
@@ -12,16 +14,19 @@ const API = "https://api.github.com";
 export const TEMPLATE_REPOSITORY = "UOR-Foundation/template";
 export const WORKFLOWS = ["pages.yml", "bootstrap.yml"];
 
-export function gitHub(token, { fetch = globalThis.fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+export function gitHub(token, { fetch = globalThis.fetch, sleep, signal, timeoutMs = 30000 } = {}) {
   const call = async (method, path, body, accept = "application/vnd.github+json") => {
-    const r = await fetch(API + path, { method, headers: { Authorization: `Bearer ${token}`, Accept: accept, "X-GitHub-Api-Version": "2022-11-28", ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
-    if (accept.endsWith(".raw")) { if (!r.ok) throw Object.assign(new Error(`GitHub ${method} ${path}: ${r.status}`), { status: r.status }); return r.text(); }
-    const text = await r.text();
-    let json = null; try { json = text ? JSON.parse(text) : null; } catch {}
-    if (!r.ok) throw Object.assign(new Error(`GitHub ${method} ${path}: ${r.status} ${(json && json.message) || text.slice(0, 200)}`), { status: r.status, json });
-    return json;
+    const { response: r, body: text } = await requestBody(API + path, { method, headers: { Authorization: `Bearer ${token}`, Accept: accept, "X-GitHub-Api-Version": "2022-11-28", ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined }, { fetch, signal, timeoutMs });
+    if (!r.ok) {
+      let already = false;
+      try { already = /already/i.test(JSON.parse(text)?.message || ""); } catch {}
+      throw Object.assign(effectError("httpRejected", `GitHub ${method} ${path}: ${r.status}${already ? " (already exists)" : ""}`), { status: r.status });
+    }
+    if (accept.endsWith(".raw")) return text;
+    try { return text ? JSON.parse(text) : null; }
+    catch { throw effectError("malformedResponse", "GitHub returned malformed JSON"); }
   };
-  return { call, sleep, get: (p) => call("GET", p), post: (p, b) => call("POST", p, b), patch: (p, b) => call("PATCH", p, b), raw: (p) => call("GET", p, null, "application/vnd.github.raw") };
+  return { call, sleep: (ms) => publicationDelay(ms, { signal, sleep }), get: (p) => call("GET", p), post: (p, b) => call("POST", p, b), patch: (p, b) => call("PATCH", p, b), raw: (p) => call("GET", p, null, "application/vnd.github.raw") };
 }
 
 export const liveUrl = (repository) => { const [owner, repo] = repository.split("/"); return `https://${owner.toLowerCase()}.github.io/${repo}/`; };
@@ -42,9 +47,9 @@ async function instance(gh, login, name, purpose, step) {
   for (let i = 0; i < 60 && !head; i++) {
     try { head = (await gh.get(`/repos/${repository}/git/ref/heads/main`)).object.sha; } catch (e) { if (e.status !== 404 && e.status !== 409) throw e; await gh.sleep(2000); }
   }
-  if (!head) throw new Error(`${repository} was created but GitHub has not filled it from the template after two minutes; publish again shortly`);
+  if (!head) throw effectError("timedOut", `${repository} was created but GitHub has not filled it from the template after two minutes; publish again shortly`);
   try { await gh.post(`/repos/${repository}/pages`, { build_type: "workflow" }); }
-  catch (e) { if (e.status !== 409 && !/already/i.test(e.message)) throw new Error(`could not turn on GitHub Pages for ${repository}: ${e.message}`); }
+  catch (e) { if (e.status !== 409 && !/already/i.test(e.message)) throw Object.assign(new Error(`could not turn on GitHub Pages for ${repository}: ${e.message}`), { code: e.code, status: e.status }); }
   return { repository, head, made };
 }
 
@@ -68,7 +73,7 @@ async function waitForRuns(gh, repository, sha, step, { timeoutMs = 45 * 60 * 10
   const t0 = Date.now();
   const found = {};
   while (Object.keys(found).length < WORKFLOWS.length) {
-    if (Date.now() - t0 > 4 * 60 * 1000) throw new Error(`no run of ${WORKFLOWS.filter((w) => !found[w]).join(", ")} started for ${sha.slice(0, 12)} within four minutes`);
+    if (Date.now() - t0 > 4 * 60 * 1000) throw effectError("timedOut", `no run of ${WORKFLOWS.filter((w) => !found[w]).join(", ")} started for ${sha.slice(0, 12)} within four minutes`);
     const listed = await gh.get(`/repos/${repository}/actions/runs?head_sha=${sha}&per_page=50`);
     for (const w of WORKFLOWS) {
       const run = (listed.workflow_runs || []).filter((r) => String(r.path || "").endsWith(`/${w}`)).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
@@ -82,7 +87,7 @@ async function waitForRuns(gh, repository, sha, step, { timeoutMs = 45 * 60 * 10
     const seconds = Math.round((Date.now() - t0) / 1000);
     step("Building with the Prism SDK", `${WORKFLOWS.map((w) => `${w.replace(".yml", "")} ${ended[w] ? ended[w].conclusion : found[w].status}`).join(", ")}, ${seconds} s`, { runs: Object.fromEntries(WORKFLOWS.map((w) => [w, (ended[w] || found[w]).html_url])) });
     if (WORKFLOWS.every((w) => ended[w])) return ended;
-    if (Date.now() - t0 > timeoutMs) throw new Error(`the build did not end in ${Math.round(timeoutMs / 60000)} minutes: ${found["pages.yml"].html_url}`);
+    if (Date.now() - t0 > timeoutMs) throw effectError("timedOut", `the build did not end in ${Math.round(timeoutMs / 60000)} minutes: ${found["pages.yml"].html_url}`);
     await gh.sleep(15000);
   }
 }
@@ -90,30 +95,30 @@ async function waitForRuns(gh, repository, sha, step, { timeoutMs = 45 * 60 * 10
 // The live holo, once Pages serves this build of it: the page's app.json names the fingerprint it carries.
 // Pages' edge caches for ten minutes, so each attempt asks with a query of its own; the holo is this
 // build's when its fingerprint is the one its page names.
-async function fetchLive(live, open, { fetch = globalThis.fetch, sleep, attempts = 48 }) {
+async function fetchLive(live, open, { fetch = globalThis.fetch, sleep, signal, timeoutMs, attempts = 48 }) {
   let last = null;
   for (let i = 0; i < attempts; i++) {
     try {
       const v = "?v=" + Date.now();
-      const page = await fetch(new URL("app.json" + v, live), { cache: "no-store" });
-      const holo = await fetch(new URL("app.holo" + v, live), { cache: "no-store" });
-      if (page.ok && holo.ok) {
-        const bytes = new Uint8Array(await holo.arrayBuffer()), json = await page.json();
+      const page = await requestBody(new URL("app.json" + v, live), { cache: "no-store" }, { fetch, signal, timeoutMs });
+      const holo = await requestBody(new URL("app.holo" + v, live), { cache: "no-store" }, { fetch, signal, timeoutMs, read: r => r.arrayBuffer() });
+      if (page.response.ok && holo.response.ok) {
+        const bytes = new Uint8Array(holo.body), json = JSON.parse(page.body);
         const app = await open(bytes);
         const named = json.attestations && json.attestations.build && json.attestations.build.id;
         last = { bytes, page: json, app, named };
-        if (named && app.identities && String(named).endsWith(app.identities.archiveFingerprint)) return last;
+        if (sameArchiveIdentity(named, app.identities?.archiveFingerprint)) return last;
       }
-    } catch {}
+    } catch (error) { if (error?.code === "cancelled") throw error; }
     await sleep(5000);
   }
   if (last) return last;
-  throw new Error(`${live}app.holo did not answer after four minutes; the page may still be deploying`);
+  throw effectError("timedOut", `${live}app.holo did not answer within ${attempts} bounded retrieval attempts; the page may still be deploying`);
 }
 
 // The whole build. `checked(bytes)` opens the holo and replays its vectors (prism-code's loadArchive).
-export async function buildOnGitHub({ token, spec, axioms = {}, attestation = null, templateCommit, open, step = () => {}, fetch = globalThis.fetch, sleep }) {
-  const gh = gitHub(token, { fetch, sleep });
+export async function buildOnGitHub({ token, spec, axioms = {}, attestation = null, templateCommit, open, step = () => {}, fetch = globalThis.fetch, sleep, signal, timeoutMs = 30000 }) {
+  const gh = gitHub(token, { fetch, sleep, signal, timeoutMs });
   const t0 = Date.now();
   const me = await gh.get("/user");
   const name = `prism-${spec.name}`;
@@ -125,15 +130,18 @@ export async function buildOnGitHub({ token, spec, axioms = {}, attestation = nu
   if (failed.length) return { ok: false, repository, sha: commit.sha, runs, error: failed.map((w) => `${w} ended ${runs[w].conclusion}: ${runs[w].html_url}`).join("; ") };
   const live = liveUrl(repository);
   step("Checking the built app", `fetching ${live}app.holo and replaying every acceptance vector in its guest`);
-  const fetched = await fetchLive(live, open, { fetch, sleep: gh.sleep });
+  const fetched = await fetchLive(live, open, { fetch, sleep: gh.sleep, signal, timeoutMs });
   const app = fetched.app;
+  checkCancellation(signal);
   const acceptance = await app.acceptance();
+  checkCancellation(signal);
   const fingerprint = app.identities && app.identities.archiveFingerprint;
   // The pages workflow writes the fingerprint of the holo it built into app.json, as attestations.build.id.
   const pageSays = fetched.named;
+  const admitted = admitPublication(pageSays, fingerprint, acceptance);
   return {
-    ok: acceptance.failed.length === 0 && String(pageSays || "").endsWith(fingerprint),
+    ...admitted,
     repository, live, sha: commit.sha, runs, seconds: Math.round((Date.now() - t0) / 1000),
-    holo: fetched.bytes, fingerprint, vectors: { passed: acceptance.passed, total: acceptance.total }, pageFingerprint: pageSays || null,
+    holo: fetched.bytes, fingerprint, pageFingerprint: pageSays || null,
   };
 }

@@ -3,3 +3,10 @@ declare module "*.svg" {
   const url: string;
   export default url;
 }
+// Vite replaces import.meta.env.BASE_URL with the shell's base at build (the covers hook keys its cache by it).
+interface ImportMetaEnv {
+  readonly BASE_URL: string;
+}
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

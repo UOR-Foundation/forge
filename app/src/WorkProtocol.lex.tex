@@ -1,0 +1,152 @@
+\begin{lexlean}{WorkProtocol}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{WorkOwnership}
+\importmodule{CompositionProtocol}
+\title{Boolean}
+\begin{semanticmodule}
+definition{
+  name: word,
+  parameters: [words : (List Nat), offset : Nat],
+  result: Nat,
+  body: (match (prim index words offset : (Option Nat))
+    | Option.none => 0
+    | Option.some value => value)
+}
+
+definition{
+  name: hexDigit,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (if (value =? 0) then 0x30 else (if (value =? 1) then 0x31 else (if (value =? 2) then 0x32 else (if (value =? 3) then 0x33 else (if (value =? 4) then 0x34 else (if (value =? 5) then 0x35 else (if (value =? 6) then 0x36 else (if (value =? 7) then 0x37 else (if (value =? 8) then 0x38 else (if (value =? 9) then 0x39 else (if (value =? 10) then 0x61 else (if (value =? 11) then 0x62 else (if (value =? 12) then 0x63 else (if (value =? 13) then 0x64 else (if (value =? 14) then 0x65 else 0x66)))))))))))))))
+}
+
+definition{
+  name: hexByte,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (prim append (hexDigit (prim quotient value 16 0 : Nat)) (hexDigit (prim remainder value 16 0 : Nat)) : Bytes)
+}
+
+definition{
+  name: hexWord,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (prim append (prim append (hexByte (prim remainder (prim quotient value 1 0 : Nat) 256 0 : Nat)) (hexByte (prim remainder (prim quotient value 256 0 : Nat) 256 0 : Nat)) : Bytes) (prim append (hexByte (prim remainder (prim quotient value 65536 0 : Nat) 256 0 : Nat)) (hexByte (prim remainder (prim quotient value 16777216 0 : Nat) 256 0 : Nat)) : Bytes) : Bytes)
+}
+
+definition{
+  name: phaseNumber,
+  parameters: [phase : WorkOwnership::Phase],
+  result: Nat,
+  body: (match phase
+    | WorkOwnership::Phase.ready => 0
+    | WorkOwnership::Phase.running => 1
+    | WorkOwnership::Phase.paused => 2
+    | WorkOwnership::Phase.complete => 3)
+}
+
+definition{
+  name: readPhase,
+  parameters: [value : Nat],
+  result: (Option WorkOwnership::Phase),
+  body: (if (value =? 0) then (ctor Option.some [WorkOwnership::Phase] (ctor WorkOwnership::Phase.ready)) else (if (value =? 1) then (ctor Option.some [WorkOwnership::Phase] (ctor WorkOwnership::Phase.running)) else (if (value =? 2) then (ctor Option.some [WorkOwnership::Phase] (ctor WorkOwnership::Phase.paused)) else (if (value =? 3) then (ctor Option.some [WorkOwnership::Phase] (ctor WorkOwnership::Phase.complete)) else (ctor Option.none [WorkOwnership::Phase])))))
+}
+
+definition{
+  name: readAction,
+  parameters: [code : Nat, a : Nat, b : Nat, c : Nat],
+  result: (Option WorkOwnership::Action),
+  body: (if (((code =? 0) && (b =? 0)) && (c =? 0)) then (ctor Option.some [WorkOwnership::Action] (ctor WorkOwnership::Action.reserve a)) else (if ((((code =? 1) && (a =? 0)) && (b =? 0)) && (c =? 0)) then (ctor Option.some [WorkOwnership::Action] (ctor WorkOwnership::Action.start)) else (if (code =? 2) then (ctor Option.some [WorkOwnership::Action] (ctor WorkOwnership::Action.progress a b c)) else (if ((((code =? 3) && (a =? 0)) && (b =? 0)) && (c =? 0)) then (ctor Option.some [WorkOwnership::Action] (ctor WorkOwnership::Action.pause)) else (if ((((code =? 4) && (a =? 0)) && (b =? 0)) && (c =? 0)) then (ctor Option.some [WorkOwnership::Action] (ctor WorkOwnership::Action.resume)) else (if ((((code =? 5) && (a =? 0)) && (b =? 0)) && (c =? 0)) then (ctor Option.some [WorkOwnership::Action] (ctor WorkOwnership::Action.finish)) else (if (((code =? 6) && (b =? 0)) && (c =? 0)) then (ctor Option.some [WorkOwnership::Action] (ctor WorkOwnership::Action.transfer a)) else (ctor Option.none [WorkOwnership::Action]))))))))
+}
+
+definition{
+  name: encodeWork,
+  parameters: [work : WorkOwnership::Work],
+  result: Bytes,
+  body: (prim append (prim append (prim append 0x6f6b20 (hexWord (project work owner)) : Bytes) (prim append (hexWord (project work revision)) (hexWord (project work capacity)) : Bytes) : Bytes) (prim append (prim append (hexWord (project work spent)) (hexWord (project work reserved)) : Bytes) (prim append (hexWord (project work checkpoint)) (prim append (hexWord (project work remaining)) (hexWord (phaseNumber (project work phase))) : Bytes) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: encodeResult,
+  parameters: [result : (Result WorkOwnership::Work WorkOwnership::WorkError)],
+  result: Bytes,
+  body: (match result
+    | Result.ok work => (encodeWork work)
+    | Result.error error => (match error
+      | WorkOwnership::WorkError.invalidState => 0x696e76616c69645374617465
+      | WorkOwnership::WorkError.wrongOwner => 0x77726f6e674f776e6572
+      | WorkOwnership::WorkError.staleRevision => 0x7374616c655265766973696f6e
+      | WorkOwnership::WorkError.invalidPhase => 0x696e76616c69645068617365
+      | WorkOwnership::WorkError.invalidAmount => 0x696e76616c6964416d6f756e74
+      | WorkOwnership::WorkError.budgetExceeded => 0x6275646765744578636565646564
+      | WorkOwnership::WorkError.reservationMissing => 0x7265736572766174696f6e4d697373696e67
+      | WorkOwnership::WorkError.reservationExceeded => 0x7265736572766174696f6e4578636565646564
+      | WorkOwnership::WorkError.obligationExceeded => 0x6f626c69676174696f6e4578636565646564
+      | WorkOwnership::WorkError.checkpointNotAdvanced => 0x636865636b706f696e744e6f74416476616e636564
+      | WorkOwnership::WorkError.unfinishedWork => 0x756e66696e6973686564576f726b
+      | WorkOwnership::WorkError.invalidOwner => 0x696e76616c69644f776e6572))
+}
+
+definition{
+  name: dispatchWorkWords,
+  parameters: [words : (List Nat)],
+  result: Bytes,
+  body: (if (((prim length words : Nat) =? 4) && ((word words 0) =? 0)) then (encodeResult (WorkOwnership::initialize (word words 1) (word words 2) (word words 3))) else (if (((prim length words : Nat) =? 15) && ((word words 0) =? 1)) then (match (readPhase (word words 8))
+    | Option.none => 0x696e76616c6964576f726b52657175657374
+    | Option.some phase => (match (readAction (word words 11) (word words 12) (word words 13) (word words 14))
+      | Option.none => 0x696e76616c6964576f726b52657175657374
+      | Option.some action => (if ((word words 2) =? 4294967295) then 0x776f726b436f756e746572457868617573746564 else (encodeResult (WorkOwnership::transition (record WorkOwnership::Work {owner := (word words 1), revision := (word words 2), capacity := (word words 3), spent := (word words 4), reserved := (word words 5), checkpoint := (word words 6), remaining := (word words 7), phase := phase}) (word words 9) (word words 10) action))))) else 0x696e76616c6964576f726b52657175657374))
+}
+
+definition{
+  name: dispatchWork,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (if (120 <? (prim length bytes : Nat)) then 0x696e76616c6964576f726b52657175657374 else (let decoded : CompositionProtocol::DecodedWords := (CompositionProtocol::decodeWords bytes 0 15 (nil Nat)); (if (project decoded valid) then (dispatchWorkWords (project decoded value)) else 0x696e76616c6964576f726b52657175657374))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "Work requests use lowercase hex of little-endian uint32 words after the ASCII work-space header. Initialization is [0,owner,capacity,remaining]. Transition is [1,owner,revision,capacity,spent,reserved,checkpoint,remaining,phase,callerOwner,expectedRevision,action,a,b,c]. Phase codes are ready=0,running=1,paused=2,complete=3. Action codes are reserve=0,start=1,progress=2,pause=3,resume=4,finish=5,transfer=6. Unused action arguments must be zero. Success is ASCII ok-space plus eight encoded state words. Other responses are exact typed errors. Malformed, noncanonical or oversized requests fail; revision 4294967295 refuses further transitions before uint32 overflow. This protocol invokes the pure WorkOwnership model; it does not authenticate owners, persist state or execute effects."
+}
+
+inductive{
+  name: WireError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidWorkRequest, fields: []},
+    {name: workCounterExhausted, fields: []},
+    {name: workRuntimeFailed, fields: []}
+  ]
+}
+
+theorem{
+  name: wireRejectsWrongOwner,
+  parameters: [],
+  statement: ((dispatchWork 0x303130303030303030373030303030303033303030303030313430303030303030343030303030303038303030303030303230303030303030353030303030303031303030303030303930303030303030333030303030303033303030303030303030303030303030303030303030303030303030303030) = 0x77726f6e674f776e6572),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+
+theorem{
+  name: wireProgressKeepsAccounting,
+  parameters: [],
+  statement: ((dispatchWork 0x303130303030303030373030303030303033303030303030313430303030303030343030303030303038303030303030303230303030303030353030303030303031303030303030303730303030303030333030303030303032303030303030303330303030303030323030303030303039303030303030) = 0x6f6b2030373030303030303034303030303030313430303030303030373030303030303035303030303030303930303030303030333030303030303031303030303030),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+
+theorem{
+  name: wireRefusesCounterOverflow,
+  parameters: [],
+  statement: ((dispatchWork 0x303130303030303030373030303030306666666666666666313430303030303030343030303030303038303030303030303230303030303030353030303030303031303030303030303730303030303066666666666666663033303030303030303030303030303030303030303030303030303030303030) = 0x776f726b436f756e746572457868617573746564),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

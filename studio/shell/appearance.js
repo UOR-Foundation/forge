@@ -191,3 +191,34 @@ new MutationObserver(() => {
   if (!rtheme || rtheme === (s.palette === "light" ? "light" : "dark")) return;
   applyTheme({ ...s, palette: rtheme, immersive: rtheme === "light" ? false : s.immersive });
 }).observe(root, { attributes: true, attributeFilter: ["class"] });
+
+// Full screen: a second round button, to the right of the sun. It is drawn only where the browser lets a page
+// fill the screen (desktop browsers and Android; Safari on iPhone does not), and its icon and label follow the
+// state, however full screen was entered or left (the button, Escape, or the browser's own control).
+const FULL_ON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>';
+const FULL_OFF = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"></path></svg>';
+const fullElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+if (document.fullscreenEnabled || document.webkitFullscreenEnabled) {
+  const full = document.createElement("button");
+  full.type = "button"; full.id = "fullscreen"; full.className = "appearance fullscreen";
+  const show = () => {
+    const on = !!fullElement();
+    full.innerHTML = on ? FULL_OFF : FULL_ON;
+    full.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+    full.title = on ? "Exit full screen" : "Full screen";
+    full.setAttribute("aria-pressed", String(on));
+  };
+  full.onclick = async (e) => {
+    e.stopPropagation();
+    try {
+      if (fullElement()) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else await (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: "hide" });
+    } catch { /* refused by the browser (for example inside a frame); the button keeps its state */ }
+    show();
+  };
+  document.addEventListener("fullscreenchange", show);
+  document.addEventListener("webkitfullscreenchange", show);
+  show();
+  $("appearance").after(full);
+  root.classList.add("has-fullscreen");
+}

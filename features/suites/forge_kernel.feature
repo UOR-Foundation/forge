@@ -70,3 +70,63 @@ Feature: forge_kernel
     Given the model in app/src/ForgeKernel.lex.tex
     When the Lean kernel checks rewordKeepsPublishedHolds during prismpm verify
     Then no request meets breaksRewordKeepsPublished
+
+  @FK-12 @build
+  Scenario: The kernel never answers within when a journey's measure is over its budget
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks budgetOverWithinHolds during prismpm verify
+    Then no request meets breaksBudgetOverWithin
+
+  @FK-13 @build
+  Scenario: The kernel never answers over when a journey's measure is within its budget
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks budgetWithinOverHolds during prismpm verify
+    Then no request meets breaksBudgetWithinOver
+
+  @FK-14 @build
+  Scenario: The mobile INP budget is never above 500 ms
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks inpBudgetBoundHolds during prismpm verify
+    Then no request meets breaksInpBudgetBound
+
+  @FK-15 @build
+  Scenario: No route's JS budget is below the first load's
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks routeBelowFirstLoadHolds during prismpm verify
+    Then no request meets breaksRouteBelowFirstLoad
+
+  @FK-16 @build
+  Scenario: The kernel never answers split when the width is under 768 px
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks narrowSplitHolds during prismpm verify
+    Then no request meets breaksNarrowSplit
+
+  @FK-17 @build
+  Scenario: The kernel never answers tabs when the width is 768 px or more
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks wideTabsHolds during prismpm verify
+    Then no request meets breaksWideTabs
+
+  @FK-18 @build
+  Scenario: The kernel never allows motion when reduced motion is asked
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks reducedMotionHolds during prismpm verify
+    Then no request meets breaksReducedMotion
+
+  @FK-19 @build
+  Scenario: The kernel never allows motion longer than 200 ms
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks longMotionHolds during prismpm verify
+    Then no request meets breaksLongMotion
+
+  @FK-20 @build
+  Scenario: The kernel never answers ok for a tap target under 44 px
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks smallTargetHolds during prismpm verify
+    Then no request meets breaksSmallTarget
+
+  @FK-21 @build
+  Scenario: The kernel never counts as this week what is older than 7 days
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks oldRecentHolds during prismpm verify
+    Then no request meets breaksOldRecent
