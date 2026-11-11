@@ -6,6 +6,9 @@ const source = fs.readFileSync(new URL("./fixtures/live/verdant.lex.tex", import
 const insert = text => source.replace("\\end{semanticmodule}", text + "\n\\end{semanticmodule}");
 const refused = text => assert.throws(() => readLexLean(text), e => e.code === "invalidCanonicalModule" && e.message === "The canonical decision module is invalid or unsupported");
 test("the supported complete and proof-free modules reconstruct all declarations", () => {
+  const header = readLexLeanPartial("\\begin{lexlean}{VerdantResonance}\n");
+  assert.equal(header.complete, false); assert.equal(header.spec.title, "Verdant Resonance");
+  assert.deepEqual(header.spec.rules, []); assert.equal(header.spec.otherwise, undefined);
   assert.equal(canonicalSource(readLexLean(source)).source, source);
   const bare = source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
   assert.equal(canonicalSource(readLexLean(bare)).source, source);

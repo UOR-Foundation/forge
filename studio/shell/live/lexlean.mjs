@@ -289,7 +289,7 @@ function readDecisionModule(text) {
 /**
  * The whole parts of a module still being written (a model streaming it). Never throws: complete
  * declarations are kept, the one being written is ignored. Returns { spec, stage, complete } where
- * stage is "empty", "fields", "rules" or "complete"; spec is a prism/spec/1 value or null.
+ * stage is "empty", "header", "fields", "rules" or "complete"; spec is a prism/spec/1 value or null.
  */
 export function readLexLeanPartial(text) {
   if (typeof text !== "string" || text.length > 1024 * 1024 || new TextEncoder().encode(text).length > 1024 * 1024) {
@@ -308,23 +308,26 @@ export function readLexLeanPartial(text) {
     re.lastIndex = i + 1;
   }
   const head = /\\begin\{lexlean\}\{([A-Za-z_]\w*)\}/.exec(text);
-  if (!head || !ends.some((d) => d.kind === "structure")) return { spec: null, stage: "empty", complete: false };
+  if (!head) return { spec: null, stage: "empty", complete: false };
+  const title = head[1].replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+  const header = { spec: { schema: "prism/spec/1", name: kebab(head[1]), title, purpose: title, fields: [], outcomes: [], rules: [], properties: [], examples: [] }, stage: "header", complete: false };
+  if (!ends.some((d) => d.kind === "structure")) return header;
   const body = text.slice(0, ends[ends.length - 1].end);
   const names = new Set(ends.map((d) => d.name));
   // What is missing is supplied as the least that reads: bounds from the fields, an empty judge.
   let extra = "";
-  if (!names.has("inBounds")) return { spec: null, stage: "empty", complete: false };
+  if (!names.has("inBounds")) return header;
   const answers = [...text.matchAll(/definition\{name: (answer[A-Z]\w*), parameters: \[\], result: Nat, body: (\d+)\}/g)];
   if (!names.has("judge")) {
-    if (!answers.length) return { spec: null, stage: "empty", complete: false };
+    if (!answers.length) return header;
     extra = `\ndefinition{\n  name: judge,\n  parameters: [request : Request],\n  result: Nat,\n  body: (${answers[answers.length - 1][1]})\n}\n`;
   }
   try {
-    const spec = readLexLean(body + extra + "\n\\end{semanticmodule}\n\\end{lexlean}\n");
+    const spec = readDecisionModule(body + extra + "\n\\end{semanticmodule}\n\\end{lexlean}\n");
     if (!names.has("judge")) { spec.rules = []; spec.otherwise = undefined; }
     return { spec, stage: names.has("judge") ? "rules" : "fields", complete: false };
   } catch (e) {
-    return { spec: null, stage: "empty", complete: false, error: e.message };
+    return { ...header, code: "invalidCanonicalModule", error: "The canonical decision module is invalid or unsupported" };
   }
 }
 

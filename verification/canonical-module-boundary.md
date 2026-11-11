@@ -46,3 +46,20 @@ Browser replay, full immutable-SDK acceptance and exact-head Studio acceptance
 remain required. The parent event-capable signed guest is still being built.
 No complete conversion, large-model SDK proof support, factory adoption or
 production release acceptance is claimed.
+
+The first actual Verdant browser replay stored its 46,960-byte canonical module
+byte for byte and reported no page errors, but failed existing quality budgets:
+113 ms to first pixel (100 ms maximum) and 21.9 ms maximum patch work (16 ms).
+These failures are retained. The reader now projects a header-only draft before
+fields arrive and reserves full canonical reconstruction for complete admission.
+No decision or proof is invented for that early title. New header behavior was
+modeled and its failing assertion recorded before implementation; acceptance
+of the resulting startup behavior is still in progress.
+
+The source-transaction browser fixture initially failed because its extracted
+host adapter lacked the newly imported reader. It now serves/imports the real
+reader and its renderer dependencies, retaining the existing transaction oracle.
+Generation cancellation, stale-source isolation, and proof/reword races before
+and after commit pass, as do the independent rules-source browser controls.
+Supplementary verification of c1424e5's 13 model modules produced attestation
+0d2d7348a9023d5e216c9a8d4b9909f25005d091b3b781eba509acb4ab0416c1.
