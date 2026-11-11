@@ -5,7 +5,7 @@
 // panel, the service worker's sandboxed route, the frame, the table worker, click to edit, the checker,
 // the kernel.
 //
-//   node tools/live_e2e.mjs <served Forge base url> <spec.json> <out dir>
+//   node tools/live_e2e.mjs <served Forge base url> <spec.json | module.lex.tex> <out dir>
 //
 // Needs a built shell served at the base URL (the lane's output, or the deployed site with this branch's
 // shell sources over it) and Playwright (the root package's devDependency; PLAYWRIGHT_MODULE names another
@@ -18,7 +18,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 const [BASE, SPEC, OUT] = process.argv.slice(2);
-const spec = JSON.parse(fs.readFileSync(SPEC, "utf8"));
+// A .lex.tex spec is a LexLean module: the turn carries it in <prism-lexlean>, theorems left to the
+// studio, and the host must read it as it streams and store its canonical source after the turn.
+const lex = SPEC.endsWith(".lex.tex");
+const lexlean = await import(new URL("../shell/live/lexlean.mjs", import.meta.url));
+const spec = lex ? lexlean.readLexLean(fs.readFileSync(SPEC, "utf8")) : JSON.parse(fs.readFileSync(SPEC, "utf8"));
 fs.mkdirSync(OUT, { recursive: true });
 const report = {};
 const log = (k, v) => { report[k] = v; console.log(k.padEnd(28), typeof v === "string" ? v : JSON.stringify(v)); };
@@ -37,12 +41,17 @@ await page.reload();
 await page.waitForFunction(() => !!navigator.serviceWorker.controller && !!window.__live && !!window.electron, null, { timeout: 30000 });
 log("worker controls page", "yes");
 
-const { appId, chatId } = await page.evaluate(async () => { const r = await window.electron.ipcRenderer.invoke("create-app", { name: "rsvp-seat", initialChatMode: "build" }); return { appId: r.app.id, chatId: r.chatId }; });
+const { appId, chatId } = await page.evaluate(async (name) => { const r = await window.electron.ipcRenderer.invoke("create-app", { name, initialChatMode: "build" }); return { appId: r.app.id, chatId: r.chatId }; }, lex ? spec.name : "rsvp-seat");
 log("app created", { appId, chatId });
 // The renderer may open the chat before it has picked the new app up ("Select an app to see the
-// preview"); the preview panel is what the test needs, so wait for it, reopening the chat once if not.
+// preview"); the preview panel is what the test needs, so wait for it. A loaded chat URL does not select
+// its app in the current renderer, so the second attempt opens the chat the way a user does: from the
+// app's page, by "Open in Chat".
 for (let attempt = 0; attempt < 2; attempt++) {
-  await page.goto(BASE + "chat?id=" + chatId);
+  if (attempt) {
+    await page.goto(BASE + "app-details?appId=" + appId);
+    await page.locator("text=Open in Chat >> visible=true").first().click();
+  } else await page.goto(BASE + "chat?id=" + chatId);
   await page.waitForFunction(() => !!window.__live, null, { timeout: 30000 });
   const ready = await page.waitForSelector('[data-testid="preview-iframe-element"]', { timeout: 20000 }).then(() => true, () => false);
   if (ready) break;
@@ -61,15 +70,20 @@ await page.evaluate(() => { window.__paints = []; window.__actions = []; addEven
 // the model's answer, streamed at about 60 tokens a second (about 240 characters a second)
 const ORDER = ["name", "title", "purpose", "view", "fields", "outcomes", "meanings", "rules", "otherwise", "otherwiseWhy", "properties", "examples", "limits"];
 const ordered = Object.fromEntries(ORDER.filter((k) => spec[k] !== undefined).map((k) => [k, spec[k]]));
-const answer = "Here are the rules for your RSVP app.\n<dyad-spec>" + JSON.stringify(ordered) + "</dyad-spec>\nThe screen is drawn from them.";
-const stream = await page.evaluate(async ({ appId, answer }) => {
+const answer = lex
+  ? "Here is the module.\n<prism-lexlean>\n" + lexlean.toLexLean(spec).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "") + "</prism-lexlean>\nThe screen is drawn from it."
+  : "Here are the rules for your RSVP app.\n<dyad-spec>" + JSON.stringify(ordered) + "</dyad-spec>\nThe screen is drawn from them.";
+const stream = await page.evaluate(async ({ appId, answer, lex }) => {
   const live = await import(new URL("live/project.mjs", location.href.replace(/chat.*$/, "")).href);
+  const lexlean = await import(new URL("live/lexlean.mjs", location.href.replace(/chat.*$/, "")).href);
   const marks = { firstNodePush: null, firstNodeRoot: null, pushes: 0 };
   let shown = false, last = null;
   for (let i = 4; i <= answer.length + 4; i += 4) {
     const full = answer.slice(0, i);
-    if (full.includes("<dyad-spec>")) {
-      const raw = live.partialSpec(full);
+    if (full.includes(lex ? "<prism-lexlean>" : "<dyad-spec>")) {
+      // as the host does: a LexLean turn opens the frame on its tag
+      if (lex && !shown) { shown = true; window.__live.showLive(appId); }
+      const raw = lex ? (lexlean.partialFromTurn(full) || {}).spec : live.partialSpec(full);
       if (raw) {
         if (!shown) { shown = true; window.__live.showLive(appId); }
         const p = live.project(raw);
@@ -81,7 +95,7 @@ const stream = await page.evaluate(async ({ appId, answer }) => {
   }
   marks.end = performance.now();
   return marks;
-}, { appId, answer });
+}, { appId, answer, lex });
 await page.waitForTimeout(800);
 const paints = await page.evaluate(() => window.__paints);
 const firstPaint = paints.find((p) => p.changed > 0);
@@ -91,6 +105,8 @@ const ms = paints.filter((p) => p.changed > 0).map((p) => p.ms).sort((a, b) => a
 const work = paints.filter((p) => p.changed > 0).map((p) => p.work).sort((a, b) => a - b);
 log("patch to pixel (stream)", { patches: ms.length, median: ms[ms.length >> 1], max: ms[ms.length - 1] });
 log("patch work (stream)", { median: work[work.length >> 1], max: work[work.length - 1] });
+const heaviest = paints.filter((p) => p.changed > 0).sort((a, b) => b.work - a.work)[0];
+if (heaviest) log("heaviest patch", { work: heaviest.work, changed: heaviest.changed, sizes: paints.filter((p) => p.changed > 0).map((p) => p.changed + ":" + p.work) });
 const frameGap = await page.evaluate(async () => { const t = []; await new Promise((r) => { let n = 0; const f = (ts) => { t.push(ts); if (++n < 40) requestAnimationFrame(f); else r(); }; requestAnimationFrame(f); }); const d = t.slice(1).map((x, i) => x - t[i]).sort((a, b) => a - b); return Math.round(d[d.length >> 1] * 10) / 10; });
 log("frame interval here", frameGap + " ms");
 
@@ -105,6 +121,11 @@ const check = await page.evaluate(async ({ appId, answer }) => {
 await page.waitForTimeout(600);
 log("check result on screen", `${check.ms} ms to checked rules and phase ${check.phase}${check.issues && check.issues.length ? " (" + check.issues.join("; ") + ")" : ""}`);
 await page.screenshot({ path: path.join(OUT, "1-streamed-and-checked.png") });
+if (lex) {
+  const want = lexlean.canonicalSource(spec);
+  const stored = await page.evaluate(({ appId, file }) => window.electron.ipcRenderer.invoke("read-app-file", { appId, filePath: file }).catch((e) => "unread: " + e.message), { appId, file: "prism/" + want.name + ".lex.tex" });
+  log("canonical source stored", stored === want.source ? `prism/${want.name}.lex.tex, ${want.source.length} bytes, byte for byte` : "NO: " + String(stored).slice(0, 120));
+}
 
 // the live frame inside Dyad's preview panel
 const frame = page.frames().find((f) => f.url().includes("/p/blake3:"));
@@ -113,7 +134,7 @@ const tables = await page.evaluate(() => window.__tables || []);
 log("table", tables.length ? tables[tables.length - 1] : "none");
 
 // click to edit: rule 3's answer becomes none, through the frame, the host and the checker
-if (frame) try {
+if (frame && !lex) try {
   const before = await page.evaluate(() => window.__paints.length);
   const badge = frame.locator('[data-key="rule:2"] [title="Click to edit"]').first();
   await badge.click();
@@ -175,12 +196,17 @@ if (!(ms[ms.length >> 1] <= frameMs + 2)) bad.push(`streamed patches paint at a 
 // An edit is on screen within two frame intervals of reaching the host: the host's check, the frame's
 // patch, and at most one wait for the screen's next frame.
 const late = (report["action to pixel (edits)"] || []).filter((x) => !(x <= 2 * frameMs));
-if (late.length || !(report["action to pixel (edits)"] || []).length) bad.push(`edits on screen in ${(report["action to pixel (edits)"] || []).join(", ") || "never"} ms; budget two frames (${(2 * frameMs).toFixed(1)} ms)`);
+if (!lex && (late.length || !(report["action to pixel (edits)"] || []).length)) bad.push(`edits on screen in ${(report["action to pixel (edits)"] || []).join(", ") || "never"} ms; budget two frames (${(2 * frameMs).toFixed(1)} ms)`);
 if (liveLoads.length !== 1) bad.push(`the live frame loaded ${liveLoads.length} times; budget: once, no reloads`);
 if (!(check.ms < 3000)) bad.push(`check result on screen in ${check.ms} ms, budget 3000`);
-if (report["edit saved to spec"] !== "none") bad.push("the click edit was not saved to the spec");
-if (!String(report["refused edit"] || "").includes("not an answer")) bad.push("the bad edit was not refused with the checker's words");
-if (!String(report["undo"] || "").includes("You're invited")) bad.push("undo did not restore the heading");
+if (lex) {
+  if (!String(report["canonical source stored"]).includes("byte for byte")) bad.push("the turn's module was not stored as its canonical LexLean source");
+  if (check.phase !== "checked") bad.push(`the module's rules ended ${check.phase}, not checked`);
+} else {
+  if (report["edit saved to spec"] !== "none") bad.push("the click edit was not saved to the spec");
+  if (!String(report["refused edit"] || "").includes("not an answer")) bad.push("the bad edit was not refused with the checker's words");
+  if (!String(report["undo"] || "").includes("You're invited")) bad.push("undo did not restore the heading");
+}
 if (errors.length) bad.push(`${errors.length} page error(s)`);
 if (bad.length) { console.log("\nend to end refused:\n" + bad.join("\n")); process.exit(1); }
 console.log("\nthe live preview meets its budgets in the real Forge");

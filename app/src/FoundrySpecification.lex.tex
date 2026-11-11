@@ -692,5 +692,40 @@ definition{
   result: String,
   body: "The browser's existing esbuild-wasm 0.25.5 compiler becomes an exact locked production runtime dependency. Its registry.npmjs.org archive is acquired offline with disabled scripts and a 60-second transport deadline. The shared bounded package adapter independently verifies SHA512 before parsing and applies the editor boundary's archive path, kind, identity and resource checks. Only LICENSE.md, esm/browser.min.js and esbuild.wasm are staged under compiler/, alongside a foundry/compiler-assets/1 receipt. Independent reacquisition and exact inventory/byte comparison reject changed, missing or extra output. All three runtime entrypoints are required by shell admission and compiler requests read the active verified version. The host uses one concurrent initialization promise for both preview and publication; module and WASM URLs are local under the actual application base. Failed imports or initialization clear the failed promise so a later call may retry, and return browserCompilerUnavailable with fixed private text through the host boundary. Actual browser acceptance compiles TypeScript and a bundled module graph without networking under the verified worker, executes the resulting program against an independent expectation, rejects invalid source, and recovers from a failed local import. This establishes imported compiler availability and a finite runtime conformance example, not compiler semantic preservation for all programs, offline package resolution, or full generated-application closure."
 }
+
+inductive{
+  name: InferenceConsentError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidInferenceConsent, fields: []},
+    {name: inferenceConsentDenied, fields: []},
+    {name: inferenceConsentCancelled, fields: []},
+    {name: inferenceConsentTimedOut, fields: []},
+    {name: inferenceOffline, fields: []},
+    {name: inferenceConsentUnavailable, fields: []}
+  ]
+}
+
+definition{
+  name: inferenceConsentBoundary,
+  parameters: [],
+  result: String,
+  body: "Each actual paid inference attempt requires a fresh browser approval for its captured provider, endpoint, model, credential ownership and exact encoded request bytes, including bounded retries of those same bytes. Only OpenRouter and Featherless's declared HTTPS chat completion endpoints are supported. The disclosure is an immutable snapshot with model length 1..256 and JSON object request of at most 2 MiB UTF8 bytes. It displays provider and destination, whether the selected credential is the visitor's configured key or the site's shared key, charge ownership, included prompt/history/project data, retention considerations, and exact request text rendered as text rather than markup. It never includes the credential itself. Fresh, stored or imported consent does not automatically approve another request. A modal opens with focus on Don't send; explicit Send approves, while decline, Escape, caller cancellation, offline state or a waiting deadline of at most five minutes refuse before transmission. Failed modal construction refuses privately. Approval returns a linked abort signal and an active Stop cloud request control; completion removes the control and listeners. Caller or user cancellation after approval aborts the bounded transport, but cannot recall data already transmitted or guarantee remote termination or charge reversal. Transport refuses redirects and omits ambient cookies; bearer authorization goes only to the declared endpoint. Shared cloud generation and local-model warmup fallback use this same boundary. The unused unbounded debug stream is removed. Existing InferenceError transport failures remain distinct from typed consent failures. This qualifies per-request browser authorization for cloud inference, not provider retention policy enforcement, other external effects, cross-origin identity authentication or whole-product conversion."
+}
+
+inductive{
+  name: CanonicalModuleError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: invalidCanonicalModule, fields: []}]
+}
+
+definition{
+  name: canonicalModuleBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser decision-module reader accepts at most one MiB of UTF8 canonical LexLean text with at most 4096 declarations and 256 nested delimiters. It refuses duplicate declaration names, malformed or unsupported request fields, noncanonical bounds, altered arguments, unrepresented definitions and other discarded semantics. Every non-theorem declaration must equal the canonical renderer reconstruction after whitespace normalization; theorem text is not accepted as proof and is regenerated from the read properties. Refusals carry invalidCanonicalModule with a fixed public message. A valid module header can project its title before fields arrive, without inventing a decision. Partial streaming remains an untrusted draft and never establishes proof; only complete input receives canonical admission. This finite adapter profile is not a general LexLean compiler, semantic preservation theorem or complete source-authority conversion."
+}
 \end{semanticmodule}
 \end{lexlean}

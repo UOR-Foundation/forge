@@ -1,3 +1,4 @@
+import { authorizeInference } from "./inference-consent.mjs";
 import { cloudCompletion } from "./inference-effects.mjs";
 // Inference on the page, shared by the landing page (shell.js) and the builder's host (host.js).
 // Adapters only: the rules are in core.wasm, generated from the Lean verified model (the route table,
@@ -327,13 +328,17 @@ async function paidGenerateOnce(body, onDelta, signal, onReasoning) {
   // Featherless speaks plain OpenAI chat completions: the core's request without the three fields only
   // OpenRouter reads (usage.include, reasoning, provider), and the standard usage option in their place.
   if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; bytes = JSON.stringify(j); }
+  const settings = await settingsGet();
+  const configured = settings?.providerSettings?.[provider]?.apiKey?.value;
+  const credentialOwner = configured && String(configured) === key ? "visitor" : "site";
+  const permission = await authorizeInference({ provider, model: paidId(body.model), bytes, credentialOwner, signal });
   let result;
-  try { result = await cloudCompletion({ provider, key, bytes, origin: location.origin, signal, onDelta, onReasoning }); }
+  try { result = await cloudCompletion({ provider, key, bytes: permission.disclosure.bytes, origin: location.origin, signal: permission.signal, onDelta, onReasoning }); }
   catch (error) {
     if (error.code === "inferenceUnauthorized") error.message = V.noKeyLabel;
     if (error.code === "inferencePaymentRequired") error.message = V.noCreditLabel;
     throw error;
-  }
+  } finally { permission.close(); }
   const { last, text, finish, ttftMs } = result;
   const usage = (last && last.usage) || {};
   const rec = { kind: provider, id: last && last.id, model: (last && last.model) || paidId(body.model), provider: last && last.provider, fingerprint: (last && last.system_fingerprint) || "", usage: { prompt: usage.prompt_tokens || 0, completion: usage.completion_tokens || 0 }, cost: String(usage.cost ?? ""), text: text.trim(), rederivable: false, ttftMs, finish };

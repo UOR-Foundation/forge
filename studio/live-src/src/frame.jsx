@@ -19,6 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { tableKernel } from "../../shell/live/table.mjs";
+// tools/fixtures/live/rsvp.json's projection, its first field given seven answers so a select is drawn too
+import WARM from "./warm.json";
 
 const TRUST = { draft: "Draft", drafting: "Draft", checked: "Checked", proving: "Lean is proving", proved: "Proved by Lean", published: "Proved by Lean · published" };
 
@@ -294,6 +296,8 @@ function hello() {
   state = { app: decodeURIComponent(location.hash.slice(1)), root: null, nodes: [], logic: null, logicKappa: null, trust: "", theme: state.theme, values: {}, table: null, diff: null };
   emit();
   parent.postMessage({ type: "live/hello", app: state.app, style: __STYLE__ }, "*");
+  // Every app with rules needs the table worker; starting it now keeps its start out of the first patch.
+  tableWorker();
 }
 addEventListener("message", (e) => {
   if (e.source !== parent) return;
@@ -311,5 +315,16 @@ addEventListener("keydown", (e) => {
   post({ type: e.shiftKey ? "live/redo" : "live/undo" });
 });
 addEventListener("hashchange", hello);
+// The first render of each component is several times slower than the next (code not yet compiled,
+// first hooks): a large first patch, such as a module's whole field list, would pay it inside the patch.
+// One off-document render of a small app with every kind of node pays it at mount instead.
+function warm() {
+  const saved = state, box = document.createElement("div"), root = createRoot(box);
+  state = { ...state, root: "warm", nodes: WARM.nodes, logic: WARM.logic, logicKappa: "warm", values: defaults(WARM.logic, {}) };
+  try { flushSync(() => root.render(<App />)); } catch (e) {}
+  root.unmount();
+  state = saved;
+}
+warm();
 createRoot(document.getElementById("root")).render(<App />);
 hello();
