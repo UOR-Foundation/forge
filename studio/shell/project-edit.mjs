@@ -29,9 +29,10 @@ export function captureProjectSource(db, appId) {
     } catch { refuse("projectEditStorageFailed"); }
   });
 }
-export function commitPreparedProject(db, appId, changedPaths, captured, prepared, { signal, dependencies, message, name, recordVersion = true } = {}) {
+export function commitPreparedProject(db, appId, changedPaths, captured, prepared, { signal, dependencies, message, name, recordVersion = true, rulesUpdate } = {}) {
   return new Promise((resolve, reject) => {
-    let t, app, reference, appRead = false, refRead = false, filesRead = false, failed = false;
+    let t, app, reference, currentRules, appRead = false, refRead = false, rulesRead = !rulesUpdate, filesRead = false, failed = false;
+    const rules = rulesUpdate ? structuredClone(rulesUpdate) : null;
     const original = new Map(captured.files); let seen = 0;
     const clean = () => signal?.removeEventListener("abort", cancelled);
     const cancelled = () => refuse("projectMutationCancelled");
@@ -43,8 +44,9 @@ export function commitPreparedProject(db, appId, changedPaths, captured, prepare
       t.onabort = () => { clean(); reject(failure(signal?.aborted ? "projectMutationCancelled" : "projectEditStorageFailed")); }; t.onerror = () => refuse("projectEditStorageFailed");
       t.oncomplete = () => { clean(); if (failed) reject(failure("projectEditStorageFailed")); else resolve(prepared.oid); };
       const write = () => {
-        if (failed || !appRead || !refRead || !filesRead) return;
+        if (failed || !appRead || !refRead || !rulesRead || !filesRead) return;
         if (!app || app.name !== captured.name || reference !== captured.reference || seen !== original.size || (!dependencyShape(app.extraDeps || []) || JSON.stringify(app.extraDeps || []) !== JSON.stringify(captured.dependencies))) { refuse("projectEditConflict"); return; }
+        if (rules && JSON.stringify(currentRules) !== JSON.stringify(rules.expected)) { refuse("projectEditConflict"); return; }
         try {
           const q = t.objectStore("versions").get(appId);
           q.onsuccess = () => {
@@ -58,13 +60,18 @@ export function commitPreparedProject(db, appId, changedPaths, captured, prepare
               }
               for (const [key, bytes] of prepared.objects) t.objectStore("objects").put(bytes, key);
               t.objectStore("refs").put(prepared.oid, `${appId}:main`);
-              if (changedPaths.includes("prism/spec.json")) t.objectStore("refs").delete(`prism:${appId}`);
+              if (rules) t.objectStore("refs").put(rules.state, `prism:${appId}`);
+              else if (changedPaths.includes("prism/spec.json")) t.objectStore("refs").delete(`prism:${appId}`);
               if (recordVersion) t.objectStore("versions").put([{ oid: prepared.oid, message: message || `Edit ${changedPaths.join(", ")}`, timestamp: Math.floor(Date.parse(at) / 1000), dbTimestamp: null, isFavorite: false, note: null }, ...q.result], appId);
               t.objectStore("apps").put({ ...app, ...(name === undefined ? {} : { name, path: name }), ...(dependencies ? { extraDeps: dependencies } : {}), updatedAt: at }, appId);
             } catch { refuse("projectEditStorageFailed"); }
           };
         } catch { refuse("projectEditStorageFailed"); }
       };
+      if (rules) {
+        const status = t.objectStore("refs").get(`prism:${appId}`);
+        status.onsuccess = () => { currentRules = status.result; rulesRead = true; write(); };
+      }
       const aq = t.objectStore("apps").get(appId), rq = t.objectStore("refs").get(`${appId}:main`);
       aq.onsuccess = () => { app = aq.result; appRead = true; write(); };
       rq.onsuccess = () => { reference = rq.result; refRead = true; write(); };

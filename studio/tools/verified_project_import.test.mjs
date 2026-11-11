@@ -69,3 +69,38 @@ test("deadlines cancellation identity failures and actual host parser bindings a
   const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8"), parser = fs.readFileSync(new URL("./shell_parse.mjs", import.meta.url), "utf8");
   assert.match(host, /await prepareProjectImport\(input,/); assert.match(host, /from "\.\/project-import.mjs"/); assert.match(parser, /"project-import.mjs": "mjs"/);
 });
+
+test("history decoding charges repeated file references before materialization", async () => {
+  const d = doc({ "shared.txt": "x".repeat(8 * 1024 * 1024) });
+  const bytes = new TextEncoder().encode(d.apps[0].files["shared.txt"]), key = kappa(bytes);
+  d.objects[key] = Buffer.from(bytes).toString("base64");
+  let parent = "";
+  for (let n = 0; n < 17; n++) {
+    const body = new TextEncoder().encode(JSON.stringify({ entries: [["shared.txt", key, bytes.length]], name: "Example", parent }));
+    parent = kappa(body); d.objects[parent] = Buffer.from(body).toString("base64");
+  }
+  d.apps[0].main = parent;
+  let fileDerivations = 0;
+  await refuse(prepareProjectImport(d, { ...boundary, derive: value => {
+    if (value.length === bytes.length) fileDerivations++;
+    return kappa(value);
+  } }), "projectImportLimitExceeded");
+  // One supplied object, one current source and fifteen decoded history files.
+  // Snapshot bodies also consume the budget; file sixteen is refused before hashing/decoding.
+  assert.equal(fileDerivations, 17);
+});
+test("imported maximum message IDs become bounded local sequences", async () => {
+  const d = doc();
+  d.apps[0].chats = [{ messages: [
+    { id: Number.MAX_SAFE_INTEGER, role: "user", content: "first" },
+    { id: 0, role: "assistant", content: "second" },
+  ] }];
+  const messages = (await prepareProjectImport(d, boundary)).apps[0].chats[0].messages;
+  assert.deepEqual(messages.map(m => m.id), [1, 2]);
+  assert.deepEqual(messages.map(m => m.content), ["first", "second"]);
+  const userId = Math.max(...messages.map(m => m.id)) + 1, assistantId = userId + 1;
+  assert.ok(Number.isSafeInteger(userId) && Number.isSafeInteger(assistantId));
+  assert.notEqual(userId, assistantId);
+  d.apps[0].chats[0].messages[1].id = Number.MAX_SAFE_INTEGER;
+  await refuse(prepareProjectImport(d, boundary), "invalidProjectImport");
+});

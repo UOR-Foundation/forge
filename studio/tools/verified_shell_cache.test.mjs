@@ -90,3 +90,48 @@ test("actual worker verifies before caching and activation and projector include
   const parser = fs.readFileSync(new URL("./shell_parse.mjs", import.meta.url), "utf8"); assert.match(parser, /"shell-cache.js": "cjs"/);
   for (const workflow of ["studio.yml", "pages.yml"]) { const text = fs.readFileSync(new URL("../../.github/workflows/" + workflow, import.meta.url), "utf8"); assert.ok(text.indexOf("stamp_shell.py") < text.indexOf("run: ./scripts/lane.sh"), `${workflow} stages assets after closure projection`); }
 });
+
+test("controlled renderer navigations preserve active HTML and special route ownership", async () => {
+  const source = fs.readFileSync(new URL("../shell/sw.template.js", import.meta.url), "utf8");
+  let handler, offline = false;
+  const rows = new Map([[base + "index.html", "HTML A"], [base + "assets/index.js", "JS A"], [base + "ui/index.html", "UI A"], [base + "holo.html", "RUNNER A"], [base + "live/frame.html", "FRAME A"]]);
+  const match = async (request, options = {}) => {
+    const url = new URL(typeof request === "string" ? request : request.url, base);
+    if (options.ignoreSearch) url.search = "";
+    return rows.has(url.href) ? new Response(rows.get(url.href), { headers: { "content-type": "text/html", "cache-control": "no-store" } }) : undefined;
+  };
+  const network = [];
+  vm.runInNewContext(source, {
+    URL, Response, Request, importScripts() {},
+    self: { registration: { scope: base }, location: { origin: new URL(base).origin }, addEventListener: (type, fn) => { if (type === "fetch") handler = fn; } },
+    caches: { open: async name => ({ match: name === "previews" ? async () => undefined : match }) },
+    fetch: async request => { network.push(typeof request === "string" ? request : request.url); if (offline) throw Error("offline"); return new Response("NETWORK B"); },
+  });
+  const read = async (path, mode = "navigate", method = "GET") => {
+    let result;
+    handler({ request: { url: new URL(path, base).href, method, mode }, respondWith: promise => { result = promise; } });
+    return result === undefined ? null : await result;
+  };
+  const routes = ["", "?refresh=1", "index.html?refresh=1", "chat", "chat/?id=1", "apps", "app-details?id=1", "templates", "plugins", "plugins/server-1", "library", "library/media", "library/themes", "library/prompts", "settings", "settings/providers/openai", "unknown", "new/version/route", "build", "plugins/server.with.dots"];
+  for (offline of [false, true]) {
+    for (const route of routes) {
+      const response = await read(route);
+      assert.equal(await response.text(), "HTML A", route);
+      assert.equal(response.headers.get("cache-control"), "no-store");
+    }
+    assert.equal(await (await read("assets/index.js", "cors")).text(), "JS A");
+    assert.equal(await (await read("ui/chat")).text(), "UI A");
+    assert.equal(await (await read("holo.html")).text(), "RUNNER A");
+    assert.equal(await (await read("live/frame.html")).text(), "FRAME A");
+    assert.equal((await read("p/project/frame")).status, 404);
+    assert.equal((await read("holo/")).status, 302);
+    for (const route of ["app", "app/", "app/page"]) assert.equal(await read(route), null);
+  }
+  assert.deepEqual(network, []);
+  rows.delete(base + "index.html"); offline = false;
+  assert.equal((await read("chat")).status, 404);
+  for (const route of ["engine", "engine/v1/responses", "v1/unknown", "q/core/new-module", "live/new-frame", "prism/new", "prism-code/new", "kernel/new", "fonts/new", "wallpapers/new", "ui", "p", "holo"]) assert.equal(await (await read(route)).text(), "NETWORK B", route);
+  assert.equal(await (await read("chat", "cors")).text(), "NETWORK B");
+  assert.equal(await read("chat", "navigate", "POST"), null);
+  for (const route of ["../outside", "../outside/chat"]) assert.equal(await read(route), null);
+});
