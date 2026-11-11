@@ -1,0 +1,39 @@
+name: template-model-projection
+on:
+  push:
+    branches: [maintainer/template-model-projection]
+permissions:
+  contents: read
+concurrency:
+  group: template-model-projection-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  generate:
+    if: github.repository == 'UOR-Foundation/foundry' && github.ref == 'refs/heads/maintainer/template-model-projection'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - name: Check out reviewed job inputs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: job-inputs
+      - name: Check out exact upstream generator and model
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: UOR-Foundation/template
+          ref: dfc09e61ac847c29a95183d471111d24dc24000d
+          persist-credentials: false
+          path: upstream
+      - name: Generate and verify model evidence with the locked SDK
+        shell: bash
+        run: bash job-inputs/diagnostics/template-model/generate.sh
+      - name: Retain only generated evidence and its input-bound receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: template-model-projection
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7

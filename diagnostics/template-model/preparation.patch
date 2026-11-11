@@ -1,0 +1,132 @@
+diff --git a/crates/conformance/tests/frame.rs b/crates/conformance/tests/frame.rs
+new file mode 100644
+index 0000000..5fa7d64
+--- /dev/null
++++ b/crates/conformance/tests/frame.rs
+@@ -0,0 +1,24 @@
++//! Executes the production frame regression under Node's isolated VM loader.
++
++use std::path::PathBuf;
++use std::process::Command;
++
++#[test]
++fn frame_fr_01() {
++    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
++        .ancestors()
++        .nth(2)
++        .expect("crates/conformance is two below the root")
++        .to_path_buf();
++    let result = Command::new("node")
++        .args(["--experimental-vm-modules", "--test", "site/worker.test.mjs"])
++        .current_dir(root)
++        .output()
++        .expect("Node executes the production frame regression");
++    assert!(
++        result.status.success(),
++        "FR-01: {}\n{}",
++        String::from_utf8_lossy(&result.stdout),
++        String::from_utf8_lossy(&result.stderr)
++    );
++}
+diff --git a/features/suites/frame.feature b/features/suites/frame.feature
+new file mode 100644
+index 0000000..0f06e30
+--- /dev/null
++++ b/features/suites/frame.feature
+@@ -0,0 +1,16 @@
++Feature: frame
++
++  The frame delegates archive verification and execution to the same worker,
++  retaining the locked prism-code runtime as the verification authority.
++
++  @FR-01 @build
++  Scenario: With a working worker, the page loads and verifies the archive only in that worker before using its identities or guest
++    Given the production page and its module worker with the locked runtime
++    When the page loads an archive by its absolute URL
++    Then the worker loads and verifies the archive before returning its identities
++    And the page never loads, resolves or compiles the archive on the working-worker path
++    And dispatch and acceptance use that same worker-owned verified application
++    And a runtime refusal retains its code and cannot publish verified identities
++    And absent workers retain the existing fully verified online execution path
++    And failed worker initialization retains the existing fully verified online execution path
++    And a crashed initialized worker rejects every waiting call without executing an unverified guest
+diff --git a/model/ids.toml b/model/ids.toml
+index a0d287f..bf2a1bf 100644
+--- a/model/ids.toml
++++ b/model/ids.toml
+@@ -26,3 +26,9 @@ id = "TC-01"
+ level = "build"
+ suite = "contract"
+ statement = "The checker answers conformant exactly when every universal policy file's observed digest equals its locked digest"
++
++[[id]]
++id = "FR-01"
++level = "build"
++suite = "frame"
++statement = "With a working worker, the page loads and verifies the archive only in that worker before using its identities or guest"
+diff --git a/site/worker.test.mjs b/site/worker.test.mjs
+new file mode 100644
+index 0000000..6472901
+--- /dev/null
++++ b/site/worker.test.mjs
+@@ -0,0 +1,60 @@
++import assert from "node:assert/strict";
++import { readFile } from "node:fs/promises";
++import test from "node:test";
++import vm from "node:vm";
++
++// Execute the complete production page, including main(), without extracting
++// or rewriting its functions. Runtime import attempts stand in for expensive
++// verification. The no-worker control proves this harness reaches that path.
++async function startPage(workers) {
++  const events = [];
++  const elements = new Map();
++  const element = (id) => {
++    if (id === "input") return null;
++    if (!elements.has(id)) elements.set(id, {
++      textContent: id === "app-data" ? "{}" : "",
++      addEventListener() {}, setAttribute() {},
++    });
++    return elements.get(id);
++  };
++  class Worker {
++    constructor() { events.push("worker-created"); }
++    postMessage() {}
++    terminate() {}
++  }
++  const context = vm.createContext({
++    TextEncoder, TextDecoder, URL, console,
++    document: { getElementById: element, documentElement: {}, baseURI: "https://example.test/app/" },
++    navigator: { onLine: true }, location: { hash: "", search: "" },
++    customElements: { get: () => true }, addEventListener() {},
++    performance: { getEntriesByName: () => [{}] },
++    requestAnimationFrame: (fn) => queueMicrotask(fn),
++    setTimeout: (fn) => { queueMicrotask(fn); return 1; },
++    ...(workers ? { Worker } : {}),
++  });
++  const source = await readFile(new URL("./app.mjs", import.meta.url), "utf8");
++  const page = new vm.SourceTextModule(source, {
++    context,
++    importModuleDynamically: async (specifier) => {
++      events.push(`main-import:${specifier}`);
++      throw new Error("test runtime load sentinel");
++    },
++  });
++  await page.link(() => { throw new Error("unexpected static import"); });
++  await page.evaluate();
++  // main() is asynchronous and deliberately not exported by the real page.
++  for (let i = 0; i < 10; i++) await new Promise(setImmediate);
++  return events;
++}
++
++test("FR-01 control: no-worker page still attempts the verified runtime", async () => {
++  const events = await startPage(false);
++  assert.ok(events.includes("main-import:./vendor/prism-code/src/browser.mjs"));
++});
++
++test("FR-01: working-worker startup never imports archive verification on the page", async () => {
++  const events = await startPage(true);
++  assert.deepEqual(events.filter((event) => event.startsWith("main-import:") && event.includes("prism-code/")), [],
++    "archive verification was imported on the UI thread before worker startup");
++  assert.ok(events.includes("worker-created"), "the production page must start its worker");
++});
