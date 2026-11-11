@@ -21,12 +21,13 @@ import { mergeConfig, type Plugin } from "vite";
 import base from "./vite.renderer.config.mts";
 import { audit, kitUi, registry, resolveUi } from "./hologram.ui.mjs";
 import { toRadix } from "./hologram.radix.mjs";
-import { screenSource } from "./hologram.screens.mjs";
+import { screenSource, unapplied } from "./hologram.screens.mjs";
 
 const src = path.resolve(__dirname, "src").replace(/\\/g, "/");
 const mark = path.resolve(__dirname, "../../shell/mark.svg");
 const picker = path.resolve(__dirname, "hologram.ModelPicker.tsx");
 const githubIntegration = path.resolve(__dirname, "hologram.GitHubIntegration.tsx");
+const posthogStub = path.resolve(__dirname, "hologram.posthog.ts");
 const importDialog = path.resolve(__dirname, "hologram.ImportAppDialog.tsx");
 const contracts = path.resolve(__dirname, "hologram.contracts.ts").split(path.sep).join("/");
 const theme = fs.readFileSync(path.resolve(__dirname, "hologram.theme.css"), "utf8");
@@ -52,14 +53,18 @@ const hologramUi: Plugin = {
   // components with Base UI's props, are rewritten for the kit's, which are Radix (hologram.radix.mjs).
   transform(code, id) {
     const file = id.replace(/\\/g, "/").split("?")[0];
-    if (!file.startsWith(src) || !/\.tsx$/.test(file)) return null;
+    if (!file.startsWith(src) || !/\.tsx?$/.test(file)) return null;
     const shell = screenSource(file, code);
+    // A .ts module has no JSX to rewrite for Radix: its patches are all it gets.
+    if (file.endsWith(".ts")) return shell === code.replace(/\r\n/g, "\n") ? null : { code: shell, map: null };
     if (file.includes("/components/ui/")) return shell === code ? null : { code: shell, map: null };
     const r = toRadix(shell, path.relative(__dirname, file));
     if (r.problems.length) this.error("not rewritten for Radix:\n" + r.problems.join("\n"));
     return r.code === code ? null : { code: r.code, map: null };
   },
   generateBundle() {
+    const missed = unapplied();
+    if (missed.length) this.error("patches the build never applied (their file was not read):\n" + missed.join("\n"));
     const bad = audit(this.getModuleIds(), (id) => [...(this.getModuleInfo(id)?.importers ?? [])]);
     if (bad.length) this.error("ui components refused:\n" + bad.join("\n"));
   },
@@ -78,6 +83,9 @@ const hologramWords: Plugin = {
     if (/(^|\/)ModelPicker$/.test(id) && from.startsWith(src)) return picker;
     // GitHub connects with a pasted token: Dyad's device flow is served to apps, not to web pages.
     if (/(^|\/)GitHubIntegration$/.test(id) && from.startsWith(src)) return githubIntegration;
+    // Dyad's analytics are Dyad's PostHog project: initialised on every load, they reached its servers
+    // (and handed them the visitor's address) even with telemetry off. This product sends nothing there.
+    if ((id === "posthog-js" || id === "posthog-js/react") && from.startsWith(src)) return posthogStub;
     // Import App takes a Forge export file: a web page has no folder to import from, and apps made on the
     // site Forge was served from before stay in that origin's storage until its moved page exports them.
     if (/(^|\/)ImportAppDialog$/.test(id) && from.startsWith(src)) return importDialog;
@@ -151,11 +159,16 @@ const hologramWords: Plugin = {
 // comes first in the plugin order, not appended after the vendored config's plugins.
 const merged = mergeConfig(base, {
   build: {
+    // dist/.vite/manifest.json: the chunk graph the Performance gate (tools/perf_budget.mjs) reads. It stays
+    // in dist; stamp_shell.py copies only dist/assets.
+    manifest: true,
     rollupOptions: {
       output: {
         entryFileNames: "assets/index.js",
-        chunkFileNames: "assets/[name].js",
-        assetFileNames: "assets/[name][extname]",
+        // The entry keeps its fixed name (the projected page names it); every other chunk is named by its
+        // content, so the worker keeps it for good and a page never mixes two builds' chunks.
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: (info) => (info.names?.[0] === "index.css" ? "assets/index.css" : "assets/[name]-[hash][extname]"),
       },
     },
   },
