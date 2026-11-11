@@ -1,3 +1,5 @@
+import {createDiscovery} from "./application-discovery.mjs";
+import {mountApplicationDiscovery} from "./discovery-ui.mjs";
 import {routeWithGuest} from './routing-codec.mjs';
 import {runBuildWork,buildWorkStore} from './build-work.mjs';
 import {authorizeGitHubPublication, bindPublicationSource} from "./github-publication-permission.mjs";
@@ -941,6 +943,9 @@ handlers.set("forge:event-deliver", input => eventDeliveryCommand("deliver", inp
 handlers.set("forge:event-pending", input => eventDeliveryCommand("pending", input));
 handlers.set("forge:event-acknowledge", input => eventDeliveryCommand("acknowledge", input));
 const PHASES = ["drafting", "checked", "proving", "proved", "published"];
+const discovery=createDiscovery({guest:kernelReady,derive:kappa,create:input=>handlers.get("forge:interaction-create")(input)});
+handlers.set("forge:discover", input=>discovery.discover(input));
+handlers.set("forge:discovery-create", input=>discovery.accept(input));
 async function nextPhase(phase, event) {
   const answer = await (await kernelReady).ask(phase + " " + event);
   if (!PHASES.includes(answer)) throw new Error("the kernel answered " + answer + " to " + phase + " " + event);
@@ -1628,3 +1633,5 @@ mountInteractionApplications({
   run:input=>handlers.get("forge:interaction-run")(input),
   probe:input=>executeInteraction(kernelReady,input),
 });
+
+mountApplicationDiscovery({discover:input=>handlers.get("forge:discover")(input),accept:input=>handlers.get("forge:discovery-create")(input),open:appId=>openInteractionApplication(appId,{run:input=>handlers.get("forge:interaction-run")(input),probe:input=>executeInteraction(kernelReady,input)})});

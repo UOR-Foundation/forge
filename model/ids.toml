@@ -387,3 +387,9 @@ id = "FA-48"
 level = "build"
 suite = "semantic-routing-model"
 statement = "Typed semantic proposals rank explicit concept relations and close dependencies while Prism independently admits ambiguity constraints and effects"
+
+[[id]]
+id = "FA-49"
+level = "build"
+suite = "semantic-application-discovery"
+statement = "Finite language discovery creates only guest-admitted catalog applications after source-bound explicit review"

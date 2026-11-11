@@ -262,6 +262,19 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Independent finite relevance and latency qualification; no permission authority."
+    },
+    {
+      "id": "application-discovery",
+      "version": 1,
+      "owner": "FoundrySpecification.discoveryBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Finite vocabulary and explicit profile review; independent quality and release obligations remain."
     }
   ],
   "commands": [
@@ -1200,6 +1213,26 @@ export const commandRegistryData = {
       "feature": "composition",
       "version": 1,
       "owner": "FoundrySpecification.compositionHostBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
+      "input": "product-boundary",
+      "output": "product-boundary"
+    },
+    {
+      "channel": "forge:discover",
+      "feature": "application-discovery",
+      "version": 1,
+      "owner": "FoundrySpecification.discoveryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
+      "input": "product-boundary",
+      "output": "product-boundary"
+    },
+    {
+      "channel": "forge:discovery-create",
+      "feature": "application-discovery",
+      "version": 1,
+      "owner": "FoundrySpecification.discoveryBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",
