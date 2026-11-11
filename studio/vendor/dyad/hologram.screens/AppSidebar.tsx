@@ -128,10 +128,11 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip={tip(TITLE)}>
+            {/* Collapsed to icons, the header is the mark alone, centred over the icons below it. */}
+            <SidebarMenuButton asChild size="lg" tooltip={tip(TITLE)} className="group-data-[collapsible=icon]:justify-center">
               <Link to="/" onClick={newApp}>
                 <PrismMark className="size-6 shrink-0" />
-                <span className="font-display text-base font-semibold">{TITLE}</span>
+                <span className="font-display text-base font-semibold group-data-[collapsible=icon]:hidden">{TITLE}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
