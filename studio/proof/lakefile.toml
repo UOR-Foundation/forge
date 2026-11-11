@@ -1,0 +1,7 @@
+name = "prism_live_proof"
+version = "0.1.0"
+defaultTargets = ["PrismLive"]
+
+[[lean_lib]]
+name = "PrismLive"
+roots = ["PrismLive.Kernel", "PrismLive.Regions", "PrismLive.VerdantRegions", "PrismLive.Axioms"]
