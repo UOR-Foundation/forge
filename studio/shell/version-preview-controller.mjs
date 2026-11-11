@@ -24,7 +24,7 @@ export function createVersionPreviewController({locks,store,mintOwner,validateEv
    }catch(error){sessions.delete(appId);fail(error);}
   }).catch(error=>{sessions.delete(appId);fail(error);});return s.ready;
  }
- async function release(appId,operationId){const s=sessions.get(appId);if(!s)return {cleanupStarted:false};s.interested=false;await s.ready;
+ async function release(appId,operationId){const s=sessions.get(appId);if(!s)return {cleanupStarted:false};s.interested=false;if(!(await s.ready).acquired)return {cleanupStarted:false};
   return serial(s,async()=>{if(s.interested)return {cleanupStarted:false};if(s.journal?.state.active){try{await transition(s,{kind:3,...(operationId?{operationId}:{})});}catch(error){emit(s,{type:'recovery-required',session:sessionOf(s),error:{message:error.message}});throw error;}}
    emit(s,{type:'closed'});sessions.delete(appId);s.unlock?.();return {cleanupStarted:true};});
  }
@@ -48,5 +48,5 @@ export function createVersionPreviewController({locks,store,mintOwner,validateEv
    }catch(error){s.invocation=null;emit(s,{type:'recovery-required',session:sessionOf(s),error:{message:error.message}},{operationId:event.operationId,outcome:'failed',error:{message:error.message}});throw error;}
   });
  }
- return {acquire,release,dispatch,snapshot(appId){const s=sessions.get(appId);return s?{appId,revision:s.revision,state:s.state,activeInvocationRef:s.invocation,lastSettlement:s.lastSettlement}:snapshots.get(appId)||{appId,revision:0,state:{type:'closed'},activeInvocationRef:null,lastSettlement:null};},dispose(){disposed=true;for(const s of sessions.values())s.unlock?.();sessions.clear();}};
+ return {acquire,release,dispatch,snapshot(appId){const s=sessions.get(appId);return s?{appId,revision:s.revision,state:s.state,activeInvocationRef:s.invocation,lastSettlement:s.lastSettlement}:snapshots.get(appId)||{appId,revision:0,state:{type:'closed'},activeInvocationRef:null,lastSettlement:null};},dispose(){disposed=true;for(const s of sessions.values())void s.ready.then(()=>s.pending).catch(()=>{}).finally(()=>s.unlock?.());sessions.clear();}};
 }

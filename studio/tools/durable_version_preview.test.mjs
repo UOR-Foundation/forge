@@ -37,7 +37,16 @@ test('window lock refuses competing ownership and missing interest cannot acknow
  assert.deepEqual(await a.acquire(1),{acquired:true});assert.deepEqual(await b.acquire(1),{acquired:false});assert.equal(a.snapshot(1).state.type,'browsing');
  await assert.rejects(()=>b.dispatch(1,{type:'SELECT_VERSION',operationId:'select',versionId:'x'}),{code:'previewInterestMissing'});await assert.rejects(()=>a.dispatch(1,{type:'SWITCH_BRANCH',branch:'other',operationId:'branch'}),{code:'previewUnsupportedBranch'});a.dispose();b.dispose();
 });
-test('request encoding retains original ownership and return targets from literal proof corpus',async()=>{
+test('selection return restore and abandoned recovery preserve literal guest source targets',async()=>{
  for(const row of vectors.filter(x=>x.input&&typeof x.expected==='object'))assert.equal(dec.decode(encodePreviewRequest(row.input)),row.request);
+ for(const name of ['select','selectSame','returnOrigin','restorePrepared','recover']){
+  const row=named(name),f=fixture(row),requested=previewAddressIdentity(row.input.command.target);let committed,parent;
+  f.boundary.prepareChild=async(snapshot,origin)=>{parent=origin;return {...snapshot,oid:requested,objects:[]};};
+  const commit=f.boundary.commit;f.boundary.commit=async(captured,prepared,journal,options)=>{committed={prepared,options};return commit(captured,prepared,journal);};
+  const answer=await operateVersionPreview({...f.request,...([2,4].includes(row.input.command.kind)?{versionId:requested}:{})},f.boundary);
+  assert.deepEqual(answer.journal.state,row.expected.state,name);assert.equal(committed.options.writeRequested,row.expected.writeRequested,name);
+  if(row.expected.writeRequested)assert.equal(committed.prepared.oid,previewAddressIdentity(row.expected.target),name);
+  if(name==='restorePrepared')assert.equal(parent,previewAddressIdentity(row.input.state.origin));
+ }
  const f=fixture();f.boundary.derive=async()=>{throw Error('private');};await assert.rejects(()=>operateVersionPreview({...f.request,operationId:'identity'},f.boundary),{code:'previewUnavailable'});
 });
