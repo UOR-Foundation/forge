@@ -1154,8 +1154,11 @@ async function chatTurn(chatId, intent) {
         if (raw) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } pushLive(appId, raw, "draft"); }
       } else if (full.includes("<prism-lexlean>")) {
         // A canonical LexLean module is the source: whatever declarations are whole are projected now.
+        // The frame opens on the tag, not on the first whole declaration (thousands of characters
+        // later), so it has mounted by the time there is something to paint.
+        if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); }
         const part = lexlean.partialFromTurn(full);
-        if (part) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } pushLive(appId, part.spec, "draft"); }
+        if (part) pushLive(appId, part.spec, "draft");
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = full; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
