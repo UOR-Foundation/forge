@@ -31,7 +31,10 @@
     "wireVectors": 26,
     "maximumPayloadBytes": 32768,
     "maximumPayloadOutcome": "malformedComposition",
-    "browserContexts": [],
+    "browserContexts": [
+      "document",
+      "dedicated-worker"
+    ],
     "workWireVectors": 30,
     "rewordPhases": 5,
     "eventWireVectors": 30,
@@ -50,7 +53,8 @@
     "queueWireVectors": 38,
     "previewWireVectors": 30,
     "externalCompositionBoundaryVectors": 2,
-    "experienceVectors": 42
+    "experienceVectors": 42,
+    "mandatoryBrowserJourneys": 41
   },
-  "claimScope": "Verified signed guest, complete embedded replay and finite Node/runtime qualification. Browser qualification and independent reproduction of this combined artifact remain pending; inherited reproduction receipts describe their explicitly identified earlier component. Not whole-product release acceptance."
+  "claimScope": "Verified signed guest, complete embedded and external boundary replay, finite Node/runtime qualification, and all 41 mandatory Chromium journeys in the bounded-executor integration. Independent reproduction of this combined artifact and final exact-SDK/full CI remain pending. Not whole-product release acceptance."
 }
