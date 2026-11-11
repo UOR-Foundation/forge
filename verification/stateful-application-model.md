@@ -48,3 +48,7 @@ These model and protocol controls are not evidence that generated application
 creation, state persistence, rendering, audio permission UI, sensory quality or
 whole-product conversion are complete. Those integrations have separate
 acceptance boundaries.
+
+## Signed execution qualification
+
+Build 43075425831 and artifact 13881743759 compile source `8baef63680ba67b8608a0e750aceba4ef8b5073a` in the locked SDK. GitHub CLI verification accepts the exact source, repository and build workflow and rejects a wrong source and changed archive byte. The installed guest is 28,489 bytes; all 145 embedded cases and the 21 interaction cases execute in both the document and dedicated worker. Archive SHA-256 is `470470068748a71fd28a22ef39f87d90db6fdfac8091a574b7f0a48753b79d0e`. Separate reproduction and final-head CI remain required before this feature is ready.
