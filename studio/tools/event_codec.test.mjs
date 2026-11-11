@@ -40,6 +40,11 @@ test("only the guest determines semantic acceptance and runtime errors stay priv
 test("canonical model contains bounded parser generated dispatch and executable wire proofs",()=>{
   const read=p=>fs.readFileSync(new URL(p,import.meta.url),'utf8');
   const model=read('../../app/src/EventProtocol.lex.tex');
+  const others = fs.readdirSync(new URL('../../app/src/', import.meta.url)).filter(name => name.endsWith('.lex.tex') && name !== 'EventProtocol.lex.tex').map(name => read('../../app/src/' + name)).join('\n');
+  for (const name of ['readEventPayload', 'readEventContract', 'readEventEnvelope', 'encodeEventResult', 'dispatchEventWords', 'dispatchEvent']) {
+    assert.equal((model.match(new RegExp('name: ' + name + ',', 'g')) || []).length, 1, name);
+    assert.ok(!new RegExp('name: ' + name + ',').test(others), 'generated Rust symbol collision: ' + name);
+  }
   for(const token of ['EventAdmission::admitEvent','CompositionProtocol::decodeWords','32768','1024','wire_natural','wire_revoked','wire_staleGeneration','wire_trailing','wire_flag'])assert.ok(model.includes(token),token);
   assert.ok(read('../../app/src/ForgeKernel.lex.tex').includes('EventProtocol::dispatchEvent'));
   assert.ok(read('../../app/src/ForgeKernel.lex.tex').includes('acceptanceVectors := (eventAcceptance)'));

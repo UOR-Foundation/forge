@@ -192,6 +192,7 @@ async function serveHolo(request, path) {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin === self.location.origin) {
+    if (!url.pathname.startsWith(BASE)) return;
     const path = url.pathname.slice(BASE.length);
     if (ENDPOINT.has(path)) { event.respondWith(serveFromPage(event.request, path)); return; }
     if (path.startsWith("holo/")) { event.respondWith(serveHolo(event.request, path)); return; }
@@ -220,6 +221,13 @@ self.addEventListener("fetch", (event) => {
     event.respondWith((async () => {
       const hit = await matchShell(event.request, { ignoreSearch: true });
       if (hit) return hit;
+      // Pages maps unknown renderer routes to its HTML fallback. Keep those navigations
+      // on this closure too; a route allowlist would drift when a newer renderer adds one.
+      // Subapps, engine/API and resource namespaces keep their existing ownership.
+      const separate = /^(?:app|ui|p|holo|v1|engine|assets|scaffold|editor|compiler|live|q|kernel|prism|prism-code|fonts|wallpapers)(?:\/|$)/.test(path);
+      if (event.request.mode === "navigate" && !separate) {
+        return (await matchShell(BASE + "index.html")) || new Response("Document absent from the active shell", { status: 404 });
+      }
       try {
         return await fetch(event.request);
       } catch (error) {

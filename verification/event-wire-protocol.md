@@ -57,3 +57,8 @@ flat Rust symbol namespace: event `encodeResult`/`dispatchWords` collided with
 existing work/composition functions. Event-specific parser/result symbols now
 have unique names. This changes no wire bytes or admission rule and does not
 replace the SDK compiler. New signed compilation remains required.
+
+The Node gate now checks the event parser/result names against every other
+application module. Reintroducing the old encodeResult name fails the source
+control before SDK compilation; restoring the unique name restores all six
+controls. This is an early collision check, not a replacement compiler.
