@@ -8,6 +8,7 @@ export async function checkStagedShell(directory) {
   const walk = async (dir, prefix = "") => {
     for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
       const relative = prefix + entry.name;
+      if (entry.name === "warmup.json") throw Object.assign(new Error("Public credential artifact refused"), {code:"providerCredentialArtifact"});
       if (entry.isSymbolicLink()) throw Error("Staged shell contains a symbolic link");
       if (relative === "app" || excluded.has(relative)) continue;
       if (entry.isDirectory()) await walk(path.join(dir, entry.name), relative + "/");

@@ -29,9 +29,10 @@ export function captureProjectSource(db, appId) {
     } catch { refuse("projectEditStorageFailed"); }
   });
 }
-export function commitPreparedProject(db, appId, changedPaths, captured, prepared, { signal, dependencies, message, name, recordVersion = true, rulesUpdate, eventUpdate, interactionUpdate } = {}) {
+export function commitPreparedProject(db, appId, changedPaths, captured, prepared, { signal, dependencies, message, name, recordVersion = true, rulesUpdate, eventUpdate, interactionUpdate, workUpdate } = {}) {
   return new Promise((resolve, reject) => {
-    let t, app, reference, currentInteraction, interactionRead = !interactionUpdate, currentRules, currentEvents, eventsRead = !eventUpdate, appRead = false, refRead = false, rulesRead = !rulesUpdate, filesRead = false, failed = false;
+    let t, app, reference, currentWork, workRead = !workUpdate, currentInteraction, interactionRead = !interactionUpdate, currentRules, currentEvents, eventsRead = !eventUpdate, appRead = false, refRead = false, rulesRead = !rulesUpdate, filesRead = false, failed = false;
+    const work = workUpdate ? structuredClone(workUpdate) : null;
     const interaction = interactionUpdate ? structuredClone(interactionUpdate) : null;
     const events = eventUpdate ? structuredClone(eventUpdate) : null;
     const rules = rulesUpdate ? structuredClone(rulesUpdate) : null;
@@ -46,8 +47,9 @@ export function commitPreparedProject(db, appId, changedPaths, captured, prepare
       t.onabort = () => { clean(); reject(failure(signal?.aborted ? "projectMutationCancelled" : "projectEditStorageFailed")); }; t.onerror = () => refuse("projectEditStorageFailed");
       t.oncomplete = () => { clean(); if (failed) reject(failure("projectEditStorageFailed")); else resolve(prepared.oid); };
       const write = () => {
-        if (failed || !appRead || !refRead || !rulesRead || !eventsRead || !interactionRead || !filesRead) return;
+        if (failed || !appRead || !refRead || !rulesRead || !eventsRead || !interactionRead || !workRead || !filesRead) return;
         if (!app || app.name !== captured.name || reference !== captured.reference || seen !== original.size || (!dependencyShape(app.extraDeps || []) || JSON.stringify(app.extraDeps || []) !== JSON.stringify(captured.dependencies))) { refuse("projectEditConflict"); return; }
+        if (work && JSON.stringify(currentWork) !== JSON.stringify(work.expected)) { refuse("projectEditConflict"); return; }
         if (rules && JSON.stringify(currentRules) !== JSON.stringify(rules.expected)) { refuse("projectEditConflict"); return; }
         if (interaction && JSON.stringify(currentInteraction) !== JSON.stringify(interaction.expected)) { refuse("projectEditConflict"); return; }
         if (events && JSON.stringify(currentEvents) !== JSON.stringify(events.expected)) { refuse("projectEditConflict"); return; }
@@ -64,6 +66,7 @@ export function commitPreparedProject(db, appId, changedPaths, captured, prepare
               }
               for (const [key, bytes] of prepared.objects) t.objectStore("objects").put(bytes, key);
               t.objectStore("refs").put(prepared.oid, `${appId}:main`);
+              if (work) t.objectStore("refs").put(work.state, `work:${appId}`);
               if (interaction) t.objectStore("refs").put(interaction.state, `interaction:${appId}`);
               if (events) t.objectStore("refs").put(events.state, `events:${appId}`);
               if (rules) t.objectStore("refs").put(rules.state, `prism:${appId}`);
@@ -74,6 +77,10 @@ export function commitPreparedProject(db, appId, changedPaths, captured, prepare
           };
         } catch { refuse("projectEditStorageFailed"); }
       };
+      if (work) {
+        const status = t.objectStore("refs").get(`work:${appId}`);
+        status.onsuccess = () => { currentWork = status.result; workRead = true; write(); };
+      }
       if (interaction) {
         const status = t.objectStore("refs").get(`interaction:${appId}`);
         status.onsuccess = () => { currentInteraction = status.result; interactionRead = true; write(); };

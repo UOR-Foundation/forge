@@ -175,7 +175,7 @@ fn openapi() -> String {
 
 /// The complete staged shell, including renderer and scaffold, in portable path order.
 /// Worker, manifest and closure-bound provenance are excluded to avoid circular hashes.
-/// Deployment credentials and model weights have separate ownership.
+/// Provider credentials cannot enter the public shell; model weights have separate ownership.
 fn manifest(shell: &Path) -> String {
     fn walk(dir: &Path, root: &Path, out: &mut Vec<PathBuf>) {
         let mut entries: Vec<_> = std::fs::read_dir(dir).expect("shell dir").flatten().collect();
@@ -199,7 +199,8 @@ fn manifest(shell: &Path) -> String {
     let mut rows = Vec::new();
     for rel in files {
         let name = rel.to_string_lossy().replace('\\', "/");
-        if name == "manifest.json" || name == "provenance.json" || name == "warmup.json" || name == "sw.js" || name == "sw.template.js" {
+        assert!(name != "warmup.json" && !name.ends_with("/warmup.json"), "providerCredentialArtifact: public credential file refused");
+        if name == "manifest.json" || name == "provenance.json" || name == "sw.js" || name == "sw.template.js" {
             continue;
         }
         let bytes = std::fs::read(shell.join(&rel)).expect("read shell file");

@@ -1,3 +1,4 @@
+import {runBuildWork,buildWorkStore} from './build-work.mjs';
 import {authorizeGitHubPublication, bindPublicationSource} from "./github-publication-permission.mjs";
 import {withPortableBuildPermission, portablePermissionFailure} from "./portable-build-permission.mjs";
 import {commandRegistry, invokeBoundCommand} from "./command-registry.mjs";
@@ -32,7 +33,7 @@ import { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteS
 import { invokeHost, unwrapHost } from "./host-boundary.mjs";
 import { buildSystemPrompt } from "./prompts.js";
 import * as inference from "./inference.js";
-import { viewReady, lookup, routeOf, refusalWord, seal as sealAnswer, sealPaid, paidGenerate, gpuReady, gpuIds, heldFor, rulesModel, rememberSession, withEngine, engine, readWho, MODEL_ID, paidId, site, siteKeyReady, deviceKeyGet } from "./inference.js";
+import { viewReady, lookup, routeOf, refusalWord, seal as sealAnswer, sealPaid, paidGenerate, gpuReady, gpuIds, heldFor, rulesModel, rememberSession, withEngine, engine, readWho, MODEL_ID, paidId, deviceKeyGet } from "./inference.js";
 import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
 import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
@@ -91,7 +92,7 @@ handlers.set("set-user-settings", async (patch) => { assertBrowserSettingsPatch(
 // What the renderer takes as "set up": the site's included key counts as OpenRouter's, the device's
 // GPU counts as the local provider's, so no connect dialog stands between the first prompt and the
 // answer. The values are words, never the key itself.
-handlers.set("get-env-vars", async () => { await siteKeyReady(); const env = {}; if (site.key) env.OPENROUTER_API_KEY = "included by this site"; if (navigator.gpu) env.HOLOGRAM_DEVICE = "webgpu"; return env; });
+handlers.set("get-env-vars", async () => { const env = {}; if (await deviceKeyGet()) env.OPENROUTER_API_KEY = "configured on this device"; if (navigator.gpu) env.HOLOGRAM_DEVICE = "webgpu"; return env; });
 handlers.set("get-system-platform", () => "web");
 handlers.set("get-app-version", () => ({ version: "1.15.0-web" }));
 handlers.set("native-theme:get-state", () => ({ shouldUseDarkColors: matchMedia("(prefers-color-scheme: dark)").matches }));
@@ -1241,7 +1242,7 @@ async function chatTurn(chatId, intent) {
       await onText(hit.text);
       provenance = { receipt: hit.receipt, served: true, fingerprint: hit.fingerprint };
     } else if (warm) {
-      const warmBody = { ...body, model: "openrouter/" + (site.model || V.paidModels[0].id) };
+      const warmBody = { ...body, model: "openrouter/" + V.paidModels[0].id };
       const warmHit = await lookup(warmBody);
       if (warmHit.hit) { await onText(warmHit.text); provenance = { receipt: warmHit.receipt, served: true, fingerprint: warmHit.fingerprint, warm: true }; }
       else {
@@ -1373,7 +1374,8 @@ function dispatch(channel, args) {
 async function buildPortable(appId, captured) {
   await coreReady;
   const source = captured || await verifiedBuildSource(appId);
-  return withPortableBuildPermission({id:"portable-"+crypto.randomUUID(),source:source.reference}, async lease => {
+  const environment=(await (await fetch(new URL("manifest.json",BASE),{cache:"no-store"})).json()).closure;
+  return runBuildWork({appId,source:source.reference,environment},()=>withPortableBuildPermission({id:"portable-"+crypto.randomUUID(),source:source.reference}, async lease => {
   const t0 = performance.now();
   const files = new Map(source.files);
   const pkg = await (await fetch(new URL("scaffold/package.json", BASE))).json();
@@ -1449,7 +1451,7 @@ async function buildPortable(appId, captured) {
     grant:async(id,permission)=>grantPreview(id,permission.disclosure.endpoints,permission,undefined),
     readGrant:id=>get("refs","capabilities:"+id),
     revoke:id=>del("refs","capabilities:"+id),
-  });
+  }), {guest:await kernelReady,derive:kappa,...buildWorkStore(await dbReady,appId,source)});
 }
 // Runs inside the compile frame. The frame is a preview address, so the worker serves it in a CSP
 // sandbox with an opaque origin and the host cannot read its document: the frame reports instead,

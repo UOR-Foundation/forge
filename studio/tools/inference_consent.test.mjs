@@ -55,7 +55,8 @@ test('approved scopes retain exact bytes link cancellation and remove active con
 });
 test('actual paid adapter refuses before transport and binds approval to exact bytes credential owner and abort signal',async()=>{
   const source=fs.readFileSync(new URL('../shell/inference.js',import.meta.url),'utf8');const start=source.indexOf('async function paidGenerateOnce'),end=source.indexOf('// ---- the route:',start);const codeText=source.slice(start,end)+'\npaidGenerateOnce';
-  for(const owner of ['visitor','site'])for(const allow of [false,true]){
+  for(const allow of [false,true]){
+    const owner='visitor';
     let calls=0,closed=0;const signal=new AbortController().signal;
     const context={providerOf:()=> 'openrouter',paidId:()=> 'model',coreReady:async()=>({run:()=>({bytes:request.bytes})}),keyFor:async()=> 'secret key',viewReady:async()=>({}),settingsGet:async()=>owner==='visitor'?{providerSettings:{openrouter:{apiKey:{value:'secret key'}}}}:{},location:{origin:'https://foundry.test'},authorizeInference:async input=>{assert.equal(input.bytes,request.bytes);assert.equal(input.credentialOwner,owner);assert.ok(!Object.hasOwn(input,'key'));if(!allow)throw Object.assign(Error('declined'),{code:'inferenceConsentDenied'});return{disclosure:input,signal,close(){closed++;}};},cloudCompletion:async input=>{calls++;assert.equal(input.bytes,request.bytes);assert.equal(input.signal,signal);return{text:'answer',finish:'stop',last:{},ttftMs:1};}};
     const paid=vm.runInNewContext(codeText,context);

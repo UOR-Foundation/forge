@@ -369,3 +369,15 @@ id = "FA-45"
 level = "build"
 suite = "github-publication-permission"
 statement = "Public GitHub writes require explicit repository and source-bound approval rechecked before each mutation"
+
+[[id]]
+id = "FA-46"
+level = "build"
+suite = "durable-build-work"
+statement = "Portable builds execute under guest-admitted durable ownership and retain source-bound completed artifacts or resumable reservations"
+
+[[id]]
+id = "FA-47"
+level = "build"
+suite = "private-provider-credentials"
+statement = "Cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files"

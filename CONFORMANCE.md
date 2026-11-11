@@ -120,6 +120,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-24` | `build` | Current live editing and reword flows retain source-bound commits and the complete compiled kernel protocols |
 
+## durable-build-work
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-46` | `build` | Portable builds execute under guest-admitted durable ownership and retain source-bound completed artifacts or resumable reservations |
+
 ## durable-event-delivery
 
 | ID | Level | Statement |
@@ -226,6 +232,12 @@ model does not sanction.
 | ID | Level | Statement |
 | --- | --- | --- |
 | `FA-39` | `build` | Networked previews require explicit source-bound permission with persistent revocation controls |
+
+## private-provider-credentials
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-47` | `build` | Cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files |
 
 ## proposal-admission
 
