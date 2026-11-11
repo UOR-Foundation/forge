@@ -44,3 +44,5 @@ final exact-head SDK/Studio acceptance remain pending. Durable prompt/payload st
 integration, actual queue dispatch/cancellation and crash recovery remain a
 separate required implementation; existing renderer acknowledgements are not
 claimed complete by this component. Neither production release hold is removed.
+
+The router SDK failure exposed flattened generated helper symbols. A source audit found the queue protocol also reused `WorkProtocol.encodeResult`; it now uses the unique name `encodeQueueResult`. This changes no wire representation or expected state. The queue signed build must include both unique helper fixes.

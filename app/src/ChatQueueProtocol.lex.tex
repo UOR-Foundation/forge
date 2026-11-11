@@ -24,7 +24,7 @@ definition{
 }
 
 definition{
-  name: encodeResult,
+  name: encodeQueueResult,
   parameters: [result : (Result ChatQueue::QueueState ChatQueue::QueueError)],
   result: Bytes,
   body: (match result
@@ -49,7 +49,7 @@ definition{
   result: Bytes,
   body: (if (((WorkProtocol::word words 0) =? 1) && (((WorkProtocol::word words 6) <=? 32) && ((prim length words : Nat) =? (13 + (WorkProtocol::word words 6))))) then (match (CompositionProtocol::listNats words 6)
     | Option.none => 0x6d616c666f726d6564517565756552657175657374
-    | Option.some items => (encodeResult (ChatQueue::transitionQueue (record ChatQueue::QueueState {revision := (WorkProtocol::word words 1), paused := (WorkProtocol::word words 2), stopPolicy := (WorkProtocol::word words 3), active := (WorkProtocol::word words 4), owner := (WorkProtocol::word words 5), items := (project items value)}) (WorkProtocol::word words ((project items rest) + 0)) (record ChatQueue::QueueCommand {kind := (WorkProtocol::word words ((project items rest) + 1)), item := (WorkProtocol::word words ((project items rest) + 2)), index := (WorkProtocol::word words ((project items rest) + 3)), owner := (WorkProtocol::word words ((project items rest) + 4)), observedStop := (WorkProtocol::word words ((project items rest) + 5))})))) else 0x6d616c666f726d6564517565756552657175657374)
+    | Option.some items => (encodeQueueResult (ChatQueue::transitionQueue (record ChatQueue::QueueState {revision := (WorkProtocol::word words 1), paused := (WorkProtocol::word words 2), stopPolicy := (WorkProtocol::word words 3), active := (WorkProtocol::word words 4), owner := (WorkProtocol::word words 5), items := (project items value)}) (WorkProtocol::word words ((project items rest) + 0)) (record ChatQueue::QueueCommand {kind := (WorkProtocol::word words ((project items rest) + 1)), item := (WorkProtocol::word words ((project items rest) + 2)), index := (WorkProtocol::word words ((project items rest) + 3)), owner := (WorkProtocol::word words ((project items rest) + 4)), observedStop := (WorkProtocol::word words ((project items rest) + 5))})))) else 0x6d616c666f726d6564517565756552657175657374)
 }
 
 definition{
