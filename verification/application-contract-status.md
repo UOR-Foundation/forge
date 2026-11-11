@@ -158,3 +158,31 @@ FA-33 now installs the signed event-capable guest from build 43056835696
 Exact-source provenance and negative controls pass; full feature acceptance
 and new component reproduction remain outstanding. PR #69's import/navigation
 repairs pass 200 combined Node controls, local Rust and the cache browser test.
+
+## Subsequent feature qualification
+
+The current source stack records additional component evidence. Ready means full
+feature acceptance plus an author completeness review; it is not independent
+approval or authorization to release the whole product.
+
+| Feature | Repository evidence | Qualification |
+| --- | --- | --- |
+| FA-28–32 | Verified import closure, shell cache, telemetry isolation, local editor/compiler; PRs #60, #62, #65–67 | Full SDK/Studio passed; maintainer integration #69 retains its release hold |
+| FA-33 | `event-wire-protocol.md`, signed/reproduced 124-vector guest; #68 | SDK 43064345919 / Studio 43064346056 passed |
+| FA-34 | `inference-consent.md`; #70 | SDK 43064733006 / Studio 43064732825 passed |
+| FA-35 | `canonical-module-boundary.md`; #71 | SDK 43064866682 / Studio 43064866477 passed |
+| FA-36 | `canonical-model-edits.md`; #72 | SDK 43064918545 / Studio 43064918640 passed |
+| FA-37 | `canonical-generation-ownership.md`; #74 | SDK 43066948452 / Studio 43066953791 passed |
+| FA-38 | `canonical-build-closure.md`; #75 | SDK 43068308886 / Studio 43068308752 passed |
+| FA-39 | `preview-permissions.md`; #76 | SDK 43069829683 / Studio 43069829502 passed |
+| FA-40 | `durable-event-delivery.md`; #77 | SDK 43071471519 / Studio 43071471663 passed |
+| FA-41 | `stateful-application-model.md` | New finite model/protocol; signed installation and product integration outstanding |
+
+Canonical editor/generation/build routes now protect coherent decision-model
+projections, and preview/network inference permission boundaries have explicit
+controls. Durable delivery retains guest-admitted events. The complete command
+and semantic-owner registry, replaceable qualified R4 routing, operational
+non-decision and multidomain applications, authenticated work ownership,
+remaining effects and production dependency/release closure are still open.
+Production Pages performance and maintainer release holds remain in force.
+The factory prerequisite above remains unchanged; no host substitute was added.

@@ -13,6 +13,8 @@ const files = new Map([
   ["/work-codec.mjs", "../shell/work-codec.mjs"],
   ["/event-vectors.json", "../../verification/event-wire-vectors.json"],
   ["/event-codec.mjs", "../shell/event-codec.mjs"],
+  ["/interaction-codec.mjs", "../shell/interaction-codec.mjs"],
+  ["/interaction-vectors.json", "../../verification/interaction-vectors.json"],
 ].map(([url, file]) => [url, fs.readFileSync(new URL(file, import.meta.url))]));
 const exercise = async () => {
   const { admitWithGuest } = await import("/composition-codec.mjs");
@@ -47,9 +49,19 @@ const exercise = async () => {
       } else if (reply.ok || reply.code !== vector.response) throw Error("event adapter: " + vector.name);
     }
   }
+  const { executeInteraction } = await import("/interaction-codec.mjs");
+  const interactions = (await (await fetch("/interaction-vectors.json")).json()).vectors;
+  for (const vector of interactions) {
+    const result = decoder.decode(await guest.dispatch(new TextEncoder().encode(vector.request)));
+    if (result !== vector.response) throw Error("interaction: " + vector.name + ": " + result);
+    if (vector.input) {
+      const encoded = await executeInteraction(guest,vector.input);
+      if (encoded.ok !== vector.response.startsWith("ok ") || (!encoded.ok && encoded.code !== vector.response)) throw Error("interaction adapter: " + vector.name);
+    }
+  }
   if (await guest.ask("drafting check") !== "checked") throw Error("legacy phase");
   for (const phase of ["drafting", "checked", "proving", "proved", "published"]) if (await guest.ask(phase + " reword") !== phase) throw Error("reword phase");
-  return { vectors: vectors.length, work: work.length, events: events.length, embedded: guest.vectors, digest: guest.digest };
+  return { vectors: vectors.length, work: work.length, events: events.length, interactions: interactions.length, embedded: guest.vectors, digest: guest.digest };
 };
 const workerSource = `importScripts('/kernel.js'); (${exercise.toString()})().then(result => postMessage({result}), error => postMessage({error: String(error)}));`;
 const server = http.createServer((request, response) => {
@@ -78,7 +90,8 @@ try {
   assert.equal(documentResult.vectors, 26);
   assert.equal(documentResult.work, 30);
   assert.equal(documentResult.events, 30);
-  assert.equal(documentResult.embedded, 124);
+  assert.equal(documentResult.interactions, 21);
+  assert.equal(documentResult.embedded, 145);
   console.log(JSON.stringify({ page: documentResult, worker: workerResult }));
 } finally {
   if (browser) await browser.close();

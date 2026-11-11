@@ -339,3 +339,9 @@ id = "FA-40"
 level = "build"
 suite = "durable-event-delivery"
 statement = "Guest-admitted events commit to a source-bound durable queue and remain pending until ordered acknowledgement"
+
+[[id]]
+id = "FA-41"
+level = "build"
+suite = "stateful-application-model"
+statement = "The generated interaction profile admits bounded state transitions and projects consent-sensitive visual audio and motion outputs"

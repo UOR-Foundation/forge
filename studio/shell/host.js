@@ -32,6 +32,7 @@ import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
 import * as lexlean from "./live/lexlean.mjs";
 import { canonicalEditPath, planCanonicalEdit } from "./canonical-edits.mjs";
+import { executeInteraction } from "./interaction-codec.mjs";
 import { copyEventCommand, readEventJournal, updateEventJournal } from "./event-delivery.mjs";
 import { authorizePreview, commitPreviewPermission, previewPermissionFailure, mountPreviewPermissions } from "./preview-permissions.mjs";
 import { copyGenerationInput, assertCanonicalGeneration } from "./canonical-generation.mjs";
@@ -884,6 +885,7 @@ handlers.set("forge:compose", async (input) => {
 });
 handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
 handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input));
+handlers.set("forge:interact", input => executeInteraction(kernelReady, input));
 async function eventDeliveryCommand(operation, raw) {
   const input=copyEventCommand(operation,raw);
   const db=await dbReady;
