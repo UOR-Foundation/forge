@@ -273,3 +273,15 @@ id = "FA-31"
 level = "build"
 suite = "local-editor-closure"
 statement = "The editor loads only from integrity-checked locked package bytes inside the active shell closure"
+
+[[id]]
+id = "FA-32"
+level = "build"
+suite = "local-browser-compiler"
+statement = "The browser compiler loads locked verified local bytes and recovers after failed initialization"
+
+[[id]]
+id = "FA-33"
+level = "build"
+suite = "event-wire-protocol"
+statement = "Typed event admission crosses a bounded byte protocol executed by the generated Prism guest"

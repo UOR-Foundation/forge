@@ -1,3 +1,5 @@
+import { admitEventWithGuest } from "./event-codec.mjs";
+import { loadBrowserCompiler } from "./browser-compiler.mjs";
 import { browserSettings, assertBrowserSettingsPatch } from "./privacy-policy.mjs";
 import { prepareProjectImport } from "./project-import.mjs";
 import { withBuildModules } from "./build-modules.mjs";
@@ -19,7 +21,7 @@ import { validateProviderKey } from "./provider-key-validation.mjs";
 
 import { packBytes, unpackBytes, RepresentationError } from "./exact-representation.mjs";
 import { admitWithGuest } from "./composition-codec.mjs";
-import { readBoundRules, saveBoundRules } from "./rules-source.mjs";
+import { readBoundRules, readBoundRulesSnapshot, saveBoundRules } from "./rules-source.mjs";
 import { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteStoredChat, updateStoredChat } from "./project-lifecycle.mjs";
 import { invokeHost, unwrapHost } from "./host-boundary.mjs";
 import { buildSystemPrompt } from "./prompts.js";
@@ -381,11 +383,7 @@ function publish(appId, patch) {
   emit("distributed-machine:snapshot", { protocolVersion: 1, machineId: "app_run", encodedKey: { appId }, actorInstanceId: "web-app_run-" + appId, revision: m.revision, encodedState: m.state });
   return m;
 }
-let esbuildReady = null;
-async function esbuild() {
-  if (!esbuildReady) esbuildReady = import("https://cdn.jsdelivr.net/npm/esbuild-wasm@0.25.5/esm/browser.min.js").then(async (m) => { await m.initialize({ wasmURL: "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.25.5/esbuild.wasm" }); return m; });
-  return esbuildReady;
-}
+const esbuild = () => loadBrowserCompiler(BASE);
 // The grant a preview is served under. The worker asks the kernel's gate (proved by Lean) before it
 // serves a preview, and the gate refuses anything that has no record, so every preview gets one:
 // it may be served, and it may reach the hosts its build names: esm.sh for packages and the play
@@ -576,11 +574,11 @@ async function patchSpec(appId, ops, { author = "user", key = null, ...options }
     const source = options.source || await captureProjectSource(await dbReady, appId);
     const ed = await editorOf(appId, source);
     if (!ed) return { ok: false, issues: ["This app has no rules yet."] };
-    const before = ed.spec, trust = ((await rulesOf(appId)) || {}).phase || "draft";
+    const before = ed.spec;
     try { if (!drawn) pushLive(appId, applyOps(before, ops), "draft", true); }
     catch (e) { if (!(e instanceof PatchError)) throw e; refuse(appId, key, e.message); return { ok: false, issues: [e.message] }; }
     const result = ed.apply(ops);
-    if (!result.ok) { pushLive(appId, before, trust); refuse(appId, key, result.issues[0]); return result; }
+    if (!result.ok) { await refreshLive(appId); refuse(appId, key, result.issues[0]); return result; }
     try {
       const saved = await saveSpec(appId, result.spec, { ...options, source });
       return { ...result, ...saved };
@@ -870,6 +868,7 @@ handlers.set("forge:compose", async (input) => {
   return admitWithGuest(await kernelReady, input.policy, input.features);
 });
 handlers.set("forge:work", async input => executeWorkWithGuest(await kernelReady, input));
+handlers.set("forge:event", async input => admitEventWithGuest(await kernelReady, input));
 const PHASES = ["drafting", "checked", "proving", "proved", "published"];
 async function nextPhase(phase, event) {
   const answer = await (await kernelReady).ask(phase + " " + event);
@@ -877,6 +876,7 @@ async function nextPhase(phase, event) {
   return answer;
 }
 const rulesOf = async (appId) => readBoundRules(await dbReady, appId, kappa);
+const rulesSnapshotOf = async (appId) => readBoundRulesSnapshot(await dbReady, appId, kappa);
 const saveRules = async (appId, state, expected, signal) => saveBoundRules(await dbReady, appId, state, kappa, expected, signal);
 // After a turn: the spec the model wrote (if any) becomes prism/spec.json; new rules drop the proof
 // (the kernel's edit), are checked (its check), and on a pass the app's rule module is written.
@@ -889,7 +889,7 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
   const tag = prism.parseSpecTag(text);
   if (tag && tag.spec) stage("prism/spec.json", JSON.stringify(tag.spec, null, 2) + "\n");
-  const current = files.get("prism/spec.json"), before = await rulesOf(appId);
+  const current = files.get("prism/spec.json"), snapshot = await rulesSnapshotOf(appId), before = snapshot.state;
   if (!current) return { changed: 0, source, card: tag && tag.error ? `**Rules** · not checked\n\n- ${tag.error}\n\nAsk me to fix the rules.` : null };
   const specKappa = await kappa(enc.encode(current));
   const proofKey = spec => live.kappaOfValue({ name: spec.name, logic: live.logicOf(spec) });
@@ -909,15 +909,14 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
     const page = files.get("src/pages/Index.tsx") || "";
     if (!page.includes("@/lib/prism") && !written.some((p) => p && p.startsWith("src/pages/"))) stage("src/pages/Index.tsx", prism.screenSource());
   }
-  const applied = await applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, ...options, source });
-  assertGenerationActive(options.signal);
   const notes = [...(tag && tag.repaired ? ["Forge repaired the JSON syntax the model wrote. Read the rules before you approve them."] : []), ...(checked.notes || [])];
   const state = { ...(retained ? before : {}), phase, specKappa, logicKappa, spec: checked.spec || null, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: retained ? before.proof : null, updated: now() };
   // A semantic proof survives wording changes; a release still identifies the older bytes.
   if (retained && before.phase === "published" && before.specKappa !== specKappa) state.publicationCurrent = false;
-  const saved = await saveRules(appId, state, undefined, options.signal);
+  // Compare the captured lifecycle and install its successor in the source transaction.
+  // A completed proof wins over this stale edit; no deleted-status interval is exposed.
+  const applied = await applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, ...options, source, rulesUpdate: { expected: snapshot.expected, state } });
   assertGenerationActive(options.signal);
-  if (!saved) return { changed: applied.changed, source: applied.source, card: "The rules changed while being checked. Check the current rules again." };
   return { changed: applied.changed, source: applied.source, card: prism.card(state) };
 }
 // The kernel's answer to a reword. A kernel guest older than the event (KERNEL_REV pins the guest the page
@@ -934,11 +933,18 @@ async function proveRules(appId, logicKey, onWait) {
   const state = await rulesOf(appId);
   if (!state || (state.logicKappa || state.specKappa) !== logicKey || state.phase !== "proving") return null;
   const result = await prism.prove(state.spec, { onWait }).catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
-  const latest = await rulesOf(appId);
-  if (!latest || (latest.logicKappa || latest.specKappa) !== logicKey || latest.phase !== "proving") return null;
   const phase = await nextPhase("proving", result.ok ? "attest" : "fail");
-  // The axiom sets Lean settled on are kept: the model the SDK builds must be the model Lean proved.
-  if (!await saveRules(appId, { ...latest, phase, proof: result.ok ? result.record : null, axioms: result.ok ? result.axioms || {} : null, proofError: result.ok ? null : result.error, updated: now() }, latest)) return null;
+  let attempted;
+  for (;;) {
+    const latest = await rulesOf(appId);
+    if (!latest || (latest.logicKappa || latest.specKappa) !== logicKey || latest.phase !== "proving") return null;
+    const predecessor = JSON.stringify(latest);
+    if (predecessor === attempted) return null;
+    attempted = predecessor;
+    // Reword can commit between this read and CAS. Retry the completed result,
+    // not the prover, only while a new current predecessor has matching semantics.
+    if (await saveRules(appId, { ...latest, phase, proof: result.ok ? result.record : null, axioms: result.ok ? result.axioms || {} : null, proofError: result.ok ? null : result.error, updated: now() }, latest)) break;
+  }
   await put("audit", Date.now() + ":prism:" + appId, { timestamp_millis: Date.now(), principal: "app:" + appId, operation: "prism.rules.prove", resource: logicKey, outcome: result.ok ? "proved" : "refused" });
   await refreshLive(appId);
   return result;

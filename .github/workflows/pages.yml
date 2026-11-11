@@ -285,12 +285,14 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: studio/vendor/dyad/package-lock.json
+      - name: Install the locked browser compiler archive
+        run: npm ci --prefix runtime --ignore-scripts --no-audit --no-fund
       - name: The vendored renderer, built beside the shell as the homepage (no Electron, no src/pro)
         run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --prefer-offline --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py
       - name: The lane, which projects the page from the verified core and builds the wasm the page loads
         run: ./scripts/lane.sh
       - name: Independently verify staged editor bytes against the locked npm archive
-        run: python3 scripts/editor_assets.py --check
+        run: python3 scripts/editor_assets.py --check && python3 scripts/compiler_assets.py --check
       - name: Verify every staged renderer, scaffold and shell byte before acceptance
         run: node tools/check_shell_closure.mjs
       - name: Byte identity corpus and shell hash check

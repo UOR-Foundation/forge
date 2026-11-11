@@ -23,9 +23,12 @@ async function matches(source, state, derive) {
   catch { throw fail("rulesIdentityFailed"); }
 }
 
-export async function readBoundRules(db, appId, derive) {
+export async function readBoundRulesSnapshot(db, appId, derive) {
   const captured = await capture(db, appId);
-  return await matches(captured.source, captured.state, derive) ? captured.state : null;
+  return { state: await matches(captured.source, captured.state, derive) ? captured.state : null, expected: captured.state };
+}
+export async function readBoundRules(db, appId, derive) {
+  return (await readBoundRulesSnapshot(db, appId, derive)).state;
 }
 
 export async function saveBoundRules(db, appId, state, derive, expected, signal) {

@@ -96,6 +96,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-19` | `build` | Typed event admission binds exact feature routes to current composition policy, generation, sequence and bounded payloads |
 
+## event-wire-protocol
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-33` | `build` | Typed event admission crosses a bounded byte protocol executed by the generated Prism guest |
+
 ## exact-representation
 
 | ID | Level | Statement |
@@ -141,6 +147,12 @@ model does not sanction.
 | ID | Level | Statement |
 | --- | --- | --- |
 | `FA-11` | `build` | Cloud inference bounds requests and streamed responses and refuses cancellation, malformed data and provider failures explicitly |
+
+## local-browser-compiler
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-32` | `build` | The browser compiler loads locked verified local bytes and recovers after failed initialization |
 
 ## local-editor-closure
 

@@ -20,11 +20,11 @@ async function revise(spec, before) {
   const source = { files: [["prism/spec.json", JSON.stringify(initial)], ["src/pages/Index.tsx", "import '@/lib/prism'"]] };
   const run = fn("rulesAfterTurn", "// Lean proves", {
     assertGenerationActive, coreReady: Promise.resolve(), core: {}, dbReady: Promise.resolve({}),
-    captureProjectSource: async () => source, prism, live, rulesOf: async () => before,
+    captureProjectSource: async () => source, prism, live, rulesSnapshotOf: async () => ({ state: before, expected: before }),
     enc: new TextEncoder(), kappa: async bytes => live.kappaOfValue([...bytes]),
     nextPhase: async (phase, event) => event === "reword" ? phase : event === "check" ? "checked" : "drafting",
-    applyStoredProjectPatch: async (_, id, patch, options) => { batch = { patch, options }; return { changed: patch.writes.length, source: { ...source, reference: "new" } }; },
-    saveRules: async (_, state) => { saved = state; return true; }, now: () => "now",
+    applyStoredProjectPatch: async (_, id, patch, options) => { batch = { patch, options }; saved = options.rulesUpdate?.state; return { changed: patch.writes.length, source: { ...source, reference: "new" } }; },
+    saveRules: async () => { assert.fail("status must commit with source"); }, now: () => "now",
   });
   const result = await run(1, `<dyad-spec>${JSON.stringify(spec)}</dyad-spec>`);
   return { saved, batch, result, source };
@@ -95,4 +95,49 @@ test("the signed installed guest supports reword alongside composition and work"
   for (const phase of ["drafting", "checked", "proving", "proved", "published"]) assert.equal(await guest.ask(phase + " reword"), phase);
   assert.equal(await guest.ask("compose "), "malformedComposition");
   assert.equal(await guest.ask("work "), "invalidWorkRequest");
+});
+
+test("invalid live edits redraw with source-bound publication trust", async () => {
+  for (const mismatch of [false, true]) {
+    const json = JSON.stringify(initial), state = { ...proved(), phase: "published", publicationCurrent: false, specKappa: mismatch ? "other" : "current" };
+    let trust;
+    const refresh = fn("refreshLive", "// ---- the one write path", {
+      get: async () => json, rulesOf: async () => state, enc: new TextEncoder(),
+      kappa: async () => "current", pushLive: (_, __, value) => { trust = value; },
+    });
+    const editor = createEditor(initial, () => ({ ok: false, issues: ["invalid"] }));
+    const patch = fn("patchSpec", "// What the user points", {
+      structuredClone, liveEditors: new Map([[1, editor]]), liveBusy: new Map(), applyOps,
+      pushLive: (_, __, value) => { trust = value; }, inOrder: (_, job) => job(),
+      assertGenerationActive, dbReady: Promise.resolve(), captureProjectSource: async () => ({}),
+      editorOf: async () => editor, rulesOf: async () => state, refuse() {}, refreshLive: refresh,
+    });
+    assert.equal((await patch(1, [{ op: "set", path: ["title"], value: "Rejected" }])).ok, false);
+    assert.equal(trust, mismatch ? "draft" : "proved");
+  }
+});
+test("proof completion retries a matching reword CAS without rerunning the prover", async () => {
+  const state = { ...proved(), phase: "proving", proof: null }, reword = { ...state, specKappa: "new" };
+  let reads = 0, saves = 0, proofs = 0;
+  const prove = fn("proveRules", '// "approve"', {
+    rulesOf: async () => ++reads <= 2 ? state : reword,
+    prism: { prove: async () => { proofs++; return { ok: true, record: { id: "settled" } }; } },
+    nextPhase: async () => "proved", saveRules: async (_, next, expected) => {
+      saves++; if (saves === 1) return false;
+      assert.equal(expected, reword); assert.equal(next.specKappa, "new"); assert.equal(next.proof.id, "settled"); return true;
+    }, put: async () => {}, refreshLive: async () => {}, now: () => "now",
+  });
+  assert.equal((await prove(1, state.logicKappa))?.ok, true);
+  assert.equal(saves, 2); assert.equal(proofs, 1);
+});
+test("proof completion stops retrying when the competing edit changes semantics", async () => {
+  const state = { ...proved(), phase: "proving" };
+  let reads = 0, saves = 0;
+  const prove = fn("proveRules", '// "approve"', {
+    rulesOf: async () => ++reads <= 2 ? state : { ...state, logicKappa: "different" },
+    prism: { prove: async () => ({ ok: true, record: { id: "old-proof" } }) },
+    nextPhase: async () => "proved", saveRules: async () => { saves++; return false; },
+    put() { assert.fail("changed semantics must not accept old proof"); }, now: () => "now",
+  });
+  assert.equal(await prove(1, state.logicKappa), null); assert.equal(saves, 1);
 });

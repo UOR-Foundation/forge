@@ -18,6 +18,12 @@ VERSION = "0.52.2"
 URL = "https://registry.npmjs.org/monaco-editor/-/monaco-editor-0.52.2.tgz"
 REQUIRED = {"LICENSE", "vs/loader.js", "vs/editor/editor.main.js", "vs/editor/editor.main.css", "vs/base/worker/workerMain.js", "vs/language/json/jsonWorker.js", "vs/language/typescript/tsWorker.js"}
 
+EDITOR = {"name": "monaco-editor", "version": VERSION, "url": URL,
+          "lock": "vendor/dyad/package-lock.json", "destination": "editor",
+          "profile": "foundry/editor-assets/1", "required": REQUIRED,
+          "prefix": "package/min/vs/", "strip": "package/min/",
+          "selected": {"package/LICENSE", "package/ThirdPartyNotices.txt"}}
+
 class EditorAssetError(Exception):
     def __init__(self, code):
         self.code = code
@@ -26,20 +32,20 @@ class EditorAssetError(Exception):
 def fail(code):
     raise EditorAssetError(code)
 
-def locked_package(lock):
+def locked_package(lock, policy=EDITOR):
     try:
-        row = lock["packages"]["node_modules/monaco-editor"]
+        row = lock["packages"]["node_modules/" + policy["name"]]
         integrity = row["integrity"]
-        if row["version"] != VERSION or row["resolved"] != URL or row.get("dev") or not isinstance(integrity, str) or not re.fullmatch(r"sha512-[A-Za-z0-9+/]{86}==", integrity):
+        if row["version"] != policy["version"] or row["resolved"] != policy["url"] or row.get("dev") or not isinstance(integrity, str) or not re.fullmatch(r"sha512-[A-Za-z0-9+/]{86}==", integrity):
             fail("invalidEditorLock")
         if len(base64.b64decode(integrity[7:], validate=True)) != 64:
             fail("invalidEditorLock")
-        return {"name": "monaco-editor", "version": VERSION, "url": URL, "integrity": integrity}
+        return {"name": policy["name"], "version": policy["version"], "url": policy["url"], "integrity": integrity}
     except (KeyError, TypeError, ValueError):
         fail("invalidEditorLock")
 
-def decode_package(compressed, lock):
-    source = locked_package(lock)
+def decode_package(compressed, lock, policy=EDITOR):
+    source = locked_package(lock, policy)
     if len(compressed) > 32 * MIB:
         fail("editorAssetLimitExceeded")
     actual = "sha512-" + base64.b64encode(hashlib.sha512(compressed).digest()).decode("ascii")
@@ -65,7 +71,7 @@ def decode_package(compressed, lock):
                     continue
                 if not member.isfile() or member.issparse() or member.size < 0:
                     fail("invalidEditorArchive")
-                selected = name.startswith("package/min/vs/") or name in ("package/LICENSE", "package/ThirdPartyNotices.txt")
+                selected = (bool(policy["prefix"]) and name.startswith(policy["prefix"])) or name in policy["selected"]
                 if selected or name == "package/package.json":
                     value = archive.extractfile(member).read(member.size + 1)
                     if len(value) != member.size:
@@ -75,39 +81,39 @@ def decode_package(compressed, lock):
                             fail("editorAssetLimitExceeded")
                         package = json.loads(value)
                     else:
-                        target = name.removeprefix("package/min/") if name.startswith("package/min/") else name.removeprefix("package/")
+                        target = name.removeprefix(policy["strip"]) if name.startswith(policy["strip"]) else name.removeprefix("package/")
                         total += len(value)
                         if len(files) >= 4096 or total > 64 * MIB:
                             fail("editorAssetLimitExceeded")
                         files[target] = value
-        if not isinstance(package, dict) or package.get("name") != "monaco-editor" or package.get("version") != VERSION or not REQUIRED.issubset(files) or any(not files[name] for name in REQUIRED):
+        if not isinstance(package, dict) or package.get("name") != policy["name"] or package.get("version") != policy["version"] or not policy["required"].issubset(files) or any(not files[name] for name in policy["required"]):
             fail("invalidEditorArchive")
         rows = [{"path": name, "sha256": hashlib.sha256(body).hexdigest(), "bytes": len(body)} for name, body in sorted(files.items())]
-        return files, {"profile": "foundry/editor-assets/1", "source": source, "files": rows}
+        return files, {"profile": policy["profile"], "source": source, "files": rows}
     except EditorAssetError:
         raise
     except (OSError, EOFError, ValueError, TypeError, tarfile.TarError, zlib.error):
         fail("invalidEditorArchive")
 
-def load_editor_package(root):
+def load_editor_package(root, policy=EDITOR):
     try:
-        lock = json.loads((root / "vendor/dyad/package-lock.json").read_text())
+        lock = json.loads((root / policy["lock"]).read_text())
     except (OSError, ValueError):
         fail("invalidEditorLock")
-    source = locked_package(lock)
+    source = locked_package(lock, policy)
     with tempfile.TemporaryDirectory(prefix="foundry-editor-package-") as temporary:
         try:
             subprocess.run(["npm", "pack", "--offline", "--ignore-scripts", "--json", "--pack-destination", temporary, source["url"]], check=True, timeout=60, capture_output=True)
-            archive = pathlib.Path(temporary) / f"monaco-editor-{VERSION}.tgz"
+            archive = pathlib.Path(temporary) / f"{policy['name']}-{policy['version']}.tgz"
             with archive.open("rb") as stream:
                 compressed = stream.read(32 * MIB + 1)
         except (OSError, subprocess.SubprocessError):
             fail("editorPackageUnavailable")
-        return decode_package(compressed, lock)
+        return decode_package(compressed, lock, policy)
 
-def stage_editor_assets(root):
-    files, receipt = load_editor_package(root)
-    destination = root / "shell/editor"
+def stage_editor_assets(root, policy=EDITOR):
+    files, receipt = load_editor_package(root, policy)
+    destination = root / "shell" / policy["destination"]
     try:
         with tempfile.TemporaryDirectory(prefix=".editor-stage-", dir=destination.parent) as temporary:
             staging = pathlib.Path(temporary)
@@ -123,9 +129,9 @@ def stage_editor_assets(root):
         fail("editorAssetStorageFailed")
     return receipt
 
-def check_editor_assets(root):
-    files, receipt = load_editor_package(root)
-    destination = root / "shell/editor"
+def check_editor_assets(root, policy=EDITOR):
+    files, receipt = load_editor_package(root, policy)
+    destination = root / "shell" / policy["destination"]
     try:
         actual_receipt = json.loads((destination / "package.json").read_text())
         if actual_receipt != receipt:
