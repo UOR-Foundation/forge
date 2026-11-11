@@ -69,8 +69,7 @@ separate from relationship definitions and proof/wire fixtures. Its thresholds
 are exact judgments, zero false admissions/dependency mismatches, normal-request
 p95 at most 100 ms and maximum corpus request at most 1000 ms. They are fixed
 before measurement. This is independent literal-oracle evaluation, not independent
-human labeling. Measurements, signed installation, browser replay, independent
-reproduction and final exact-head SDK/Studio acceptance remain outstanding.
+human labeling. Signed installation, finite measurements and browser replay are recorded below; independent reproduction and final SDK/Studio acceptance remain outstanding.
 
 Natural-language interpretation, product discovery/creation integration, learned
 R4 replacement, general relevance, complete feature semantics and release
@@ -83,11 +82,6 @@ model obligations remain unchanged and pass after this representation change.
 The selected-composition mutation is rejected by its concrete Lean obligation;
 restoring the model restores verification. No SDK implementation is replaced.
 
-The next exact-SDK build (43094326648) reports a failed construction step, but
-its run has not finalized and GitHub's log endpoint repeatedly times out. The
-project build workflow now preserves SDK output as a separate diagnostic
-artifact even on failure. Existing `set -euo pipefail` retains the SDK exit
-status; no acceptance check is skipped or weakened. The previous guest remains
-installed and this feature remains unqualified until the failure is resolved.
+The second exact-SDK build (43094326648, source e3b00f0) reached generated Rust checking and rejected duplicate helper `negate` (E0428). The router helper now uses the unique name `routingNegate` in canonical source. The project workflow preserves SDK diagnostics even on failure, retaining `set -euo pipefail` and the complete acceptance boundary. No generated Rust or SDK implementation was patched.
 
-The second exact-SDK build (43094326648, source e3b00f0) reached generated Rust checking and rejected duplicate helper `negate` (E0428). The router helper is now named `routingNegate` in the canonical source to preserve a unique public generated symbol. No generated Rust or SDK implementation was patched. A fresh signed build remains required.
+Signed build 43099200049 at `0b9dc207ba242b6f97d324cf959b362bfa359340` passed construction. The archive signature verifies against the exact repository, workflow and source; wrong-source and changed-byte controls refuse. All 177 embedded vectors replay, and the independent routing corpus and fixed relevance/latency thresholds pass. Chromium document and dedicated-worker replay also pass the routing, composition, work, event and interaction corpora. See `kernel-artifact-receipt.json` for exact identities and measurements. The independent reproduction build and final full SDK/Studio acceptance remain pending.
