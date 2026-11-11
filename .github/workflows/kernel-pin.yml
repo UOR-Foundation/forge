@@ -1,0 +1,138 @@
+# Pins the Forge kernel the shell runs to the kernel app/ now builds, so nobody pins it by hand.
+# Project content, not universal policy.
+#
+# Forge runs the kernel guest that studio/KERNEL_REV pins: the holo's archive fingerprint, and the URL of the
+# commit that archives it in studio/shell/kernel/kernel.holo. Pinning by hand meant a local SDK build of some
+# 15 minutes, two commits (the holo, then the URL naming that commit), and a conflict in the committed
+# binaries whenever two branches changed the kernel. Here the same pin is made in CI from the locked SDK:
+# when app/ changes on main, or when started for a branch. The holo is built and proved by `just app`
+# exactly as pages.yml builds it; the Kernel gate (tools/kernel.mjs --check) and the kernel's boundary tests
+# must pass before anything is pushed; nothing is pushed when the pin is already current.
+#
+# Commits pushed with this workflow's token start no other workflow, so on main it starts the deploy itself.
+name: kernel pin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "prismpm.lock"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: The branch to pin the kernel on.
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kernel-pin-${{ inputs.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  pin:
+    name: pin the kernel the shell runs to the one app/ builds
+    if: github.repository != 'UOR-Foundation/template'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      actions: write
+    env:
+      REF: ${{ inputs.ref || github.ref_name }}
+    steps:
+      - name: Check out the branch to pin
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.REF }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+      - name: Build and verify the holo through the locked SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
+          if [[ ! $image =~ ^[a-z0-9.-]+(:[0-9]{1,5})?/[a-z0-9./_-]+@sha256:[0-9a-f]{64}$ ]]; then
+            printf '%s\n' 'prismpm.lock does not select an immutable SDK image' >&2
+            exit 64
+          fi
+          docker_config=$(mktemp -d)
+          trap 'rm -rf "$docker_config"' EXIT
+          printf '{}\n' >"$docker_config/config.json"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --group-add "$(stat -c '%g' /var/run/docker.sock)" \
+            --tmpfs /tmp:rw,exec,nosuid,size=2g \
+            --volume "$PWD:$PWD" \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume "$docker_config:/tmp/prismpm-home/.docker:ro" \
+            --workdir "$PWD" \
+            --env DOCKER_CONFIG=/tmp/prismpm-home/.docker \
+            --env BUILDX_CONFIG=/tmp/prismpm-buildx \
+            --env HOME=/tmp/prismpm-home \
+            --env PRISMPM_EPHEMERAL_HOME=1 \
+            "$image" just app
+      - name: Find the holo, and whether the pin is already current
+        id: holo
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          holos=(app/.prism/build/*/*.holo)
+          if [[ ${#holos[@]} -ne 1 ]]; then
+            printf 'expected one holo, found %d\n' "${#holos[@]}" >&2
+            exit 64
+          fi
+          fingerprint=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).archive_fingerprint)' "$(dirname "${holos[0]}")/application/holo-identities.json")
+          pinned=$(sed -n 2p studio/KERNEL_REV)
+          {
+            echo "path=${holos[0]}"
+            echo "fingerprint=$fingerprint"
+            if [[ $pinned == "blake3:$fingerprint" ]]; then echo "current=true"; else echo "current=false"; fi
+          } >>"$GITHUB_OUTPUT"
+          printf 'built blake3:%s, pinned %s\n' "$fingerprint" "$pinned"
+      - name: Archive the holo, then name the commit that archives it
+        if: steps.holo.outputs.current != 'true'
+        shell: bash
+        env:
+          HOLO: ${{ steps.holo.outputs.path }}
+          FINGERPRINT: ${{ steps.holo.outputs.fingerprint }}
+          SOURCE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pin() { printf 'https://raw.githubusercontent.com/%s/%s/studio/shell/kernel/kernel.holo\nblake3:%s\n' "$GITHUB_REPOSITORY" "$1" "$FINGERPRINT" >studio/KERNEL_REV; }
+          cp "$HOLO" studio/shell/kernel/kernel.holo
+          pin "$(git rev-parse HEAD)"
+          (cd studio && node tools/kernel.mjs)
+          git add studio/shell/kernel studio/KERNEL_REV
+          git commit -m "Archive the kernel holo app/ builds (blake3:${FINGERPRINT:0:8})" -m "Built and proved by the locked SDK in the kernel pin workflow, from ${SOURCE}."
+          pin "$(git rev-parse HEAD)"
+          (cd studio && node tools/kernel.mjs)
+          git add studio/shell/kernel studio/KERNEL_REV
+          git commit -m "KERNEL_REV names the commit that archives the kernel holo"
+      - name: The Kernel gate and the kernel's boundary tests, on the new pin
+        if: steps.holo.outputs.current != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd studio && node tools/kernel.mjs --check)
+          node --test studio/tools/kernel_boundary.test.mjs
+      - name: Push the pin
+        if: steps.holo.outputs.current != 'true'
+        # The checkout keeps no credentials; the token is handed to this one push and to nothing else.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$REF"
+      - name: Deploy the site with the new pin
+        if: steps.holo.outputs.current != 'true' && env.REF == 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

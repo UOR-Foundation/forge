@@ -90,7 +90,18 @@ if (process.argv.includes("--browser")) {
   const browser = await chromium.launch({ headless: true, channel: process.env.PERF_CHANNEL || undefined });
   const median = (xs) => xs.slice().sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   const cold = [], warm = [], inp = [], token = [];
+  // On a failed journey, what the page showed is kept (PERF_ARTIFACTS, set by CI), so a timeout says why.
+  const keep = async (page, run, error) => {
+    const dir = process.env.PERF_ARTIFACTS;
+    if (!dir || !page) return;
+    fs.mkdirSync(dir, { recursive: true });
+    await page.screenshot({ path: path.join(dir, `run-${run}.png`) }).catch(() => {});
+    const text = await page.evaluate(() => document.body.innerText).catch(() => "");
+    fs.writeFileSync(path.join(dir, `run-${run}.txt`), [error.message, page.url(), text].join("\n\n"));
+  };
   for (let run = 0; run < 3; run++) {
+    let page = null;
+    try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
     await ctx.addInitScript(() => {
       window.__lcp = 0; window.__inp = 0;
@@ -98,7 +109,7 @@ if (process.argv.includes("--browser")) {
       new PerformanceObserver((l) => { for (const e of l.getEntries()) if (e.interactionId) window.__inp = Math.max(window.__inp, e.duration); }).observe({ type: "event", buffered: true, durationThreshold: 16 });
     });
     await ctx.route("https://api.featherless.ai/**", (r) => r.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: sse() }));
-    const page = await ctx.newPage();
+    page = await ctx.newPage();
     const cdp = await ctx.newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
     const lcpOf = async () => { await page.waitForSelector("[role=textbox]", { timeout: 120000 }); await page.waitForTimeout(2500); return Math.round(await page.evaluate(() => window.__lcp)); };
@@ -124,6 +135,7 @@ if (process.argv.includes("--browser")) {
     await page.waitForFunction(() => /T0 /.test(document.body.innerText), null, { timeout: 120000, polling: "raf" });
     token.push(Math.round((await page.evaluate(() => performance.now())) - t0));
     await ctx.close();
+    } catch (error) { await keep(page, run, error); throw error; }
   }
   await browser.close();
   console.log("runs", JSON.stringify({ cold, warm, inp, token }));
