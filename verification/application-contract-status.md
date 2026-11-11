@@ -144,3 +144,10 @@ FA-31 (#66) has now passed full SDK 43051703625 as well as Studio, Try-page
 and codespace gates. FA-32 is in #67 with full acceptance pending. FA-33's
 event protocol source is in #68; its generated-guest installation and browser
 acceptance are pending. Pure event admission is distinct from durable delivery.
+
+FA-33 now installs the signed event-capable guest from build 43056835696
+(source f3b83edd0de9c45826f70765b8fb5879a5f42364). All 124 embedded,
+26 composition, 30 work and 30 event cases pass in page and worker contexts.
+Exact-source provenance and negative controls pass; full feature acceptance
+and new component reproduction remain outstanding. PR #69's import/navigation
+repairs pass 200 combined Node controls, local Rust and the cache browser test.
