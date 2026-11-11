@@ -1,4 +1,5 @@
 // FoundrySpecification.snapshotBuildBoundary: exact source before effects.
+import { assertCanonicalBuild } from "./canonical-build.mjs";
 import { captureProjectSource } from "./project-edit.mjs";
 import { prepareSnapshot } from "./snapshot-restore.mjs";
 import { snapshotDependencies } from "./project-lifecycle.mjs";
@@ -10,6 +11,7 @@ export function sameBuildSource(left, right) {
 }
 export function verifyCapturedSource(source, snapshot) {
   if (!shape(source) || !snapshot || !shape({ ...snapshot, reference: snapshot.oid, dependencies: [] }) || source.reference !== snapshot.oid || source.name !== snapshot.name || rows(source.files) !== rows(snapshot.files) || JSON.stringify(source.dependencies) !== JSON.stringify(snapshotDependencies(snapshot.files))) throw fail("buildSourceMismatch");
+  assertCanonicalBuild(source.files);
   return source;
 }
 export async function captureBuildSource(db, appId, boundary) {

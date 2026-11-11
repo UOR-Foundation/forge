@@ -66,6 +66,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-30` | `build` | The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings |
 
+## canonical-build-closure
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-38` | `build` | Decision builds require the canonical module and generated runtime to match the captured specification |
+
 ## canonical-generation-ownership
 
 | ID | Level | Statement |
