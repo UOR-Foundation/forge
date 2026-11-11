@@ -1,3 +1,4 @@
+import {listStoredVersions,setStoredVersionMetadata,verifiedVersionChanges,resolveStoredVersion} from "./version-history.mjs";
 import {createChatQueueController} from "./chat-queue-controller.mjs";
 import {readStoredChatQueue,commitStoredChatQueue,bindQueuePayload,chatQueueFailure} from "./chat-queue-store.mjs";
 import {ChatStreamIntentEventSchema,SerializableChatTurnIntentSchema,serializeImmutableChatTurnPayload} from "./chat-contracts.mjs";
@@ -323,7 +324,7 @@ handlers.set("forge:import", async (input) => {
 
 // ---- versions: a branch is a name pointing at an address; rollback restores the object at an
 // address only when its bytes re-derive to it (the core's restore rule).
-handlers.set("list-versions", async ({ appId }) => (await get("versions", appId)) || []);
+handlers.set("list-versions", async input => listStoredVersions(await dbReady,input));
 handlers.set("get-current-branch", async () => ({ branch: "main" }));
 // What a version changed, computed from the addresses themselves: a version is the preimage of the
 // project state (its JSON lists every file as [path, kappa, bytes] with the parent's address), and
@@ -336,23 +337,12 @@ async function snapshotOf(oid) {
   try { const snap = JSON.parse(dec.decode(bytes)); return Array.isArray(snap.entries) ? snap : null; } catch (e) { return null; }
 }
 const contentAt = async (kappa) => { const b = kappa ? await get("objects", kappa) : null; return b ? dec.decode(b) : ""; };
-handlers.set("get-version-changes", async ({ versionId }) => {
-  const snap = await snapshotOf(versionId);
-  if (!snap) return [];
-  const before = new Map((((await snapshotOf(snap.parent)) || {}).entries || []).map(([path, kappa]) => [path, kappa]));
-  const now = new Map(snap.entries.map(([path, kappa]) => [path, kappa]));
-  const changes = [];
-  for (const [path, kappa] of now) {
-    const old = before.get(path);
-    if (old === kappa) continue;
-    changes.push({ path, type: old ? "modified" : "added", oldContent: await contentAt(old), newContent: await contentAt(kappa) });
-  }
-  for (const [path, kappa] of before) if (!now.has(path)) changes.push({ path, type: "deleted", oldContent: await contentAt(kappa), newContent: "" });
-  return changes.sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : 0));
-});
-handlers.set("set-version-favorite", async ({ appId, oid, isFavorite }) => { const v = (await get("versions", appId)) || []; for (const x of v) if (x.oid === oid) x.isFavorite = isFavorite; await put("versions", appId, v); });
-handlers.set("set-version-note", async ({ appId, oid, note }) => { const v = (await get("versions", appId)) || []; for (const x of v) if (x.oid === oid) x.note = note; await put("versions", appId, v); });
+async function versionHistoryBoundary(){await coreReady;return {readObject:key=>get("objects",key),derive:kappa,admit:async(derived,expected)=>core.run({op:"restore",derived,expected}).decision==="Accept"};}
+handlers.set("get-version-changes", async input => verifiedVersionChanges(await dbReady,input,await versionHistoryBoundary()));
+handlers.set("set-version-favorite", async input => setStoredVersionMetadata(await dbReady,input,"isFavorite"));
+handlers.set("set-version-note", async input => setStoredVersionMetadata(await dbReady,input,"note"));
 async function restore(appId, oid, revert = false) {
+  oid = await resolveStoredVersion(await dbReady, appId, oid);
   await coreReady;
   return restoreStoredProject(await dbReady, appId, oid, {
     core, onCommit: hash => emit("version-created", { appId, oid: hash }),

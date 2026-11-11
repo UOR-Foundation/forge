@@ -104,6 +104,7 @@ jobs:
           node tools/chat_queue_runtime.mjs
           node tools/chat_queue_browser.mjs
           node tools/durable_chat_queue_browser.mjs
+          node tools/canonical_version_history_browser.mjs
           node tools/rules_source_browser.mjs
           node tools/inference_effects_browser.mjs
           node tools/inference_consent_browser.mjs

@@ -301,6 +301,19 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Queue admission grants no effect permission; inference, build and publication boundaries remain mandatory."
+    },
+    {
+      "id": "version-history",
+      "version": 1,
+      "owner": "FoundrySpecification.versionHistoryBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Snapshot and file identities require core admission; metadata does not change canonical source identity."
     }
   ],
   "commands": [
@@ -1756,9 +1769,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "get-version-changes",
-      "feature": "local-read",
+      "feature": "version-history",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.versionHistoryBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -2026,9 +2039,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "list-versions",
-      "feature": "local-read",
+      "feature": "version-history",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.versionHistoryBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -2916,9 +2929,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "set-version-favorite",
-      "feature": "local-write",
+      "feature": "version-history",
       "version": 1,
-      "owner": "FoundrySpecification.storageCommitBoundary",
+      "owner": "FoundrySpecification.versionHistoryBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -2926,9 +2939,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "set-version-note",
-      "feature": "local-write",
+      "feature": "version-history",
       "version": 1,
-      "owner": "FoundrySpecification.storageCommitBoundary",
+      "owner": "FoundrySpecification.versionHistoryBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",

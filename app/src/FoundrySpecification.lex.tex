@@ -986,5 +986,19 @@ definition{
   result: String,
   body: "Actual chat commands persist prompt payloads with ChatQueue guest transitions in one IndexedDB transaction. A journal binds chat and app identities, monotonically allocated uint32 item IDs, exact captured imported renderer intents, independently derived payload identities, guest state, at most 128 recent completion/removal receipts and a bounded mutation receipt. The whole journal is at most 48 MiB and the guest bounds items to 32 including active work. Acknowledgement follows transaction completion; late abort, deletion or compare-and-swap conflict cannot acknowledge or resurrect work. Payload identities and imported schemas are rechecked before mutations or execution. Duplicate queued or recent completed intent IDs replay without execution only when captured payload identity agrees; changed content refuses. This finite 128-receipt window is not eternal deduplication or exactly-once remote effects. Actual queue controls enqueue while busy, edit/reorder/remove pending items, clear only pending items, preserve pauses, and require current revisions and Stop policy. Cancellation is bound to the current invocation and cannot abort a newer turn. An origin Web Lock admits only one active executor; a separate short mutation lock serializes journal updates while allowing Stop and queue edits during a turn. Browser messages refresh peer snapshots and request active cancellation after durable Stop. An abandoned active head is recovered only while holding the exclusive execution lock, retained paused, and requires explicit resumption. Existing inference, publication, canonical generation and consent boundaries apply to every execution. The host does not automatically replay interrupted external effects. Ownership is cooperative within one origin, not remote authentication or protection from malicious same-origin scripts. Chat and project deletion remove queue journals atomically. Device loss, deleted origin storage and provider-side cancellation remain outside this storage guarantee."
 }
+
+inductive{
+  name: VersionHistoryError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: invalidVersionHistory, fields: []}, {name: versionHistoryMissing, fields: []}, {name: versionHistoryStorageFailed, fields: []}, {name: versionHistoryStateInvalid, fields: []}]
+}
+
+definition{
+  name: versionHistoryBoundary,
+  parameters: [],
+  result: String,
+  body: "Renderer version IDs are full lowercase hexadecimal aliases for exact canonical BLAKE3 addresses; this is reversible representation, never a second hash or Git commit claim. Listing validates project existence and history shape. The main branch lists stored history; a known exact version selects just that record without claiming Git ancestry traversal. Metadata requests use imported versionId and return oid, isFavorite and note after one apps-and-versions transaction; concurrent favorite and note changes preserve each other. Missing projects or versions, malformed requests, invalid stored records and storage failure refuse with fixed typed errors. Notes retain at most 10000 UTF-16 code units, matching the imported contract. Differences resolve only a project-owned version, then validate its snapshot and every file identity through the existing SnapshotRestore boundary and compiled core admission, and repeat that validation for its parent. Added, changed and deleted text is computed from those verified files, sorted by path; missing or corrupt objects never become an empty successful diff. The parent returned by snapshot validation is taken from the same captured verified bytes. History metadata is local presentation state and does not change canonical source identity. This boundary does not implement Git branches, version-preview ownership, history garbage collection or cross-origin authorization."
+}
 \end{semanticmodule}
 \end{lexlean}

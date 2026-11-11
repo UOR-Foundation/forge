@@ -90,6 +90,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-35` | `build` | The canonical decision-module reader refuses ambiguous or discarded semantics before authoring |
 
+## canonical-version-history
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-52` | `build` | Version history preserves canonical content identity through renderer aliases and atomically commits metadata with verified snapshot differences |
+
 ## capability-availability
 
 | ID | Level | Statement |

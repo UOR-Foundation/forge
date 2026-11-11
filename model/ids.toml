@@ -405,3 +405,9 @@ id = "FA-51"
 level = "build"
 suite = "durable-chat-queue"
 statement = "Actual chat queue commands atomically bind guest transitions to durable payloads and exclusive recoverable execution"
+
+[[id]]
+id = "FA-52"
+level = "build"
+suite = "canonical-version-history"
+statement = "Version history preserves canonical content identity through renderer aliases and atomically commits metadata with verified snapshot differences"
