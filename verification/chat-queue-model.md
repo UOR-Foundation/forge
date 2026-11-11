@@ -46,3 +46,5 @@ separate required implementation; existing renderer acknowledgements are not
 claimed complete by this component. Neither production release hold is removed.
 
 The router SDK failure exposed flattened generated helper symbols. A source audit found the queue protocol also reused `WorkProtocol.encodeResult`; it now uses the unique name `encodeQueueResult`. This changes no wire representation or expected state. The queue signed build must include both unique helper fixes.
+
+Signed build 43099516534 at `f3aa9460a8204edc263fd86e6688a1d9f230f81b` passed construction. The archive signature verifies against the exact repository, workflow and source; wrong-source and changed-byte controls refuse. All 215 embedded vectors replay, and the independent routing corpus and fixed relevance/latency thresholds pass. Chromium document and dedicated-worker replay also pass the routing, composition, work, event and interaction corpora plus all 38 queue wire cases. See `kernel-artifact-receipt.json` for exact identities and measurements. The independent reproduction build and final full SDK/Studio acceptance remain pending.

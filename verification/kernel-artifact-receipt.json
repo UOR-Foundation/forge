@@ -1,17 +1,18 @@
 {
   "schema": "foundry/kernel-artifact-review/1",
-  "source": "8baef63680ba67b8608a0e750aceba4ef8b5073a",
-  "run": 43075425831,
-  "artifact": 13881743759,
+  "source": "f3aa9460a8204edc263fd86e6688a1d9f230f81b",
+  "run": 43099516534,
+  "artifact": 13892753944,
   "archiveFingerprint": {
     "algorithm": "blake3",
     "profile": "hologram-archive-body",
-    "digest": "b46ffbaf7edeb696dcd73481423776a30fd33705af80d8eee8b156d351145653"
+    "digest": "edc10818eaf1f0751d9d28cfa97da430c577496c708c76ba4a96526fa1740be9"
   },
   "archiveFile": {
     "algorithm": "sha256",
     "profile": "whole-file",
-    "digest": "470470068748a71fd28a22ef39f87d90db6fdfac8091a574b7f0a48753b79d0e"
+    "digest": "40dc6013ce18cf421f8146f0449b32bd2baff7ede0e5783f1cb49b405f9640a5",
+    "bytes": 646392
   },
   "provenance": {
     "verifier": "GitHub CLI 2.103.3",
@@ -26,7 +27,7 @@
     "changedArchiveByte": "refused"
   },
   "runtime": {
-    "embeddedVectors": 145,
+    "embeddedVectors": 215,
     "wireVectors": 26,
     "maximumPayloadBytes": 32768,
     "maximumPayloadOutcome": "malformedComposition",
@@ -37,7 +38,19 @@
     "workWireVectors": 30,
     "rewordPhases": 5,
     "eventWireVectors": 30,
-    "interactionWireVectors": 21
+    "interactionWireVectors": 21,
+    "routingWireVectors": 32,
+    "routingQualification": {
+      "embedded": 215,
+      "wireVectors": 32,
+      "typedJudgments": 12,
+      "falseAdmissions": 0,
+      "dependencyMismatches": 0,
+      "normalP95Milliseconds": 0.46289200000001074,
+      "maximumCaseMilliseconds": 3.7235219999999885,
+      "scope": "Author-curated typed-concept cases withheld from relation declarations and proof/wire fixtures; independent literal judgments, not independent human evaluation or natural-language generalization."
+    },
+    "queueWireVectors": 38
   },
-  "claimScope": "Executed qualification of this artifact and the browser adapter; not independent review approval, registry authenticity, R4 routing, or whole-application release acceptance."
+  "claimScope": "Executed finite artifact and browser-adapter qualification; reproduction is recorded separately. Not independent approval, general language relevance, authenticated owners or whole-product release acceptance."
 }
