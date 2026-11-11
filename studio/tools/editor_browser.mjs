@@ -24,9 +24,9 @@ const executablePath = process.env.CHROME_BIN || ["/usr/bin/chromium", "/usr/bin
 let browser;
 try {
   browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox"] });
-  const context = await browser.newContext({ serviceWorkers: "allow" }), page = await context.newPage(), external = [], errors = [], workers = [];
+  const context = await browser.newContext({ serviceWorkers: "allow" }), page = await context.newPage(), external = [], errors = [], workers = [], closedWorkers = new Set();
   page.on("pageerror", error => errors.push(error.message));
-  page.on("worker", worker => workers.push(worker));
+  page.on("worker", worker => {workers.push(worker);worker.on("close",()=>closedWorkers.add(worker));});
   await context.route("**/*", route => {
     const url = new URL(route.request().url()); if (url.origin === origin) return route.continue(); external.push(url.href);
     return route.abort();
@@ -43,6 +43,11 @@ try {
   await page.getByText("Browser telemetry is disabled.", { exact: true }).waitFor();
   assert.equal(await page.getByRole("switch", { name: "Telemetry", exact: true }).count(), 0);
   assert.equal(await page.getByText("Telemetry ID", { exact: true }).count(), 0);
+  // Main loads Monaco when the editor is opened, rather than on the settings page.
+  const made=await page.evaluate(()=>window.electron.ipcRenderer.invoke("create-app",{name:"offline-editor",initialChatMode:"build"}));
+  await page.goto(base+"chat?id="+made.chatId+"&appId="+made.app.id);
+  await page.getByRole("button",{name:"Code",exact:true}).click();
+  await page.getByText("AI_RULES.md",{exact:true}).click();
   await page.waitForFunction(() => !!window.monaco?.editor);
   const result = await page.evaluate(async () => {
     const monaco = window.monaco;
@@ -68,7 +73,7 @@ try {
   await page.waitForTimeout(1000);
   if (errors.length) console.error(JSON.stringify({ errors, external }));
   assert.deepEqual(errors, []);
-  const workerResources = (await Promise.all(workers.map(worker => worker.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name))))).flat();
+  const workerResources = (await Promise.all(workers.filter(worker=>!closedWorkers.has(worker)).map(worker => worker.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name))))).flat();
   assert.ok(workerResources.some(url => url.startsWith(base + "editor/vs/") && url.includes("jsonWorker.js")), JSON.stringify(workerResources));
   // The declared decorative background is a separate product request.
   const unexpected = external.filter(url => !url.startsWith("https://uor-foundation.github.io/template/frame/backdrops/") && !url.startsWith("https://images.unsplash.com/"));
