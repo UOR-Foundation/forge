@@ -1,8 +1,10 @@
+import {createVersionPreviewController} from "./version-preview-controller.mjs";
+import {previewProjectStore,previewFailure} from "./version-preview-store.mjs";
 import {previewWithGuest} from "./version-preview-codec.mjs";
 import {listStoredVersions,setStoredVersionMetadata,verifiedVersionChanges,resolveStoredVersion} from "./version-history.mjs";
 import {createChatQueueController} from "./chat-queue-controller.mjs";
 import {readStoredChatQueue,commitStoredChatQueue,bindQueuePayload,chatQueueFailure} from "./chat-queue-store.mjs";
-import {ChatStreamIntentEventSchema,SerializableChatTurnIntentSchema,serializeImmutableChatTurnPayload} from "./chat-contracts.mjs";
+import {VersionPreviewIntentEventSchema,VersionPreviewRemoteSnapshotSchema,ChatStreamIntentEventSchema,SerializableChatTurnIntentSchema,serializeImmutableChatTurnPayload} from "./chat-contracts.mjs";
 import {queueWithGuest} from "./chat-queue-codec.mjs";
 import {createDiscovery} from "./application-discovery.mjs";
 import {mountApplicationDiscovery} from "./discovery-ui.mjs";
@@ -356,8 +358,13 @@ async function restore(appId, oid, revert = false) {
     },
   }, revert);
 }
-handlers.set("checkout-version", async ({ appId, versionId }) => { await restore(appId, versionId); });
-handlers.set("revert-version", async ({ appId, previousVersionId }) => { await restore(appId, previousVersionId, true); return { successMessage: "Reverted" }; });
+handlers.set("checkout-version", async ({ appId, purpose, versionId, branch }) => {
+  if(purpose==="return"){if(branch!=="main")throw previewFailure("previewUnsupportedBranch");return versionPreview.dispatch(appId,{type:"CLOSE",operationId:crypto.randomUUID()});}
+  if(purpose!=="preview")throw previewFailure("invalidPreviewCommand");if(!(await versionPreview.acquire(appId)).acquired)throw previewFailure("previewWindowBusy");return versionPreview.dispatch(appId,{type:"SELECT_VERSION",versionId,operationId:crypto.randomUUID()});
+});
+handlers.set("revert-version", async ({appId,previousVersionId,expectedHeadOid,currentChatMessageId,targetBranchName}) => {
+  if(currentChatMessageId)throw previewFailure("invalidPreviewCommand");if(targetBranchName!==undefined&&targetBranchName!=="main")throw previewFailure("previewUnsupportedBranch");if(!(await versionPreview.acquire(appId)).acquired)throw previewFailure("previewWindowBusy");return versionPreview.dispatch(appId,{type:"RESTORE",versionId:previousVersionId,...(expectedHeadOid?{expectedHeadOid}:{}),operationId:crypto.randomUUID()});
+});
 
 // ---- chats as records; the stream is the next slice
 handlers.set("get-chats", async (appId) => (await all("chats")).filter((c) => appId == null || c.appId === appId).map((c) => chatRow(c)));
@@ -700,6 +707,7 @@ function warmLive() {
 window.__live = { liveFrame, showLive, pushLive, refreshLive, patchSpec, stepSpec, pointed: livePointed, times: liveTimes, project: live.project };
 
 handlers.set("distributed-machine:subscribe", async ({ machineId, encodedKey }) => {
+  if (machineId === "version_preview") return previewEnvelope(encodedKey.appId);
   if (machineId === "chat_stream") return chatSubscribe({ machineId, encodedKey });
   if (machineId !== "app_run") throw new Error("no browser machine " + machineId);
   const m = machineOf(encodedKey.appId);
@@ -708,6 +716,7 @@ handlers.set("distributed-machine:subscribe", async ({ machineId, encodedKey }) 
 handlers.set("distributed-machine:unsubscribe", () => undefined);
 handlers.set("distributed-machine:dispatch", async (envelope) => {
   const { machineId, encodedKey, messageId, encodedEvent } = envelope;
+  if (machineId === "version_preview") return previewDispatch(envelope);
   if (machineId === "chat_stream") return chatDispatch(envelope);
   if (machineId !== "app_run") throw new Error("no browser machine " + machineId);
   const appId = encodedKey.appId, type = encodedEvent && encodedEvent.type;
@@ -728,7 +737,7 @@ handlers.set("distributed-machine:dispatch", async (envelope) => {
       return receipt(m);
     }
     const m = publish(appId, { phase: type === "MANUAL_RELOAD" ? "reloading" : "starting", operation: op, startedAt: Date.now(), operationError: null, exit: null });
-    (async () => {
+    m.pending = (async () => {
       try {
         const { appUrl } = await buildPreview(appId);
         // A build that finishes after the app's rules took the preview (a model began writing a spec
@@ -751,12 +760,29 @@ handlers.set("distributed-machine:dispatch", async (envelope) => {
 handlers.set("connection-flow:get-states", () => ({ github: { status: "disconnected", revision: 0 }, supabase: { status: "disconnected", revision: 0 }, neon: { status: "disconnected", revision: 0 } }));
 handlers.set("window-infrastructure:attach-interest", () => undefined);
 handlers.set("window-infrastructure:detach-interest", () => undefined);
-// the renderer arbitrates the version preview between its windows: a window asks to own an app's preview
-// before it may select a version, and the version controls refuse to work until it does. One tab owns
-// everything here, so the interest is always granted and releasing it always starts the cleanup.
-handlers.set("version-preview:acquire-window-interest", () => ({ acquired: true }));
-handlers.set("version-preview:restore-window-interest", () => ({ acquired: true }));
-handlers.set("version-preview:release-window-interest", () => ({ cleanupStarted: true }));
+const previewEpoch=crypto.randomUUID();
+const previewActorId=appId=>`web-version_preview-${appId}-${previewEpoch}`;
+const previewEnvelope=appId=>({protocolVersion:1,machineId:"version_preview",encodedKey:{appId},actorInstanceId:previewActorId(appId),revision:versionPreview.snapshot(appId).revision,encodedState:VersionPreviewRemoteSnapshotSchema.parse(versionPreview.snapshot(appId))});
+const versionPreview=createVersionPreviewController({
+  locks:navigator.locks,
+  store:async appId=>{await coreReady;return previewProjectStore(await dbReady,appId,{guest:kernelReady,core,derive:kappa,readObject:key=>get("objects",key),admit:async(derived,expected)=>core.run({op:"restore",derived,expected}).decision==="Accept"});},
+  mintOwner:()=>{let owner=0;while(!owner)owner=crypto.getRandomValues(new Uint32Array(1))[0];return owner;},
+  validateEvent:value=>VersionPreviewIntentEventSchema.safeParse(value),
+  publish:(appId,snapshot)=>emit("distributed-machine:snapshot",{protocolVersion:1,machineId:"version_preview",encodedKey:{appId},actorInstanceId:previewActorId(appId),revision:snapshot.revision,encodedState:VersionPreviewRemoteSnapshotSchema.parse(snapshot)}),
+  created:(appId,oid)=>emit("version-created",{appId,oid}),
+  restart:async appId=>{const operationId=crypto.randomUUID();await handlers.get("distributed-machine:dispatch")({protocolVersion:1,machineId:"app_run",encodedKey:{appId},messageId:operationId,encodedEvent:{type:"RESTART",operationId}});await machineOf(appId).pending;const m=machineOf(appId);if(m.state.lastSettlement?.operationId!==operationId||m.state.lastSettlement.outcome!=="succeeded")throw previewFailure("previewUnavailable");},
+});
+async function previewDispatch(raw){
+  const {encodedKey,messageId,encodedEvent,expectedActorInstanceId}=structuredClone(raw),appId=encodedKey?.appId;
+  if(!Number.isSafeInteger(appId)||appId<1||typeof messageId!=="string"||!messageId||messageId.length>256)throw previewFailure("invalidPreviewCommand");
+  const actorInstanceId=previewActorId(appId);if(expectedActorInstanceId&&expectedActorInstanceId!==actorInstanceId)return {kind:"rejected",messageId,reason:"stale-actor"};
+  let result;try{result=await versionPreview.dispatch(appId,encodedEvent);}catch(error){emit("version-preview:result",{appId,operationId:encodedEvent.operationId,notification:{kind:"error",message:error.message},affectedChatId:null,createdChatId:null});throw error;}if(result)emit("version-preview:result",{appId,operationId:encodedEvent.operationId,notification:result.notification,affectedChatId:result.affectedChatId,createdChatId:result.createdChatId});const revision=versionPreview.snapshot(appId).revision;
+  return {kind:"applied",actorInstanceId,revision,transactionSequence:revision,messageId};
+}
+handlers.set("version-preview:acquire-window-interest", ({appId}) => versionPreview.acquire(appId));
+handlers.set("version-preview:restore-window-interest", ({appId}) => versionPreview.acquire(appId));
+handlers.set("version-preview:release-window-interest", ({appId,operationId}) => versionPreview.release(appId,operationId));
+window.addEventListener("pagehide",()=>versionPreview.dispose(),{once:true});
 handlers.set("is-capacitor", () => false);
 handlers.set("get-app-theme", () => null);
 handlers.set("get-proposal", () => null);

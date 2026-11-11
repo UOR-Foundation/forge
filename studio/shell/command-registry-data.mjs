@@ -325,6 +325,20 @@ export const commandRegistryData = {
       ],
       "assurance": "boundary-inventory",
       "quality": "Guest ownership admission does not grant source mutation permission or authenticate an owner."
+    },
+    {
+      "id": "durable-version-preview",
+      "version": 1,
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
+      "effects": [
+        "storage",
+        "execution"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Origin window ownership and guest-admitted atomic source preview; imported version actor transport and independent recovery journeys apply."
     }
   ],
   "commands": [
@@ -750,9 +764,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "checkout-version",
-      "feature": "lifecycle",
+      "feature": "durable-version-preview",
       "version": 1,
-      "owner": "FoundrySpecification.projectLifecycleBoundary",
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",
@@ -2770,9 +2784,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "revert-version",
-      "feature": "lifecycle",
+      "feature": "durable-version-preview",
       "version": 1,
-      "owner": "FoundrySpecification.projectLifecycleBoundary",
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "product-boundary",
@@ -3470,9 +3484,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "version-preview:acquire-window-interest",
-      "feature": "local-acknowledgement",
+      "feature": "durable-version-preview",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -3480,9 +3494,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "version-preview:release-window-interest",
-      "feature": "local-acknowledgement",
+      "feature": "durable-version-preview",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -3490,9 +3504,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "version-preview:restore-window-interest",
-      "feature": "local-acknowledgement",
+      "feature": "durable-version-preview",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.durableVersionPreviewBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",

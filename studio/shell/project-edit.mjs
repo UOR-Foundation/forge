@@ -1,6 +1,7 @@
+import {capturePreviewState} from "./version-preview-codec.mjs";
 // FoundrySpecification.projectEditBoundary: prepare, compare, atomically commit.
 import { prepareExistingProject } from "./project-creation.mjs";
-const failure = code => Object.assign(new Error(code === "projectMutationCancelled" ? "Project mutation cancelled" : code === "projectEditConflict" ? "Project changed during edit" : code === "invalidProjectEdit" ? "Invalid project edit" : code === "projectEditStateInvalid" ? "Project state is invalid" : "Project edit storage failed"), { code });
+const failure = code => Object.assign(new Error(code === "projectPreviewActive" ? "Close version preview before changing project source" : code === "projectMutationCancelled" ? "Project mutation cancelled" : code === "projectEditConflict" ? "Project changed during edit" : code === "invalidProjectEdit" ? "Invalid project edit" : code === "projectEditStateInvalid" ? "Project state is invalid" : "Project edit storage failed"), { code });
 const validPath = path => typeof path === "string" && path.length > 0 && !/[\\\u0000-\u001f:]/.test(path) && path.split("/").every(part => part && part !== "." && part !== "..");
 const dependencyShape = value => Array.isArray(value) && value.length <= 128 && value.every(item => typeof item === "string" && item.length <= 256);
 const range = id => IDBKeyRange.bound(`${id}:`, `${id};`, false, true);
@@ -29,9 +30,11 @@ export function captureProjectSource(db, appId) {
     } catch { refuse("projectEditStorageFailed"); }
   });
 }
-export function commitPreparedProject(db, appId, changedPaths, captured, prepared, { signal, dependencies, message, name, recordVersion = true, rulesUpdate, eventUpdate, interactionUpdate, workUpdate } = {}) {
+export function commitPreparedProject(db, appId, changedPaths, captured, prepared, { signal, dependencies, message, name, recordVersion = true, rulesUpdate, eventUpdate, interactionUpdate, workUpdate, previewUpdate } = {}) {
   return new Promise((resolve, reject) => {
-    let t, app, reference, currentWork, workRead = !workUpdate, currentInteraction, interactionRead = !interactionUpdate, currentRules, currentEvents, eventsRead = !eventUpdate, appRead = false, refRead = false, rulesRead = !rulesUpdate, filesRead = false, failed = false;
+    let t, app, reference, currentPreview, previewRead = false, currentWork, workRead = !workUpdate, currentInteraction, interactionRead = !interactionUpdate, currentRules, currentEvents, eventsRead = !eventUpdate, appRead = false, refRead = false, rulesRead = !rulesUpdate, filesRead = false, failed = false;
+    const preview = previewUpdate ? structuredClone(previewUpdate) : null;
+    const sourceMutation = prepared.oid !== captured.reference || changedPaths.length > 0 || name !== undefined || dependencies !== undefined;
     const work = workUpdate ? structuredClone(workUpdate) : null;
     const interaction = interactionUpdate ? structuredClone(interactionUpdate) : null;
     const events = eventUpdate ? structuredClone(eventUpdate) : null;
@@ -41,14 +44,18 @@ export function commitPreparedProject(db, appId, changedPaths, captured, prepare
     const cancelled = () => refuse("projectMutationCancelled");
     const refuse = code => { failed = true; clean(); if (t) { try { t.abort(); } catch {} } reject(failure(code)); };
     try {
+      if (preview) { try { if(preview.state?.profile!=="foundry/version-preview/1"||preview.state.appId!==appId||!Array.isArray(preview.state.receipts)||preview.state.receipts.length>128)throw Error();capturePreviewState(preview.state.state); } catch { refuse("projectEditStateInvalid");return; } }
       if (signal?.aborted) { refuse("projectMutationCancelled"); return; }
       signal?.addEventListener("abort", cancelled, { once: true });
       t = db.transaction(["apps", "files", "objects", "refs", "versions"], "readwrite");
       t.onabort = () => { clean(); reject(failure(signal?.aborted ? "projectMutationCancelled" : "projectEditStorageFailed")); }; t.onerror = () => refuse("projectEditStorageFailed");
       t.oncomplete = () => { clean(); if (failed) reject(failure("projectEditStorageFailed")); else resolve(prepared.oid); };
       const write = () => {
-        if (failed || !appRead || !refRead || !rulesRead || !eventsRead || !interactionRead || !workRead || !filesRead) return;
+        if (failed || !appRead || !refRead || !rulesRead || !eventsRead || !interactionRead || !workRead || !previewRead || !filesRead) return;
         if (!app || app.name !== captured.name || reference !== captured.reference || seen !== original.size || (!dependencyShape(app.extraDeps || []) || JSON.stringify(app.extraDeps || []) !== JSON.stringify(captured.dependencies))) { refuse("projectEditConflict"); return; }
+        if (currentPreview !== undefined) { try { if (currentPreview?.profile !== "foundry/version-preview/1" || currentPreview.appId !== appId) throw Error(); capturePreviewState(currentPreview.state); } catch { refuse("projectEditStateInvalid"); return; } }
+        if (preview && JSON.stringify(currentPreview) !== JSON.stringify(preview.expected)) { refuse("projectEditConflict"); return; }
+        if (sourceMutation && !preview && currentPreview?.state.active === 1) { refuse("projectPreviewActive"); return; }
         if (work && JSON.stringify(currentWork) !== JSON.stringify(work.expected)) { refuse("projectEditConflict"); return; }
         if (rules && JSON.stringify(currentRules) !== JSON.stringify(rules.expected)) { refuse("projectEditConflict"); return; }
         if (interaction && JSON.stringify(currentInteraction) !== JSON.stringify(interaction.expected)) { refuse("projectEditConflict"); return; }
@@ -66,6 +73,7 @@ export function commitPreparedProject(db, appId, changedPaths, captured, prepare
               }
               for (const [key, bytes] of prepared.objects) t.objectStore("objects").put(bytes, key);
               t.objectStore("refs").put(prepared.oid, `${appId}:main`);
+              if (preview) t.objectStore("refs").put(preview.state, `preview:${appId}`);
               if (work) t.objectStore("refs").put(work.state, `work:${appId}`);
               if (interaction) t.objectStore("refs").put(interaction.state, `interaction:${appId}`);
               if (events) t.objectStore("refs").put(events.state, `events:${appId}`);
@@ -77,6 +85,8 @@ export function commitPreparedProject(db, appId, changedPaths, captured, prepare
           };
         } catch { refuse("projectEditStorageFailed"); }
       };
+      const previewStatus = t.objectStore("refs").get(`preview:${appId}`);
+      previewStatus.onsuccess = () => { currentPreview = previewStatus.result; previewRead = true; write(); };
       if (work) {
         const status = t.objectStore("refs").get(`work:${appId}`);
         status.onsuccess = () => { currentWork = status.result; workRead = true; write(); };
