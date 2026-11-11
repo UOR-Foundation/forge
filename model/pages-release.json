@@ -1,7 +1,9 @@
 {
   "schema": "foundry/pages-export/1",
   "capability": "FR-01",
-  "forbidden_basenames": ["warmup.json"],
+  "forbidden_basenames": [
+    "warmup.json"
+  ],
   "entry_policy": "directories-and-single-link-regular-files-only",
   "diagnostics": {
     "forbidden": "PAGES_EXPORT_FORBIDDEN",
@@ -9,5 +11,7 @@
     "empty": "PAGES_EXPORT_EMPTY",
     "changed": "PAGES_EXPORT_CHANGED",
     "source": "PAGES_EXPORT_SOURCE"
-  }
+  },
+  "workflow_sha256": "584f903f7725a2c299f769c47074a52e398b3f24f0930035386c4a39ad0cfd25",
+  "lighthouse_sha256": "0145d04da93193801b0d8736ceba7e0df94b9b15f183b07a16e6feda16d72082"
 }

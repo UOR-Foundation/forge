@@ -34,6 +34,12 @@ model does not sanction.
 | `FK-10` | `build` | The app always answers proved when event is reword and phase is proved |
 | `FK-11` | `build` | The app always answers published when event is reword and phase is published |
 
+## pages_release
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FR-01` | `build` | Pages exports reject every warmup.json path and nonregular entry before hashing or upload, and deploy only after clean exact-source acceptance |
+
 ## Cited authorities
 
 Never re-derived, vendored, or gated on.

@@ -19,7 +19,7 @@ def verify_workflow(source):
     if any(token in source for token in ["secrets.", "actions/cache", "cache: npm",
                                         "continue-on-error: true", "workflow_dispatch:"]):
         return False
-    for job in ["acceptance", "studio", "build", "forge", "deploy"]:
+    for job in ["acceptance", "studio", "browser", "codespace", "build", "forge", "deploy"]:
         if source.count("\n  " + job + ":\n") != 1:
             return False
     sections = re.split(r"\n  [a-z-]+:\n", source)[1:]
@@ -28,14 +28,23 @@ def verify_workflow(source):
         return False
     if "exec just vv" not in jobs["acceptance"]:
         return False
-    for name in ["build", "forge", "deploy"]:
-        if "    needs: [acceptance, studio]\n" not in jobs[name] and name != "deploy":
+    for command in ["npm run test:try", "npm run test:identity",
+                    'node frame/publish.mjs "$RUNNER_TEMP/frame" "$GITHUB_SHA"',
+                    'node identity/publish.mjs "$RUNNER_TEMP/identity" "$GITHUB_SHA"']:
+        if command not in jobs["browser"]:
             return False
-    if "    needs: [acceptance, studio, build, forge]\n" not in jobs["deploy"]:
+    if "devcontainer up --workspace-folder . --config .devcontainer/try/devcontainer.json" not in jobs["codespace"]:
+        return False
+    if "devcontainer exec --workspace-folder . --config .devcontainer/try/devcontainer.json" not in jobs["codespace"]:
+        return False
+    for name in ["build", "forge", "deploy"]:
+        if "    needs: [acceptance, studio, browser, codespace]\n" not in jobs[name] and name != "deploy":
+            return False
+    if "    needs: [acceptance, studio, browser, codespace, build, forge]\n" not in jobs["deploy"]:
         return False
     if "      name: github-pages\n" not in jobs["deploy"]:
         return False
-    for name in ["acceptance", "studio", "build", "forge", "deploy"]:
+    for name in ["acceptance", "studio", "browser", "codespace", "build", "forge", "deploy"]:
         # No per-job or per-step omission, except the pre-existing fork exclusion.
         for line in jobs[name].splitlines():
             if line.lstrip().startswith("if:") and line.strip() != "if: github.repository != 'UOR-Foundation/template'":
@@ -51,6 +60,10 @@ def verify_workflow(source):
         index = matching[0]
         if index + 1 >= len(steps) or upload not in steps[index + 1]:
             return False
+        if job == "deploy" and not steps[index].strip().endswith('cmp "$RUNNER_TEMP/combined-before.json" "$RUNNER_TEMP/combined-inventory.json"'):
+            return False
+    if 'cmp "$RUNNER_TEMP/combined-before.json" "$RUNNER_TEMP/combined-inventory.json"' not in jobs["deploy"]:
+        return False
     return "lhci autorun --config=lighthouserc.json" in jobs["build"] and "node bootstrap/screens.mjs site screens" in jobs["build"]
 
 
@@ -91,6 +104,18 @@ class ExportBoundary(unittest.TestCase):
         self.assertEqual(data["schema"], "foundry/pages-export/1")
         self.assertEqual([x["path"] for x in data["files"]],
                          [".nojekyll", "app/index.html", "index.html"])
+        before = Path(self.temp.name) / "producer-inventory.json"
+        after = Path(self.temp.name) / "final-inventory.json"
+        before.write_text(a.stdout)
+        original = (self.root / "index.html").read_bytes()
+        (self.root / "index.html").write_bytes(b"changed inert fixture\n")
+        changed = self.run_guard()
+        self.assertEqual(changed.returncode, 0, changed.stderr)
+        after.write_text(changed.stdout)
+        self.assertEqual(subprocess.run(["cmp", "-s", str(before), str(after)], check=False).returncode, 1)
+        (self.root / "index.html").write_bytes(original)
+        after.write_text(self.run_guard().stdout)
+        self.assertEqual(subprocess.run(["cmp", "-s", str(before), str(after)], check=False).returncode, 0)
         for item in data["files"]:
             content = (self.root / item["path"]).read_bytes()
             self.assertEqual(item["sha256"], hashlib.sha256(content).hexdigest())
@@ -154,12 +179,17 @@ class ExportBoundary(unittest.TestCase):
         changes = [
             ('bootstrap/pages-export.py --source "$SOURCE_COMMIT" out >', 'true # '),
             ('bootstrap/pages-export.py --source "$SOURCE_COMMIT" studio/shell >', 'true # '),
-            ("needs: [acceptance, studio, build, forge]", "needs: [build, forge]"),
+            ("needs: [acceptance, studio, browser, codespace, build, forge]", "needs: [build, forge]"),
             ("exec just vv", "exec just app"),
+            ("npm run test:try", "true"),
+            ("npm run test:identity", "true"),
+            ("devcontainer up --workspace-folder . --config .devcontainer/try/devcontainer.json", "true"),
+            ("devcontainer exec --workspace-folder . --config .devcontainer/try/devcontainer.json", "true"),
             ("runner: [ubuntu-24.04, ubuntu-24.04-arm]", "runner: [ubuntu-24.04]"),
             ("lhci autorun --config=lighthouserc.json", "true"),
             ("node bootstrap/screens.mjs site screens", "true"),
             ("name: github-pages", "name: unprotected"),
+            ('cmp "$RUNNER_TEMP/combined-before.json" "$RUNNER_TEMP/combined-inventory.json"', "true"),
         ]
         for before, after in changes:
             with self.subTest(change=before):
@@ -167,6 +197,42 @@ class ExportBoundary(unittest.TestCase):
                 self.assertFalse(verify_workflow(source.replace(before, after)))
         self.assertFalse(verify_workflow(source + "\n# secrets.EXAMPLE\n"))
         self.assertFalse(verify_workflow(source + "\n# actions/cache\n"))
+
+        # Exercise the actual production comparison program, not a second implementation.
+        marker = '          python3 -I - "$RUNNER_TEMP/combined-before.json" "$SOURCE_COMMIT" <<\'PYTHON\'\n'
+        program = source.split(marker, 1)[1].split("          PYTHON\n", 1)[0]
+        program = "\n".join(line[10:] for line in program.splitlines()) + "\n"
+        work = Path(self.temp.name) / "compare"
+        (work / "evidence/forge").mkdir(parents=True)
+        (work / "evidence/prism").mkdir(parents=True)
+        (work / "model").mkdir()
+        (work / "model/pages-release.json").write_bytes((ROOT / "model/pages-release.json").read_bytes())
+        file = {"path": "index.html", "size": 1, "sha256": "a" * 64}
+        forge = {"schema": "foundry/pages-export/1", "source_commit": SHA, "files": [file]}
+        prism = dict(forge)
+        combined = dict(forge, files=[dict(file, path="app/index.html"), file])
+        combined_path = work / "combined.json"
+        combined_path.write_text(json.dumps(combined))
+        (work / "evidence/prism/prism-inventory.json").write_text(json.dumps(prism))
+        cases = [(forge, 0), (dict(forge, schema="other"), 1),
+                 (dict(forge, source_commit="b" * 40), 1),
+                 (dict(forge, files=[]), 1),
+                 (dict(forge, files=[dict(file, path="../index.html")]), 1),
+                 (dict(forge, files=[file, file]), 1),
+                 (dict(forge, extra=True), 1),
+                 ({key: value for key, value in forge.items() if key != "schema"}, 1),
+                 (dict(forge, files=[dict(file, path="/index.html")]), 1),
+                 (dict(forge, files=[dict(file, path="a//index.html")]), 1),
+                 (dict(forge, files=[dict(file, path="app/warmup.json")]), 1),
+                 (dict(forge, files=[dict(file, size=True)]), 1),
+                 (dict(forge, files=[dict(file, size=-1)]), 1),
+                 (dict(forge, files=[dict(file, sha256="not-a-hash")]), 1)]
+        for manifest, expected in cases:
+            with self.subTest(manifest=manifest):
+                (work / "evidence/forge/forge-inventory.json").write_text(json.dumps(manifest))
+                result = subprocess.run([sys.executable, "-I", "-", str(combined_path), SHA],
+                                        input=program, cwd=work, capture_output=True, text=True, check=False)
+                self.assertEqual(result.returncode, expected, result.stderr)
 
     def test_untrusted_source_commit_is_rejected(self):
         for sha in ["main", "a" * 39, "$(echo unsafe)", "a" * 40 + "\n"]:
