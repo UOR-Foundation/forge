@@ -13,6 +13,7 @@ import { viewReady, lookup, routeOf, refusalWord, seal as sealAnswer, sealPaid, 
 import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
 import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
+import * as lexlean from "./live/lexlean.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
@@ -894,6 +895,14 @@ const saveRules = (appId, state) => put("refs", "prism:" + appId, state);
 // (the kernel's edit), are checked (its check), and on a pass the app's rule module is written.
 // Returns the files changed and the card that replaces the spec in the chat.
 async function rulesAfterTurn(appId, text, written = []) {
+  // A canonical LexLean module, when the model wrote one, is the app's source: it is stored as written
+  // and the spec is read from it, so the spec is a view of the module, never a second source.
+  const lex = lexlean.specFromTurn(text);
+  if (lex && lex.error) return { changed: 0, card: `**Rules** · not read\n\n- ${lex.error}\n\nAsk me to fix the module.` };
+  if (lex) {
+    if ((await get("files", `${appId}:prism/${lex.name}.lex.tex`)) !== lex.source) { await put("objects", await kappa(enc.encode(lex.source)), enc.encode(lex.source)); await put("files", `${appId}:prism/${lex.name}.lex.tex`, lex.source); }
+    text = "<dyad-spec>" + JSON.stringify(lex.spec) + "</dyad-spec>";
+  }
   const tag = prism.parseSpecTag(text);
   let changed = 0;
   if (tag && tag.spec) {
@@ -1134,6 +1143,10 @@ async function chatTurn(chatId, intent) {
       if (full.includes("<dyad-spec>")) {
         const raw = live.partialSpec(full);
         if (raw) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } pushLive(appId, raw, "draft"); }
+      } else if (full.includes("<prism-lexlean>")) {
+        // A canonical LexLean module is the source: whatever declarations are whole are projected now.
+        const part = lexlean.partialFromTurn(full);
+        if (part) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } pushLive(appId, part.spec, "draft"); }
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = full; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
