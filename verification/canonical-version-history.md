@@ -14,7 +14,7 @@ The FA-52 ID, scenario and missing-test failure preceded implementation (`canoni
 
 Seven planted defects were rejected: wrong alias conversion; missing app-existence check; success before transaction completion; relaxed note bound; discarded verified parent; omitted file-identity check; omitted core admission. Each was restored and all six controls passed. Diagnostic logs are `version-history-mutation-*.log` in the execution evidence workspace.
 
-The specification's two-module host diagnostic produced receipt `ece2df30b2fab6fcd8af888345231f970417dd7260b80672f572b84414054b28`. It is not locked-SDK acceptance. Local Rust acceptance is recorded separately after clearing reproducible build caches needed by the linker.
+The specification's two-module host diagnostic produced receipt `ece2df30b2fab6fcd8af888345231f970417dd7260b80672f572b84414054b28`. It is not locked-SDK acceptance. The workspace Rust conformance suite, Clippy and formatting checks pass after clearing reproducible build caches needed by the linker.
 
 ## Acceptance scope
 
