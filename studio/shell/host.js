@@ -1,3 +1,4 @@
+import {runBuildWork,buildWorkStore} from './build-work.mjs';
 import {authorizeGitHubPublication, bindPublicationSource} from "./github-publication-permission.mjs";
 import {withPortableBuildPermission, portablePermissionFailure} from "./portable-build-permission.mjs";
 import {commandRegistry, invokeBoundCommand} from "./command-registry.mjs";
@@ -1373,7 +1374,8 @@ function dispatch(channel, args) {
 async function buildPortable(appId, captured) {
   await coreReady;
   const source = captured || await verifiedBuildSource(appId);
-  return withPortableBuildPermission({id:"portable-"+crypto.randomUUID(),source:source.reference}, async lease => {
+  const environment=(await (await fetch(new URL("manifest.json",BASE),{cache:"no-store"})).json()).closure;
+  return runBuildWork({appId,source:source.reference,environment},()=>withPortableBuildPermission({id:"portable-"+crypto.randomUUID(),source:source.reference}, async lease => {
   const t0 = performance.now();
   const files = new Map(source.files);
   const pkg = await (await fetch(new URL("scaffold/package.json", BASE))).json();
@@ -1449,7 +1451,7 @@ async function buildPortable(appId, captured) {
     grant:async(id,permission)=>grantPreview(id,permission.disclosure.endpoints,permission,undefined),
     readGrant:id=>get("refs","capabilities:"+id),
     revoke:id=>del("refs","capabilities:"+id),
-  });
+  }), {guest:await kernelReady,derive:kappa,...buildWorkStore(await dbReady,appId,source)});
 }
 // Runs inside the compile frame. The frame is a preview address, so the worker serves it in a CSP
 // sandbox with an opaque origin and the host cannot read its document: the frame reports instead,

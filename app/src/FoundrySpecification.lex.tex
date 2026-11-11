@@ -906,5 +906,27 @@ definition{
   result: String,
   body: "Public GitHub publication requires a permission adapter before any network request. The adapter captures at most one MiB of exact JSON model, axioms and attestation plus source identity before asynchronous work. Read-only authenticated account discovery identifies the exact destination; the configured visitor token is sent only to the GitHub API with redirects refused and ambient credentials omitted. Before creating a public repository, enabling Pages or changing its tree and branch, the native disclosure names the repository, public destination, template authority and exact model payload without containing the token. It explains generated model, proof, workflow and page publication, possible updates of an existing repository, provider account ownership and remote effects that stopping cannot undo. Denial and Escape refuse; approval must occur within five minutes and mutation permission expires within one hour. Each non-read GitHub operation rechecks approval, online state, cancellation and the current source-bound rule record. Caller mutation cannot change the approved captured payload. A missing or malformed authorization cannot issue writes. Monitoring and live artifact acceptance retain their separate bounded effect and identity checks. This boundary does not prove template reproducibility, certify generated workflow semantics, undo public writes or establish complete deployment acceptance."
 }
+
+inductive{
+  name: DurableBuildWorkError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidBuildWork, fields: []},
+    {name: buildWorkBusy, fields: []},
+    {name: buildWorkUnavailable, fields: []},
+    {name: buildWorkConflict, fields: []},
+    {name: buildWorkSourceChanged, fields: []},
+    {name: buildWorkArtifactInvalid, fields: []},
+    {name: buildWorkLimitExceeded, fields: []}
+  ]
+}
+
+definition{
+  name: durableBuildWorkBoundary,
+  parameters: [],
+  result: String,
+  body: "The portable build adapter acquires an exclusive browser Web Lock before executing work. Its owner is minted inside the adapter and never selected by a renderer command. This is cooperative same-origin browser ownership, not external user authentication or protection against malicious same-origin scripts. The verified WorkProtocol guest alone initializes, reserves, starts, pauses, transfers, resumes, progresses and finishes semantic work. One semantic unit denotes one completed source-bound portable artifact; attempt counts and elapsed time are separate physical observations, not guest spent work. IndexedDB atomically compares the prior work record and project source before saving each transition. A completed bounded output and its independently recomputed content identity commit atomically with the guest completion. Reuse recomputes that identity and requires the same captured source. Failures retain unused reservation, remaining obligation and a private interruption reason; after reload a newly minted owner pauses interrupted running state, transfers and resumes through the guest. Retries re-enter the actual permission boundary and never claim that prior network effects were undone. A bounded journal retains up to 32 distinct project sources; exhaustion refuses explicitly. Missing Web Locks, stale source, concurrent owners, corrupt artifacts, invalid records and guest refusal cannot execute or promote work. Deleted projects remove work records atomically. This adapter does not authenticate remote operators, measure CPU cost as semantic work, provide arbitrary-stage checkpointing or establish whole-release acceptance."
+}
 \end{semanticmodule}
 \end{lexlean}

@@ -52,6 +52,7 @@ try {
   const independent=await context.newPage();await independent.setContent(built.value.html);assert.equal(await independent.locator('#root').textContent(),'Portable accepted');await independent.close();
   assert.equal(await page.evaluate(async()=> (await window.__host.all('refs')).filter(r=>r?.previewConsent?.id.startsWith('portable-')).length),0);
   assert.equal(await page.locator('iframe[src*="/p/portable-"]').count(),0);
+  await page.evaluate(id=>window.electron.ipcRenderer.invoke('edit-app-file',{appId:id,filePath:'new-build.txt',content:'require a new source build'}),appId);
   await context.setOffline(true);await start();assert.equal((await outcome()).code,'portableBuildPermissionOffline');await context.setOffline(false);
   await start();await dialog.waitFor();await page.evaluate(id=>window.electron.ipcRenderer.invoke('edit-app-file',{appId:id,filePath:'notes.txt',content:'changed during approval'}),appId);await dialog.getByRole('button',{name:'Build this source'}).click();assert.equal((await outcome()).code,'buildSourceChanged');assert.equal(remoteRequests,1);
   await page.evaluate(id=>window.electron.ipcRenderer.invoke('edit-app-file',{appId:id,filePath:'src/main.tsx',content:'import { title } from "https://esm.sh/foundry-portable-acceptance";const root=document.getElementById("root");root.textContent=title;root.className="unmatched-fixture";'}),appId);

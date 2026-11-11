@@ -120,6 +120,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-24` | `build` | Current live editing and reword flows retain source-bound commits and the complete compiled kernel protocols |
 
+## durable-build-work
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-46` | `build` | Portable builds execute under guest-admitted durable ownership and retain source-bound completed artifacts or resumable reservations |
+
 ## durable-event-delivery
 
 | ID | Level | Statement |

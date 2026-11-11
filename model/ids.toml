@@ -369,3 +369,9 @@ id = "FA-45"
 level = "build"
 suite = "github-publication-permission"
 statement = "Public GitHub writes require explicit repository and source-bound approval rechecked before each mutation"
+
+[[id]]
+id = "FA-46"
+level = "build"
+suite = "durable-build-work"
+statement = "Portable builds execute under guest-admitted durable ownership and retain source-bound completed artifacts or resumable reservations"
