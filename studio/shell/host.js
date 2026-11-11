@@ -32,6 +32,7 @@ import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
 import * as lexlean from "./live/lexlean.mjs";
 import { canonicalEditPath, planCanonicalEdit } from "./canonical-edits.mjs";
+import { copyGenerationInput, assertCanonicalGeneration } from "./canonical-generation.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
@@ -767,9 +768,12 @@ function parseDyadTags(text) {
   return { writes, deletes, renames, deps };
 }
 async function applyDyadTags(appId, tags, options = {}) {
+  const copied = copyGenerationInput(tags, options.source), { signal, onCommit } = options;
   await coreReady;
-  const result = await applyStoredProjectPatch(await dbReady, appId, tags, { core, derive: kappa, ...options });
-  return result;
+  assertGenerationActive(signal);
+  const source = copied.source || await captureProjectSource(await dbReady, appId);
+  assertCanonicalGeneration(source, copied.tags, lexlean);
+  return applyStoredProjectPatch(await dbReady, appId, copied.tags, { core, derive: kappa, source, signal, onCommit });
 }
 window.__chat = { parseDyadTags, applyDyadTags };
 
