@@ -60,6 +60,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-27` | `build` | Portable builds fetch only bounded approved-origin modules and retain exact module-byte receipts |
 
+## browser-telemetry-isolation
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-30` | `build` | The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings |
+
 ## capability-availability
 
 | ID | Level | Statement |
@@ -189,6 +195,12 @@ model does not sanction.
 | ID | Level | Statement |
 | --- | --- | --- |
 | `FA-28` | `build` | Imports validate bounded snapshot closure and discard authority-bearing metadata before atomic insertion |
+
+## verified-shell-cache
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-29` | `build` | Worker activation requires bounded independently verified shell bytes including renderer and scaffold closure |
 
 ## work-ownership
 

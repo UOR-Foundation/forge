@@ -173,12 +173,9 @@ fn openapi() -> String {
     serde_json::to_string_pretty(&doc).unwrap() + "\n"
 }
 
-/// Every file of the shell with its SHA-256, lexically ordered. Not in the closure: the worker and
-/// its template, this list, `provenance.json` (the closure digest is one of its fields; the worker
-/// precaches it beside this list), `warmup.json` (the site's included key, written at deploy time,
-/// never hashed into the closure), the renderer build under `assets/` and the staged `scaffold/` and
-/// `404.html` (written after the lane by the Pages workflow and content hashed by Vite already), and
-/// model weights, which live in the device store the engine keeps.
+/// The complete staged shell, including renderer and scaffold, in portable path order.
+/// Worker, manifest and closure-bound provenance are excluded to avoid circular hashes.
+/// Deployment credentials and model weights have separate ownership.
 fn manifest(shell: &Path) -> String {
     fn walk(dir: &Path, root: &Path, out: &mut Vec<PathBuf>) {
         let mut entries: Vec<_> = std::fs::read_dir(dir).expect("shell dir").flatten().collect();
@@ -187,7 +184,7 @@ fn manifest(shell: &Path) -> String {
             let path = entry.path();
             if path.is_dir() {
                 let name = path.file_name().unwrap().to_string_lossy().to_string();
-                if path.parent() == Some(root) && (name == "app" || name == "assets" || name == "scaffold") {
+                if path.parent() == Some(root) && name == "app" {
                     continue;
                 }
                 walk(&path, root, out);
@@ -198,10 +195,11 @@ fn manifest(shell: &Path) -> String {
     }
     let mut files = Vec::new();
     walk(shell, shell, &mut files);
+    files.sort_by_key(|path| path.to_string_lossy().replace('\\', "/"));
     let mut rows = Vec::new();
     for rel in files {
         let name = rel.to_string_lossy().replace('\\', "/");
-        if name == "manifest.json" || name == "provenance.json" || name == "warmup.json" || name == "sw.js" || name == "sw.template.js" || name == "404.html" {
+        if name == "manifest.json" || name == "provenance.json" || name == "warmup.json" || name == "sw.js" || name == "sw.template.js" {
             continue;
         }
         let bytes = std::fs::read(shell.join(&rel)).expect("read shell file");

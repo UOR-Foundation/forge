@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { privacySource } from "./hologram.privacy.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const slash = (p) => p.replace(/\\/g, "/");
@@ -250,5 +251,5 @@ export function screenSource(file, code) {
     if (!out.includes(p.from)) throw new Error(`${rel}: the passage the shell patches was not found:\n${p.from.split("\n")[0]}`);
     out = out.replace(p.from, p.to);
   }
-  return out;
+  return privacySource(rel, out);
 }
