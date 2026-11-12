@@ -621,3 +621,9 @@ id = "FA-76"
 level = "build"
 suite = "large-module-presentation"
 statement = "Presentation validation retains complete large canonical modules without promoting them into the bounded proof profile"
+
+[[id]]
+id = "FA-77"
+level = "build"
+suite = "atomic-chat-preferences"
+statement = "Chat title mode and model preferences commit atomically through their imported schema without losing concurrent transcript updates"

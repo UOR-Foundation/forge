@@ -42,6 +42,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-63` | `build` | Browser settings updates serialize their read and write and acknowledge only transaction completion |
 
+## atomic-chat-preferences
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-77` | `build` | Chat title mode and model preferences commit atomically through their imported schema without losing concurrent transcript updates |
+
 ## atomic-generation-patch
 
 | ID | Level | Statement |
