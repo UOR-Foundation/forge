@@ -71,3 +71,18 @@ test("each approval explains why, then how, then what, in plain words, and still
   // no jargon left in the words a person reads
   for (const source of [consent, preview, hosted]) for (const word of ["UTF-8", "module prefixes", "Credential:", "bounded retries", "aborts", "executes generated code"]) assert.equal(source.includes(word), false, word);
 });
+
+test("every phrase a browser gate reads from an approval is a phrase the approval still writes", () => {
+  const dialogs = ["inference-consent.mjs", "hosted-source-permission.mjs", "preview-permissions.mjs"].map((s) => read("../shell/" + s));
+  let found = 0;
+  for (const gate of ["inference_consent_browser.mjs", "site_relay_authorization_browser.mjs", "hosted_source_permission_browser.mjs", "preview_permissions_browser.mjs", "sidebar_tool_access_browser.mjs"]) {
+    for (const m of read("./" + gate).matchAll(/assert\.ok\(\(await dialog\.textContent\(\)\)\.includes\((['"])((?:(?!\1).)+)\1\)/g)) {
+      const phrase = m[2];
+      // Values a gate passes in itself (a key that must not appear, its own source, an address) are not wording.
+      if (/secret|private app source|^https?:/.test(phrase)) continue;
+      found++;
+      assert.ok(dialogs.some((source) => source.includes(phrase)), gate + " reads a phrase no approval writes: " + phrase);
+    }
+  }
+  assert.ok(found >= 4, "the gates' phrase checks were not found: " + found);
+});
