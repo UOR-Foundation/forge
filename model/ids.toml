@@ -597,3 +597,9 @@ id = "FA-72"
 level = "build"
 suite = "module-presentation-ownership"
 statement = "Generated modules retain presentation only when the canonical application interface remains compatible"
+
+[[id]]
+id = "FA-73"
+level = "build"
+suite = "kernel-owner-readiness"
+statement = "Service-worker guest requests await an initializing matching document owner without accepting unverified executables"
