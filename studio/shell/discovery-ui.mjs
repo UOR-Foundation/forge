@@ -1,3 +1,4 @@
+import {mountShellAction} from "./shell-action-dock.mjs";
 // Native review is explicit local-storage permission; it never enables audio.
 export function mountApplicationDiscovery({discover,accept,open}){
  const element=(tag,text,parent)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;parent?.append(node);return node;};
@@ -13,6 +14,6 @@ export function mountApplicationDiscovery({discover,accept,open}){
    const create=button('Create reviewed application',dialog,async()=>{if(busy||!proposal)return;busy=true;creating=true;review.disabled=true;create.disabled=true;prompt.disabled=true;name.disabled=true;try{const result=await accept({text:proposal.text,name:name.value,review:proposal.review});dialog.close();await open(result.app.id);}catch(error){status.textContent=error.message;proposal=null;}finally{busy=false;creating=false;if(!closed){review.disabled=false;prompt.disabled=false;name.disabled=false;}}});create.disabled=true;
    prompt.addEventListener('input',()=>{revision++;proposal=null;create.disabled=true;detail.replaceChildren();status.textContent='Request changed. Review it again.';});
    button('Cancel',dialog,()=>{if(!creating)dialog.close();});dialog.addEventListener('cancel',event=>{if(creating)event.preventDefault();});dialog.addEventListener('close',()=>{closed=true;revision++;dialog.remove();previous?.focus();},{once:true});document.body.append(dialog);dialog.showModal();prompt.focus();
-  });entry.id='foundry-application-discovery';entry.style.cssText+=';position:fixed;bottom:12px;left:320px;z-index:2147480000';
+  });entry.id='foundry-application-discovery';mountShellAction(entry);
  };if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 }

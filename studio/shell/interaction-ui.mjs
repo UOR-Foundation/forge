@@ -1,3 +1,4 @@
+import {mountShellAction} from "./shell-action-dock.mjs";
 // Native keyboard controls and closed visual/audio adapters for accepted guest outputs.
 import {interactionFailure} from './interaction-application.mjs';
 const colors=['#f5ead1','#172c4c','#dcebd5','#f7d9e4','#e2def5','#d8edf0','#f4e2c7','#e5e7eb'];
@@ -50,6 +51,6 @@ export function mountInteractionApplications({create,list,run,probe}){
    const refresh=async()=>{catalog.replaceChildren();try{for(const app of await list())button(app.name,catalog,()=>{node.close();void openInteractionApplication(app.id,{run,probe});});}catch{status.textContent='Applications could not be listed';}};
    for(const kind of ['gallery','garden'])button('Create '+kind,node,async event=>{const target=event.currentTarget;target.disabled=true;try{const created=await create({name:name.value,kind});node.close();await openInteractionApplication(created.app.id,{run,probe});}catch(error){status.textContent=error.message;}finally{target.disabled=false;}});
    button('Close',node,()=>node.close());await refresh();
-  });entry.id='foundry-interaction-applications';entry.style.cssText+=';position:fixed;bottom:12px;left:170px;z-index:2147480000';
+  });entry.id='foundry-interaction-applications';mountShellAction(entry);
  };if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 }

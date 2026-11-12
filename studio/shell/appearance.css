@@ -248,3 +248,6 @@ button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* FoundrySpecification.sidebarToolAccessBoundary: native top-layer disclosures remain operable over renderer drawers. */
+dialog:modal { pointer-events: auto; }

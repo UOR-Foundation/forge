@@ -1,3 +1,4 @@
+import {mountShellAction} from "./shell-action-dock.mjs";
 // FoundrySpecification.previewPermissionBoundary: consent binds a source and exact origins.
 const messages = {
   invalidPreviewPermission: "Invalid preview permission",
@@ -75,9 +76,9 @@ export function authorizePreview(input, { document = globalThis.document, online
     } catch { finish("previewPermissionUnavailable"); }
   });
 }
-export function mountPreviewPermissions({ list, revoke, document = globalThis.document }) {
-  const button = element(document,"button","Preview permissions"); button.type="button";
-  button.style.cssText="position:fixed;bottom:0.5rem;left:0.5rem;z-index:2147483646;padding:0.5rem;background:Canvas;color:CanvasText;border:1px solid;border-radius:0.5rem;font:inherit";
+export function mountPreviewPermissions({ list, revoke, document = globalThis.document, mount = button => mountShellAction(button,document) }) {
+  const button = element(document,"button","Preview permissions"); button.type="button";button.id="foundry-preview-permissions";
+  button.style.cssText="padding:0.5rem;background:Canvas;color:CanvasText;border:1px solid;border-radius:0.5rem;font:inherit";
   button.addEventListener("click",async()=>{
     let dialog;
     try {
@@ -93,5 +94,5 @@ export function mountPreviewPermissions({ list, revoke, document = globalThis.do
       }
     } catch { if (dialog) dialog.append(element(document,"p",messages.previewPermissionStorageFailed)); }
   });
-  document.body.append(button); return button;
+  return mount(button);
 }

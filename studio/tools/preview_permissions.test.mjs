@@ -25,7 +25,7 @@ test("approval snapshots endpoints focuses refusal and rechecks online state",as
  const next=dom();let online=true;const pending=authorizePreview(request,{document:next.document,online:()=>online});online=false;next.button("Allow this preview").click();await assert.rejects(pending,code("previewPermissionOffline"));
 });
 test("persistent permission control lists grants and awaits revocation",async()=>{
- const ui=dom();let revoked=null;mountPreviewPermissions({document:ui.document,list:async()=>[{id:request.id,source:request.source,endpoints:request.endpoints}],revoke:async id=>{revoked=id;}});ui.button("Preview permissions").click();await new Promise(r=>setTimeout(r,0));ui.button("Revoke preview").click();await new Promise(r=>setTimeout(r,0));assert.equal(revoked,request.id);
+ const ui=dom();let revoked=null;mountPreviewPermissions({document:ui.document,mount:button=>{ui.document.body.append(button);return button;},list:async()=>[{id:request.id,source:request.source,endpoints:request.endpoints}],revoke:async id=>{revoked=id;}});ui.button("Preview permissions").click();await new Promise(r=>setTimeout(r,0));ui.button("Revoke preview").click();await new Promise(r=>setTimeout(r,0));assert.equal(revoked,request.id);
 });
 test("actual host binds approval before compilation and grant after source comparison",async()=>{
  const host=fs.readFileSync(new URL("../shell/host.js",import.meta.url),"utf8"),start=host.indexOf("async function buildPreview("),body=host.slice(start,host.indexOf("// ---- the live preview",start));
