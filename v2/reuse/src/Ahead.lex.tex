@@ -1,0 +1,134 @@
+\begin{lexlean}{Ahead}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Entry,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: event, type: Nat}, {name: response, type: Nat}]
+}
+
+structure{
+  name: Table,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: app, type: Nat}, {name: state, type: Nat}, {name: entries, type: (List Entry)}]
+}
+
+inductive{
+  name: Answer,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: hit, fields: [Nat]}, {name: compute, fields: []}]
+}
+
+definition{
+  name: findCode,
+  parameters: [entries : (List Entry), event : Nat],
+  result: Nat,
+  body: (match entries
+    | List.nil => 0
+    | List.cons head rest => (if ((project head event) =? event) then 1 else (findCode rest event))),
+  recursive_argument: entries
+}
+
+definition{
+  name: findValue,
+  parameters: [entries : (List Entry), event : Nat],
+  result: Nat,
+  body: (match entries
+    | List.nil => 0
+    | List.cons head rest => (if ((project head event) =? event) then (project head response) else (findValue rest event))),
+  recursive_argument: entries
+}
+
+definition{
+  name: lookupCode,
+  parameters: [table : Table, app : Nat, state : Nat, event : Nat],
+  result: Nat,
+  body: (if (((project table app) =? app) && ((project table state) =? state)) then (findCode (project table entries) event) else 0)
+}
+
+definition{
+  name: lookupValue,
+  parameters: [table : Table, app : Nat, state : Nat, event : Nat],
+  result: Nat,
+  body: (if (((project table app) =? app) && ((project table state) =? state)) then (findValue (project table entries) event) else 0)
+}
+
+definition{
+  name: answer,
+  parameters: [table : Table, app : Nat, state : Nat, event : Nat],
+  result: Answer,
+  body: (if ((lookupCode table app state event) =? 1) then (ctor Answer.hit (lookupValue table app state event)) else (ctor Answer.compute))
+}
+
+definition{
+  name: build,
+  parameters: [app : Nat, state : Nat, entries : (List Entry)],
+  result: Table,
+  body: (record Table {app := app, state := state, entries := entries})
+}
+
+definition{
+  name: breaksState,
+  parameters: [table : Table, app : Nat, state : Nat, event : Nat],
+  result: Bool,
+  body: ((not ((project table state) =? state)) && ((lookupCode table app state event) =? 1))
+}
+
+theorem{
+  name: stateChangeInvalidatesEveryEntry,
+  parameters: [table : Table, app : Nat, state : Nat, event : Nat],
+  statement: ((breaksState table app state event) = false),
+  proof: linear_arithmetic{definitions: [breaksState, lookupCode]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksApp,
+  parameters: [table : Table, app : Nat, state : Nat, event : Nat],
+  result: Bool,
+  body: ((not ((project table app) =? app)) && ((lookupCode table app state event) =? 1))
+}
+
+theorem{
+  name: appChangeInvalidatesEveryEntry,
+  parameters: [table : Table, app : Nat, state : Nat, event : Nat],
+  statement: ((breaksApp table app state event) = false),
+  proof: linear_arithmetic{definitions: [breaksApp, lookupCode]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: counterStep,
+  parameters: [count : Nat, stride : Nat, event : Nat],
+  result: Nat,
+  body: (if (event =? 0) then (count + stride) else (if (event =? 1) then 0 else count))
+}
+
+definition{
+  name: counterTable,
+  parameters: [app : Nat, state : Nat, count : Nat, stride : Nat],
+  result: Table,
+  body: (build app state (cons (record Entry {event := 0, response := (counterStep count stride 0)}) (cons (record Entry {event := 1, response := (counterStep count stride 1)}) (nil Entry))))
+}
+
+definition{
+  name: breaksHit,
+  parameters: [app : Nat, state : Nat, count : Nat, stride : Nat, event : Nat],
+  result: Bool,
+  body: (((lookupCode (counterTable app state count stride) app state event) =? 1) && (not ((lookupValue (counterTable app state count stride) app state event) =? (counterStep count stride event))))
+}
+
+theorem{
+  name: counterHitEqualsCompute,
+  parameters: [app : Nat, state : Nat, count : Nat, stride : Nat, event : Nat],
+  statement: ((breaksHit app state count stride event) = false),
+  proof: linear_arithmetic{definitions: [breaksHit, build, counterStep, counterTable, findCode, findValue, lookupCode, lookupValue]},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

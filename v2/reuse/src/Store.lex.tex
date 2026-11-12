@@ -1,0 +1,144 @@
+\begin{lexlean}{Store}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{Encoding}
+\title{Boolean}
+\begin{semanticmodule}
+inductive{
+  name: Read,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: accepted, fields: []}, {name: refusedMismatch, fields: []}]
+}
+
+inductive{
+  name: SnapshotForm,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: canonical, fields: [(List Nat)]}, {name: refusedDuplicate, fields: []}]
+}
+
+definition{
+  name: blobPreimage,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (prim append 0x707269736d2f72657573652f626c6f622f310a (Encoding::framed bytes) : Bytes)
+}
+
+definition{
+  name: codeAccepted,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: codeMismatch,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: readCode,
+  parameters: [expected : Nat, derived : Nat],
+  result: Nat,
+  body: (if (expected =? derived) then (codeAccepted) else (codeMismatch))
+}
+
+definition{
+  name: read,
+  parameters: [expected : Nat, derived : Nat],
+  result: Read,
+  body: (if ((readCode expected derived) =? (codeAccepted)) then (ctor Read.accepted) else (ctor Read.refusedMismatch))
+}
+
+definition{
+  name: restoreCode,
+  parameters: [snapshot : Nat, derived : Nat, membersAccepted : Nat],
+  result: Nat,
+  body: (if ((readCode snapshot derived) =? (codeAccepted)) then (if (membersAccepted =? 1) then (codeAccepted) else (codeMismatch)) else (codeMismatch))
+}
+
+definition{
+  name: restore,
+  parameters: [snapshot : Nat, derived : Nat, membersAccepted : Nat],
+  result: Read,
+  body: (if ((restoreCode snapshot derived membersAccepted) =? (codeAccepted)) then (ctor Read.accepted) else (ctor Read.refusedMismatch))
+}
+
+definition{
+  name: snapshotForm,
+  parameters: [members : (List Nat)],
+  result: SnapshotForm,
+  body: (if ((Encoding::ascendingCode (Encoding::ordered members)) =? 0) then (ctor SnapshotForm.canonical (Encoding::ordered members)) else (ctor SnapshotForm.refusedDuplicate))
+}
+
+definition{
+  name: snapshotPreimage,
+  parameters: [members : (List Nat)],
+  result: Bytes,
+  body: (prim append 0x707269736d2f72657573652f736e617073686f742f310a (prim append (Encoding::countBytes (prim length members : Nat)) (Encoding::addresses (Encoding::ordered members)) : Bytes) : Bytes)
+}
+
+definition{
+  name: breaksRead,
+  parameters: [expected : Nat, derived : Nat],
+  result: Bool,
+  body: ((not (expected =? derived)) && ((readCode expected derived) =? (codeAccepted)))
+}
+
+theorem{
+  name: readRefusesMismatch,
+  parameters: [expected : Nat, derived : Nat],
+  statement: ((breaksRead expected derived) = false),
+  proof: linear_arithmetic{definitions: [breaksRead, codeAccepted, codeMismatch, readCode]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksReadMatch,
+  parameters: [expected : Nat, derived : Nat],
+  result: Bool,
+  body: ((expected =? derived) && (not ((readCode expected derived) =? (codeAccepted))))
+}
+
+theorem{
+  name: readAcceptsMatch,
+  parameters: [expected : Nat, derived : Nat],
+  statement: ((breaksReadMatch expected derived) = false),
+  proof: linear_arithmetic{definitions: [breaksReadMatch, codeAccepted, codeMismatch, readCode]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksRestore,
+  parameters: [snapshot : Nat, derived : Nat, membersAccepted : Nat],
+  result: Bool,
+  body: ((not (snapshot =? derived)) && ((restoreCode snapshot derived membersAccepted) =? (codeAccepted)))
+}
+
+theorem{
+  name: restoreRefusesMismatch,
+  parameters: [snapshot : Nat, derived : Nat, membersAccepted : Nat],
+  statement: ((breaksRestore snapshot derived membersAccepted) = false),
+  proof: linear_arithmetic{definitions: [breaksRestore, codeAccepted, codeMismatch, readCode, restoreCode]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksRestoreMembers,
+  parameters: [snapshot : Nat, derived : Nat, membersAccepted : Nat],
+  result: Bool,
+  body: ((not (membersAccepted =? 1)) && ((restoreCode snapshot derived membersAccepted) =? (codeAccepted)))
+}
+
+theorem{
+  name: restoreRefusesBadMember,
+  parameters: [snapshot : Nat, derived : Nat, membersAccepted : Nat],
+  statement: ((breaksRestoreMembers snapshot derived membersAccepted) = false),
+  proof: linear_arithmetic{definitions: [breaksRestoreMembers, codeAccepted, codeMismatch, readCode, restoreCode]},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

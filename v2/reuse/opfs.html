@@ -1,0 +1,58 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Reuse store over OPFS</title>
+<pre id="out">running…</pre>
+<script type="module">
+// Exercises the OPFS backend through the same store the Node tests use, then times reads.
+import { loadModel } from "./adapter/model.mjs";
+import { createStore, opfsBackend } from "./adapter/store.mjs";
+
+const out = document.getElementById("out"), lines = [];
+const log = (o) => { lines.push(JSON.stringify(o)); out.textContent = lines.join("\n"); };
+const check = (name, ok, detail) => log({ check: name, ok: !!ok, ...(detail ? { detail } : {}) });
+const enc = new TextEncoder();
+const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+
+try {
+  const model = await loadModel(async (n) => (await fetch("./data/" + n)).text());
+  const root = await navigator.storage.getDirectory();
+  await root.removeEntry("prism-reuse", { recursive: true }).catch(() => {});
+  const backend = await opfsBackend(root), store = createStore(model, backend);
+
+  const hex = await store.put(enc.encode("hello"));
+  check("put then get returns the bytes", new TextDecoder().decode(await store.get(hex)) === "hello");
+
+  const fresh = createStore(model, await opfsBackend(root));
+  check("a second store over the same OPFS reads it back (persisted, not in memory)", new TextDecoder().decode(await fresh.get(hex)) === "hello");
+
+  const dir = await (await root.getDirectoryHandle("prism-reuse")).getDirectoryHandle("blob");
+  const w = await (await dir.getFileHandle(hex)).createWritable(); await w.write(enc.encode("hellp")); await w.close();
+  try { await store.get(hex); check("altered bytes on disk are refused", false); } catch (e) { check("altered bytes on disk are refused", e.code === "store.mismatch", e.code); }
+
+  try { await store.get("0".repeat(64)); check("missing address is refused", false); } catch (e) { check("missing address is refused", e.code === "store.missing", e.code); }
+
+  const members = [];
+  for (const t of ["spec", "data form", "view"]) members.push(await store.put(enc.encode(t)));
+  const snap = await store.snapshot(members), snap2 = await store.snapshot([...members].reverse());
+  check("snapshot address is independent of insertion order", snap === snap2);
+  check("restore returns every member", (await store.restore(snap)).size === 3);
+  const sdir = await (await root.getDirectoryHandle("prism-reuse")).getDirectoryHandle("snapshot");
+  const file = await (await sdir.getFileHandle(snap)).getFile(); const bytes = new Uint8Array(await file.arrayBuffer()); bytes[bytes.length - 1] ^= 1;
+  const w2 = await (await sdir.getFileHandle(snap)).createWritable(); await w2.write(bytes); await w2.close();
+  try { await store.restore(snap); check("tampered snapshot is refused", false); } catch (e) { check("tampered snapshot is refused", e.code === "store.mismatch", e.code); }
+
+  let names = []; for await (const [n] of dir.entries()) names.push(n);
+  check("no partial files left behind", !names.some((n) => n.endsWith(".partial")), { files: names.length, move: typeof (await dir.getFileHandle(names[0])).move });
+
+  for (const size of [1024, 65536]) {
+    const h = await store.put(new Uint8Array(size).fill(7));
+    for (let i = 0; i < 5; i++) await store.get(h);
+    const xs = []; for (let i = 0; i < 200; i++) { const t = performance.now(); await store.get(h); xs.push(performance.now() - t); }
+    log({ measure: `OPFS store get, ${size} bytes, verified`, runs: 200, medianMs: +median(xs).toFixed(3) });
+    const ys = []; for (let i = 0; i < 50; i++) { const t = performance.now(); await store.put(new Uint8Array(size).fill(i)); ys.push(performance.now() - t); }
+    log({ measure: `OPFS store put, ${size} bytes`, runs: 50, medianMs: +median(ys).toFixed(3) });
+  }
+  log({ done: true, userAgent: navigator.userAgent });
+} catch (e) { log({ error: String(e), stack: e.stack }); }
+window.__done = lines;
+</script>
