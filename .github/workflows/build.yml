@@ -48,7 +48,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.sha }}-${{ github.ref }}
+  group: build-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
