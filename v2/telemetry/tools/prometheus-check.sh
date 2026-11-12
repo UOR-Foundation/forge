@@ -10,10 +10,10 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 image=prom/prometheus:v3.5.0
 cp "$here/tools/rules.test.yml" "$here/out/rules.test.yml"
 run() { docker run --rm -i --user "$(id -u):$(id -g)" -v "$here/out:/out" -w /out --entrypoint promtool "$image" "$@"; }
-echo "== check metrics"; run check metrics < "$here/out/prism.prom"
+echo "== check metrics"; run check metrics < "$here/out/prism.prom" && echo "  SUCCESS: no problems"
 echo "== check rules"; run check rules prism.rules.yml
 echo "== test rules"; run test rules rules.test.yml
 echo "== backfill"; rm -rf "$here/out/tsdb"; run tsdb create-blocks-from openmetrics prism-history.om.txt tsdb
-echo "== read back"; run tsdb dump --match='prism_kpi_seconds{kpi="preview"}' tsdb | tee "$here/out/dump.txt" | head -20
+echo "== read back"; mkdir -p "$here/out/tsdb/wal"; run tsdb dump --match='prism_kpi_seconds{kpi="preview"}' tsdb | tee "$here/out/dump.txt" | head -20
 test "$(grep -c 'prism_kpi_seconds' "$here/out/dump.txt")" -ge 12
 echo "prometheus-check: all passed"

@@ -42,13 +42,12 @@ Deterministic and on device. A KPI over budget in a majority of observed turns g
 
 ## Evidence
 
-- Lean, in the SDK image pinned by `prismpm.lock`: 15 theorems verified, attestation `d5ea4e35…` (see VERIFICATION.md for which source).
+- Lean, in the SDK image pinned by `prismpm.lock`: 15 theorems verified on the current sources, attestation `a8d04f96…`.
+- Prometheus's own `promtool` (v3.5.0): the snapshot passes `check metrics`, the rules pass `check rules` and a boundary `test rules`, and the history backfills and reads back every turn. A planted off-by-one rule fails `test rules`.
 - `node --test v2/telemetry/test.mjs`: 21 of 21. `node v2/telemetry/browser-test.mjs`: 25 of 25. `node v2/telemetry/defects.mjs`: 6 of 6 caught.
 
 ## Not established
 
-- Prometheus compatibility is not yet confirmed by Prometheus: `tools/prometheus-check.sh` (promtool check metrics, check and test rules, backfill and read back) is written but has not run, because WSL could not attach its disk and restarting WSL was not permitted. The formats were written to the 0.0.4 and OpenMetrics 1.0 rules and are tested by this suite's own parser, which is not promtool.
-- The current source's `maxValue` and `worstOf` (rewritten to be linear) were not re-verified in the SDK image for the same reason. No theorem refers to them; the hosted service checked the source.
 - Nothing is wired into the shell (`host.js`, the live frame, the worker): no ID in `model/ids.toml`, no scenario in `features/suites/` (R3), no FK in the kernel. Wiring needs the six marks named under "Where" and a kernel decision `telemetry EFFECT USER DEVICE` (FK-25 onward) mirroring `flowAllows`.
 - The replay's model time is a schedule divided by 100: `declaration` and `built` in a replayed turn are the schedule's, not a model's. The 11 seeded turns are synthesized from the owner's hand-measured ranges, not captured.
 - Per-model read rates in the replay: the replayed turn is labelled model-a.

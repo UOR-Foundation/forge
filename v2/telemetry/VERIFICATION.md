@@ -2,13 +2,14 @@
 
 | Gate | Command | Result |
 | --- | --- | --- |
-| Check | `v2/telemetry/sdk.sh` in WSL: `lexlean lock && lexlean check --all` in the image `prismpm.lock` pins | Both modules check (last run in the SDK image before the `maxValue`/`worstOf` rewrite; the current source checks on the hosted service, `data/source.json`) |
-| Verify | `node v2/telemetry/tools/verify-loop.mjs` (`lexlean verify --all` in the same image) | Verified, 15 theorems, attestation `d5ea4e3552084571b9531b35ed5e2b7e89ac8092cd72a2efe85a0e56029d6ea8`, of the source before the `maxValue`/`worstOf` rewrite. Not re-run since: WSL could not attach its disk |
+| Check | `v2/telemetry/sdk.sh` in WSL: `lexlean lock && lexlean check --all` in the image `prismpm.lock` pins | Both modules check |
+| Verify | `node v2/telemetry/tools/verify-loop.mjs` (`lexlean verify --all` in the same image) | Verified, 15 theorems, attestation `a8d04f961afbabb1cf2cf523356ad12faffffb40e0bedb34a65e100f82c5143a`, of the sources whose SHA-256 `data/source.json` records (the data form the tab runs is read from the same sources). `d5ea4e35…` is the earlier run, before `maxValue`/`worstOf` became linear |
+| Hosted verify | `lexlean_verify` on draft `spec/ac81f46e…` (the public service, LexLean 0.4.0, not the locked SDK) | task-8 verified; independent of the SDK run, not a substitute for it |
 | Tests | `node --test v2/telemetry/test.mjs` | 21 of 21 pass |
 | Egress gate | `node v2/telemetry/egress-gate.mjs` | 12 files clean |
 | Browser | `node v2/telemetry/browser-test.mjs` (headless Chrome, DevTools protocol) | 25 of 25 checks pass |
 | Planted defects | `node v2/telemetry/defects.mjs` (output in `out/defects.log`) | 6 of 6 caught, every file restored byte for byte |
-| Prometheus | `bash v2/telemetry/tools/prometheus-check.sh` in WSL (`promtool` from `prom/prometheus:v3.5.0`) | Not run: WSL could not attach its disk |
+| Prometheus | `bash v2/telemetry/tools/prometheus-check.sh` in WSL (`promtool` from `prom/prometheus:v3.5.0`), after `browser-test.mjs` wrote `out/` | `check metrics` on the 0.0.4 snapshot: no problems. `check rules`: 3 rules. `test rules`: the alert fires at 16 ms on the 15 ms budget and not at 15.999 ms. The OpenMetrics history backfills into 7 TSDB blocks, and `tsdb dump` reads back all 12 turns (11 at 1.3 s, the replay at 27.9 ms) |
 
 ## Planted defects
 
@@ -22,6 +23,7 @@ Each defect is planted in the bytes that run: the model's data form, an adapter,
 | `overCode` judges one microsecond late (`<` for `<=`) | "verdicts agree with the kernel's" | 20 pass, 1 fail | 21 pass |
 | `persistent` drops the majority rule | "a majority of turns must be over" | 20 pass, 1 fail | 21 pass |
 | Export ignores whether the user asked | "typed refusals" | 20 pass, 1 fail | 21 pass |
+| The alert rule judges `>` where the kernel says `>=` (`tools/prometheus-defect.sh`) | `promtool test rules`: expected the alert at 1m, got none | exit 1 | exit 0, SUCCESS |
 
 Defects 3 to 5 are also excluded by proof in the LexLean source (`zeroEgress`, `withinBudgetNeverOver`/`overBudgetNeverWithin`, `noSuggestionFromMinority`); the tests hold the data form the tab runs to that source.
 
@@ -33,7 +35,8 @@ Defects 3 to 5 are also excluded by proof in the LexLean source (`zeroEgress`, `
 | 2 | `LLV7002`: `omega` could not see through a record projection in `onlyApprovalChangesAnything` | `loopStep` built from three scalar functions; the theorems are about `loopApplied` |
 | 3 | `LLV7005`: `persistentOverIsSuggested` observed `Classical.choice` | Declared it |
 | 4 | `LLV7005`: `zeroEgress` observed `Classical.choice` | Declared it |
-| 5 | Verified | |
+| 5 | Verified (`d5ea4e35…`) | `maxValue` and `worstOf` then found exponential in the tab; rewritten with an accumulator |
+| 6 | Verified (`a8d04f96…`), 214 s | |
 
 ## Measured
 
