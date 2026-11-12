@@ -127,6 +127,10 @@ jobs:
           node tools/inference_consent_browser.mjs
           node tools/exact_representation_browser.mjs
           node tools/provider_key_browser.mjs
+      - name: Recompile the exact host projection and compare its receipt
+        run: |
+          node tools/host_bundle.mjs --check
+          node tools/host_bundle_runtime.mjs
       - name: Every shell script parses the way the browser parses it
         run: node tools/shell_parse.mjs
       - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone

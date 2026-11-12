@@ -32,3 +32,7 @@ site/manifest.webmanifest
 screens/
 
 /studio/shell/interaction-model.lex.tex
+
+# Reproducible host projection, bound by the staged complete manifest.
+/studio/shell/host.bundle.js
+/studio/shell/host-bundle.json

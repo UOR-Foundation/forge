@@ -15,8 +15,8 @@ test('stylesheet normalization preserves the resolved resource at root nested an
 });
 test('initial stylesheet identity precedes the unchanged host and renderer module boundary',()=>{
  assert.ok(source.includes('<link id="renderer-style" rel="stylesheet" crossorigin>'));
- assert.ok(source.indexOf('const style = document.getElementById("renderer-style")')<source.indexOf('<script type="module" src="host.js"></script>'));
- assert.ok(source.indexOf('<script type="module" src="host.js"></script>')<source.indexOf('<script type="module" src="assets/index.js"></script>'));
+ assert.ok(source.indexOf('const style = document.getElementById("renderer-style")')<source.indexOf('<script type="module" src="host.bundle.js"></script>'));
+ assert.ok(source.indexOf('<script type="module" src="host.bundle.js"></script>')<source.indexOf('<script type="module" src="assets/index.js"></script>'));
  assert.ok(!source.includes('async src="assets/index.js"'));
  assert.ok(read('app/src/FoundrySpecification.lex.tex').includes('name: rendererStylesheetBoundary,'));
 });

@@ -6,7 +6,7 @@ under shell/assets/, writes shell/404.html as a copy of the homepage so Pages an
 of the renderer's routes with the app (the router reads the URL), and stages the renderer's scaffold with a file list,
 which the host creates apps from. Run after the Vite build: python3 scripts/stamp_shell.py
 """
-import json, pathlib, re, shutil
+import json, pathlib, re, shutil, subprocess
 
 root = pathlib.Path(__file__).resolve().parent.parent
 dist = root / "vendor" / "dyad" / "dist" / "assets"
@@ -56,3 +56,7 @@ print(f"staged {len(compiler_receipt['files'])} locked compiler assets and licen
 
 # Application instances carry the exact project-owned model source.
 shutil.copyfile(root.parent / "app" / "src" / "InteractionModel.lex.tex", root / "shell" / "interaction-model.lex.tex")
+
+# The locked renderer compiler projects the host before the complete manifest is written.
+subprocess.run(["node", str(root / "tools" / "host_bundle.mjs")], check=True)
+subprocess.run(["node", str(root / "tools" / "host_bundle.mjs"), "--check"], check=True)

@@ -78,6 +78,8 @@ try {
   await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
   await page.getByLabel('Application name').fill('Motion garden');await page.getByRole('button',{name:'Create garden',exact:true}).click();
   await page.getByRole('heading',{name:'Seed',exact:true}).waitFor();
+  // Inspect the painted state after the reduced-motion CSS transitions settle.
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   assert.equal(await page.evaluate(()=>document.querySelector('dialog section').getAnimations({subtree:true}).length),0);
   await page.getByRole('button',{name:'Enable sound',exact:true}).click();await page.getByRole('button',{name:'Mute sound',exact:true}).waitFor();
   await page.getByRole('button',{name:'Mute sound',exact:true}).click();await page.getByRole('button',{name:'Enable sound',exact:true}).waitFor();
