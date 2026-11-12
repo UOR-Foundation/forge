@@ -292,3 +292,36 @@ Two findings before any model ran:
 
 1. The hosted checker refuses any project that imports the library: `LLL1004`, because its `prism-app` profile lacks the lexicon entries the library modules' titles use. It answered in 1.6 s. So a spec written against PrismPM's content kinds cannot be checked in the tab today; the harness checks in the SDK image instead. This is the most important upstream request for the product: a hosted profile that carries the full library.
 2. No model was reachable from a script on this machine. No API key is set, and the Claude Code program the desktop app ships answers "Not logged in" when run on its own. Signing in or entering a key is the user's to do. So time to first token, tokens per second and streaming render are still unmeasured.
+
+## The model loop, run with an independent model (2026-11-12)
+
+No model could be called from a script, so the loop was run by hand with an independent model: an agent given only [loop/RULES.txt](loop/RULES.txt) and one sentence, forbidden to read any other file, search the web or run a command. It could not see this repository's other specs, the checker or the interpreter. Its answers are kept as [loop/answers/guests-1.lex.tex](loop/answers/guests-1.lex.tex) and [guests-2.lex.tex](loop/answers/guests-2.lex.tex).
+
+The sentence: "A guest list. The person types a name of at most 40 bytes and presses Add, and the name joins a table with one column, newest first, keeping at most 16. A Clear button empties the list. An empty name is ignored."
+
+Round 1:
+- The model wrote 10 declarations, 93 lines, in 33 s (the agent's whole turn, not a token timing).
+- `lexlean check` in the SDK image accepted it on the first attempt, with no diagnostics. Check took 11 s; most of that is starting the container.
+- The data form came back from the hosted service in 1.1 s.
+- The first frame was admitted by the library's `presentationValid`.
+- Exercised through the interpreter against the sentence: two adds give newest first; an empty name is ignored and the revision does not move; 41 bytes is ignored; 40 bytes of two-byte characters is accepted and 42 refused, so the limit is in bytes as asked; the table stops at 16; Clear empties it; a stale intent changes nothing. Every one of these held.
+- In the browser, one thing was wrong: after Add the name box still held the name, so the next Add appended to it.
+
+That fault had three owners, and it is worth being exact about them. The instructions never said what a field's draft epoch means, and the model flagged exactly that as ambiguous in its reply. The renderer ignored the epoch. And the checker cannot see it: the spec was well formed and its frames were valid. It was found only by using the app.
+
+Fix: the renderer now resets a field when its value or its epoch changes, and the instructions state the rule.
+
+Round 2: told only what a person saw ("the name box still held Ada"), the model changed one expression, the input's epoch, from 0 to the state's revision. Checked on the first attempt. In the browser, with real typing and Enter: the box empties after each add, the rows read Grace then Ada, an empty submit is ignored, and 300 actions took a median of 0.6 ms each.
+
+What this establishes:
+- A model can write a correct, checkable spec for a small app against PrismPM's content kinds from 11.7 KB of instructions and one example, with no access to the toolchain. One sentence, one check pass, one behavioural repair.
+- The closed vocabulary works as intended: the model never wrote markup, styling or code, and everything it wrote was either accepted whole or would have been refused whole.
+- The loop's stages after the model are fast enough: check 11 s cold in a container (1.6 s on the hosted service for a project it can read), data form 1.1 s, first frame 13 ms, each action under 1 ms.
+
+What it does not establish:
+- Anything about latency of the model itself: time to first token, tokens per second, and rendering while the spec streams are unmeasured, because no model was reachable from a script.
+- Reliability. This is one app, one model, one run. A harder app, or a weaker model, may need many rounds or fail.
+- Proof. The model was told not to write theorems, so this app is checked and tested, not proved. Having the model state properties, and the person approve them, is the next part of the loop.
+- That a check pass means the app is right. The one real fault here passed every automatic gate.
+
+`node --test v2/shell/test.mjs v2/shell/test-payment.mjs`: 20 of 20.

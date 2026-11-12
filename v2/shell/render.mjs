@@ -22,10 +22,10 @@ const KINDS = {
   Heading: ([level, label], words) => ({ tag: "h" + level, text: words(label) }),
   Text: ([text]) => ({ tag: "p", text }),
   Action: ([label, id, enabled, isDefault, fields], words) => ({ tag: "button", text: words(label), action: String(id), disabled: !enabled, type: isDefault ? "submit" : "button", binds: toArray(fields).map(Number) }),
-  Input: ([label, enabled, required, maximum, value], words) => ({ tag: "label", control: "input", ...field(words(label), enabled, required), maximum: Number(maximum), value }),
-  Multiline: ([label, enabled, required, maximum, value], words) => ({ tag: "label", control: "textarea", ...field(words(label), enabled, required), maximum: Number(maximum), value }),
-  Select: ([label, enabled, required, selected, choices], words) => ({ tag: "label", control: "select", ...field(words(label), enabled, required), selected: String(selected), options: toArray(choices).map((c) => [String(c.id), words(c.label)]) }),
-  TextSelect: ([label, enabled, required, selected, choices], words) => ({ tag: "label", control: "select", ...field(words(label), enabled, required), selected: String(selected), options: toArray(choices).map((c) => [String(c.id), c.text]) }),
+  Input: ([label, enabled, required, maximum, value, epoch], words) => ({ tag: "label", control: "input", ...field(words(label), enabled, required), maximum: Number(maximum), value, epoch: String(epoch) }),
+  Multiline: ([label, enabled, required, maximum, value, epoch], words) => ({ tag: "label", control: "textarea", ...field(words(label), enabled, required), maximum: Number(maximum), value, epoch: String(epoch) }),
+  Select: ([label, enabled, required, selected, choices, epoch], words) => ({ tag: "label", control: "select", ...field(words(label), enabled, required), selected: String(selected), epoch: String(epoch), options: toArray(choices).map((c) => [String(c.id), words(c.label)]) }),
+  TextSelect: ([label, enabled, required, selected, choices, epoch], words) => ({ tag: "label", control: "select", ...field(words(label), enabled, required), selected: String(selected), epoch: String(epoch), options: toArray(choices).map((c) => [String(c.id), c.text]) }),
   Table: ([caption, columns, chunks], words) => ({ tag: "table", caption: words(caption), columns: toArray(columns).map(words), rows: toArray(chunks).flatMap((chunk) => toArray(chunk.rows).map((row) => toArray(row.cells))) }),
 };
 
@@ -48,8 +48,8 @@ function build(n, parent) {
   return e;
 }
 
-// A field keeps what the person typed until the model itself changes the value.
-function setValue(control, value) { if (control.dataset.model !== value) { control.value = value; control.dataset.model = value; } }
+// A field keeps what the person typed until the model changes the value or moves the draft epoch.
+function setValue(control, value, epoch) { const key = epoch + ":" + value; if (control.dataset.model !== key) { control.value = value; control.dataset.model = key; } }
 
 function update(e, n) {
   if (n.text !== undefined && e.textContent !== n.text) e.textContent = n.text;
@@ -67,8 +67,8 @@ function update(e, n) {
         for (const [id, text] of n.options) { const o = el("option", control); o.value = id; o.textContent = text; }
         control.dataset.options = key; delete control.dataset.model;
       }
-      setValue(control, n.selected);
-    } else { control.maxLength = n.maximum; setValue(control, n.value); }
+      setValue(control, n.selected, n.epoch);
+    } else { control.maxLength = n.maximum; setValue(control, n.value, n.epoch); }
   }
   if (n.tag === "table") {
     const [caption, head, body] = e.children;

@@ -51,6 +51,8 @@ Rules of the view protocol (PrismPM browser presentation):
   Table caption columns chunks, columns : (List Nat) labels, chunks : (List ${MODEL}TableChunk); a TableChunk is {rows}, a TableRow is {cells : (List String)}; at most 16 rows in the one chunk, no chunk when there are no rows, each row has exactly one cell per column
 - Inputs, selects and actions must be direct children of a Form. A form holds at most one default action. Action ids are unique and nonzero.
 - An Input's value must be at most maximum bytes of UTF-8.
+- epoch is the draft epoch of a field. The page keeps what the person typed in a field for as long as that field's epoch and value stay the same, and resets the field to value when either changes. For a field that should empty after an action, give it value "" and epoch := (project state revision). For a field that should keep what was sent, store that text in the state, show it as value, and use epoch 0.
+- required true only marks a field for the person; an action sends only the fields it lists.
 - An Intent is {revision, action, fields}; fields : (List ${MODEL}FieldValue); a FieldValue is {node, value}; value is ${MODEL}Value.Text string or ${MODEL}Value.Choice nat.
 - step must return state unchanged when (project intent revision) differs from (project state revision), and must add 1 to revision whenever it changes anything.
 
