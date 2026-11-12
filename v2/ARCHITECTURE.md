@@ -263,3 +263,32 @@ What this does and does not establish:
 - The comparison is the gate a preview needs: an app whose interpreter and guest disagree on any vector or sweep request must not publish.
 
 `node --test v2/shell/test.mjs`: 14 of 14 pass.
+
+## A real app on the protocol: payment approval (2026-11-12)
+
+Built: [probe-payment](probe-payment) is a payment approval app with a form, a select, two text inputs, two actions and a table. Its decision is not rewritten: the model calls `PaymentApproval::dispatch`, PrismPM's own example, and shows the answer. Its own model, [Payment.lex.tex](probe-payment/src/Payment.lex.tex), is about 150 lines. [shell/app.html](shell/app.html) runs any spec that follows the convention `initial`, `step(state, intent)`, `view(state)`, `catalogue`; [shell/render.mjs](shell/render.mjs) now draws inputs, multiline inputs, selects, text selects and tables as well.
+
+Proved: `lexlean verify --all` in the pinned SDK image verified all 9 modules, attestation `47e971f850de8a0c2ee6f613140445c02ef48f676723d8ea2f9acdcb6fef8284`, in 2 min 48 s. That covers the app's two theorems (the frame carries the state's revision; clearing advances the revision by one) and the library and example modules it imports, each with its exact axiom set.
+
+So Lean verification does work locally, and in under three minutes. What times out locally is `prismpm verify`, the full build, in its runtime compile. The two were being conflated.
+
+Tested (`node --test v2/shell/test-payment.mjs`, 6 of 6): the decisions match the example's rule; every frame over 40 actions is admitted by the library's `presentationValid`; the table keeps the newest sixteen rows; over-long text is refused and never shown back; a stale intent changes nothing.
+
+Measured in Chrome with real typing, selecting and Enter to submit: 300 actions, median 1.2 ms, 95th percentile 2.7 ms, worst 12.4 ms from action to updated page. Load to first view 94 ms from a local server. In Node, `step` plus `view` takes 0.23 ms. This loop holds the state as a value and uses no wire codec, which is how the browser profile will run once it opens; the counter's 2 ms included the codec.
+
+The 2 ms figure holds on a real view.
+
+Not shown: the accessibility annotations and design tokens of the protocol (the page uses its own small stylesheet); secret inputs; a guest build of this app.
+
+Notes:
+- Three names were refused by the checker because Lean already uses them (`id`, `decide`, `take`). A model writing specs must be told this.
+- `lexlean fmt --all` under the pinned compiler rewrote the copied `PaymentApproval.lex.tex`, so that copy is no longer byte for byte PrismPM's example at `527cd58`. The comparison in `compare/` used the unformatted original.
+
+## The model loop: built, not yet run against a model (2026-11-12)
+
+Built: [loop/loop.mjs](loop/loop.mjs) asks a model for a spec from one sentence and a fixed set of instructions ([loop/RULES.txt](loop/RULES.txt), 11.7 KB including one worked example), splits the stream into declarations as they complete, checks the module, asks for a repair with the diagnostics when the check refuses it (up to four rounds), fetches the data form, runs the first frame through the interpreter and the library's validity rule, and records the time of every stage.
+
+Two findings before any model ran:
+
+1. The hosted checker refuses any project that imports the library: `LLL1004`, because its `prism-app` profile lacks the lexicon entries the library modules' titles use. It answered in 1.6 s. So a spec written against PrismPM's content kinds cannot be checked in the tab today; the harness checks in the SDK image instead. This is the most important upstream request for the product: a hosted profile that carries the full library.
+2. No model was reachable from a script on this machine. No API key is set, and the Claude Code program the desktop app ships answers "Not logged in" when run on its own. Signing in or entering a key is the user's to do. So time to first token, tokens per second and streaming render are still unmeasured.

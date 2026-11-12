@@ -5,3 +5,7 @@ builds.log
 **/.diag-laws.log
 # A copy of the repository's prismpm.lock, placed beside a probe to build it. Copy it again; do not commit it.
 probe-*/prismpm.lock
+**/verify.log
+# Scratch projects and logs of the model loop.
+loop/work/
+loop/*.log
