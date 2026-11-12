@@ -45,3 +45,29 @@ test("the look comes from the brand's tokens: no colour of its own, in any theme
   for (const token of ["--popover", "--popover-foreground", "--muted-foreground", "--sidebar-foreground", "--sidebar-accent", "--font-sans", "--font-mono", "--ring"]) assert.ok(section.includes("var(" + token + ")"), token);
   assert.ok(section.includes("@media (pointer: coarse)") && section.includes("prefers-reduced-motion"));
 });
+
+test("FoundrySpecification.foundrySurfaceExperienceBoundary: centred popups, golden measures, marks alone when collapsed", () => {
+  const spec = read("../../app/src/FoundrySpecification.lex.tex");
+  assert.ok(spec.includes("name: foundrySurfaceExperienceBoundary,"));
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "its mark alone, with no letters", "in one column at the right"]) assert.ok(spec.includes(said), said);
+  // centred, across and down
+  assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
+  // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
+  for (const measure of ['550px', 'max-height: 61.8vh', 'padding: 21px', 'border-radius: 13px', 'gap: 13px 8px', 'width: 34px; height: 34px', 'font: 600 16px/1.3', 'font: 400 13px/1.618', 'min-height: 34px', 'min-height: 44px']) assert.ok(section.includes(measure), measure);
+  // a collapsed sidebar shows marks alone, by the dock's own width
+  assert.match(css, /#foundry-shell-actions \{ container-type: inline-size; \}\s*@container \(max-width: 89px\) \{\s*#foundry-shell-actions > button \{[^}]*font-size: 0 !important;/);
+});
+
+test("each approval explains why, then how, then what, in plain words, and still states what must be disclosed", () => {
+  const consent = read("../shell/inference-consent.mjs"), preview = read("../shell/preview-permissions.mjs"), hosted = read("../shell/hosted-source-permission.mjs");
+  // why comes first in each
+  for (const [source, why, what] of [[consent, "runs outside this browser, so your request has to be sent", "You are approving this one request"], [preview, "The preview runs your app's code", "You are approving this one version"], [hosted, "by a UOR service outside this browser", "You are approving"]]) {
+    assert.ok(source.indexOf(why) > 0 && source.indexOf(what) > source.indexOf(why), why);
+  }
+  // the facts the approval boundaries require
+  for (const fact of ["disclosure.model", "disclosure.provider", "disclosure.endpoint", "disclosure.credentialOwner", "automatic retries", "disclosure.bytes", "cannot be taken back"]) assert.ok(consent.includes(fact), fact);
+  for (const fact of ["disclosure.source", "disclosure.endpoints", "IP address", "Preview permissions", "cannot take back"]) assert.ok(preview.includes(fact), fact);
+  for (const fact of ["disclosure.endpoint", "disclosure.appId", "disclosure.turnId", "disclosure.source", "five minutes", "no cookies", "no proof and no publishing", "cannot be taken back"]) assert.ok(hosted.includes(fact), fact);
+  // no jargon left in the words a person reads
+  for (const source of [consent, preview, hosted]) for (const word of ["UTF-8", "module prefixes", "Credential:", "bounded retries", "aborts", "executes generated code"]) assert.equal(source.includes(word), false, word);
+});

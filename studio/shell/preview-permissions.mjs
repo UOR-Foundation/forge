@@ -67,11 +67,11 @@ function authorizePreviewNow(input, { document = globalThis.document, online = (
     const finish = error => { if (settled) return; settled = true; clearTimeout(timer); dialog?.remove(); previous?.focus?.(); if (error) reject(previewPermissionFailure(error)); else resolve(Object.freeze({ disclosure, expires })); };
     try {
       dialog = element(document,"dialog"); styleDialog(dialog); dialog.setAttribute("aria-label","Review preview permissions");
-      dialog.append(element(document,"h2","Allow this preview to contact these destinations?"));
-      dialog.append(element(document,"p","The preview executes generated code. These destinations can receive requests and data sent by that code, your IP address and browser request information. They may retain transferred data. No configured AI provider key is included in this permission."));
-      dialog.append(element(document,"p",`Captured source: ${disclosure.source}`));
+      dialog.append(element(document,"h2","Let this preview reach the internet?"));
+      dialog.append(element(document,"p","The preview runs your app's code, and that code loads parts from the sites below."));dialog.append(element(document,"p","Those sites will see what the code sends them, your IP address and your browser's details, and may keep it. Your AI key is never included."));
+      dialog.append(element(document,"p",`This exact version of the app: ${disclosure.source}`));
       const list = element(document,"ul"); for (const origin of disclosure.endpoints) list.append(element(document,"li",origin)); dialog.append(list);
-      dialog.append(element(document,"p","Approval covers this preview build. Use Preview permissions to revoke its stored grant later. Revocation prevents future authorized requests but cannot recall data or guarantee that remote work stops."));
+      dialog.append(element(document,"p","You are approving this one version of the preview. You can withdraw it later under Preview permissions; that stops new requests, but cannot take back what was sent."));
       const deny = element(document,"button","Don't allow"), allow = element(document,"button","Allow this preview"); deny.type = allow.type = "button"; deny.autofocus = true;
       deny.addEventListener("click",()=>finish("previewPermissionDenied")); dialog.addEventListener("cancel",event=>{event.preventDefault();finish("previewPermissionDenied");});
       allow.addEventListener("click",()=>{ if (Date.now() >= expires) finish("previewPermissionExpired"); else if (!online()) finish("previewPermissionOffline"); else finish(); });
