@@ -123,6 +123,7 @@ jobs:
           node tools/source_bound_gallery_browser.mjs
           node tools/initial_project_theme_browser.mjs
           node tools/module_presentation_browser.mjs
+          node tools/large_module_presentation_browser.mjs
           node tools/kernel_owner_readiness_browser.mjs
           node tools/kernel_owner_handoff_browser.mjs
           node tools/renderer_stylesheet_identity_browser.mjs

@@ -615,3 +615,9 @@ id = "FA-75"
 level = "build"
 suite = "kernel-owner-handoff"
 statement = "Service-worker guest execution reselects verified document owners lost during navigation within one bounded deadline"
+
+[[id]]
+id = "FA-76"
+level = "build"
+suite = "large-module-presentation"
+statement = "Presentation validation retains complete large canonical modules without promoting them into the bounded proof profile"

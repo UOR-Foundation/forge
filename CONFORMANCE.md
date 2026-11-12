@@ -308,6 +308,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-73` | `build` | Service-worker guest requests await an initializing matching document owner without accepting unverified executables |
 
+## large-module-presentation
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-76` | `build` | Presentation validation retains complete large canonical modules without promoting them into the bounded proof profile |
+
 ## live-lexlean
 
 | ID | Level | Statement |
