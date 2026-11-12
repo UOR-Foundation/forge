@@ -39,5 +39,10 @@ test("the host binds generation source signal and committed results", () => {
   assert.ok(host.includes("const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };"));
   assert.ok(host.includes("rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit })"));
   assert.ok(host.includes("Committed project changes were retained."));
+  // A first turn opens the live frame before the app has rules; the renderer's start for that app must
+  // settle on the frame, never wait on a build that yields to it (seen on the live site: "Preparing
+  // preview" for good, from the home composer).
+  assert.ok(host.includes("if (await hasRules(appId) || liveShown.has(appId)) {"));
+  assert.ok(host.includes('if (liveShown.has(appId)) { await showLive(appId).catch(() => {}); publish(appId, { phase: "ready", operation: null, lastSettlement: { operationId: encodedEvent.operationId || messageId, kind: "run", outcome: "succeeded" } }); return; }'));
   assert.ok(!host.includes('if (updatedFiles) commit = await seal('));
 });
