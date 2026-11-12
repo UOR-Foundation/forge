@@ -409,3 +409,40 @@ Tested:
 - All suites together: `node --test v2/shell/test.mjs v2/shell/test-payment.mjs v2/loop/test-guests.mjs v2/reuse/test.mjs v2/hosted-check/test.mjs v2/site/test.mjs`.
 
 Not tested: the deployed page itself, which exists only after this change merges and the Pages workflow runs; Safari and Firefox; a phone.
+
+## Direction: v2 lives inside Foundry's own app, not beside it (2026-11-12)
+
+Decided by the owner: v2 must keep the look, the functions and the journey of the app at https://uor-foundation.github.io/foundry/ (sidebar, home composer, model picker, chat beside a live preview, publish). It should feel like Lovable. Models edit LexLean specs; the specs are projected into the live preview inside that app.
+
+So the page under `v2/` is evidence, not the product surface. The product surface is the existing shell, and the v2 engine goes into it.
+
+What the existing app already does (read in `studio/shell` at this commit):
+
+- The chat model already writes LexLean. `prism.js` tells it to answer with one `<prism-lexlean>` block and streams it.
+- The preview already draws from the spec as it streams. `host.js` (the `<prism-lexlean>` branch of the stream handler) reads whatever declarations are whole with `live/lexlean.mjs`, projects them with `live/project.mjs`, and posts `live/projection` to the live frame, which draws a closed set of node kinds with the kit's components (`live/components.js`).
+- Proving already goes to the hosted service: `prism.js` writes a draft and calls `lexlean_verify` at `mcp.uor.foundation`. The phase shown is the kernel's answer (FK-01 to FK-04).
+- A module that does not read gets one repair turn from the same model, streamed into the same answer.
+
+So the journey the owner describes exists. Its limit is the shape of app it can express: `live/lexlean.mjs` reads one shape only, a decision (a request of fields, rules, a first-match `judge`, and `breaks…` properties). Its reader is a hand-written parser for that shape, and its preview is a projection of that shape. An app with state, a form that adds to a list, or a table is outside it.
+
+What v2 adds, and where each piece plugs in:
+
+| Step | Change | Where | Evidence it rests on |
+| --- | --- | --- | --- |
+| 1 | A second shape in the same block: `State`, `catalogue`, `initial`, `view`, `step`, then promises and theorems. The decision shape stays for "decide one answer". | the system prompt in `prism.js`, from `v2/loop/RULES.txt` | An independent model wrote this shape correctly from those instructions, first attempt. |
+| 2 | When the block is the app shape, split it into whole declarations as it streams; once `State`, `catalogue`, `initial` and `view` are whole, fetch the data form and run it. | a new `live/app.mjs` beside `live/lexlean.mjs`, called from the same branch in `host.js` | `v2/loop/loop.mjs` splits declarations; the hosted service returns a data form in 0.2 to 1.1 s; the interpreter's first frame takes about 13 ms. |
+| 3 | Draw the frame with the kit's own components, and send a pressed action back as an intent; the host runs `step` and posts the next frame. | a `live/presentation` message handled in `live/components.js`, mapping PrismPM's content kinds to the components the frame already has | `v2/shell/render.mjs` covers ten content kinds; an action reaches the page in about 1 ms. |
+| 4 | Check at the end of the turn; a refusal becomes the existing repair turn, with the checker's diagnostics. | `v2/hosted-check/check.mjs`, called where `lexlean.withRepair` is called today | Same verdicts as the SDK image on 17 files; press to verdict 648 ms. |
+| 5 | Prove with the existing path, sending the library modules with the app's. Show each promise beside the exact statement proved, and flag a theorem that proves less. | `prism.js` proof call; the frame's existing guarantees block | Lean verified the model-written app's five theorems; the v2 page already shows sentence against statement. |
+| 6 | Hold the interpreter to the built guest before anything publishes. | the Publish panel's existing gate | `v2/compare/compare.mjs`: 395,625 of 395,625 on the counter. |
+
+Nothing in the sidebar, the composer, the model picker, the chat, the panels or the appearance changes.
+
+What will not be true at first, and should be said in the app:
+
+- Publish for the app shape. A holo of a stateful app needs the text-application wrapper and a build of about eight minutes on GitHub. Until that is wired, the app shape previews and proves; it does not publish. Decision apps publish as today.
+- Proof strength. Without induction, some promises can only be tested. The app must show which.
+- Model quality. The app shape was written correctly by one strong model. The app's default cloud model has not been tried on it.
+- Speed while streaming. Each partial render needs a data form from the hosted service; one sample each of 0.2 and 1.1 s. If that is too slow to feel live, the data form must be produced in the tab, which needs LexLean's reader compiled for the browser (an upstream request).
+
+Order of work: steps 1 to 3 give a stateful app appearing in the existing preview while the model writes it. That is the first thing worth showing, and it touches three files of the studio plus one new one. Steps 4 to 6 make it trustworthy. Each step lands with the studio's own gates extended (the journey check, the contract check, the performance budgets), a planted defect, and a browser run of the real journey.
