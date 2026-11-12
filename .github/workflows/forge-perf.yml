@@ -73,7 +73,7 @@ jobs:
           node tools/perf_budget.mjs --browser
       - name: Every Prism app previews live within its budgets (tools/live_e2e.mjs on each app fixture)
         run: |
-          export PLAYWRIGHT_MODULE="$(npm root --global)/playwright/index.mjs"
+          export PLAYWRIGHT_MODULE="${GITHUB_WORKSPACE}/studio/vendor/dyad/node_modules/playwright-core/index.mjs"
           scripts/live_e2e_all.sh shell "$RUNNER_TEMP/live-e2e"
       - name: Keep what the journeys saw when they failed
         if: failure()
