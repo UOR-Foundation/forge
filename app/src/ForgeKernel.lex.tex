@@ -399,10 +399,24 @@ definition{name: tapMinimum, parameters: [], result: Nat, body: 44}
 definition{name: weekSeconds, parameters: [], result: Nat, body: 604800}
 
 definition{
+  name: siteBudget,
+  parameters: [journey : Nat],
+  result: Nat,
+  body: (if (journey =? 0) then 11500 else (if (journey =? 1) then 2200 else (if (journey =? 2) then 450 else (if (journey =? 3) then 5000 else (if (journey =? 4) then 615 else (if (journey =? 5) then 930 else (if (journey =? 6) then 645 else (if (journey =? 7) then 645 else (if (journey =? 8) then 630 else (if (journey =? 9) then 945 else (if (journey =? 10) then 960 else 0)))))))))))
+}
+
+definition{
+  name: buildBudget,
+  parameters: [journey : Nat],
+  result: Nat,
+  body: (if (journey =? 11) then 1999 else (if (journey =? 12) then 19999 else (if (journey =? 13) then 99 else (if (journey =? 14) then 15 else (if (journey =? 15) then 33 else (if (journey =? 16) then 2999 else (if (journey =? 17) then 29999 else 0)))))))
+}
+
+definition{
   name: budgetOf,
   parameters: [journey : Nat],
   result: Nat,
-  body: (if (journey =? 0) then 11500 else (if (journey =? 1) then 2200 else (if (journey =? 2) then 450 else (if (journey =? 3) then 5000 else (if (journey =? 4) then 615 else (if (journey =? 5) then 930 else (if (journey =? 6) then 645 else (if (journey =? 7) then 645 else (if (journey =? 8) then 630 else (if (journey =? 9) then 945 else (if (journey =? 10) then 960 else (if (journey =? 11) then 1999 else (if (journey =? 12) then 19999 else (if (journey =? 13) then 99 else (if (journey =? 14) then 15 else (if (journey =? 15) then 33 else (if (journey =? 16) then 2999 else (if (journey =? 17) then 29999 else 0))))))))))))))))))
+  body: (if (journey <? 11) then (siteBudget journey) else (buildBudget journey))
 }
 
 structure{
