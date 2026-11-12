@@ -1,0 +1,15 @@
+# Browser chat mode controls — FA-80
+
+Authority: `FoundrySpecification.browserChatModeControlsBoundary` and its literal `browserChatModeCatalog`. Registration and failing controls precede implementation at `ac3d33611509dba83da14117fb463854bd4c6429`.
+
+The checked representation-only catalog projection exposes Build, Ask and Plan. The actual renderer uses one accessible selector and one keyboard owner. Home persists selected/default mode atomically; chat selection uses the imported chat hook and existing atomic preferences boundary. Unsupported legacy modes remain visibly unavailable until explicitly replaced. Missing/loading chat identity and concurrent writes disable selection. A failed write preserves committed state and displays a fixed retry message. New apps and chats capture supported defaults before creation; explicit app mode overrides the default. Invalid and unsupported requests fail with the existing modeled `invalidChatExecutionMode` before writes.
+
+The actual Chromium journey covers reload, default capture, explicit overrides, unsupported refusal, real transaction aborts after successful requests, visible retries, route independence and keyboard cycling. A second window changes a queued Ask chat to Build while consent is open: the disclosed request stays immutable and the completed Ask turn preserves files, history and rules. Controls fit 390, 768 and 1280 pixel viewports and remain keyboard operable. No page exceptions occur.
+
+All 471 Node controls pass, as do the full locked Rust suite, Clippy and formatting. The renderer builds; differential typechecking reports 28 upstream errors and zero added errors. Locked lint reports no warnings or errors. The private credential artifact gate passes. Host LexLean verifies two modules with diagnostic attestation `b154ce7e0d943c752c99a743cc9eae9b387636132d407aee84bd4dd294724aa0`; this is not immutable SDK acceptance.
+
+Seven planted defects are rejected by focused controls: ignored explicit mode, unsupported admission, forced Build default, omitted app capture, omitted new-chat capture, duplicate shortcut and enabled unavailable selector. A rebuilt host forcing new apps to Build fails the actual browser's Ask assertion; restoration passes the complete browser journey. Mutation logs are retained in the execution workspace. The initial pre-projection browser failure was a startup integrity failure and is not counted as semantic mutation evidence.
+
+`just model-write` regenerates evidence and model consistency, failure, deferral and dependency-update checks pass locally. `just model` correctly refuses its bootstrap stage outside the digest-selected SDK. Exact SDK acceptance is delegated to the unchanged pinned CI workflow. The full 60-journey browser sweep is running; no completed integrated result is claimed yet.
+
+This scoped feature does not implement native-agent tools or complete plan approval/storage. Entire-conversion, factory-consumer qualification, production dependency closure and independent review obligations remain open.

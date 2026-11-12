@@ -11,7 +11,7 @@ import { screenSource, unapplied } from "./hologram.screens.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // Files the shell's build replaces with ours (vite.shell.config.mts resolveId): their errors do not ship.
-const REPLACED = new Set(["src/components/ModelPicker.tsx", "src/components/GitHubIntegration.tsx", "src/components/ImportAppDialog.tsx"]);
+const REPLACED = new Set(["src/components/ChatModeSelector.tsx", "src/components/ModelPicker.tsx", "src/components/GitHubIntegration.tsx", "src/components/ImportAppDialog.tsx"]);
 const slash = (p) => p.replace(/\\/g, "/");
 const src = slash(path.join(here, "src")) + "/";
 

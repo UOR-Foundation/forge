@@ -1,3 +1,4 @@
+import {browserChatMode} from "./browser-chat-modes.mjs";
 // FoundrySpecification.projectCreationBoundary; canonical bytes come from the core.
 import {readThemeCatalog, initialProjectTheme} from "./theme-library.mjs";
 const MiB = 1024 * 1024;
@@ -127,7 +128,8 @@ export async function createStoredProject(db, prepared, defaults = {}, initialTh
     } catch { refuse(); }
   });
 }
-export async function createStoredChat(db, appId, at = new Date().toISOString()) {
+export async function createStoredChat(db, appId, at = new Date().toISOString(), initialMode = "build") {
+  const capturedMode = browserChatMode(initialMode);
   if (!Number.isSafeInteger(appId) || appId < 1) throw failure("projectStorageFailed");
   return new Promise((resolve, reject) => {
     let t, id;
@@ -140,7 +142,7 @@ export async function createStoredChat(db, appId, at = new Date().toISOString())
       aq.onsuccess = () => {
         if (!aq.result) { refuse(); return; }
         allocateIdentifier(t, "chats", allocated => {
-          try { id = allocated; t.objectStore("chats").add({ id, appId, title: "New chat", createdAt: at, messages: [], initialCommitHash: null, dbTimestamp: null, chatMode: "build", modelSelection: null, referencedApps: [] }, id); }
+          try { id = allocated; t.objectStore("chats").add({ id, appId, title: "New chat", createdAt: at, messages: [], initialCommitHash: null, dbTimestamp: null, chatMode: capturedMode, modelSelection: null, referencedApps: [] }, id); }
           catch { refuse(); }
         }, refuse);
       };

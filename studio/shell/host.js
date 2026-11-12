@@ -51,6 +51,7 @@ import { validateProviderKey } from "./provider-key-validation.mjs";
 import { packBytes, unpackBytes, RepresentationError } from "./exact-representation.mjs";
 import { admitWithGuest } from "./composition-codec.mjs";
 import { readBoundRules, readBoundRulesSnapshot, saveBoundRules } from "./rules-source.mjs";
+import {browserChatMode,assertBrowserChatModes,browserChatModeSettings} from "./browser-chat-modes.mjs";
 import {chatExecutionPolicy,chatExecutionPrompt,readOnlyChatText} from "./chat-execution.mjs";
 import {updateChatPreferences} from "./chat-preferences.mjs";
 import { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteStoredChat, updateStoredChat } from "./project-lifecycle.mjs";
@@ -129,9 +130,8 @@ const DEFAULT_SETTINGS = {
 // defaults fill what is missing, the record keeps what it has. One mode is implemented here, the build
 // turn that writes files, so that is the mode the record always carries: an agent mode would promise
 // tool calls this host does not make.
-const BUILD_MODE = { selectedChatMode: "build", defaultChatMode: "build" };
-handlers.set("get-user-settings", async () => browserSettings({ ...DEFAULT_SETTINGS, ...((await inference.settingsGet()) || {}), ...BUILD_MODE }));
-handlers.set("set-user-settings", (patch) => { assertBrowserSettingsPatch(patch); return changeUserSettings(dbReady, patch || {}, (current,captured) => browserSettings({ ...DEFAULT_SETTINGS, ...current, ...captured, ...BUILD_MODE })); });
+handlers.set("get-user-settings", async () => browserSettings(browserChatModeSettings({ ...DEFAULT_SETTINGS, ...((await inference.settingsGet()) || {}) })));
+handlers.set("set-user-settings", (patch) => { assertBrowserSettingsPatch(patch); assertBrowserChatModes(patch); return changeUserSettings(dbReady, patch || {}, (current,captured) => browserSettings(browserChatModeSettings({ ...DEFAULT_SETTINGS, ...current, ...captured }))); });
 // What the renderer takes as "set up": the site's included key counts as OpenRouter's, the device's
 // GPU counts as the local provider's, so no connect dialog stands between the first prompt and the
 // answer. The values are words, never the key itself.
@@ -217,7 +217,8 @@ handlers.set("check-app-name", async ({ appName }) => ({ exists: (await all("app
 handlers.set("preview-app-folder-name", async ({ appName }) => ({ folderName: appName }));
 handlers.set("create-app", async ({ name, initialChatMode }) => {
   await coreReady;
-  const prepared = await prepareNewProject({ name, initialChatMode, files: await loadScaffold() }, { core, derive: kappa });
+  const capturedMode = browserChatMode(initialChatMode,await get("settings","user"));
+  const prepared = await prepareNewProject({ name, initialChatMode: capturedMode, files: await loadScaffold() }, { core, derive: kappa });
   const created = await createStoredProject(await dbReady, prepared, nulls, themesData);
   emit("version-created", { appId: created.app.id, oid: created.oid });
   return { app: withDates(created.app), chatId: created.chatId };
@@ -388,10 +389,10 @@ handlers.set("revert-version", async ({appId,previousVersionId,expectedHeadOid,c
 
 // ---- chats as records; the stream is the next slice
 handlers.set("get-chats", async (appId) => (await all("chats")).filter((c) => appId == null || c.appId === appId).map((c) => chatRow(c)));
-handlers.set("get-chat", async (id) => { const c = await get("chats", id); if (!c) throw new Error("no chat " + id); return { ...c, chatMode: c.chatMode || "build", referencedApps: c.referencedApps || [], messages: (c.messages || []).map((x) => ({ ...x, createdAt: x.createdAt || now() })) }; });
-const chatRow = (c) => ({ id: c.id, appId: c.appId, title: c.title, createdAt: new Date(c.createdAt || Date.now()), chatMode: c.chatMode || "build", isFavorite: !!c.isFavorite });
+handlers.set("get-chat", async (id) => { const c = await get("chats", id); if (!c) throw new Error("no chat " + id); return { ...c, chatMode: c.chatMode ?? null, referencedApps: c.referencedApps || [], messages: (c.messages || []).map((x) => ({ ...x, createdAt: x.createdAt || now() })) }; });
+const chatRow = (c) => ({ id: c.id, appId: c.appId, title: c.title, createdAt: new Date(c.createdAt || Date.now()), chatMode: c.chatMode ?? null, isFavorite: !!c.isFavorite });
 handlers.set("get-chat-metadata", async (id) => { const c = await get("chats", id); return c ? chatRow(c) : null; });
-handlers.set("create-chat", async (appId) => createStoredChat(await dbReady, appId, now()));
+handlers.set("create-chat", async (appId) => createStoredChat(await dbReady, appId, now(), browserChatMode(undefined,await get("settings","user"))));
 handlers.set("update-chat", input => updateChatPreferences(dbReady,input));
 handlers.set("delete-chat", async (id) => { await deleteStoredChat(await dbReady, id); queueChannel?.postMessage({chatId:id}); await chatQueue.refresh(id).catch(()=>{}); });
 // The sidebar's search: a chat matches by title or by the text of one of its messages, and the line

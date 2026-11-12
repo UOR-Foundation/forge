@@ -9,6 +9,10 @@ const rules = host.slice(host.indexOf("async function rulesAfterTurn("), host.in
 const proof = host.slice(host.indexOf("async function proveRules("), host.indexOf('// "approve"'));
 const hostModule = `import { copyGenerationInput, assertCanonicalGeneration } from "/canonical-generation.mjs";\nimport * as lexlean from "/live/lexlean.mjs";\nexport function hostAdapters(env) { const { coreReady, dbReady, core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, prism, live, rulesOf, rulesSnapshotOf, saveRules, nextPhase, now, enc, put, refreshLive } = env; ${apply}\n${rules}\n${proof}\nreturn { applyDyadTags, rulesAfterTurn, proveRules }; }`;
 const sources = new Map([
+  ["/browser-chat-modes.mjs", fs.readFileSync(new URL("../shell/browser-chat-modes.mjs", import.meta.url))],
+  ["/chat-mode-catalog.mjs", fs.readFileSync(new URL("../shell/chat-mode-catalog.mjs", import.meta.url))],
+  ["/chat-contracts.mjs", fs.readFileSync(new URL("../shell/chat-contracts.mjs", import.meta.url))],
+
   ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
   ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/host-adapters.mjs", hostModule], ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
 for (const name of ["canonical-generation.mjs", "generation-patch.mjs", "project-edit.mjs", "project-creation.mjs", "storage-request.mjs", "rules-source.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
