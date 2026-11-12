@@ -664,7 +664,7 @@ async function patchSpec(appId, ops, { author = "user", key = null, ...options }
     catch (e) { if (!(e instanceof PatchError)) throw e; refuse(appId, key, e.message); return { ok: false, issues: [e.message] }; }
     // The check samples up to 200,000 requests on this thread, which the live frame shares: it waits
     // until the frame has painted the edit, so the person sees their change before it is judged.
-    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    await new Promise((r) => (typeof requestAnimationFrame === "function" && typeof setTimeout === "function" ? requestAnimationFrame(() => setTimeout(r, 0)) : r()));
     const result = ed.apply(ops);
     if (!result.ok) { await refreshLive(appId); refuse(appId, key, result.issues[0]); return result; }
     try {
