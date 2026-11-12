@@ -26,7 +26,7 @@ test('invalid tail rules properties examples and presentation refuse without par
 });
 test('schema checks span multiple batches and canonical source browser remains mandatory',()=>{
  const s=large();while(s.rules.length<73)s.rules.push(structuredClone(s.rules[0]));
- assert.deepEqual(modulePresentation(null,s).spec,s);s.rules[72].then='unknown';assert.deepEqual(modulePresentation(null,s),failure);
+ assert.deepEqual(modulePresentation(null,s).spec,s);for(const index of [0,23,24,47,48,71,72]){const bad=structuredClone(s);bad.rules[index].then='unknown';assert.deepEqual(modulePresentation(null,bad),failure,'invalid rule '+index);}
  const root=new URL('../../',import.meta.url);assert.match(fs.readFileSync(new URL('app/src/FoundrySpecification.lex.tex',root),'utf8'),/name: largeModulePresentationBoundary/);
  assert.ok(fs.readFileSync(new URL('.github/workflows/studio.yml',root),'utf8').includes('node tools/large_module_presentation_browser.mjs'));
 });
