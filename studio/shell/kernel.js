@@ -89,12 +89,21 @@
     };
     return { execute, retire };
   }
-  const browserKernels = new Map();
+  const browserKernels = new Map(), browserLoads = new Set();
   scope.navigator?.serviceWorker?.addEventListener("message", async event => {
     const data = event.data, port = event.ports?.[0];
     if (data?.kind !== "foundry:kernel-execute/1" || !port || event.source !== scope.navigator.serviceWorker.controller) {port?.close();return;}
     try {
-      const entry = browserKernels.get(data.key);
+      let entry = browserKernels.get(data.key);
+      if (!entry && browserLoads.size) {
+        let timer;
+        try {
+          await Promise.race([Promise.allSettled([...browserLoads]), new Promise((_, reject) => {
+            timer = setTimeout(() => reject(fail("kernelExecutionFailed")), 30000);
+          })]);
+        } finally { clearTimeout(timer); }
+        entry = browserKernels.get(data.key);
+      }
       if (!entry) throw fail("kernelExecutionFailed");
       const result = await entry(data.request);
       port.postMessage({ ok: true, result }, [result.buffer]);
@@ -124,7 +133,18 @@
       } finally {clearTimeout(timer);for(const port of ports)port.close();pending--;queuedBytes-=request.length;}
     }};
   }
-  async function load(get) {
+  // FoundrySpecification.kernelOwnerReadinessBoundary: readiness is not verification.
+  function load(get) {
+    const documentOwner = typeof Worker === "function" && scope.navigator?.serviceWorker;
+    if (documentOwner && browserLoads.size >= 8) return Promise.reject(fail("kernelExecutionFailed"));
+    const pending = loadVerified(get);
+    if (documentOwner) {
+      browserLoads.add(pending);
+      void pending.then(() => browserLoads.delete(pending), () => browserLoads.delete(pending));
+    }
+    return pending;
+  }
+  async function loadVerified(get) {
     let meta, bytes;
     try {
       const response = await get("kernel/kernel.json");
