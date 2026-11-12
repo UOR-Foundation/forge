@@ -1322,5 +1322,12 @@ definition{
   result: String,
   body: "Each live document retains at most one exclusive execution-lock request per observed chat until it acquires the lock or the document is disposed. Contention must not discard recovery interest: a subscriber arriving before a closing owner releases its lock must still recover the abandoned durable head. After acquisition the controller rereads the journal under the short mutation lock and uses the existing signed ChatQueue guest recovery transition. Recovery retains the exact head paused and never replays an interrupted external effect without explicit resumption. Live owners retain exclusive execution; no timeout steals their lock. Document disposal cancels waiting lock requests and running local work, with no new writes or error publication from a cancelled waiter. Real lock/storage failures while the document remains live retain the existing fixed chatQueueUnavailable or storage failure boundary. Browser lock scheduling and document lifetime provide wake-up; no polling loop or repeated inference request substitutes for ownership."
 }
+definition{
+  name: kernelOwnerHandoffBoundary,
+  parameters: [],
+  result: String,
+  body: "A service-worker guest request may outlive its controlled document during navigation. The transport retains the exact archive/guest identity and captured request while observing loss of all still-answering selected owners every 50 ms. It may select current controlled replacement documents for at most eight batches of at most eight clients under one 30000 ms deadline shared across the request. A live unanswered owner is not replaced merely for being slow. No initial controlled owner, explicit refusal, invalid reply, exhausted handoffs, discovery failure or timeout retains an executable result; existing fixed kernelExecutionFailed, kernelResponseTooLarge and kernelAcceptanceFailed boundaries apply. Each abandoned batch closes all ports and its observation timer; terminal success or failure also clears the shared deadline and capacity accounting. Only already verified exact document entries execute, and service-worker loading still replays every committed vector before serving an untrusted preview. Repeated execution is pure guest computation and grants no effects. This transport recovery does not authenticate arbitrary same-origin code, skip acceptance or retry provider requests."
+}
+
 \end{semanticmodule}
 \end{lexlean}

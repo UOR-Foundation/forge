@@ -296,6 +296,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-71` | `build` | New projects inherit the validated selected generation theme in the project creation transaction |
 
+## kernel-owner-handoff
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-75` | `build` | Service-worker guest execution reselects verified document owners lost during navigation within one bounded deadline |
+
 ## kernel-owner-readiness
 
 | ID | Level | Statement |
