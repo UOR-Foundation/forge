@@ -405,6 +405,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-08` | `build` | Snapshot restoration validates every referenced object before atomically replacing files and the main reference |
 
+## source-bound-gallery
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-70` | `build` | Gallery media and descriptions publish atomically only for their captured current project source |
+
 ## stateful-application-journeys
 
 | ID | Level | Statement |
