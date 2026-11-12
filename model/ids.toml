@@ -639,3 +639,9 @@ id = "FA-79"
 level = "build"
 suite = "chat-model-picker-scope"
 statement = "The model picker resolves mounted chat routes and persists the active chat selection independently of Home defaults"
+
+[[id]]
+id = "FA-80"
+level = "build"
+suite = "browser-chat-mode-controls"
+statement = "Canonical Build Ask and Plan controls persist scoped preferences and initialize chats with the captured supported mode"

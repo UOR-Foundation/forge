@@ -90,6 +90,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-60` | `build` | Fresh guest instances execute in bounded browser worker lifetimes without exhausting compiler memory reservations |
 
+## browser-chat-mode-controls
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-80` | `build` | Canonical Build Ask and Plan controls persist scoped preferences and initialize chats with the captured supported mode |
+
 ## browser-telemetry-isolation
 
 | ID | Level | Statement |

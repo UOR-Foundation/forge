@@ -1376,5 +1376,17 @@ definition{
   result: String,
   body: "The renderer model picker resolves the current pathname relative to the configured router base at a path-segment boundary. A chat route with a positive safe loaded chat identity reads and updates that chat through the imported useChatMode hook and UpdateChatParamsSchema; this applies even before the first message. Its choice does not change Home defaults or another chat. Home and other non-chat routes use the imported settings default. A chat route with missing, invalid or unavailable identity remains disabled rather than falling through to a global settings write. Loading and ongoing mutation disable repeat selection. Existing typed storage failures retain the committed value and show a fixed retry message; no failed write is presented as saved. Offered-model labels reflect committed chat selection, survive reload and remain independent of subsequent Home changes. This boundary controls picker scope only; unsupported provider routing and model quality are not promoted into guarantees."
 }
+definition{
+  name: browserChatModeCatalog,
+  parameters: [],
+  result: String,
+  body: "{\"profile\":\"foundry/browser-chat-modes/1\",\"modes\":[{\"id\":\"build\",\"label\":\"Build\"},{\"id\":\"ask\",\"label\":\"Ask\"},{\"id\":\"plan\",\"label\":\"Plan\"}]}"
+}
+definition{
+  name: browserChatModeControlsBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser exposes only the Build, Ask and Plan choices in browserChatModeCatalog, projected literally without a second authored catalog. The mode selector resolves the configured router base through the existing route-scope boundary. An existing chat uses its imported mode mutation; Home writes selectedChatMode and defaultChatMode together through the existing atomic settings transaction. Loading, missing identity and in-flight selection disable repeat writes; failure retains the committed value and displays a fixed retry message. Settings are no longer forcibly rewritten to Build on read or update. A newly created application or chat captures the supported default, with an explicit initial mode taking precedence; unsupported or invalid modes fail with invalidChatExecutionMode before project creation. Existing nullable chat mode remains nullable so imported default resolution works. New chat creation commits its captured mode with chat allocation. The current browser catalog excludes native local-agent tooling; legacy unsupported selections remain visible as unavailable and require an explicit supported choice rather than silently becoming Build. Ask and Plan execution is governed by readOnlyChatExecutionBoundary, including immutable queued-mode precedence."
+}
 \end{semanticmodule}
 \end{lexlean}
