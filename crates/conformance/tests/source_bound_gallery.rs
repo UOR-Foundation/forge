@@ -1,7 +1,36 @@
-//! The `source-bound-gallery` suite: one test per scenario in `features/suites/source-bound-gallery.feature`.
+//! Execute the canonical module boundary and its negative controls.
+use std::path::PathBuf;
+use std::process::Command;
 
-/// `FA-70`: Gallery media and descriptions publish atomically only for their captured current project source
 #[test]
 fn source_bound_gallery_fa_70() {
-    panic!("FA-70 is registered and not built: assert what its scenario states");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("repository root")
+        .to_path_buf();
+    let output = Command::new("node")
+        .args(["--test", "--test-reporter=tap"])
+        .arg(root.join("studio/tools/source_bound_gallery.test.mjs"))
+        .output()
+        .expect("the locked SDK supplies Node");
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "{report}\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    for required in [
+        "# tests 4",
+        "# pass 4",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+    ] {
+        assert!(
+            report.lines().any(|line| line == required),
+            "incomplete oracle: {report}"
+        );
+    }
 }

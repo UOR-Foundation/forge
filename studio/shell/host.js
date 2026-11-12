@@ -67,6 +67,7 @@ import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
 import * as covers from "./covers.mjs";
+import {publishGallery, readGallery, galleryFailure} from "./gallery-store.mjs";
 
 const BASE = new URL("./", import.meta.url); // the shell's directory, wherever it is served
 const listeners = new Map();
@@ -151,7 +152,7 @@ handlers.set("window-infrastructure:set-focused", () => windowCoordination.setFo
 handlers.set("window-infrastructure:set-visible-entities", input => windowCoordination.setVisible(input));
 handlers.set("window-infrastructure:set-chat-tab-ownership", input => windowCoordination.setTabs(input));
 for (const c of ["add-log", "renderer:error-toast-ready", "clear-logs"]) handlers.set(c, () => undefined);
-relayWindowEvent=(channel,payload)=>{windowCoordination.relay(channel,payload);if(channel==="version-created"&&Number.isSafeInteger(payload?.appId))void windowCoordination.invalidate([{family:"app",appId:payload.appId},{family:"versions",appId:payload.appId}]).catch(()=>{});if(channel==="chat:stream:end"&&Number.isSafeInteger(payload?.chatId))void windowCoordination.invalidate([{family:"chat",chatId:payload.chatId},{family:"chats"}]).catch(()=>{});};
+relayWindowEvent=(channel,payload)=>{windowCoordination.relay(channel,payload);if(channel==="version-created"&&Number.isSafeInteger(payload?.appId))void windowCoordination.invalidate([{family:"apps"},{family:"app",appId:payload.appId},{family:"versions",appId:payload.appId}]).catch(()=>{});if(channel==="chat:stream:end"&&Number.isSafeInteger(payload?.chatId))void windowCoordination.invalidate([{family:"chat",chatId:payload.chatId},{family:"chats"}]).catch(()=>{});};
 window.addEventListener("pagehide",()=>windowCoordination.dispose(),{once:true});
 handlers.set("does-release-note-exist", () => ({ exists: false }));
 handlers.set("get-user-budget", () => null);
@@ -246,7 +247,7 @@ handlers.set("edit-app-file", async (input) => {
   emit("version-created", { appId: input.appId, oid });
   return {};
 });
-handlers.set("delete-app", async ({ appId }) => { const deletedChats=(await all("chats")).filter(chat=>chat.appId===appId).map(chat=>chat.id); await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); await covers.forget(BASE, appId); for(const chatId of deletedChats){queueChannel?.postMessage({chatId});await chatQueue.refresh(chatId).catch(()=>{});} });
+handlers.set("delete-app", async ({ appId }) => { const deletedChats=(await all("chats")).filter(chat=>chat.appId===appId).map(chat=>chat.id); await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); coverSources.delete(appId); clearTimeout(coverTimers.get(appId)); coverTimers.delete(appId); await covers.forget(BASE, appId); for(const chatId of deletedChats){queueChannel?.postMessage({chatId});await chatQueue.refresh(chatId).catch(()=>{});} });
 handlers.set("rename-app", async (input) => {
   await coreReady;
   await renameStoredProject(await dbReady, input, { core, derive: kappa, onCommit: oid => emit("version-created", { appId: input.appId, oid }) });
@@ -453,29 +454,47 @@ async function withCoverResponder(html) {
   return library ? covers.withResponder(html, library) : html;
 }
 const coverTimers = new Map();
+const coverSources = new Map();
 let coverQueue = Promise.resolve();
 // A turn writes in batches and the preview is announced ready after each; the picture waits for the last.
 function scheduleCover(appId, appUrl) {
-  // Only a preview this page built carries the responder; a published app's page on GitHub Pages does not.
   if (!String(appUrl).startsWith(BASE.href)) return;
+  // Capture when the preview is announced, before debounce, capture or model work.
+  const built = coverSources.get(appId);
+  const live = appUrl === liveFrameUrl + "#" + encodeURIComponent(appId);
+  if (!live && built?.appUrl !== appUrl) return;
+  const source = live ? dbReady.then(db => captureProjectSource(db, appId)) : Promise.resolve(structuredClone(built.source));
+  void source.catch(() => {});
   clearTimeout(coverTimers.get(appId));
   coverTimers.set(appId, setTimeout(() => {
     coverTimers.delete(appId);
-    coverQueue = coverQueue.then(() => coverApp(appId, appUrl)).catch((e) => console.warn("cover", appId, e && e.message));
+    coverQueue = coverQueue.then(async () => coverApp(appId, appUrl, await source)).catch(e => console.warn("cover", appId, e?.code || "galleryStorageFailed"));
   }, 4000));
 }
-async function coverApp(appId, appUrl) {
-  if (!(await get("apps", appId))) return;
-  const version = ((await get("refs", appId + ":main")) || "") + " " + appUrl;
-  if ((await covers.coverVersion(BASE, appId)) === version) return;
+async function galleryChanged(appId) {
+  dispatchEvent(new CustomEvent(covers.EVENT, { detail: { appId } }));
+  await windowCoordination.invalidate([{family:"apps"}]).catch(() => {});
+}
+async function coverApp(appId, appUrl, source) {
+  const version = source.reference + " " + appUrl;
+  const current = await readGallery(dbReady, appId);
+  if (current?.version === version) return;
+  const checkProjection = () => {
+    if (appUrl === liveFrameUrl + "#" + encodeURIComponent(appId)) {
+      const json = new Map(source.files).get("prism/spec.json");
+      if (!json || JSON.stringify(JSON.parse(json)) !== JSON.stringify(liveLatest.get(appId)?.raw)) throw galleryFailure("gallerySourceChanged");
+    } else if (coverSources.get(appId)?.appUrl !== appUrl) throw galleryFailure("gallerySourceChanged");
+  };
+  checkProjection();
   const shot = await covers.capture(appUrl);
   if (!shot) return;
-  await covers.saveCover(BASE, appId, await covers.encodeCover(shot.png), version);
-  if (!(await covers.hasCard(BASE, appId)) && !turnRunning()) await describeApp(appId, shot.text);
+  checkProjection();
+  await publishGallery(dbReady, appId, source, {picture:await covers.encodeCover(shot.png),version});
+  await galleryChanged(appId);
+  if (!(await readGallery(dbReady, appId))?.card && !turnRunning()) await describeApp(appId, shot.text, source);
 }
-// One short request through this origin's own endpoint, so it is routed, sealed and paid as any turn is.
-async function describeApp(appId, pageText) {
-  const app = await get("apps", appId);
+// The description keeps the same source captured for its screenshot across both model attempts.
+async function describeApp(appId, pageText, source) {
   const settings = (await get("settings", "user")) || DEFAULT_SETTINGS;
   const chosen = settings.selectedModel || {};
   const paid = chosen.provider === "featherless" && chosen.name;
@@ -483,11 +502,11 @@ async function describeApp(appId, pageText) {
   let issues = [];
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await fetch(new URL("v1/chat/completions", BASE), { method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model, messages: covers.cardMessages(app.name, pageText, issues), max_tokens: paid ? 8192 : 256, temperature: "0.3" }) });
+      body: JSON.stringify({ model, messages: covers.cardMessages(source.name, pageText, issues), max_tokens: paid ? 8192 : 256, temperature: "0.3" }) });
     if (!res.ok) return;
     const answer = (await res.json()).choices?.[0]?.message?.content;
     const read = covers.readCard(answer);
-    if (read.card) { await covers.saveCard(BASE, appId, read.card); return; }
+    if (read.card) { await publishGallery(dbReady, appId, source, {card:read.card}); await galleryChanged(appId); return; }
     issues = read.issues;
   }
 }
@@ -605,6 +624,7 @@ async function buildPreview(appId) {
   await cache.put(appUrl.pathname + "index.html", new Response(shown, { headers: { "content-type": "text/html; charset=utf-8" } }));
   try { await grantPreview(previewId(appUrl.pathname), approvedEndpoints, permission, previousPermission); }
   catch (error) { await cache.delete(appUrl.pathname + "index.html"); throw error; }
+  coverSources.set(appId, {appUrl:appUrl.href,source:structuredClone(source)});
   return { appUrl: appUrl.href, bytes: js.length };
 }
 // ---- the live preview. An app with rules is not built: it is projected. One fixed frame on shadcn/ui
@@ -682,6 +702,7 @@ async function refreshLive(appId) {
     // The edit history is ready before the first click, so even the first edit is drawn optimistically,
     // before any storage read, instead of waiting for the history to be built.
     if (liveEditors.has(appId)) liveEditors.get(appId).sync(spec); else liveEditors.set(appId, createEditor(spec, checkForEdit));
+    if (liveShown.has(appId) && liveFrameUrl) scheduleCover(appId, liveFrameUrl + "#" + encodeURIComponent(appId));
   } catch (e) {}
 }
 
@@ -1812,6 +1833,7 @@ window.electron = {
   history.replaceState(null, "", base + "chat?id=" + created.chatId + "&appId=" + created.app.id);
   dispatchEvent(new PopStateEvent("popstate"));
 })();
+window.__gallery = Object.freeze({read: appId => readGallery(dbReady, appId)});
 window.__host = { handlers, emit, seen, get, put, all, kappa, core: () => core, coreReady, view: () => coreReady.then((c) => c.run({ op: "view" })), publish: () => lastPublish };
 if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("sw.js", BASE)).catch(() => {});
 // The worker installs only what a first paint needs; once this page has loaded and is idle it is asked to
