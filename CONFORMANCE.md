@@ -375,6 +375,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-48` | `build` | Typed semantic proposals rank explicit concept relations and close dependencies while Prism independently admits ambiguity constraints and effects |
 
+## sidebar-tool-access
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-68` | `build` | Foundry tools remain reachable without covering renderer controls across responsive sidebar lifetimes |
+
 ## site-relay-authorization
 
 | ID | Level | Statement |

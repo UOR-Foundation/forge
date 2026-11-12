@@ -567,3 +567,9 @@ id = "FA-67"
 level = "build"
 suite = "durable-theme-library"
 statement = "Custom generation themes and app selection persist atomically with exact imported renderer contracts"
+
+[[id]]
+id = "FA-68"
+level = "build"
+suite = "sidebar-tool-access"
+statement = "Foundry tools remain reachable without covering renderer controls across responsive sidebar lifetimes"
