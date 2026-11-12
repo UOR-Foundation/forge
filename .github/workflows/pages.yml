@@ -2,6 +2,8 @@
 #   https://uor-foundation.github.io/foundry/      Foundry (studio/), the app builder
 #   https://uor-foundation.github.io/foundry/app/  the Foundry kernel's Prism page: `site/` with the holo
 #                                                that `just app` builds and verifies through the locked SDK
+#   https://uor-foundation.github.io/foundry/reuse/v2/reuse/opfs.html  the address-based reuse store,
+#                                                exercised over the browser's own OPFS (v2/reuse)
 # Project content, not universal policy: a repository may extend or replace it.
 #
 # It runs on every push to main, beside `bootstrap`, not after it: `just app`
@@ -343,6 +345,28 @@ jobs:
         with:
           name: prism-page
           path: out/app
+      - name: The address-based reuse page's sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: src
+          persist-credentials: false
+          sparse-checkout: |
+            v2/reuse
+            v2/shell/interp.mjs
+            studio/shell/prism-code/src/blake3.mjs
+          sparse-checkout-cone-mode: false
+      - name: The address-based reuse page, under reuse/
+        # Byte-for-byte copies in the repository's own layout, so the page's relative imports resolve
+        # unchanged: https://<owner>.github.io/foundry/reuse/v2/reuse/opfs.html. Forge's worker answers
+        # this path from the network, as it does any path it does not own.
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in v2/reuse/opfs.html v2/reuse/adapter/*.mjs v2/reuse/data/*.json v2/shell/interp.mjs studio/shell/prism-code/src/blake3.mjs; do
+            for g in src/$f; do rel=${g#src/}; mkdir -p "out/reuse/$(dirname "$rel")"; cp "$g" "out/reuse/$rel"; done
+          done
+          test -s out/reuse/v2/reuse/opfs.html
+          test -s out/reuse/v2/reuse/data/modules.json
       - name: Configure Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
       - name: Upload the site
