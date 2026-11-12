@@ -147,3 +147,49 @@ test("proof completion stops retrying when the competing edit changes semantics"
   });
   assert.equal(await prove(1, state.logicKappa), null); assert.equal(saves, 1);
 });
+
+function liveHelloHarness({fail = false, cached = false, stateful = false, trusted = true} = {}) {
+  const begin = host.indexOf('window.addEventListener("message", (e) => {\n  const m = e.data;'), end = host.indexOf('new MutationObserver', begin);
+  assert.ok(begin >= 0 && end > begin, 'live hello must use the production message handler');
+  let handler;
+  const source = {}, other = {}, log = {refresh:[], sent:[], refused:[]}, windows = new Map();
+  const refreshPreview = appId => {
+    log.refresh.push(appId);
+    const result = fail ? Promise.reject(Object.assign(Error('private storage detail'),{code:'projectEditStateInvalid'})) : Promise.resolve();
+    // The harness owns the returned rejection even for the original faulty listener.
+    // The production handler must independently convert it to a visible refusal.
+    void result.catch(()=>{}); return result;
+  };
+  vm.runInNewContext(host.slice(begin,end), {
+    window:{addEventListener:(_name,fn)=>{handler=fn;}},isLiveFrame:win=>trusted&&win===source,
+    liveWindows:windows,appApps:new Set(stateful?[1]:[]),liveLatest:new Map(cached?[[1,{}]]:[]),
+    appFramesReady:async()=>({has:()=>false}),refreshPreview,sendLive:id=>log.sent.push(id),
+    refuse:(...args)=>log.refused.push(args),
+  });
+  return{log,windows,hello:app=>handler({source,data:{type:'live/hello',app}}),foreign:()=>handler({source:other,data:{type:'live/hello',app:'1'}})};
+}
+test('warm-up and invalid live hello identities do not read or bind project state',async()=>{
+  const h=liveHelloHarness();
+  for(const id of ['',0,'0',-1,'-1','01','1.5',1.5,'9007199254740992',Number.MAX_SAFE_INTEGER+1,null,undefined,{}])h.hello(id);
+  h.foreign();await new Promise(setImmediate);
+  assert.equal(h.windows.size,0);assert.deepEqual(h.log,{refresh:[],sent:[],refused:[]});
+});
+test('valid live hello keeps trusted frame ownership and refreshes or resends current content',async()=>{
+  for(const stateful of [false,true]){
+    const h=liveHelloHarness({stateful});h.hello('1');await new Promise(setImmediate);
+    assert.deepEqual(h.log.refresh,[1]);assert.equal([...h.windows.values()][0],1);assert.deepEqual(h.log.refused,[]);
+  }
+  const cached=liveHelloHarness({cached:true});cached.hello(1);await new Promise(setImmediate);
+  assert.deepEqual(cached.log.sent,[1]);assert.deepEqual(cached.log.refresh,[]);
+  const untrusted=liveHelloHarness({trusted:false});untrusted.hello('1');await new Promise(setImmediate);
+  assert.equal(untrusted.windows.size,0);assert.deepEqual(untrusted.log.refresh,[]);
+});
+test('failed live hello refresh is a private visible refusal, never an unhandled success',async()=>{
+  for(const stateful of [false,true]){
+    const h=liveHelloHarness({fail:true,stateful});h.hello('1');await new Promise(setImmediate);
+    assert.deepEqual(h.log.refresh,[1]);assert.equal(h.log.refused.length,1);
+    const [app,key,message]=h.log.refused[0];assert.equal(app,1);assert.equal(key,null);
+    assert.match(message,/preview.*could not be refreshed/i);assert.doesNotMatch(message,/private storage detail/);
+    assert.deepEqual(h.log.sent,[]);
+  }
+});

@@ -1,19 +1,19 @@
 {
   "profile": "foundry/component-reproduction/1",
   "scope": "Forge kernel archive only; not the complete Foundry application or release",
-  "source": "060df8ea31c455b6cb2f4f346d1b0bcb4d9d8abb",
+  "source": "1ce5b07bcb43c97ac3b04bc90988a2f6ca1af90f",
   "sdk": "ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58",
   "runs": [
-    43241205254,
-    43241211040
+    43253866653,
+    43253876685
   ],
   "artifacts": [
-    13956785774,
-    13955583745
+    13962102973,
+    13962201772
   ],
-  "archiveSha256": "48e62277f21f3edf99a1f7a3f406d48f449571c6a2ec80fcc237a45e9b63e7a9",
+  "archiveSha256": "20a3747bd84725469df2e930b529ec28603caffc351403249778ed3db6aca33b",
   "archiveBytes": 508356,
-  "archiveFingerprint": "2877e27cacbb91dfa503b0bde6ba0d0ee6973c081d49ec2aba7f3ad949e7dc01",
+  "archiveFingerprint": "c5da9ebae1f6820f456f24bc955c4f0cf807a4a040b17c3c3fc50cffececca9a",
   "acceptanceVectors": 305,
   "comparison": "complete byte-for-byte equality from independent runners",
   "provenance": "Both bundles verified by GitHub CLI 2.103.3 with exact repository, source digest, build workflow, OIDC issuer and hosted-runner policy; signed transparency-log timestamps verified.",
@@ -21,7 +21,9 @@
     "kernel-reproduction.sigstore.json",
     "kernel-reproduction-b.sigstore.json"
   ],
-  "normalization": "The same pinned SDK runs lexlean fmt --all and lexlean lock before unchanged just app. The returned canonical source bytes are adopted; only two blank-line changes in FoundrySpecification were produced.",
-  "normalizedSourceArtifact": 13956960516,
-  "normalizedModelSha256": "8e89fc61c6162c3dff00cc82dcd813e7c9116112133e43b0a97c02c11364fae6"
+  "modelSha256": "9b58506a9ba5d42b7b1bc22166a0dab41ca452950e241f879b6b979b85a6f514",
+  "artifactZipSha256": [
+    "39148e5791ff4b557263373e1445b0030c2409c67763c3680f74df9706f58226",
+    "4f4b6cb5adff4164c36ba0833703f29598fe2c1dcc9e310f2b6c1961a6424224"
+  ]
 }

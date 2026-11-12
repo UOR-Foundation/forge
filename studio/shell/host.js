@@ -718,7 +718,18 @@ window.addEventListener("message", (e) => {
   const m = e.data;
   if (!m || typeof m.type !== "string" || !m.type.startsWith("live/") || !isLiveFrame(e.source)) return;
   // The frame reads its app from the address (a string); the host keys apps as the store does (a number).
-  if (m.type === "live/hello") { const app = /^[0-9]+$/.test(String(m.app)) ? Number(m.app) : m.app; liveWindows.set(e.source, app); if (appApps.has(app)) appFramesReady().then((frames) => (frames.has(app) ? frames.resend(app) : refreshPreview(app))).catch(() => {}); else if (liveLatest.has(app)) sendLive(app); else refreshPreview(app); return; }
+  if (m.type === "live/hello") {
+    // The hidden warm-up frame has no app. Only a real project identity may read source.
+    const app = typeof m.app === "number" ? m.app : typeof m.app === "string" && /^[1-9][0-9]*$/.test(m.app) ? Number(m.app) : 0;
+    if (!Number.isSafeInteger(app) || app < 1) return;
+    liveWindows.set(e.source, app);
+    Promise.resolve().then(async () => {
+      if (appApps.has(app)) { const frames = await appFramesReady(); return frames.has(app) ? frames.resend(app) : refreshPreview(app); }
+      if (liveLatest.has(app)) return sendLive(app);
+      return refreshPreview(app);
+    }).catch(() => refuse(app, null, "The app preview could not be refreshed. Reopen it to try again."));
+    return;
+  }
   if (m.type === "live/painted") { if (m.changed) { liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift(); } return; }
   // Everything else acts on an app: the one this frame was shown, never the one the message names.
   const appId = liveWindows.get(e.source);
