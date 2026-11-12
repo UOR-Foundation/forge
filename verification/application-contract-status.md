@@ -1,6 +1,6 @@
 # Application specification implementation status
 
-Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-72. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
+Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-73. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
 
 | Obligation | Implemented scope and evidence | Remaining acceptance or implementation |
 | --- | --- | --- |
@@ -36,10 +36,12 @@ Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implement
 | FA-67 durable themes | #130; `durable-theme-library.md` | Exact SDK 43139271613, Studio 43139271626 and Forge performance 43139271767 pass. |
 | FA-68 sidebar tools | #132 at fc2c833e19254ff8f7422f52f388100fd7f81435 | SDK 43145069884, Studio 43145070030 and Forge performance 43145069883 pass; separate Prism-page gate fails. |
 | FA-69 live integration | #135; `live-main-integration.md` | All 50 local browser journeys, four actual app replays and full mobile performance pass. Hosted CI fixes retain history, hidden assets, executable mode and locked Playwright. Exact SDK 43151216436, Studio 43151216446 and Forge performance 43151216563 pass at b84f7ca. |
-| FA-70 gallery | #136; `source-bound-gallery.md` | 430 Node controls, all 51 browser journeys, seven rejected mutations, full mobile performance and author review. Studio 43151356015 and Forge performance 43151356020 pass at 412fd21; exact-SDK acceptance remains pending. |
+| FA-70 gallery | #136; `source-bound-gallery.md` | 430 Node controls, all 51 browser journeys, seven rejected mutations, full mobile performance and author review. Studio 43151356015 and Forge performance 43151356020 pass at 412fd21; exact SDK 43151356149 also passes. |
 | FA-71 initial theme | #137; `initial-project-theme.md` | 434 Node controls, full Rust/Clippy/fmt, renderer typecheck with zero added errors, actual transaction browser and six mutations pass. All 52 mandatory browser journeys and full mobile performance pass. Exact-head hosted acceptance and independent approval remain outstanding. |
 
-FA-72 (#138) records all 438 Node controls, all 53 mandatory browser journeys, seven qualified mutations, exact source/preview checks and complete local Rust/corpus/closure gates. Full hosted mobile and SDK acceptance remain pending. Full-page guest-owner initialization/recovery is a distinct open obligation exposed by this work.
+FA-72 (#138) records all 438 Node controls, all 53 mandatory browser journeys, seven qualified mutations, exact source/preview checks and complete local Rust/corpus/closure gates. Full hosted mobile and SDK acceptance remain pending. Hosted Studio 43153909948 exposed an intermittent surviving-tab queue recovery failure; it remains under investigation.
+
+FA-73 (#139) implements verified document-owner readiness under `FoundrySpecification.kernelOwnerReadinessBoundary`. All 442 Node controls, the full Rust suite, all 54 mandatory browser journeys and nine planted-defect controls pass. Full mobile/live replay and exact-head hosted qualification remain in progress; see `kernel-owner-readiness.md`.
 
 Author completeness reviews are not independent approval. Earlier green revisions do not establish acceptance for newer heads.
 
