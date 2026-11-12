@@ -1,17 +1,18 @@
 {
   "schema": "foundry/kernel-artifact-review/1",
-  "source": "686c09b89757fa3a924dd71bd17e53dd43509a73",
-  "run": 43033504480,
-  "artifact": 13862847178,
+  "source": "a291a72752d727aab1d68bbc1edcd09eae809f0f",
+  "run": 43115365275,
+  "artifact": 13899592362,
   "archiveFingerprint": {
     "algorithm": "blake3",
     "profile": "hologram-archive-body",
-    "digest": "4e9d80d52a73916bcdf9163902b31a520e4e42eaad227b087fda0e1a7c5e7cac"
+    "digest": "ad62cb5b2336915485ea4e1f737a18711e577d484b338c7ddccfcd65e5a1ab43"
   },
   "archiveFile": {
     "algorithm": "sha256",
     "profile": "whole-file",
-    "digest": "c1da2933403ff457fded52a6a21a3d9c4d5164783b2881bd63a0d5570f3ab9da"
+    "digest": "fcf77322417e0f212409214070829592df3411bb2ff2b292ffe158ea0a93cbcf",
+    "bytes": 505788
   },
   "provenance": {
     "verifier": "GitHub CLI 2.103.3",
@@ -26,7 +27,7 @@
     "changedArchiveByte": "refused"
   },
   "runtime": {
-    "embeddedVectors": 114,
+    "embeddedVectors": 285,
     "wireVectors": 26,
     "maximumPayloadBytes": 32768,
     "maximumPayloadOutcome": "malformedComposition",
@@ -35,7 +36,25 @@
       "dedicated-worker"
     ],
     "workWireVectors": 30,
-    "rewordPhases": 5
+    "rewordPhases": 5,
+    "eventWireVectors": 30,
+    "interactionWireVectors": 21,
+    "routingWireVectors": 32,
+    "routingQualification": {
+      "embedded": 285,
+      "wireVectors": 32,
+      "typedJudgments": 12,
+      "falseAdmissions": 0,
+      "dependencyMismatches": 0,
+      "normalP95Milliseconds": 0.47628300000002355,
+      "maximumCaseMilliseconds": 2.678297999999998,
+      "scope": "Author-curated typed-concept cases withheld from relation declarations and proof/wire fixtures; independent literal judgments, not independent human evaluation or natural-language generalization."
+    },
+    "queueWireVectors": 38,
+    "previewWireVectors": 30,
+    "externalCompositionBoundaryVectors": 2,
+    "experienceVectors": 42,
+    "mandatoryBrowserJourneys": 41
   },
-  "claimScope": "Executed qualification of this artifact and the browser adapter; not independent review approval, registry authenticity, R4 routing, or whole-application release acceptance."
+  "claimScope": "Verified signed guest, complete embedded and external boundary replay, finite Node/runtime qualification, and all 41 mandatory Chromium journeys in the bounded-executor integration. Independent signed rebuild reproduces all 505788 archive bytes with exact-source provenance. Final exact-SDK/full CI and whole-product release acceptance remain separate obligations."
 }

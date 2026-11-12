@@ -1,0 +1,349 @@
+\begin{lexlean}{ChatQueue}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{FeatureComposition}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: QueueState,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: revision, type: Nat},
+    {name: paused, type: Nat},
+    {name: stopPolicy, type: Nat},
+    {name: active, type: Nat},
+    {name: owner, type: Nat},
+    {name: items, type: (List Nat)}
+  ]
+}
+
+structure{
+  name: QueueCommand,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: kind, type: Nat},
+    {name: item, type: Nat},
+    {name: index, type: Nat},
+    {name: owner, type: Nat},
+    {name: observedStop, type: Nat}
+  ]
+}
+
+structure{
+  name: QueueItems,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: (List Nat)}]
+}
+
+inductive{
+  name: QueueError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidQueueState, fields: []},
+    {name: invalidQueueCommand, fields: []},
+    {name: queueRevisionConflict, fields: []},
+    {name: queueFull, fields: []},
+    {name: queueItemMissing, fields: []},
+    {name: queueItemDuplicate, fields: []},
+    {name: queueActiveConflict, fields: []},
+    {name: queuePaused, fields: []},
+    {name: queueStopConflict, fields: []},
+    {name: queueOwnerConflict, fields: []},
+    {name: queueRevisionExhausted, fields: []}
+  ]
+}
+
+definition{
+  name: headItem,
+  parameters: [items : (List Nat)],
+  result: Nat,
+  body: (match items | List.nil => 0 | List.cons head rest => head),
+  recursive_argument: items
+}
+
+definition{
+  name: containsItem,
+  parameters: [items : (List Nat), item : Nat],
+  result: Bool,
+  body: (match items
+    | List.nil => false
+    | List.cons head rest => ((head =? item) || (containsItem rest item))),
+  recursive_argument: items
+}
+
+definition{
+  name: removeItem,
+  parameters: [items : (List Nat), item : Nat],
+  result: QueueItems,
+  body: (match items
+    | List.nil => (record QueueItems {value := (nil Nat)})
+    | List.cons head rest => (record QueueItems {value := (if (head =? item) then rest else (cons head (project (removeItem rest item) value)))})),
+  recursive_argument: items
+}
+
+definition{
+  name: insertItem,
+  parameters: [items : (List Nat), item : Nat, index : Nat],
+  result: QueueItems,
+  body: (match items
+    | List.nil => (record QueueItems {value := (cons item (nil Nat))})
+    | List.cons head rest => (record QueueItems {value := (if (index =? 0) then (cons item (cons head rest)) else (cons head (project (insertItem rest item (prim subtract index 1 : Nat)) value)))})),
+  recursive_argument: items
+}
+
+definition{
+  name: boundedItems,
+  parameters: [items : (List Nat)],
+  result: Bool,
+  body: (match items
+    | List.nil => true
+    | List.cons head rest => ((head <=? 4294967295) && (boundedItems rest))),
+  recursive_argument: items
+}
+
+definition{
+  name: validState,
+  parameters: [state : QueueState],
+  result: Bool,
+  body: (((project state revision) <=? 4294967295) && (((project state stopPolicy) <=? 4294967295) && (((project state paused) <=? 1) && (((project state owner) <=? 4294967295) && (((project state active) <=? 4294967295) && (((prim length (project state items) : Nat) <=? 32) && (((boundedItems (project state items)) && (FeatureComposition::validIds (project state items))) && ((if ((project state active) =? 0) then ((project state owner) =? 0) else ((0 <? (project state owner)) && (((headItem (project state items)) =? (project state active)) && true))) && true))))))))
+}
+
+definition{
+  name: validCommand,
+  parameters: [command : QueueCommand],
+  result: Bool,
+  body: (((project command kind) <=? 4294967295) && (((project command item) <=? 4294967295) && (((project command index) <=? 4294967295) && (((project command owner) <=? 4294967295) && (((project command observedStop) <=? 4294967295) && (((((project command kind) =? 1) && (((project command index) =? 0) && (((project command owner) =? 0) && (((project command observedStop) =? 0) && ((0 <? (project command item)) && true))))) || ((((project command kind) =? 2) && (((project command index) =? 0) && (((project command owner) =? 0) && (((project command observedStop) =? 0) && ((0 <? (project command item)) && true))))) || ((((project command kind) =? 3) && (((project command owner) =? 0) && (((project command observedStop) =? 0) && ((0 <? (project command item)) && true)))) || ((((project command kind) =? 4) && (((project command index) =? 0) && (((project command owner) =? 0) && (((project command observedStop) =? 0) && ((0 <? (project command item)) && true))))) || ((((project command kind) =? 5) && (((project command item) =? 0) && (((project command index) =? 0) && (((project command owner) =? 0) && (((project command observedStop) =? 0) && true))))) || ((((project command kind) =? 6) && (((project command item) =? 0) && (((project command index) =? 0) && (((project command owner) =? 0) && (((project command observedStop) =? 0) && true))))) || ((((project command kind) =? 7) && (((project command item) =? 0) && (((project command index) =? 0) && (((project command owner) =? 0) && true)))) || ((((project command kind) =? 8) && (((project command item) =? 0) && (((project command index) =? 0) && (((project command owner) =? 0) && (((project command observedStop) =? 0) && true))))) || ((((project command kind) =? 9) && (((project command item) =? 0) && (((project command index) =? 0) && ((0 <? (project command owner)) && true)))) || ((((project command kind) =? 10) && (((project command index) =? 0) && (((project command observedStop) =? 0) && ((0 <? (project command item)) && ((0 <? (project command owner)) && true))))) || ((((project command kind) =? 11) && (((project command item) =? 0) && (((project command index) =? 0) && (((project command observedStop) =? 0) && ((0 <? (project command owner)) && true))))) || ((((project command kind) =? 12) && (((project command item) =? 0) && (((project command index) =? 0) && (((project command observedStop) =? 0) && ((0 <? (project command owner)) && true))))) || false)))))))))))) && true))))))
+}
+
+definition{
+  name: nextState,
+  parameters: [
+    state : QueueState,
+    items : (List Nat),
+    paused : Nat,
+    stopPolicy : Nat,
+    active : Nat,
+    owner : Nat
+  ],
+  result: (Result QueueState QueueError),
+  body: (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := ((project state revision) + 1), paused := paused, stopPolicy := stopPolicy, active := active, owner := owner, items := items}))
+}
+
+definition{
+  name: applyValidated,
+  parameters: [state : QueueState, command : QueueCommand],
+  result: (Result QueueState QueueError),
+  body: (if ((project command kind) =? 1) then (if (containsItem (project state items) (project command item)) then (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueItemDuplicate)) else (if ((prim length (project state items) : Nat) <? 32) then (nextState state (prim append (project state items) (cons (project command item) (nil Nat)) : (List Nat)) (project state paused) (project state stopPolicy) (project state active) (project state owner)) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueFull)))) else (if ((project command kind) =? 2) then (if (containsItem (project state items) (project command item)) then (if (if ((project state active) =? (project command item)) then false else true) then (nextState state (project (removeItem (project state items) (project command item)) value) (project state paused) (project state stopPolicy) (project state active) (project state owner)) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueActiveConflict))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueItemMissing))) else (if ((project command kind) =? 3) then (if (containsItem (project state items) (project command item)) then (if ((if ((project state active) =? (project command item)) then false else true) && (((project command index) <? (prim length (project state items) : Nat)) && ((if ((project state active) =? 0) then true else (0 <? (project command index))) && true))) then (nextState state (project (insertItem (project (removeItem (project state items) (project command item)) value) (project command item) (project command index)) value) (project state paused) (project state stopPolicy) (project state active) (project state owner)) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueActiveConflict))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueItemMissing))) else (if ((project command kind) =? 4) then (if (containsItem (project state items) (project command item)) then (if (if ((project state active) =? (project command item)) then false else true) then (nextState state (project state items) (project state paused) (project state stopPolicy) (project state active) (project state owner)) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueActiveConflict))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueItemMissing))) else (if ((project command kind) =? 5) then (nextState state (if ((project state active) =? 0) then (nil Nat) else (cons (project state active) (nil Nat))) (project state paused) (project state stopPolicy) (project state active) (project state owner)) else (if ((project command kind) =? 6) then (nextState state (project state items) 1 (project state stopPolicy) (project state active) (project state owner)) else (if ((project command kind) =? 7) then (if ((project state stopPolicy) =? (project command observedStop)) then (nextState state (project state items) 0 (project state stopPolicy) (project state active) (project state owner)) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueStopConflict))) else (if ((project command kind) =? 8) then (if ((project state stopPolicy) <? 4294967295) then (nextState state (project state items) 1 ((project state stopPolicy) + 1) (project state active) (project state owner)) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueRevisionExhausted))) else (if ((project command kind) =? 9) then (if ((project state active) =? 0) then (if ((project state paused) =? 0) then (if ((project state stopPolicy) =? (project command observedStop)) then (if (0 <? (prim length (project state items) : Nat)) then (nextState state (project state items) (project state paused) (project state stopPolicy) (headItem (project state items)) (project command owner)) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueItemMissing))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueStopConflict))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queuePaused))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueActiveConflict))) else (if ((project command kind) =? 10) then (if ((0 <? (project state active)) && (((project state owner) =? (project command owner)) && true)) then (if ((project command item) =? (project state active)) then (nextState state (project (removeItem (project state items) (project state active)) value) (project state paused) (project state stopPolicy) 0 0) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueActiveConflict))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueOwnerConflict))) else (if ((project command kind) =? 11) then (if ((0 <? (project state active)) && ((if ((project command owner) =? (project state owner)) then false else true) && true)) then (nextState state (project state items) 1 (project state stopPolicy) 0 0) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueOwnerConflict))) else (if ((project command kind) =? 12) then (if ((0 <? (project state active)) && (((project state owner) =? (project command owner)) && true)) then (nextState state (project state items) 1 (project state stopPolicy) 0 0) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueOwnerConflict))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.invalidQueueCommand))))))))))))))
+}
+
+definition{
+  name: transitionQueue,
+  parameters: [state : QueueState, expectedRevision : Nat, command : QueueCommand],
+  result: (Result QueueState QueueError),
+  body: (if (validState state) then (if (validCommand command) then (if (expectedRevision =? (project state revision)) then (if ((project state revision) <? 4294967295) then (applyValidated state command) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueRevisionExhausted))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueRevisionConflict))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.invalidQueueCommand))) else (ctor Result.error [QueueState, QueueError] (ctor QueueError.invalidQueueState)))
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "A finite queue contains at most 32 unique positive turn identities, including any active head. Every successful mutation increments its unsigned 32-bit revision; stale revisions and exhausted counters refuse. Enqueue, remove, reorder, edit, clear, pause, resume, stop, claim, complete, recovery and failure are explicit operations. Active work stays at the head; edit/remove/reorder cannot change it, and clear removes only pending work. Claim requires an unpaused queue, no active owner and the current stop policy. Completion requires the exact active item and owner. Stop increments its policy and pauses pending dispatch without discarding active work. Resume observes that policy. Failure retains the item and pauses. Explicit recovery by a different owner also retains the item and pauses, and the host must establish abandonment with an exclusive origin lock before invoking it. This pure model validates state transitions, not identities, prompt payloads, durable storage, remote authentication, inference permission, exactly-once external effects or physical work accounting. The adapter must bind payloads to turn identities, commit state and payload changes atomically, and never report a command applied without that commit."
+}
+
+theorem{
+  name: queue_enqueue,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 1, item := 14, index := 0, owner := 0, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (cons 14 (nil Nat)))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_remove,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 2, item := 12, index := 0, owner := 0, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 13 (nil Nat)))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_reorder,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 3, item := 13, index := 0, owner := 0, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 13 (cons 11 (cons 12 (nil Nat))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_edit,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 4, item := 12, index := 0, owner := 0, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_clear,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 5, item := 0, index := 0, owner := 0, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (nil Nat)}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_pause,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 6, item := 0, index := 0, owner := 0, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 1, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_resume,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 1, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 7, item := 0, index := 0, owner := 0, observedStop := 2})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_stop,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 8, item := 0, index := 0, owner := 0, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 1, stopPolicy := 3, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_claim,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 9, item := 0, index := 0, owner := 7, observedStop := 2})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 0, stopPolicy := 2, active := 11, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_complete,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 11, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 10, item := 11, index := 0, owner := 7, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 12 (cons 13 (nil Nat)))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_recover,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 11, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 11, item := 0, index := 0, owner := 8, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 1, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_fail,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 11, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 12, item := 0, index := 0, owner := 7, observedStop := 0})) = (ctor Result.ok [QueueState, QueueError] (record QueueState {revision := 4, paused := 1, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_duplicate,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 1, item := 12, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueItemDuplicate))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_missing,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 2, item := 99, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueItemMissing))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_activeRemove,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 11, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 2, item := 11, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueActiveConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_activeEdit,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 11, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 4, item := 11, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueActiveConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_activeReorder,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 11, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 3, item := 12, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueActiveConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_wrongOwner,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 11, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 10, item := 11, index := 0, owner := 8, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueOwnerConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_staleResume,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 1, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 7, item := 0, index := 0, owner := 0, observedStop := 1})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueStopConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_pausedClaim,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 1, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 9, item := 0, index := 0, owner := 7, observedStop := 2})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queuePaused))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_staleRevision,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 2 (record QueueCommand {kind := 6, item := 0, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueRevisionConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_exhaustedRevision,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 4294967295, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 4294967295 (record QueueCommand {kind := 6, item := 0, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.queueRevisionExhausted))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_invalidCommand,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 0, owner := 0, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 6, item := 1, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.invalidQueueCommand))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: queue_invalidState,
+  parameters: [],
+  statement: ((transitionQueue (record QueueState {revision := 3, paused := 0, stopPolicy := 2, active := 12, owner := 7, items := (cons 11 (cons 12 (cons 13 (nil Nat))))}) 3 (record QueueCommand {kind := 6, item := 0, index := 0, owner := 0, observedStop := 0})) = (ctor Result.error [QueueState, QueueError] (ctor QueueError.invalidQueueState))),
+  proof: reflexivity{},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}

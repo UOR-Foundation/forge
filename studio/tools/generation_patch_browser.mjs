@@ -7,13 +7,16 @@ const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8
 const apply = host.slice(host.indexOf("async function applyDyadTags("), host.indexOf("window.__chat ="));
 const rules = host.slice(host.indexOf("async function rulesAfterTurn("), host.indexOf("// Lean proves"));
 const proof = host.slice(host.indexOf("async function proveRules("), host.indexOf('// "approve"'));
-// rulesAfterTurn reads a LexLean module from the turn and stages the spec's canonical source. These turns
-// carry no module and the stubbed prism's specs are not full specs, so the real reader finds none and the
-// real writer refuses each, exactly as this stand-in does.
-const lexleanStandIn = `const lexlean = { specFromTurn: () => null, canonicalSource: () => { throw new Error("not a full spec"); } };`;
-const hostModule = `export function hostAdapters(env) { const { coreReady, dbReady, core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, prism, live, rulesOf, rulesSnapshotOf, saveRules, nextPhase, now, enc, put, refreshLive } = env; ${lexleanStandIn}\n${apply}\n${rules}\n${proof}\nreturn { applyDyadTags, rulesAfterTurn, proveRules }; }`;
-const sources = new Map([["/host-adapters.mjs", hostModule], ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
-for (const name of ["generation-patch.mjs", "project-edit.mjs", "project-creation.mjs", "storage-request.mjs", "rules-source.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
+const hostModule = `import { copyGenerationInput, assertCanonicalGeneration } from "/canonical-generation.mjs";\nimport * as lexlean from "/live/lexlean.mjs";\nexport function hostAdapters(env) { const { coreReady, dbReady, core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, prism, live, rulesOf, rulesSnapshotOf, saveRules, nextPhase, now, enc, put, refreshLive } = env; ${apply}\n${rules}\n${proof}\nreturn { applyDyadTags, rulesAfterTurn, proveRules }; }`;
+const sources = new Map([
+  ["/browser-chat-modes.mjs", fs.readFileSync(new URL("../shell/browser-chat-modes.mjs", import.meta.url))],
+  ["/chat-mode-catalog.mjs", fs.readFileSync(new URL("../shell/chat-mode-catalog.mjs", import.meta.url))],
+  ["/chat-contracts.mjs", fs.readFileSync(new URL("../shell/chat-contracts.mjs", import.meta.url))],
+
+  ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
+  ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/host-adapters.mjs", hostModule], ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
+for (const name of ["canonical-generation.mjs", "generation-patch.mjs", "project-edit.mjs", "project-creation.mjs", "storage-request.mjs", "rules-source.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
+for (const name of ["live/lexlean.mjs", "prism/render.mjs", "prism/spec.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
 const server = http.createServer((request, response) => { const source = sources.get(request.url); response.setHeader("content-type", source ? "text/javascript" : "text/html"); response.end(source || "<!doctype html><title>Generation patch acceptance</title>"); });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const executablePath = process.env.CHROME_BIN || ["/usr/bin/chromium", "/usr/bin/google-chrome"].find(p => fs.existsSync(p));

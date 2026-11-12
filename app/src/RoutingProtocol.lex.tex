@@ -1,0 +1,290 @@
+\begin{lexlean}{RoutingProtocol}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{SemanticRouter}
+\importmodule{ProposalAdmission}
+\importmodule{FeatureComposition}
+\importmodule{CompositionProtocol}
+\importmodule{WorkProtocol}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: RelationRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: SemanticRouter::SemanticRelation}, {name: rest, type: Nat}]
+}
+
+structure{
+  name: RelationsRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List SemanticRouter::SemanticRelation)},
+    {name: rest, type: Nat},
+    {name: valid, type: Bool}
+  ]
+}
+
+definition{
+  name: readRelation,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option RelationRead),
+  body: (match (CompositionProtocol::readScalar words offset)
+    | Option.none => (ctor Option.none [RelationRead])
+    | Option.some fromConcept => (match (CompositionProtocol::readScalar words (project fromConcept rest))
+      | Option.none => (ctor Option.none [RelationRead])
+      | Option.some toConcept => (match (CompositionProtocol::readScalar words (project toConcept rest))
+        | Option.none => (ctor Option.none [RelationRead])
+        | Option.some weight => (ctor Option.some [RelationRead] (record RelationRead {value := (record SemanticRouter::SemanticRelation {fromConcept := (project fromConcept value), toConcept := (project toConcept value), weight := (project weight value)}), rest := (project weight rest)})))))
+}
+
+definition{
+  name: readRelations,
+  parameters: [
+    words : (List Nat),
+    offset : Nat,
+    count : Nat,
+    acc : (List SemanticRouter::SemanticRelation)
+  ],
+  result: RelationsRead,
+  body: (match count
+    | Nat.zero => (record RelationsRead {value := acc, rest := offset, valid := true})
+    | Nat.succ less => (match (readRelation words offset)
+      | Option.none => (record RelationsRead {value := acc, rest := offset, valid := false})
+      | Option.some item => (readRelations words (project item rest) less (prim append acc (cons (project item value) (nil SemanticRouter::SemanticRelation)) : (List SemanticRouter::SemanticRelation))))),
+  recursive_argument: count
+}
+
+definition{
+  name: listRelations,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option RelationsRead),
+  body: (match (CompositionProtocol::readScalar words offset)
+    | Option.none => (ctor Option.none [RelationsRead])
+    | Option.some count => (if ((project count value) <=? 128) then (let result : RelationsRead := (readRelations words (project count rest) (project count value) (nil SemanticRouter::SemanticRelation)); (if (project result valid) then (ctor Option.some [RelationsRead] result) else (ctor Option.none [RelationsRead]))) else (ctor Option.none [RelationsRead])))
+}
+
+definition{
+  name: encodeNats,
+  parameters: [values : (List Nat)],
+  result: Bytes,
+  body: (match values
+    | List.nil => 0x
+    | List.cons head rest => (prim append (WorkProtocol::hexWord head) (encodeNats rest) : Bytes)),
+  recursive_argument: values
+}
+
+definition{
+  name: encodeReferences,
+  parameters: [values : (List FeatureComposition::FeatureRef)],
+  result: Bytes,
+  body: (match values
+    | List.nil => 0x
+    | List.cons head rest => (prim append (WorkProtocol::hexWord (project head key)) (prim append (WorkProtocol::hexWord (project head version)) (encodeReferences rest) : Bytes) : Bytes)),
+  recursive_argument: values
+}
+
+definition{
+  name: encodeCandidates,
+  parameters: [values : (List SemanticRouter::Candidate)],
+  result: Bytes,
+  body: (match values
+    | List.nil => 0x
+    | List.cons head rest => (prim append (WorkProtocol::hexWord (project (project head reference) key)) (prim append (WorkProtocol::hexWord (project (project head reference) version)) (prim append (WorkProtocol::hexWord (project head score)) (encodeCandidates rest) : Bytes) : Bytes) : Bytes)),
+  recursive_argument: values
+}
+
+definition{
+  name: compositionCode,
+  parameters: [error : FeatureComposition::CompositionError],
+  result: Nat,
+  body: (match error
+    | FeatureComposition::CompositionError.emptyComposition => 1
+    | FeatureComposition::CompositionError.invalidDeclaration => 2
+    | FeatureComposition::CompositionError.duplicateFeature => 3
+    | FeatureComposition::CompositionError.missingDependency => 4
+    | FeatureComposition::CompositionError.incompatibleInput => 5
+    | FeatureComposition::CompositionError.featureConflict => 6
+    | FeatureComposition::CompositionError.permissionDenied => 7
+    | FeatureComposition::CompositionError.unsupportedTarget => 8
+    | FeatureComposition::CompositionError.missingEvidence => 9
+    | FeatureComposition::CompositionError.budgetExceeded => 10)
+}
+
+definition{
+  name: admissionCode,
+  parameters: [
+    admission : (Result (List FeatureComposition::FeatureContract) ProposalAdmission::ProposalError)
+  ],
+  result: Nat,
+  body: (match admission
+    | Result.ok accepted => 0
+    | Result.error error => (match error
+      | ProposalAdmission::ProposalError.invalidRegistry => 1
+      | ProposalAdmission::ProposalError.invalidProposal => 2
+      | ProposalAdmission::ProposalError.staleIntent => 3
+      | ProposalAdmission::ProposalError.staleRegistry => 4
+      | ProposalAdmission::ProposalError.unresolvedAmbiguity => 5
+      | ProposalAdmission::ProposalError.unresolvedConstraint => 6
+      | ProposalAdmission::ProposalError.unregisteredFeature => 7
+      | ProposalAdmission::ProposalError.compositionRejected detail => 8))
+}
+
+definition{
+  name: admissionDetail,
+  parameters: [
+    admission : (Result (List FeatureComposition::FeatureContract) ProposalAdmission::ProposalError)
+  ],
+  result: Nat,
+  body: (match admission
+    | Result.ok accepted => 0
+    | Result.error error => (match error
+      | ProposalAdmission::ProposalError.invalidRegistry => 0
+      | ProposalAdmission::ProposalError.invalidProposal => 0
+      | ProposalAdmission::ProposalError.staleIntent => 0
+      | ProposalAdmission::ProposalError.staleRegistry => 0
+      | ProposalAdmission::ProposalError.unresolvedAmbiguity => 0
+      | ProposalAdmission::ProposalError.unresolvedConstraint => 0
+      | ProposalAdmission::ProposalError.unregisteredFeature => 0
+      | ProposalAdmission::ProposalError.compositionRejected detail => (compositionCode detail)))
+}
+
+definition{
+  name: encodeOutcome,
+  parameters: [result : SemanticRouter::RoutingOutcome],
+  result: Bytes,
+  body: (let proposal : ProposalAdmission::Proposal := (project result proposal); (let ranked : (List SemanticRouter::Candidate) := (project result ranked); (let selected : (List FeatureComposition::FeatureRef) := (project proposal selected); (let ambiguities : (List Nat) := (project proposal ambiguities); (let unresolved : (List Nat) := (project proposal unresolved); (prim append 0x6f6b20 (prim append (WorkProtocol::hexWord 1) (prim append (WorkProtocol::hexWord (admissionCode (project result admission))) (prim append (WorkProtocol::hexWord (admissionDetail (project result admission))) (prim append (WorkProtocol::hexWord (project proposal intent)) (prim append (WorkProtocol::hexWord (project proposal registryRevision)) (prim append (WorkProtocol::hexWord (project proposal confidence)) (prim append (WorkProtocol::hexWord (prim length ranked : Nat)) (prim append (encodeCandidates ranked) (prim append (WorkProtocol::hexWord (prim length selected : Nat)) (prim append (encodeReferences selected) (prim append (WorkProtocol::hexWord (prim length ambiguities : Nat)) (prim append (encodeNats ambiguities) (prim append (WorkProtocol::hexWord (prim length unresolved : Nat)) (encodeNats unresolved) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes))))))
+}
+
+definition{
+  name: encodeRoutingResult,
+  parameters: [result : (Result SemanticRouter::RoutingOutcome SemanticRouter::RoutingError)],
+  result: Bytes,
+  body: (match result
+    | Result.ok value => (encodeOutcome value)
+    | Result.error error => (match error
+      | SemanticRouter::RoutingError.invalidSemanticIntent => 0x696e76616c696453656d616e746963496e74656e74
+      | SemanticRouter::RoutingError.invalidSemanticCatalog => 0x696e76616c696453656d616e746963436174616c6f67
+      | SemanticRouter::RoutingError.invalidSemanticRelations => 0x696e76616c696453656d616e74696352656c6174696f6e73))
+}
+
+definition{
+  name: dispatchRoutingWords,
+  parameters: [words : (List Nat)],
+  result: Bytes,
+  body: (match (CompositionProtocol::readScalar words 0)
+    | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+    | Option.some version => (match (CompositionProtocol::readScalar words (project version rest))
+      | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+      | Option.some expectedIntent => (match (CompositionProtocol::readScalar words (project expectedIntent rest))
+        | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+        | Option.some revision => (match (CompositionProtocol::readScalar words (project revision rest))
+          | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+          | Option.some intent => (match (CompositionProtocol::readScalar words (project intent rest))
+            | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+            | Option.some intentRevision => (match (CompositionProtocol::listNats words (project intentRevision rest))
+              | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+              | Option.some concepts => (match (CompositionProtocol::listNats words (project concepts rest))
+                | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+                | Option.some context => (match (listRelations words (project context rest))
+                  | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+                  | Option.some relations => (match (CompositionProtocol::readPolicy words (project relations rest))
+                    | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+                    | Option.some policy => (match (CompositionProtocol::listFeatures words (project policy rest))
+                      | Option.none => 0x6d616c666f726d6564526f7574696e6752657175657374
+                      | Option.some catalog => (if (((project version value) =? 1) && ((project catalog rest) =? (prim length words : Nat))) then (encodeRoutingResult (SemanticRouter::propose (project expectedIntent value) (project revision value) (record SemanticRouter::SemanticIntent {id := (project intent value), registryRevision := (project intentRevision value), concepts := (project concepts value), context := (project context value)}) (project catalog value) (project relations value) (project policy value))) else 0x6d616c666f726d6564526f7574696e6752657175657374)))))))))))
+}
+
+definition{
+  name: dispatchRouting,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (if (32768 <? (prim length bytes : Nat)) then 0x726f7574696e6752657175657374546f6f4c61726765 else (let decoded : CompositionProtocol::DecodedWords := (CompositionProtocol::decodeWords bytes 0 4096 (nil Nat)); (if (project decoded valid) then (dispatchRoutingWords (project decoded value)) else 0x6d616c666f726d6564526f7574696e6752657175657374))),
+  axioms: [Quot.sound, propext]
+}
+
+inductive{
+  name: RoutingWireError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: malformedRoutingRequest, fields: []},
+    {name: routingRequestTooLarge, fields: []},
+    {name: routingRuntimeFailed, fields: []},
+    {name: invalidRoutingResponse, fields: []}
+  ]
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "Routing wire v1 uses the eight-byte propose-space prefix and lowercase hexadecimal little-endian uint32 words. Input is version, expected intent, registry revision, intent identity, intent registry revision, concept list, context list, relation count and triples, existing CompositionProtocol policy and feature list. At most 4096 words and 32768 ASCII payload bytes are decoded; list bounds, exact end offset and canonical hexadecimal are mandatory. SemanticRouter owns ranking, dependency closure and proposal generation; ProposalAdmission owns independent admission. Success includes version, admission code/detail, intent/revision/confidence, ranked triples, selected references, ambiguities and unresolved concepts. Confidence is zero, not calibrated probability. Proposal error codes are 1 through 8; composition detail codes are the existing ten declared composition errors. All lists are length-prefixed. Codec adapters serialize only and never replace semantics. Runtime, malformed and oversized failures are typed. The protocol does not grant effects, authenticate catalog provenance, persist proposals or establish natural-language relevance."
+}
+
+theorem{
+  name: routingWords_exactGallery,
+  parameters: [],
+  statement: ((dispatchRoutingWords (prim append (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 101 (cons 0 (cons 4 (cons 102 (cons 101 (cons 900 (cons 203 (cons 201 (cons 900 (cons 100 (nil Nat))))))))))))))))) (prim append (cons 101 (cons 500 (cons 100 (cons 201 (cons 500 (cons 100 (cons 100 (cons 1 (cons 9 (cons 1 (cons 1 (cons 0 (cons 5 (cons 10 (cons 1 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 1 (cons 900 (cons 1 (cons 7 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 11 (cons 1 (cons 2 (cons 1 (cons 1 (cons 101 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 1 (cons 10 (cons 1 (cons 7 (cons 14 (cons 1 (cons 1 (cons 1 (cons 1 (cons 901 (cons 1 (cons 8 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 9 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (cons 12 (cons 1 (cons 1 (cons 1 (cons 2 (cons 201 (cons 202 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 1 (cons 10 (cons 1 (cons 1 (cons 14 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 8 (cons 13 (cons 1 (cons 1 (cons 1 (cons 1 (cons 301 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (nil Nat))))))))))))))))) (cons 0 (cons 1 (cons 10 (cons 1 (cons 0 (nil Nat)))))) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat))) = 0x6f6b2030313030303030303030303030303030303030303030303030313030303030303031303030303030303030303030303030313030303030303062303030303030303130303030303065383462653830313032303030303030306130303030303030313030303030303062303030303030303130303030303030303030303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: routingWords_ambiguity,
+  parameters: [],
+  statement: ((dispatchRoutingWords (prim append (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 100 (cons 0 (cons 4 (cons 102 (cons 101 (cons 900 (cons 203 (cons 201 (cons 900 (cons 100 (nil Nat))))))))))))))))) (prim append (cons 101 (cons 500 (cons 100 (cons 201 (cons 500 (cons 100 (cons 100 (cons 1 (cons 9 (cons 1 (cons 1 (cons 0 (cons 5 (cons 10 (cons 1 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 1 (cons 900 (cons 1 (cons 7 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 11 (cons 1 (cons 2 (cons 1 (cons 1 (cons 101 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 1 (cons 10 (cons 1 (cons 7 (cons 14 (cons 1 (cons 1 (cons 1 (cons 1 (cons 901 (cons 1 (cons 8 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 9 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (cons 12 (cons 1 (cons 1 (cons 1 (cons 2 (cons 201 (cons 202 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 1 (cons 10 (cons 1 (cons 1 (cons 14 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 8 (cons 13 (cons 1 (cons 1 (cons 1 (cons 1 (cons 301 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (nil Nat))))))))))))))))) (cons 0 (cons 1 (cons 10 (cons 1 (cons 0 (nil Nat)))))) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat))) = 0x6f6b203031303030303030303530303030303030303030303030303031303030303030303130303030303030303030303030303032303030303030306230303030303030313030303030306634323566343030306330303030303030313030303030306634323566343030303230303030303030613030303030303031303030303030306230303030303030313030303030303032303030303030306230303030303030633030303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: routingWords_unknown,
+  parameters: [],
+  statement: ((dispatchRoutingWords (prim append (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 999 (cons 0 (cons 4 (cons 102 (cons 101 (cons 900 (cons 203 (cons 201 (cons 900 (cons 100 (nil Nat))))))))))))))))) (prim append (cons 101 (cons 500 (cons 100 (cons 201 (cons 500 (cons 100 (cons 100 (cons 1 (cons 9 (cons 1 (cons 1 (cons 0 (cons 5 (cons 10 (cons 1 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 1 (cons 900 (cons 1 (cons 7 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 11 (cons 1 (cons 2 (cons 1 (cons 1 (cons 101 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 1 (cons 10 (cons 1 (cons 7 (cons 14 (cons 1 (cons 1 (cons 1 (cons 1 (cons 901 (cons 1 (cons 8 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 9 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (cons 12 (cons 1 (cons 1 (cons 1 (cons 2 (cons 201 (cons 202 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 1 (cons 10 (cons 1 (cons 1 (cons 14 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 8 (cons 13 (cons 1 (cons 1 (cons 1 (cons 1 (cons 301 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (nil Nat))))))))))))))))) (cons 0 (cons 1 (cons 10 (cons 1 (cons 0 (nil Nat)))))) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat))) = 0x6f6b2030313030303030303036303030303030303030303030303030313030303030303031303030303030303030303030303030303030303030303030303030303030303030303030303030313030303030306537303330303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: routingWords_permissionDenied,
+  parameters: [],
+  statement: ((dispatchRoutingWords (prim append (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 201 (cons 0 (cons 4 (cons 102 (cons 101 (cons 900 (cons 203 (cons 201 (cons 900 (cons 100 (nil Nat))))))))))))))))) (prim append (cons 101 (cons 500 (cons 100 (cons 201 (cons 500 (cons 100 (cons 100 (cons 0 (cons 1 (cons 1 (cons 0 (cons 5 (cons 10 (cons 1 (cons 1 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 900 (cons 1 (cons 7 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (cons 11 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 2 (cons 1 (cons 1 (cons 101 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 10 (cons 1 (cons 7 (cons 14 (cons 1 (cons 1 (cons 1 (cons 1 (cons 901 (cons 1 (cons 8 (cons 0 (cons 0 (cons 0 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 9 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (cons 12 (cons 1 (cons 1 (cons 1 (cons 2 (cons 201 (cons 202 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 1 (cons 10 (cons 1 (cons 1 (cons 14 (cons 1 (cons 8 (nil Nat))))))))))))))))) (prim append (cons 13 (cons 1 (cons 1 (cons 1 (cons 1 (cons 301 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat))))))))))))))))) (cons 1 (cons 10 (cons 1 (cons 0 (nil Nat))))) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat))) = 0x6f6b203031303030303030303830303030303030373030303030303031303030303030303130303030303030303030303030303031303030303030306330303030303030313030303030306538346265383031303330303030303030613030303030303031303030303030306530303030303030313030303030303063303030303030303130303030303030303030303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: routingWords_invalidWeight,
+  parameters: [],
+  statement: ((dispatchRoutingWords (prim append (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 101 (cons 0 (cons 4 (cons 102 (cons 101 (cons 1001 (cons 203 (cons 201 (cons 900 (cons 100 (nil Nat))))))))))))))))) (prim append (cons 101 (cons 500 (cons 100 (cons 201 (cons 500 (cons 100 (cons 100 (cons 1 (cons 9 (cons 1 (cons 1 (cons 0 (cons 5 (cons 10 (cons 1 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 1 (cons 900 (cons 1 (cons 7 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 11 (cons 1 (cons 2 (cons 1 (cons 1 (cons 101 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 1 (cons 10 (cons 1 (cons 7 (cons 14 (cons 1 (cons 1 (cons 1 (cons 1 (cons 901 (cons 1 (cons 8 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 9 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (cons 12 (cons 1 (cons 1 (cons 1 (cons 2 (cons 201 (cons 202 (nil Nat))))))))))))))))) (prim append (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 1 (cons 10 (cons 1 (cons 1 (cons 14 (cons 1 (nil Nat))))))))))))))))) (prim append (cons 8 (cons 13 (cons 1 (cons 1 (cons 1 (cons 1 (cons 301 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (nil Nat))))))))))))))))) (cons 0 (cons 1 (cons 10 (cons 1 (cons 0 (nil Nat)))))) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat))) = 0x696e76616c696453656d616e74696352656c6174696f6e73),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: routingWords_forwardDependency,
+  parameters: [],
+  statement: ((dispatchRoutingWords (prim append (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 1 (cons 101 (cons 0 (cons 4 (cons 102 (cons 101 (cons 900 (cons 203 (cons 201 (cons 900 (cons 100 (nil Nat))))))))))))))))) (prim append (cons 101 (cons 500 (cons 100 (cons 201 (cons 500 (cons 100 (cons 100 (cons 1 (cons 9 (cons 1 (cons 1 (cons 0 (cons 2 (cons 11 (cons 1 (cons 2 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 1 (cons 101 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 1 (cons 10 (nil Nat))))))))))))))))) (prim append (cons 1 (cons 7 (cons 10 (cons 1 (cons 1 (cons 1 (cons 1 (cons 900 (cons 1 (cons 7 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (nil Nat))))))))))))))))) (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat)))))) : (List Nat)) : (List Nat)) : (List Nat)) : (List Nat))) = 0x696e76616c696453656d616e746963436174616c6f67),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: routingRaw_empty,
+  parameters: [],
+  statement: ((dispatchRouting 0x) = 0x6d616c666f726d6564526f7574696e6752657175657374),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+
+theorem{
+  name: routingRaw_uppercase,
+  parameters: [],
+  statement: ((dispatchRouting 0x4130303030303030) = 0x6d616c666f726d6564526f7574696e6752657175657374),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

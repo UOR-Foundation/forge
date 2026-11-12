@@ -1,0 +1,316 @@
+\begin{lexlean}{VersionPreview}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: PreviewAddress,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: w0, type: Nat},
+    {name: w1, type: Nat},
+    {name: w2, type: Nat},
+    {name: w3, type: Nat},
+    {name: w4, type: Nat},
+    {name: w5, type: Nat},
+    {name: w6, type: Nat},
+    {name: w7, type: Nat}
+  ]
+}
+
+structure{
+  name: PreviewState,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: revision, type: Nat},
+    {name: active, type: Nat},
+    {name: owner, type: Nat},
+    {name: origin, type: PreviewAddress},
+    {name: current, type: PreviewAddress}
+  ]
+}
+
+structure{
+  name: PreviewCommand,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: kind, type: Nat}, {name: owner, type: Nat}, {name: target, type: PreviewAddress}]
+}
+
+structure{
+  name: PreviewTransition,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: state, type: PreviewState},
+    {name: writeRequested, type: Bool},
+    {name: target, type: PreviewAddress}
+  ]
+}
+
+inductive{
+  name: PreviewError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidPreviewState, fields: []},
+    {name: invalidPreviewCommand, fields: []},
+    {name: previewRevisionConflict, fields: []},
+    {name: previewRevisionExhausted, fields: []},
+    {name: previewAlreadyOwned, fields: []},
+    {name: previewInactive, fields: []},
+    {name: previewWrongOwner, fields: []}
+  ]
+}
+
+definition{
+  name: previewZero,
+  parameters: [],
+  result: PreviewAddress,
+  body: (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})
+}
+
+definition{
+  name: previewAddressValid,
+  parameters: [value : PreviewAddress],
+  result: Bool,
+  body: (((project value w0) <=? 4294967295) && (((project value w1) <=? 4294967295) && (((project value w2) <=? 4294967295) && (((project value w3) <=? 4294967295) && (((project value w4) <=? 4294967295) && (((project value w5) <=? 4294967295) && (((project value w6) <=? 4294967295) && (((project value w7) <=? 4294967295) && true))))))))
+}
+
+definition{
+  name: previewAddressEqual,
+  parameters: [left : PreviewAddress, right : PreviewAddress],
+  result: Bool,
+  body: (((project left w0) =? (project right w0)) && (((project left w1) =? (project right w1)) && (((project left w2) =? (project right w2)) && (((project left w3) =? (project right w3)) && (((project left w4) =? (project right w4)) && (((project left w5) =? (project right w5)) && (((project left w6) =? (project right w6)) && (((project left w7) =? (project right w7)) && true))))))))
+}
+
+definition{
+  name: previewNegate,
+  parameters: [value : Bool],
+  result: Bool,
+  body: (if value then false else true)
+}
+
+definition{
+  name: previewStateValid,
+  parameters: [state : PreviewState],
+  result: Bool,
+  body: (((project state revision) <=? 4294967295) && (((project state active) <=? 1) && (((project state owner) <=? 4294967295) && ((previewAddressValid (project state origin)) && ((previewAddressValid (project state current)) && ((if ((project state active) =? 0) then (((project state owner) =? 0) && ((previewAddressEqual (project state origin) (previewZero)) && ((previewAddressEqual (project state current) (previewZero)) && true))) else (0 <? (project state owner))) && true))))))
+}
+
+definition{
+  name: previewCommandValid,
+  parameters: [command : PreviewCommand],
+  result: Bool,
+  body: ((0 <? (project command kind)) && (((project command kind) <=? 5) && ((0 <? (project command owner)) && (((project command owner) <=? 4294967295) && ((previewAddressValid (project command target)) && ((if (((project command kind) =? 3) || ((project command kind) =? 5)) then (previewAddressEqual (project command target) (previewZero)) else true) && true))))))
+}
+
+definition{
+  name: transitionPreview,
+  parameters: [state : PreviewState, expectedRevision : Nat, command : PreviewCommand],
+  result: (Result PreviewTransition PreviewError),
+  body: (if (previewNegate (previewStateValid state)) then (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewState)) else (if (previewNegate (previewCommandValid command)) then (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewCommand)) else (if (previewNegate (expectedRevision =? (project state revision))) then (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewRevisionConflict)) else (if ((project state revision) =? 4294967295) then (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewRevisionExhausted)) else (if ((project command kind) =? 1) then (if ((project state active) =? 1) then (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewAlreadyOwned)) else (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := ((project state revision) + 1), active := 1, owner := (project command owner), origin := (project command target), current := (project command target)}), writeRequested := false, target := (previewZero)}))) else (if ((project state active) =? 0) then (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewInactive)) else (if ((project command kind) =? 5) then (if ((project command owner) =? (project state owner)) then (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewWrongOwner)) else (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := ((project state revision) + 1), active := 1, owner := (project command owner), origin := (project state origin), current := (project state current)}), writeRequested := false, target := (previewZero)}))) else (if (previewNegate ((project command owner) =? (project state owner))) then (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewWrongOwner)) else (if ((project command kind) =? 2) then (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := ((project state revision) + 1), active := 1, owner := (project command owner), origin := (project state origin), current := (project command target)}), writeRequested := true, target := (project command target)})) else (if ((project command kind) =? 3) then (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := ((project state revision) + 1), active := 0, owner := 0, origin := (previewZero), current := (previewZero)}), writeRequested := true, target := (project state origin)})) else (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := ((project state revision) + 1), active := 0, owner := 0, origin := (previewZero), current := (previewZero)}), writeRequested := true, target := (project command target)}))))))))))))
+}
+
+definition{
+  name: boundary,
+  parameters: [],
+  result: String,
+  body: "One exclusive origin owner preserves exact 256-bit original and current content identities. Acquire captures a current source without requesting a write. Selection changes only the current target; return requests the original target and closes ownership; restore requests an independently prepared canonical target and closes ownership. Recovery changes owner only, preserves both identities and requests no write. Every admitted command advances a bounded uint32 revision; invalid state or command, stale revision, exhausted revision, occupied acquire, inactive operation and wrong owner refuse. Origins are never truncated hashes or sampled identifiers. Snapshot verification, project binding, current-source compare-and-swap, Web Lock exclusivity, permissions and durable transactions remain mandatory typed adapter obligations. A claimed owner number is not authentication."
+}
+
+theorem{
+  name: preview_acquire,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 0, active := 0, owner := 0, origin := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0}), current := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}) 0 (record PreviewCommand {kind := 1, owner := 7, target := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8})})) = (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := 1, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8})}), writeRequested := false, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_select,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 2, owner := 7, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})})) = (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := 4, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})}), writeRequested := true, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_selectSame,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 2, owner := 7, target := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})})) = (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := 4, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}), writeRequested := true, target := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_returnOrigin,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 3, owner := 7, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := 4, active := 0, owner := 0, origin := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0}), current := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}), writeRequested := true, target := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8})}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_restorePrepared,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 4, owner := 7, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})})) = (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := 4, active := 0, owner := 0, origin := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0}), current := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}), writeRequested := true, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_recover,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 5, owner := 8, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.ok [PreviewTransition, PreviewError] (record PreviewTransition {state := (record PreviewState {revision := 4, active := 1, owner := 8, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}), writeRequested := false, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_occupied,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 1, owner := 8, target := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewAlreadyOwned))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_inactiveSelect,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 0, active := 0, owner := 0, origin := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0}), current := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}) 0 (record PreviewCommand {kind := 2, owner := 7, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewInactive))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_inactiveReturn,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 0, active := 0, owner := 0, origin := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0}), current := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}) 0 (record PreviewCommand {kind := 3, owner := 7, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewInactive))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_inactiveRecovery,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 0, active := 0, owner := 0, origin := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0}), current := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}) 0 (record PreviewCommand {kind := 5, owner := 8, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewInactive))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_wrongSelectOwner,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 2, owner := 8, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewWrongOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_wrongReturnOwner,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 3, owner := 8, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewWrongOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_wrongRestoreOwner,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 4, owner := 8, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewWrongOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_sameRecoveryOwner,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 5, owner := 7, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewWrongOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_staleRevision,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 2 (record PreviewCommand {kind := 2, owner := 7, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewRevisionConflict))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_exhausted,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 4294967295, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 4294967295 (record PreviewCommand {kind := 3, owner := 7, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewRevisionExhausted))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_inactiveOwner,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 0, active := 0, owner := 7, origin := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0}), current := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}) 0 (record PreviewCommand {kind := 1, owner := 7, target := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewState))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_invalidPhase,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 2, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 3, owner := 7, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewState))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_emptyOwner,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 0, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 3, owner := 7, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewState))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_inactiveOrigin,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 0, active := 0, owner := 0, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})}) 0 (record PreviewCommand {kind := 1, owner := 7, target := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewState))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_invalidKind,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 6, owner := 7, target := (record PreviewAddress {w0 := 0, w1 := 0, w2 := 0, w3 := 0, w4 := 0, w5 := 0, w6 := 0, w7 := 0})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewCommand))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_invalidOwner,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 2, owner := 0, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewCommand))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_unusedTarget,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 3, owner := 7, target := (record PreviewAddress {w0 := 17, w1 := 18, w2 := 19, w3 := 20, w4 := 21, w5 := 22, w6 := 23, w7 := 24})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.invalidPreviewCommand))),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: preview_maximumIdentity,
+  parameters: [],
+  statement: ((transitionPreview (record PreviewState {revision := 3, active := 1, owner := 7, origin := (record PreviewAddress {w0 := 1, w1 := 2, w2 := 3, w3 := 4, w4 := 5, w5 := 6, w6 := 7, w7 := 8}), current := (record PreviewAddress {w0 := 9, w1 := 10, w2 := 11, w3 := 12, w4 := 13, w5 := 14, w6 := 15, w7 := 16})}) 3 (record PreviewCommand {kind := 2, owner := 4294967295, target := (record PreviewAddress {w0 := 4294967295, w1 := 4294967295, w2 := 4294967295, w3 := 4294967295, w4 := 4294967295, w5 := 4294967295, w6 := 4294967295, w7 := 4294967295})})) = (ctor Result.error [PreviewTransition, PreviewError] (ctor PreviewError.previewWrongOwner))),
+  proof: reflexivity{},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}

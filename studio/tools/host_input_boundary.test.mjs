@@ -1,9 +1,10 @@
+import {commandRegistry, invokeBoundCommand} from "../shell/command-registry.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { test } from "node:test";
 import { invokeHost, unwrapHost } from "../shell/host-boundary.mjs";
-const channel = "input:test";
+const channel = "create-app";
 const output = { safeParse: () => ({ success: true }) };
 const input = { safeParse: data => ({ success: true, data }) };
 const invoke = (args, handler, schema = input) => invokeHost(channel, args, handler, output, { schema });
@@ -51,7 +52,7 @@ test("the shipped host routes imported commands through input validation", async
   assert.ok(start >= 0 && end > start);
   let effects = 0;
   const window = { __contracts: { [channel]: output }, __inputContracts: { [channel]: { safeParse: () => ({ success: false }) } } };
-  const dispatch = vm.runInNewContext(source.slice(start, end) + "\ndispatch", { window, handlers: new Map([[channel, () => effects++]]), seen: new Map(), invokeHost });
+  const dispatch = vm.runInNewContext(source.slice(start, end) + "\ndispatch", { window, handlers: new Map([[channel, () => effects++]]), seen: new Map(), invokeHost, commandRegistry, invokeBoundCommand, windowRecoveryScopes:()=>[],windowCoordination:{invalidate:async()=>{}} });
   refused(await dispatch(channel, ["private"]), "invalidInput");
   delete window.__inputContracts[channel]; refused(await dispatch(channel, []), "inputContractUnavailable");
   assert.equal(effects, 0);

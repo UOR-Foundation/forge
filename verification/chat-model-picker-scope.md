@@ -1,0 +1,17 @@
+# Chat model picker scope — FA-79
+
+Authority: `FoundrySpecification.chatModelPickerScopeBoundary`. Registration and failing controls precede implementation at `bff96e7abf1f72a8ee1260c0e12aeb6738d4bce5`. The original actual renderer fails the committed-chat-model label assertion under `/foundry/chat`.
+
+The picker previously compared the full mounted pathname with `/chat`, falling through to the global default and omitting per-chat writes. A dependency-free route adapter now resolves the configured base on a path-segment boundary. Positive safe chat identity selects the imported chat hook, including for empty chats. Home and non-chat routes select only the global default. Missing/unloaded chat identity disables the picker; synchronous single-flight protection and disabled controls prevent duplicate submissions. Failed typed storage writes preserve the committed value and display a fixed retry message.
+
+Four focused controls cover root/nested/trailing-slash mounts, non-chat defaults, malformed/out-of-base identity and actual component wiring. Seven mutations are rejected: ignored base, outside-base fallthrough, unsafe identity, chats treated as defaults, empty-chat omission, global writes after chat updates and enabled unavailable controls. A rebuilt-renderer mutation ignores the base and fails the intended label assertion; restored renderer passes.
+
+Actual Chromium verifies a chat-specific label distinct from Home, empty-chat persistence, unchanged other chat/global defaults, a real late transaction abort with visible retry and preserved state, successful recovery, Home selection, subsequent chat independence and reload with a differing default. No inference is sent and there are no page exceptions. Root unit controls and a whitespace-normalized wiring assertion use only Node; they do not depend on renderer development packages in the SDK conformance lane.
+
+All 467 Node controls pass. Locked formatter and lint report no errors; the actual renderer builds and its differential type check reports 28 upstream errors and zero added errors. Host LexLean verifies two modules with diagnostic attestation `f1434fd08b4772189328867c65db1d96f2550d9dc2dbcde4342b382d18089045`; this is not immutable SDK acceptance. Full Rust, integrated browser and final closure qualification are in progress. The original source assertion was made whitespace-normalized after the locked formatter split a call across lines; it still requires the imported mutation.
+
+Legacy provider routing, model quality, mode-selector exposure, the separately observed sidebar pointer obstruction and whole-conversion completion remain outside this scoped claim. The sidebar diagnostic passed six local replays without reproducing the hosted obstruction; no sidebar fix is claimed.
+
+All 59 mandatory browser journeys pass together; `model-picker-scope-integrated-browser-results.json` retains their exact results. Full Rust workspace, Clippy/fmt, shell parsing and byte corpus pass. Restored closure: 591 files, 51,381,880 bytes, `ce44c9eea9f4278d9d7b4de059201d3d87ad6f3a4562a492e807df88f076d370`. Full mobile performance is running separately.
+
+Full mobile performance passes unchanged budgets: cold median 9,720 ms, warm 1,632 ms, INP 176 ms, Enter-to-token 3,130 ms. All three runs are retained in `model-picker-scope-performance.json`. Hosted immutable SDK, Studio and every-app performance qualification remains outstanding for the latest head.

@@ -35,5 +35,6 @@ Five planted defects fail the controls: accepting other origins, following
 redirects, including credentials, removing the per-module bound, and returning
 the wrong deadline failure. Every mutation was restored. The complete Node,
 browser, Rust workspace, Clippy, parser and renderer contract gates pass locally.
-Full immutable SDK and Studio acceptance remain pending at the initial feature
-revision; diagnostic model verification is supplementary only.
+Full immutable SDK run 43039476228 and Studio run 43039475998 passed at
+`108800e5437b5dcb87429da22bf7e8bbe1cfc092`; diagnostic model verification
+is supplementary only.

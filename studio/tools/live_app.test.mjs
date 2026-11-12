@@ -7,6 +7,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { isAppShape, moduleFromTurn, splitDeclarations, wholePrefix, createApp, appLive, dataForm } from "../shell/live/app.mjs";
 
+import { describeHostedSource } from "../shell/hosted-source-permission.mjs";
+// Explicit fixture authorization. No test uses implicit production consent.
+const permissionOptions = { authorize: async input => ({ disclosure: describeHostedSource(input), expires: Date.now() + 10000, signal: new AbortController().signal, close() {} }), online: () => true };
 const read = (path) => fs.readFileSync(new URL(path, import.meta.url), "utf8");
 const module = read("../../v2/loop/answers/guests-3.verified.lex.tex");
 const decision = read("../../app/src/ForgeKernel.lex.tex");
@@ -23,7 +26,7 @@ function service() {
     let payload;
     if (request.params.name === "lexlean_draft_write") { const id = "prism-app/" + drafts.size; drafts.set(id, args.files[0].content); payload = { draft: id }; }
     else { const names = new Set(splitDeclarations(drafts.get(args.draft)).declarations.map((d) => d.name)); payload = { data: { spec: whole.spec, declarations: whole.declarations.filter((d) => names.has(d.name)) } }; }
-    return { json: async () => ({ result: { structuredContent: payload } }) };
+    return { ok: true, json: async () => ({ result: { structuredContent: payload } }) };
   };
   return { fetchImpl, calls };
 }
@@ -70,7 +73,7 @@ test("an app runs: frames are plain data, an action moves the state, a stale pre
 
 test("a streamed module posts a frame as soon as it is runnable, then again when step arrives", async () => {
   const { fetchImpl, calls } = service(), posted = [];
-  const live = appLive({ post: (appId, m) => posted.push(m), library, fetchImpl, now: () => 0 });
+  const live = appLive({ post: (appId, m) => posted.push(m), library, fetchImpl, permissionOptions, now: () => 0 });
   const viewEnd = module.indexOf("definition{\n  name: textOf"), stepEnd = module.indexOf("definition{\n  name: promises");
   assert.ok(viewEnd > 0 && stepEnd > viewEnd);
   assert.equal(live.push(7, module.slice(0, 300)), false, "nothing to run yet");
@@ -92,7 +95,7 @@ test("a streamed module posts a frame as soon as it is runnable, then again when
 
 test("a press in the frame is answered with the next frame; a press from an old frame with the current one", async () => {
   const { fetchImpl } = service(), posted = [];
-  const live = appLive({ post: (appId, m) => posted.push(m), library, fetchImpl });
+  const live = appLive({ post: (appId, m) => posted.push(m), library, fetchImpl, permissionOptions });
   live.push(1, module); await live.settled(1);
   const frame = posted.at(-1), input = frame.nodes.findIndex((n) => n.kind === "Input") + 1;
   live.intent(1, { revision: frame.revision, action: 1, fields: [{ node: input, text: "Grace" }] });
@@ -105,11 +108,11 @@ test("a press in the frame is answered with the next frame; a press from an old 
 test("a start that does not run keeps the last frame and says why; a service failure is a note, not a crash", async () => {
   const posted = [];
   const broken = async () => ({ json: async () => ({ result: { isError: true, structuredContent: { diagnostics: [{ message: "syntax" }] }, content: [{ text: "x" }] } }) });
-  const live = appLive({ post: (appId, m) => posted.push(m), library, fetchImpl: broken });
+  const live = appLive({ post: (appId, m) => posted.push(m), library, fetchImpl: broken, permissionOptions });
   live.push(3, module); await live.settled(3);
   assert.equal(posted.length, 0, "no frame was ever drawn, so none is posted");
   const { fetchImpl } = service();
-  const good = appLive({ post: (appId, m) => posted.push(m), library, fetchImpl });
+  const good = appLive({ post: (appId, m) => posted.push(m), library, fetchImpl, permissionOptions });
   good.push(3, module); await good.settled(3);
   assert.equal(posted.length, 1);
   const invalid = { ...whole, declarations: whole.declarations.map((d) => (d.name === "catalogue" ? { ...d, body: { kind: "nil", element: { kind: "string" } } } : d)) };
@@ -117,7 +120,7 @@ test("a start that does not run keeps the last frame and says why; a service fai
 });
 
 test("the hosted service gives the data form the fixture holds", { skip: process.env.LIVE_APP_HOSTED !== "1" }, async () => {
-  const data = await dataForm(wholePrefix(module).source);
+  const data = await dataForm(wholePrefix(module).source, undefined, permissionOptions);
   const names = (d) => d.declarations.map((x) => x.name);
   assert.deepEqual(names(data), names(whole).filter((n) => !/^(startsEmpty|clearEmpties|emptyIgnored|longIgnored|staleIgnored)$/.test(n)));
   assert.deepEqual(createApp(data, library).frame().nodes, createApp(whole, library).frame().nodes);

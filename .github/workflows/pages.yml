@@ -265,14 +265,13 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Forge's address, from every file its build can read (all but v2/)
-        # A superset of Forge's inputs: its gates read app/ and bootstrap/ as well as studio/. Only v2/,
-        # which none of them reads, is left out, so a v2/-only change republishes the site already built
-        # and gated for the same files.
+      - name: Forge's address, from every file its build can read
+        # A superset of Forge's inputs: its gates read app/, bootstrap/ and the v2 engine sources.
+        # Other v2 prototypes remain excluded; changes to any consumed engine source invalidate reuse.
         id: forge-address
         shell: bash
         working-directory: .
-        run: echo "key=forge-site-v1-${{ hashFiles('**', '!v2/**', '!.git/**') }}" >>"$GITHUB_OUTPUT"
+        run: echo "key=forge-site-v1-${{ hashFiles('**', '!v2/**', '!.git/**', 'v2/shell/**', 'v2/loop/**', 'v2/probe-payment/data/**', 'v2/probe-payment/src/**', 'v2/hosted-check/**') }}" >>"$GITHUB_OUTPUT"
       - name: Forge's site already built and gated from these files, if there is one
         id: forge-reuse
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -294,28 +293,36 @@ jobs:
             ~/.cache/hologram-forge-lane
             ~/.elan
           key: lane-${{ hashFiles('studio/PRISMPM_REV', 'studio/lean-toolchain') }}
-      - name: The lane, which projects the page from the verified core and builds the wasm the page loads
-        if: steps.forge-reuse.outputs.cache-hit != 'true'
-        run: ./scripts/lane.sh
-      - name: Byte identity corpus and shell hash check
-        if: steps.forge-reuse.outputs.cache-hit != 'true'
-        run: python3 tools/corpus.py
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: steps.forge-reuse.outputs.cache-hit != 'true'
         with:
           node-version: "24"
-          # The renderer's 1,600 packages come from the runner's cache while its lockfile is unchanged.
           cache: npm
           cache-dependency-path: studio/vendor/dyad/package-lock.json
+      - name: Install the locked browser compiler archive
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        run: npm ci --prefix runtime --ignore-scripts --no-audit --no-fund
+      - name: The vendored renderer, built beside the shell as the homepage (no Electron, no src/pro)
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --prefer-offline --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py
+      - name: The lane, which projects the page from the verified core and builds the wasm the page loads
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        run: ./scripts/lane.sh
+      - name: Independently verify staged editor bytes against the locked npm archive
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        run: python3 scripts/editor_assets.py --check && python3 scripts/compiler_assets.py --check
+      - name: Verify every staged renderer, scaffold and shell byte before acceptance
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        run: node tools/check_shell_closure.mjs
+      - name: Byte identity corpus and shell hash check
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        run: python3 tools/corpus.py
       - name: Every shell script parses the way the browser parses it
         if: steps.forge-reuse.outputs.cache-hit != 'true'
         run: node tools/shell_parse.mjs
       - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone
         if: steps.forge-reuse.outputs.cache-hit != 'true'
         run: node tools/build_look.mjs
-      - name: The vendored renderer, built beside the shell as the homepage (no Electron, no src/pro)
-        if: steps.forge-reuse.outputs.cache-hit != 'true'
-        run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --prefer-offline --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py
       - name: The host answers the renderer's own contracts (the renderer's node_modules are installed by now)
         if: steps.forge-reuse.outputs.cache-hit != 'true'
         run: node tools/contract_shapes.mjs --check

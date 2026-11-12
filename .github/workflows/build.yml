@@ -82,7 +82,7 @@ jobs:
           set -euo pipefail
           if [[ -f app/lexlean.toml ]]; then
             project=app
-            command='just app'
+            command='(cd app && lexlean fmt --all && lexlean lock) && just app'
           elif [[ -f prism/prism.toml ]]; then
             project=prism
             command='cd prism && lexlean lock && lexlean fmt --all && lexlean lock && prismpm verify'
@@ -123,7 +123,25 @@ jobs:
             --env BUILDX_CONFIG=/tmp/prismpm-buildx \
             --env HOME=/tmp/prismpm-home \
             --env PRISMPM_EPHEMERAL_HOME=1 \
-            "$image" sh -c "$COMMAND"
+            "$image" sh -c "$COMMAND" 2>&1 | tee "$RUNNER_TEMP/prism-build-sdk.log"
+      - name: Preserve the SDK diagnostic even when construction fails
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-sdk-diagnostic-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/prism-build-sdk.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Export canonical SDK-normalized application sources
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-normalized-source-${{ github.sha }}
+          path: |
+            app/src/
+            app/lexlean.lock
+          if-no-files-found: error
+          retention-days: 7
       - name: Collect the holo, its build directory and what this run knows about them
         id: collect
         shell: bash

@@ -11,7 +11,8 @@ import { describe, fieldValue } from "./v2/render.mjs";
 import RULES from "./v2/rules.mjs";
 import { check as hostedCheck, loadLibrary, prepare } from "./v2/check.mjs";
 
-const HOSTED = "https://mcp.uor.foundation/";
+import { HOSTED_SOURCE_ENDPOINT as HOSTED, withHostedSourcePermission } from "../hosted-source-permission.mjs";
+export { createHostedSourceSession } from "../hosted-source-permission.mjs";
 const PROFILE = "prism-app";
 const MODEL = "Foundation.View.Browser.V1.Model";
 const OPEN = "\\begin{semanticmodule}", CLOSE = "\n\\end{semanticmodule}\n\\end{lexlean}\n";
@@ -23,7 +24,7 @@ export const STATE_PATH = "prism/app.json";
 export function card(state) {
   if (state.phase === "proving") return "**App** · Lean is proving\n\nLean is checking this app's properties on the hosted verifier.";
   if (state.phase === "proved") return "**App** · proved by Lean\n\nLean proved " + (state.theorems || []).length + " theorem" + ((state.theorems || []).length === 1 ? "" : "s") + " about this app. Attestation `" + String(state.proof && state.proof.attestation_id || "").slice(0, 16) + "…`. It cannot be published yet.";
-  if (state.phase === "checked") return "**App** · checked\n\nThe checker accepts this app's module, and it runs in the preview from it. It is not proved yet, and it cannot be published yet.";
+  if (state.phase === "checked") return "**App** · checked\n\nThe checker accepts this app's module. Preview parsing uses separately approved hosted access. It is not proved yet, and it cannot be published yet.";
   if (state.issues && state.issues.length) return "**App** · not checked\n\n" + state.issues.map((i) => "- " + i).join("\n") + "\n\nIt still runs in the preview as far as it can. Ask me to fix the module.";
   return CARD + (state.unchecked ? "\n\nIt could not be checked just now: " + state.unchecked : "");
 }
@@ -88,9 +89,14 @@ export const checkLibrary = (readText) => loadLibrary(readText);
  * Checks a module on the hosted service. Resolves { ok, issues, ms }; `issues` are lines about the
  * module as written. It checks; it does not prove. Rejects when the service cannot be reached.
  */
-export async function checkApp(module, library, fetchImpl) {
-  const t0 = performance.now();
-  const result = await hostedCheck(String(module).trim() + "\n", { library: await library, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
+export async function checkApp(module, library, fetchImpl = globalThis.fetch, options = {}) {
+  const t0 = performance.now(), source = String(module).trim() + "\n", loaded = await library;
+  const files = prepare(source, { library: loaded }).files;
+  const result = await withHostedSourcePermission({ purpose: "check", files }, async (permittedFetch) => {
+    let failure;
+    try { return await hostedCheck(source, { library: loaded, fetch: async (...args) => { try { return await permittedFetch(...args); } catch (error) { failure = error; throw error; } } }); }
+    catch (error) { throw failure || error; }
+  }, options, fetchImpl);
   const issues = result.ok ? [] : result.diagnostics.filter((d) => d.severity !== "warning").map(issueLine);
   return { ok: !!result.ok, issues: result.ok ? [] : issues.length ? issues.slice(0, 8) : ["The checker refused the module and gave no reason."], ms: Math.round(performance.now() - t0) };
 }
@@ -98,7 +104,7 @@ export async function checkApp(module, library, fetchImpl) {
 /** Where a stateful app's module is kept in its project. */
 export const SOURCE_PATH = "prism/App.lex.tex";
 /** What the chat shows once a turn has written one. It claims no more than is true. */
-export const CARD = "**App** · draft\n\nThis app runs in the preview straight from its LexLean module. It is not checked or proved yet, and it cannot be published yet.";
+export const CARD = "**App** · draft\n\nThis app is stored as a LexLean module. Preview parsing and checking require approval to send source to mcp.uor.foundation. It is not checked or proved yet, and it cannot be published yet.";
 /** What a model is told about the app shape, after the instructions for a decision. */
 export const PROMPT = "\n\n# When the app keeps state: the app shape\nA decision module answers one request. If what is asked for is used over several steps (a list that grows, entries that are kept, a counter, a table of results, a form whose answer stays on the screen), write the module in the app shape instead, in the same <prism-lexlean> block. The shorthand above does not apply to it: write full LexLean, exactly as these rules and their example show, and inside the block write the module and nothing else. Forge runs it in the preview as you write it.\n\n" + RULES;
 /** What a model is shown of a stateful app: its module as it stands. */
@@ -154,18 +160,17 @@ export function wholePrefix(module) {
 }
 
 /** The data form of one module, from the hosted service. It parses; it does not check. */
-export async function dataForm(source, fetchImpl = fetch) {
-  let id = 0;
-  const call = async (name, args) => {
-    const res = await fetchImpl(HOSTED, { method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: ++id, method: "tools/call", params: { name, arguments: args } }) });
-    const body = await res.json();
-    if (body.error) throw new Error(body.error.message || "the hosted service refused the request");
-    const payload = body.result.structuredContent ?? JSON.parse(body.result.content[0].text);
-    if (body.result.isError) throw new Error((payload.diagnostics?.[0]?.message || body.result.content?.[0]?.text || "the hosted service refused the module").slice(0, 300));
-    return payload;
-  };
-  const draft = await call("lexlean_draft_write", { profile: PROFILE, files: [{ path: "src/App.lex.tex", content: source }] });
-  return (await call("lexlean_draft_read", { draft: draft.draft, path: "src/App.lex.tex", view: "data" })).data;
+export async function dataForm(source, fetchImpl = globalThis.fetch, options = {}) {
+  const files = [{ path: "src/App.lex.tex", content: source }];
+  return withHostedSourcePermission({ purpose: "parse", files }, async (permittedFetch) => {
+    let id = 0;
+    const call = async (name, args) => {
+      const res = await permittedFetch(HOSTED, { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: ++id, method: "tools/call", params: { name, arguments: args } }) });
+      return (await res.json()).result.structuredContent;
+    };
+    const draft = await call("lexlean_draft_write", { profile: PROFILE, files });
+    return (await call("lexlean_draft_read", { draft: draft.draft, path: "src/App.lex.tex", view: "data" })).data;
+  }, options, fetchImpl);
 }
 
 const list = (items) => items.reduceRight((tail, head) => cons(head, tail), NIL);
@@ -200,9 +205,9 @@ export function createApp(data, library, name = "App") {
  * Follows the modules a chat turn streams for each app and posts frames as they become runnable.
  * `post(appId, message)` delivers a `live/presentation` message to that app's frame.
  */
-export function appLive({ post, library, fetchImpl = fetch, now = () => performance.now() }) {
+export function appLive({ post, library, fetchImpl = globalThis.fetch, now = () => performance.now(), permissionOptions = {} }) {
   const apps = new Map(); // appId -> { source, app, last, wanted, busy, trust, note }
-  const entry = (appId) => { if (!apps.has(appId)) apps.set(appId, { source: null, app: null, last: null, wanted: null, busy: false, trust: "draft", note: null }); return apps.get(appId); };
+  const entry = (appId) => { if (!apps.has(appId)) apps.set(appId, { source: null, app: null, last: null, wanted: null, busy: false, trust: "draft", wantedTrust: "draft", frameSource: null, note: null, options: {}, controller: null }); return apps.get(appId); };
   const send = (appId) => {
     const a = apps.get(appId);
     if (!a || !a.last) return;
@@ -213,32 +218,36 @@ export function appLive({ post, library, fetchImpl = fetch, now = () => performa
     if (a.busy) return;
     a.busy = true;
     try {
-      while (a.wanted !== null && a.wanted !== a.source) {
-        const source = a.wanted, t0 = now();
+      while (apps.get(appId) === a && a.wanted !== null && a.wanted !== a.source) {
+        const source = a.wanted, t0 = now(), options = a.options;
+        const controller = new AbortController(), abort = () => controller.abort(); a.controller = controller;
+        options.signal?.addEventListener("abort", abort, { once: true });
+        if (options.signal?.aborted) abort();
         try {
-          const app = createApp(await dataForm(source, fetchImpl), library);
+          const app = createApp(await dataForm(source, fetchImpl, { ...permissionOptions, ...options, signal: controller.signal }), library);
+          if (controller.signal.aborted || apps.get(appId) !== a || a.wanted !== source) throw new Error("Hosted preview was superseded");
           const frame = app.frame();
-          a.app = app; a.last = { ...frame, ms: Math.round(now() - t0) }; a.note = null;
+          a.app = app; a.last = { ...frame, ms: Math.round(now() - t0) }; a.frameSource = source; a.trust = a.wantedTrust; a.note = null;
         } catch (e) {
           // A start of a module that does not run yet (a helper still to come, a frame not yet valid)
           // keeps the last frame that did; only the note changes.
-          a.note = String(e && e.message || e).slice(0, 200);
-        }
-        a.source = source;
-        send(appId);
+          if (!controller.signal.aborted && apps.get(appId) === a && a.wanted === source) a.note = String(e && e.message || e).slice(0, 200);
+        } finally { options.signal?.removeEventListener("abort", abort); if (a.controller === controller) a.controller = null; }
+        if (a.wanted === source) { a.source = source; if (!controller.signal.aborted) send(appId); }
       }
     } finally { a.busy = false; }
   }
   return {
     /** The module text so far. Returns whether it is runnable yet. */
-    push(appId, module, trust = "draft") {
+    push(appId, module, trust = "draft", options = {}) {
       const prefix = wholePrefix(module);
       const a = entry(appId);
-      a.trust = trust;
+      a.wantedTrust = trust;
       if (!prefix.ready) return false;
       // The same module with a new standing (checked, say) is the same frame under a new badge.
-      if (prefix.source === a.source && a.last) { send(appId); return true; }
-      a.wanted = prefix.source;
+      if (prefix.source === a.frameSource && a.last) { a.trust = trust; send(appId); return true; }
+      if (a.wanted !== prefix.source || a.options.session !== options.session || a.options.signal !== options.signal) a.controller?.abort();
+      a.options = options; a.wanted = prefix.source;
       run(appId);
       return true;
     },
@@ -253,8 +262,8 @@ export function appLive({ post, library, fetchImpl = fetch, now = () => performa
     },
     resend: send,
     has: (appId) => !!(apps.get(appId) && apps.get(appId).last),
-    forget: (appId) => apps.delete(appId),
+    forget: (appId) => { apps.get(appId)?.controller?.abort(); return apps.delete(appId); },
     /** Resolves when nothing is being fetched for this app. For tests and for the end of a turn. */
-    async settled(appId) { const a = apps.get(appId); while (a && (a.busy || (a.wanted !== null && a.wanted !== a.source))) await new Promise((r) => setTimeout(r, 5)); },
+    async settled(appId) { const a = apps.get(appId); while (a && apps.get(appId) === a && a.busy) await new Promise((r) => setTimeout(r, 5)); },
   };
 }

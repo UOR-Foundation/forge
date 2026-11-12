@@ -68,3 +68,36 @@ String equality is not kernel reducible in Lean 4.32, so equality of concrete st
 - That the browser host is free of bugs: the model owns rules and bytes; adapters are handwritten and covered by conformance runs, not proofs.
 - That BLAKE3 is computed correctly: the address is derived by the holospaces wasm, `some-true` from that project's own verification; the composer's `address_bytes` (uor-hologram) agreed with it on every archive produced here, and the host refuses to keep an archive whose two addresses differ.
 - That the composed archive is correct beyond what PrismPM's own validator and hologram-live's loader check: the composer is PrismPM's code verbatim, `some-true` from PrismPM's conformance runs; the round trip through hologram-live's `inspect_bytes` is `build`.
+
+
+## FA-83: hosted source permission
+
+Authority: `FoundrySpecification.hostedSourcePermissionBoundary`. Stateful parser
+and checker source transfers use `hosted-source-permission.mjs`, independent of
+inference consent and network-free preview-frame grants. One approved captured
+turn may stream its later module prefixes and repairs to the disclosed service;
+standalone source operations require exact-file approval. Proof/publication
+permission is outside this capability.
+
+`node --test studio/tools/hosted_source_permission.test.mjs` passes all 15
+controls, with no skipped, cancelled or TODO cases. It covers default fail-closed
+behavior, immutable disclosures, deny/Escape/timeout/offline/cancellation, active
+stop, same-turn streaming, no cross-turn approval, exact RPC scope, private
+transport errors, hung requests, ownership changes and late-frame suppression.
+The Rust FA-83 gate requires the exact complete report. Existing live app/check/
+proof tests pass 20 controls; their two prior live-service opt-in tests remain
+unrun because no hosted transfer was requested.
+
+Representative defect: before implementation, calling actual `dataForm` with
+private fixture source and no permission invoked the transport. The new negative
+control failed with `Error: network` instead of `hostedSourcePermissionUnavailable`.
+The restored boundary passes and observes zero transport calls. A second planted
+bypass in the guarded transport is rejected by the exact-files/RPC control.
+
+`node studio/tools/hosted_source_permission_browser.mjs` exercises the shipped
+parser and permission dialog in Chromium with every remote request intercepted.
+It checks denial, Escape, caller cancellation, focus, text-only source, exact
+transmitted bytes, one-turn prefixes, stop, redirects, cookies and offline state.
+The local environment refuses Chromium's process-singleton socket with EPERM,
+even with approved escalation, so browser acceptance is not claimed locally.
+The mandatory browser lane must run this check before release acceptance.

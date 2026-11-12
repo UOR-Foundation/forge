@@ -31,6 +31,12 @@ site/manifest.webmanifest
 .brand-src/
 screens/
 
+/studio/shell/interaction-model.lex.tex
+
+# Reproducible host projection, bound by the staged complete manifest.
+/studio/shell/host.bundle.js
+/studio/shell/host-bundle.json
+
 # The proof `just app` keeps for bootstrap.yml to cache (see Justfile).
 .prism-proof/
 .prism-proof.log

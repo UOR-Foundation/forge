@@ -1,0 +1,38 @@
+{
+  "profile": "foundry/mobile-performance-qualification/1",
+  "runs": {
+    "cold": [
+      9576,
+      9584,
+      9536
+    ],
+    "warm": [
+      1324,
+      1852,
+      1800
+    ],
+    "inp": [
+      176,
+      200,
+      280
+    ],
+    "token": [
+      2737,
+      3182,
+      3082
+    ]
+  },
+  "medians": {
+    "cold": 9576,
+    "warm": 1800,
+    "inp": 200,
+    "token": 3082
+  },
+  "budgets": {
+    "cold": 11500,
+    "warm": 2200,
+    "inp": 450,
+    "token": 5000
+  },
+  "allRouteBudgetsPassed": true
+}

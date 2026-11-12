@@ -1,9 +1,9 @@
 # App covers
 
-Authority: `FA-28` in `model/ids.toml`, scenario `features/suites/app-covers.feature`.
+Authority: `AC-01` in `model/ids.toml`, scenario `features/suites/app-covers.feature`.
 Every app card in the gallery showed the first letter of the app's name: the browser host never answered
 `app:list-thumbnails`, and a preview served in the worker's sandbox has an opaque origin the page cannot
-read. FA-28 gives each app a cover taken from its own preview and a card sentence and tag written by
+read. AC-01 gives each app a cover taken from its own preview and a card sentence and tag written by
 the visitor's model.
 
 The capture runs inside the preview. `studio/shell/covers.mjs` adds the renderer's locked
@@ -40,3 +40,5 @@ the viewport at zero opacity.
 This is not a judgement of what an app is: the words are the model's, checked only for form. A cover
 exists only for an app whose preview has been opened since this change, in the browser that opened it;
 covers do not travel between devices. The card call costs one short model request per app.
+
+Integration identity migration: main fbff87cecd0e99db2dbc93ccdc2830ed6b86607a registered this capability as FA-28, already owned by verified project import in the conversion stack. Its original scenario and test history are retained under AC-01; FA-28 continues to identify project import. This is an identifier migration, not a new proof claim.

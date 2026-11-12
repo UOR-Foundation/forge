@@ -22,13 +22,17 @@ import base from "./vite.renderer.config.mts";
 import { audit, kitUi, registry, resolveUi } from "./hologram.ui.mjs";
 import { toRadix } from "./hologram.radix.mjs";
 import { screenSource, unapplied } from "./hologram.screens.mjs";
+import { editorLoaderSource } from "./hologram.editor-loader.mjs";
+const projectedEditorLoaders = new Set<string>();
 
 const src = path.resolve(__dirname, "src").replace(/\\/g, "/");
 const mark = path.resolve(__dirname, "../../shell/mark.svg");
+const modeSelector = path.resolve(__dirname, "hologram.ChatModeSelector.tsx");
 const picker = path.resolve(__dirname, "hologram.ModelPicker.tsx");
 const githubIntegration = path.resolve(__dirname, "hologram.GitHubIntegration.tsx");
 const posthogStub = path.resolve(__dirname, "hologram.posthog.ts");
 const importDialog = path.resolve(__dirname, "hologram.ImportAppDialog.tsx");
+const editor = path.resolve(__dirname, "hologram.editor.ts").split(path.sep).join("/");
 const contracts = path.resolve(__dirname, "hologram.contracts.ts").split(path.sep).join("/");
 const theme = fs.readFileSync(path.resolve(__dirname, "hologram.theme.css"), "utf8");
 const arbitrary: Record<string, string> = JSON.parse(fs.readFileSync(path.resolve(__dirname, "hologram.arbitrary.json"), "utf8"));
@@ -53,6 +57,11 @@ const hologramUi: Plugin = {
   // components with Base UI's props, are rewritten for the kit's, which are Radix (hologram.radix.mjs).
   transform(code, id) {
     const file = id.replace(/\\/g, "/").split("?")[0];
+    const loader = editorLoaderSource(file, code);
+    if (loader !== null) {
+      projectedEditorLoaders.add(file);
+      return { code: loader, map: null };
+    }
     if (!file.startsWith(src) || !/\.tsx?$/.test(file)) return null;
     const shell = screenSource(file, code);
     // A .ts module has no JSX to rewrite for Radix: its patches are all it gets.
@@ -63,6 +72,8 @@ const hologramUi: Plugin = {
     return r.code === code ? null : { code: r.code, map: null };
   },
   generateBundle() {
+    if (!projectedEditorLoaders.size)
+      this.error("The locked editor loader projection was not applied");
     const missed = unapplied();
     if (missed.length) this.error("patches the build never applied (their file was not read):\n" + missed.join("\n"));
     const bad = audit(this.getModuleIds(), (id) => [...(this.getModuleInfo(id)?.importers ?? [])]);
@@ -81,6 +92,7 @@ const hologramWords: Plugin = {
     // of their models, nothing else. Dyad's has submenus, a recent section, effort levels, price
     // badges, a trial banner and a Pro upsell, none of which this product has.
     if (/(^|\/)ModelPicker$/.test(id) && from.startsWith(src)) return picker;
+    if (/(^|\/)ChatModeSelector$/.test(id) && from.startsWith(src)) return modeSelector;
     // GitHub connects with a pasted token: Dyad's device flow is served to apps, not to web pages.
     if (/(^|\/)GitHubIntegration$/.test(id) && from.startsWith(src)) return githubIntegration;
     // Dyad's analytics are Dyad's PostHog project: initialised on every load, they reached its servers
@@ -116,9 +128,6 @@ const hologramWords: Plugin = {
     // set up by the host), the Pro selector (Dyad's paid tier), and the voice to text button (Pro).
     if (file.endsWith("/pages/home.tsx")) out = out.replace(/\{!isSettingsLoading &&\s*!isLoadingLanguageModelProviders &&\s*!hasDyadProApiKey && \(/, "{false && (");
     if (file.endsWith("/components/ChatInputControls.tsx")) out = out.replace("<ProModeSelector />", "{null}");
-    // One mode is implemented here, the build turn that writes files, so the mode selector offers no
-    // choice worth making: Dyad's agent and plan modes promise tool calls this host does not make.
-    if (file.endsWith("/components/ChatInputControls.tsx")) out = out.replace("<ChatModeSelector />", "{null}");
     // The promo row under the composer rotates Dyad's Pro upsells and links to Dyad's own GitHub,
     // subreddit and X account: a subscription this product does not sell, and channels that are not
     // Hologram's. The row is not rendered.
@@ -148,7 +157,8 @@ const hologramWords: Plugin = {
     if (file.endsWith("/preview_panel/PreviewIframe.tsx")) out = out.replace("{userBudget ? (", "{true ? (");
     // The contracts are published to the page so the host can check its own answers against them
     // (see hologram.contracts.ts). First import in the entry, before anything renders.
-    if (file.endsWith("/renderer.tsx")) out = `import ${JSON.stringify(contracts)};
+    if (file.endsWith("/renderer.tsx")) out = `import ${JSON.stringify(editor)};
+import ${JSON.stringify(contracts)};
 ` + out;
     for (const [hex, role] of Object.entries(arbitrary)) out = out.split(`text-[${hex}]`).join(`text-${role}`).split(`bg-[${hex}]`).join(`bg-${role}`).split(`border-[${hex}]`).join(`border-${role}`);
     return out === code ? null : { code: out, map: null };

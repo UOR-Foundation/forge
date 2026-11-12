@@ -54,7 +54,7 @@ export async function prepareSnapshot(oid, { readObject, derive, admit }) {
     if (roundtrip.length !== bytes.length || roundtrip.some((byte, index) => byte !== bytes[index])) throw fail("invalidFileEncoding");
     files.push([path, text]);
   }
-  return { oid, files, name: state.name };
+  return { oid, files, name: state.name, parent: state.parent };
 }
 
 export async function restoreSnapshot(db, appId, oid, boundary) {

@@ -5,12 +5,19 @@ import http from "node:http";
 import { chromium } from "../vendor/dyad/node_modules/playwright-core/index.mjs";
 const files = new Map([
   ["/kernel.js", "../shell/kernel.js"],
+  ["/preview-vectors.json", "../../verification/version-preview-vectors.json"],
+  ["/queue-vectors.json", "../../verification/chat-queue-vectors.json"],
+  ["/routing-vectors.json", "../../verification/routing-vectors.json"],
   ["/kernel/kernel.json", "../shell/kernel/kernel.json"],
   ["/kernel/guest.wasm", "../shell/kernel/guest.wasm"],
   ["/composition-codec.mjs", "../shell/composition-codec.mjs"],
   ["/vectors.json", "../../verification/composition-wire-vectors.json"],
   ["/work-vectors.json", "../../verification/work-wire-vectors.json"],
   ["/work-codec.mjs", "../shell/work-codec.mjs"],
+  ["/event-vectors.json", "../../verification/event-wire-vectors.json"],
+  ["/event-codec.mjs", "../shell/event-codec.mjs"],
+  ["/interaction-codec.mjs", "../shell/interaction-codec.mjs"],
+  ["/interaction-vectors.json", "../../verification/interaction-vectors.json"],
 ].map(([url, file]) => [url, fs.readFileSync(new URL(file, import.meta.url))]));
 const exercise = async () => {
   const { admitWithGuest } = await import("/composition-codec.mjs");
@@ -33,9 +40,37 @@ const exercise = async () => {
   for (const vector of work) if (await guest.ask(vector.request) !== vector.response) throw Error("work: " + vector.name);
   const initialized = await executeWorkWithGuest(guest, { kind: "initialize", owner: 7, capacity: 20, remaining: 2 });
   if (!initialized.ok || initialized.state.owner !== 7 || initialized.state.remaining !== 2) throw Error("work adapter");
+  const { admitEventWithGuest } = await import("/event-codec.mjs");
+  const events = (await (await fetch("/event-vectors.json")).json()).vectors;
+  for (const vector of events) {
+    if (await guest.ask(vector.request) !== vector.response) throw Error("event: " + vector.name);
+    if (vector.input) {
+      const reply = await admitEventWithGuest(guest, vector.input);
+      if (vector.response.startsWith("ok ")) {
+        const next = vector.name === "lastSequence" ? 0xffffffff : 3;
+        if (!reply.ok || reply.nextSequence !== next) throw Error("event adapter: " + vector.name);
+      } else if (reply.ok || reply.code !== vector.response) throw Error("event adapter: " + vector.name);
+    }
+  }
+  const { executeInteraction } = await import("/interaction-codec.mjs");
+  const interactions = (await (await fetch("/interaction-vectors.json")).json()).vectors;
+  for (const vector of interactions) {
+    const result = decoder.decode(await guest.dispatch(new TextEncoder().encode(vector.request)));
+    if (result !== vector.response) throw Error("interaction: " + vector.name + ": " + result);
+    if (vector.input) {
+      const encoded = await executeInteraction(guest,vector.input);
+      if (encoded.ok !== vector.response.startsWith("ok ") || (!encoded.ok && encoded.code !== vector.response)) throw Error("interaction adapter: " + vector.name);
+    }
+  }
+  const routing = (await (await fetch("/routing-vectors.json")).json()).vectors;
+  for (const vector of routing) if (decoder.decode(await guest.dispatch(new TextEncoder().encode(vector.request))) !== vector.response) throw Error("routing: " + vector.name);
+  const queue = (await (await fetch("/queue-vectors.json")).json()).vectors;
+  for (const vector of queue) if (decoder.decode(await guest.dispatch(new TextEncoder().encode(vector.request))) !== vector.response) throw Error("queue: " + vector.name);
+  const previews=(await (await fetch("/preview-vectors.json")).json()).vectors;
+  for(const vector of previews)if(decoder.decode(await guest.dispatch(new TextEncoder().encode(vector.request)))!==vector.response)throw Error("preview: "+vector.name);
   if (await guest.ask("drafting check") !== "checked") throw Error("legacy phase");
   for (const phase of ["drafting", "checked", "proving", "proved", "published"]) if (await guest.ask(phase + " reword") !== phase) throw Error("reword phase");
-  return { vectors: vectors.length, work: work.length, embedded: guest.vectors, digest: guest.digest };
+  return { previews: previews.length, queue: queue.length, routing: routing.length, vectors: vectors.length, work: work.length, events: events.length, interactions: interactions.length, embedded: guest.vectors, digest: guest.digest };
 };
 const workerSource = `importScripts('/kernel.js'); (${exercise.toString()})().then(result => postMessage({result}), error => postMessage({error: String(error)}));`;
 const server = http.createServer((request, response) => {
@@ -63,7 +98,12 @@ try {
   assert.deepEqual(workerResult, documentResult);
   assert.equal(documentResult.vectors, 26);
   assert.equal(documentResult.work, 30);
-  assert.ok(documentResult.embedded >= 109);
+  assert.equal(documentResult.events, 30);
+  assert.equal(documentResult.interactions, 21);
+  assert.equal(documentResult.routing, 32);
+  assert.equal(documentResult.queue, 38);
+  assert.equal(documentResult.previews, 30);
+  assert.equal(documentResult.embedded, 285);
   console.log(JSON.stringify({ page: documentResult, worker: workerResult }));
 } finally {
   if (browser) await browser.close();

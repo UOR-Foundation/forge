@@ -1,0 +1,21 @@
+# Complete large-module presentation — FA-76
+
+Authority: `FoundrySpecification.largeModulePresentationBoundary`, composed with the existing canonical module, presentation ownership and proof-profile boundaries. Registration and failing tests precede implementation at `2475bd8`.
+
+Hosted Forge performance 43153909940 passed mobile timing but failed every-app replay: Verdant's canonical source was not stored and its phase remained null. Local reproduction identifies the FA-72 regression: its presentation validator applied the imported 24-rule proof profile to a valid 35-rule canonical module. The existing large-module checker and explicit proof limitation were bypassed by that premature refusal.
+
+Presentation validation now applies the unchanged imported structural validator to every consecutive batch of at most 24 rules, retaining the complete fields, outcomes, properties, examples and presentation in each validation call. Validation outputs never replace or truncate the original detached specification. The existing full local obligations/table check still processes the complete module, and Lean proof eligibility remains capped at 24 rules.
+
+Four focused controls cover exact canonical bytes, caller detachment, compatible presentation without prior logic, malformed tails/properties/examples/metadata, corruption resets, and boundaries at rules 0/23/24/47/48/71/72. All eight new/existing presentation controls pass. Seven Node mutations are rejected: using the proof cap for admission, omitting validation, checking only the first batch, dropping each batch's last rule, retaining old logic, truncating incoming logic and skipping prior validation. The dropped-boundary mutation initially survived; the explicit boundary controls now reject it.
+
+Actual Chromium installs all 35 Verdant rules, checks them locally, records the proof limitation, refuses Lean proof without remote effects, preserves a compatible custom view across a distinct 36-rule canonical replacement, refuses an invalid tail without changing the source head and renders the live preview. Zero page exceptions. Reintroducing proof-profile admission fails the intended actual-storage assertion; the restored browser passes. The first replacement fixture duplicated a declaration ID and was correctly refused; assigning a new declaration ID corrected the fixture without relaxing canonical admission.
+
+Host LexLean diagnostic verifies two modules, attestation `ad370cd5a40993eecbede712f803c228907e264e348719c37440663cba0e4de7`. It is not immutable SDK acceptance. Full integrated/mobile/every-app qualification, exact-head hosted acceptance and author completeness review remain in progress. This correction does not resolve the upstream larger-proof limitation or claim whole-product completion.
+
+All 455 Node controls, full Rust, Clippy/fmt, shell parsing and complete byte corpus pass. All 56 mandatory browser journeys pass together; `large-presentation-integrated-browser-results.json` retains the results. Restored closure: 589 files, 51,374,407 bytes, digest `8f940a49bbeec2de7da3f7e0b4d0bc14af3ee60e02be984d7613791d1e83597e`. Full performance and every-app replay are running separately.
+
+Full mobile performance passes unchanged budgets; raw timings are recorded in `large-presentation-performance.json`. Every-app replay passes RSVP (attempt 1), Parking (attempt 2), Library (attempt 1), and Verdant (attempt 3). Parking's first edit timing was 47.3 ms against 33.4 ms; Verdant's first two maximum patch-work samples were 16.5 and 16.8 ms against 16 ms. These failures remain evidence of timing variability; no budget was relaxed. All Verdant attempts stored the complete 46,960-byte canonical module and reported one preview load and no page exceptions.
+
+The live-frame observer's origin check is mutation-qualified: accepting a foreign window's matching-app hello counts two loads and fails the unchanged one-load requirement. Restoring the source-window check passes the four-app replay.
+
+At implementation/evidence head `b81d7d326f67ade0f9fc97d5b72420740610d941`, hosted Studio 43158555960 and Forge performance 43158556059 pass. Exact-SDK bootstrap 43158555961 is still running at this checkpoint. Author completeness review 5869376671 is recorded; it is not independent approval.
