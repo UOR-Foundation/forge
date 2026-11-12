@@ -290,6 +290,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-71` | `build` | New projects inherit the validated selected generation theme in the project creation transaction |
 
+## kernel-owner-readiness
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-73` | `build` | Service-worker guest requests await an initializing matching document owner without accepting unverified executables |
+
 ## live-lexlean
 
 | ID | Level | Statement |
