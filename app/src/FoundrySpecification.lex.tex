@@ -1390,5 +1390,22 @@ definition{
   result: String,
   body: "The browser exposes only the Build, Ask and Plan choices in browserChatModeCatalog, projected literally without a second authored catalog. The mode selector resolves the configured router base through the existing route-scope boundary. An existing chat uses its imported mode mutation; Home writes selectedChatMode and defaultChatMode together through the existing atomic settings transaction. The same canonical choices govern keyboard cycling with exactly one active shortcut owner; loading, missing identity and in-flight selection disable repeat writes; failure retains the committed value and displays a fixed retry message. Settings are no longer forcibly rewritten to Build on read or update. A newly created application or chat captures the supported default, with an explicit initial mode taking precedence; unsupported or invalid modes fail with invalidChatExecutionMode before project creation. Existing nullable chat mode remains nullable so imported default resolution works. New chat creation commits its captured mode with chat allocation. The current browser catalog excludes native local-agent tooling; legacy unsupported selections remain visible as unavailable and require an explicit supported choice rather than silently becoming Build. Ask and Plan execution is governed by readOnlyChatExecutionBoundary, including immutable queued-mode precedence."
 }
+
+inductive{
+  name: ChatModelRouteError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidChatModelSelection, fields: []},
+    {name: unsupportedChatProvider, fields: []}
+  ]
+}
+
+definition{
+  name: chatProviderRoutingBoundary,
+  parameters: [],
+  result: String,
+  body: "Chat generation and token accounting resolve the same captured selection: a non-null chat selection takes precedence over the global default, and malformed explicit selections never fall through. The imported model selection schema and bounded nonempty provider/model strings are checked before transcript or inference effects. Local accepts only the declared webgpu:BitNet model and remains a device route. Featherless and existing OpenRouter selections retain their exact model identifier and route to their corresponding already consent-governed cloud transport; a stored OpenRouter selection never silently becomes local. A provider prefix is added once as a transport namespace without stripping any part of the model identifier, including openrouter/free. Unknown providers return unsupportedChatProvider, malformed selections or invalid local identity return invalidChatModelSelection, with fixed private messages. The captured route is immutable for the executing turn. Context accounting selects the resolved provider catalog; no offered-provider catalog expansion, additional endpoint, stored consent, provider credential, model quality or provider availability claim follows from this boundary. Existing local warmup consent and explicit per-request cloud authorization remain mandatory."
+}
 \end{semanticmodule}
 \end{lexlean}

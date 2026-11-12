@@ -133,6 +133,7 @@ jobs:
           node tools/chat_model_picker_scope_browser.mjs
           python3 tools/chat_mode_catalog_projection.py --check
           node tools/browser_chat_mode_controls_browser.mjs
+          node tools/chat_provider_routing_browser.mjs
           node tools/site_relay_authorization_browser.mjs
           node tools/browser_window_coordination_browser.mjs
           node tools/message_linked_restoration_browser.mjs

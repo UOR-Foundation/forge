@@ -645,3 +645,9 @@ id = "FA-80"
 level = "build"
 suite = "browser-chat-mode-controls"
 statement = "Canonical Build Ask and Plan controls persist scoped preferences and initialize chats with the captured supported mode"
+
+[[id]]
+id = "FA-81"
+level = "build"
+suite = "chat-provider-routing"
+statement = "Chat model routing preserves the captured provider and exact model identity without silently replacing cloud selections with device inference"

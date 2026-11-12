@@ -156,6 +156,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-74` | `build` | Surviving chat windows retain execution-lock interest until closed-owner recovery pauses the exact durable head |
 
+## chat-provider-routing
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-81` | `build` | Chat model routing preserves the captured provider and exact model identity without silently replacing cloud selections with device inference |
+
 ## chat-queue-model
 
 | ID | Level | Statement |
