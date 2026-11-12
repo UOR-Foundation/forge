@@ -6,6 +6,6 @@ The Pages cache key now includes the stateful engine inputs in `v2/shell`, `v2/l
 
 Independent review identified the additional hosted-check and browser-model source inputs; the input coverage control now derives its source list directly from the engine projector rather than a hand-maintained subset.
 
-Three controls in `studio/tools/backlog_workflows.test.mjs` verify input identity, locked browser selection, and staging order with cache-miss guards. Omitting `v2/loop/**` from the reuse key fails the intended assertion, `reuse omits v2/loop/**`. Restoring it passes all three controls. They run through both the Studio workflow and FA-24's complete conformance invocation, alongside existing source-transaction controls and the four stateful integration controls: 19 tests, 19 passes, no skipped or filtered controls.
+Three controls in `studio/tools/backlog_workflows.test.mjs` verify input identity, locked browser selection, and staging order with cache-miss guards. Omitting `v2/loop/**` from the reuse key fails the intended assertion, `reuse omits v2/loop/**`. Restoring it passes all three controls. They run through both the Studio workflow and FA-24's complete conformance invocation, alongside existing source-transaction controls and the eight stateful integration controls: 23 tests, 23 passes, no skipped or filtered controls.
 
 These local results qualify the inspected workflow reconciliation only. Fresh combined-tree SDK, kernel construction and identity replay, full Studio/browser runs, and both performance lanes remain required before merge.

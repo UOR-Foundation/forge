@@ -139,3 +139,45 @@ test('production host shares owned session across streaming repair checking and 
  assert.ok(app.includes('withHostedSourcePermission({ purpose: "check", files }'));assert.ok(app.includes('withHostedSourcePermission({ purpose: "parse", files }'));
  assert.ok(read('../../app/src/FoundrySpecification.lex.tex').includes('name: hostedSourcePermissionBoundary,'));assert.ok(read('./shell_parse.mjs').includes('"hosted-source-permission.mjs": "mjs"'));
 });
+test('identical source retries only when a fresh scope replaces a refused or failed attempt',async()=>{
+ for(const failure of ['denied','network']){
+  let approvals=0;const transport=service(),posted=[],denied=session({authorize:async value=>{approvals++;if(failure==='denied')throw hostedSourceFailure('hostedSourcePermissionDenied');return approval(value);}});
+  let failTransport=failure==='network';const fetch=async(...args)=>{if(failTransport)throw Error('private offline detail');return transport.fetch(...args);};
+  const live=appLive({library,fetchImpl:fetch,post:(_app,frame)=>posted.push(frame)});
+  const granted=session({authorize:async value=>{approvals++;return approval(value);}});
+  try{
+   live.push(7,module,'draft',{session:denied.scope});await live.settled(7);assert.equal(posted.length,0);
+   live.push(7,module,'draft',{session:denied.scope});await live.settled(7);assert.equal(approvals,1,'same failed scope must not repeatedly prompt');
+   failTransport=false;live.push(7,module,'checked',{session:granted.scope});await live.settled(7);
+   assert.equal(approvals,2,'new scope must authorize identical source again');assert.equal(posted.length,1);assert.equal(posted[0].trust,'checked');assert.equal(transport.requests.length,2);
+  }finally{denied.scope.close();granted.scope.close();}
+ }
+});
+test('reselecting a rendered module cancels pending different source and never relabels its late frame',async()=>{
+ const transport=service(),posted=[],one=session();let hold=false,release,started;const seen=new Promise(resolve=>started=resolve);
+ const fetch=async(...args)=>{if(hold){hold=false;started();await new Promise(resolve=>release=resolve);}return transport.fetch(...args);};
+ const live=appLive({library,fetchImpl:fetch,post:(_app,frame)=>posted.push(frame)});
+ try{
+  live.push(7,module,'checked',{session:one.scope});await live.settled(7);const first=structuredClone(posted[0]);
+  hold=true;live.push(7,module.replace('Guests','Visitors'),'draft',{session:one.scope});await seen;
+  live.push(7,module,'proved',{session:one.scope});assert.equal(posted.length,2);assert.deepEqual(posted[1].nodes,first.nodes);assert.equal(posted[1].trust,'proved');
+  release();await live.settled(7);assert.equal(posted.length,2,'late B must not post after A was reselected');
+  assert.deepEqual(posted.at(-1).nodes,first.nodes);assert.equal(posted.at(-1).trust,'proved');assert.equal(posted.at(-1).note,null);
+ }finally{one.scope.close();}
+});
+test('same-source owner replacement and incomplete-source replacement suppress superseded work',async()=>{
+ for(const action of ['scope','signal','incomplete']){
+  const transport=service(),posted=[],one=session(),two=session();let release,started,hold=true;const seen=new Promise(resolve=>started=resolve);
+  const fetch=async(...args)=>{if(hold){hold=false;started();await new Promise(resolve=>release=resolve);}return transport.fetch(...args);};
+  const live=appLive({library,fetchImpl:fetch,post:(_app,frame)=>posted.push(frame)}),first=new AbortController(),second=new AbortController();
+  try{
+   live.push(7,module,'draft',{session:one.scope,signal:first.signal});await seen;
+   if(action==='scope')live.push(7,module,'checked',{session:two.scope,signal:first.signal});
+   if(action==='signal')live.push(7,module,'checked',{session:one.scope,signal:second.signal});
+   if(action==='incomplete')assert.equal(live.push(7,'\\begin{lexlean}{App}','proved',{session:one.scope,signal:first.signal}),false);
+   release();await live.settled(7);
+   assert.equal(posted.length,action==='incomplete'?0:1);
+   if(action!=='incomplete')assert.equal(posted[0].trust,'checked');
+  }finally{one.scope.close();two.scope.close();}
+ }
+});

@@ -12,3 +12,10 @@ Feature: Hosted source permission
     When its owner changes or permission expires or is revoked
     Then subsequent hosted requests are refused and late preview results are discarded
     And redirects credentials malformed responses and undisclosed RPC effects are refused
+
+  @FA-83 @build
+  Scenario: A fresh permission scope can retry the same source without accepting stale frames
+    Given a refused preview attempt and a new turn with identical module bytes
+    When the new turn explicitly approves its own hosted scope
+    Then parsing retries under the new scope and the current frame is rendered
+    And reselecting an existing frame cancels any different pending source before updating its trust

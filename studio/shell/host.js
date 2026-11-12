@@ -686,6 +686,11 @@ function pushApp(appId, module, trust = "draft", options = {}) {
   appApps.add(appId);
   appFramesReady().then((frames) => { assertGenerationActive(options.signal); return frames.push(appId, module, trust, options); }).catch((e) => { if (!options.signal?.aborted) console.error(e); });
 }
+async function settleAppFrames(appId, signal) {
+  assertGenerationActive(signal);
+  if (appFrames && appApps.has(appId)) await (await appFrames).settled(appId);
+  assertGenerationActive(signal);
+}
 function pushLive(appId, raw, trust, edit = false) {
   liveLatest.set(appId, { raw, trust, edit });
   // An edit is one change a person just made: it goes now, not at the next frame, so the frame can paint
@@ -1175,7 +1180,7 @@ async function appAfterTurn(appId, text, options = {}) {
   try { known = JSON.parse(files.get(appShape.STATE_PATH) || "null"); } catch (e) {}
   const sourceKappa = await kappa(enc.encode(appSource));
   let appState;
-  if (known && known.sourceKappa === sourceKappa) appState = known;
+  if (known && known.sourceKappa === sourceKappa && ["checked", "proving", "proved", "published"].includes(known.phase)) appState = known;
   else {
     let phase = known && known.phase ? await nextPhase(known.phase, "edit") : "drafting";
     const verdict = await checkAppModule(appSource, { signal: options.signal, session: options.session }).catch((e) => ({ ok: false, issues: [], unchecked: String((e && e.message) || e).slice(0, 200) }));
@@ -1664,6 +1669,9 @@ async function chatTurn(chatId, intent) {
       provenance = { receipt: await sealAnswer(body, rec, hit.key), fingerprint: `${(rec.body["prov:used"] || {})["holo:model"]}` };
     }
     // T6: completed batches have their own committed snapshots.
+    // A streamed parser still owns the pre-turn snapshot until it settles. Finish it before our
+    // own transaction changes that snapshot, so ownership checks cannot mistake our commit for an edit.
+    if (execution.sourceEffects && hostedSession) await settleAppFrames(appId, abort.signal);
     assertGenerationActive(abort.signal);
     const sm = full.match(/<dyad-chat-summary>([\s\S]*?)<\/dyad-chat-summary>/); summary = sm ? sm[1].trim() : undefined;
     if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
@@ -1713,7 +1721,8 @@ async function chatTurn(chatId, intent) {
     await saveMessages(chatId, messages);
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   } finally {
-    try { if (hostedSession && appFrames && !abort.signal.aborted) await (await appFrames).settled(appId); }
+    try { if (hostedSession && !abort.signal.aborted) await settleAppFrames(appId, abort.signal); }
+    catch (e) { if (!abort.signal.aborted) error ||= String((e && e.message) || e); }
     finally { hostedSession?.close(); }
   }
   m.abort = null;

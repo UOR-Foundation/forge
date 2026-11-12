@@ -444,8 +444,8 @@ async function rpc(method, name, params) {
 const callTool = (tool, args, tasks = false) => rpc("tools/call", tool, { name: tool, arguments: args, _meta: meta(tasks) });
 
 /** Ask Lean to prove the spec's guarantees. Resolves { ok, record, seconds } or { ok: false, error }. */
-export async function prove(spec, { onWait = () => {} } = {}) {
-  const result = await proveFiles(async (axioms) => { const files = await projectFiles(spec, axioms); return { files, entrypoints: files.map((f) => f.path) }; }, { onWait, before: () => { if (spec.rules.length > PROVE_RULES_MAX) throw new Error(`These ${spec.rules.length} rules are checked on every request, but Lean proves at most ${PROVE_RULES_MAX} rules today: its proofs are one theorem per guarantee over the whole rule chain. Proving more waits for local proofs in LexLean (UOR-Foundation/PrismPM#605).`); } });
+export async function prove(spec, { onWait = () => {}, beforeSubmit = () => {} } = {}) {
+  const result = await proveFiles(async (axioms) => { const files = await projectFiles(spec, axioms); return { files, entrypoints: files.map((f) => f.path) }; }, { onWait, beforeSubmit, before: () => { if (spec.rules.length > PROVE_RULES_MAX) throw new Error(`These ${spec.rules.length} rules are checked on every request, but Lean proves at most ${PROVE_RULES_MAX} rules today: its proofs are one theorem per guarantee over the whole rule chain. Proving more waits for local proofs in LexLean (UOR-Foundation/PrismPM#605).`); } });
   if (result.ok) { const { seconds, ...rest } = result.record; result.record = { ...rest, properties: spec.properties.map((p) => p.id), seconds }; }
   return result;
 }
@@ -455,12 +455,14 @@ export async function prove(spec, { onWait = () => {} } = {}) {
  * so far (declaration name -> "[a, b]"); a wrong set is corrected from what Lean observed and proved
  * again. Resolves { ok, record, seconds, axioms } or { ok: false, error }.
  */
-export async function proveFiles(filesFor, { onWait = () => {}, before = () => {} } = {}) {
+export async function proveFiles(filesFor, { onWait = () => {}, before = () => {}, beforeSubmit = () => {} } = {}) {
   before();
   const t0 = Date.now();
   const axioms = {};
+  let submitted = false;
   for (let round = 1; round <= 6; round++) {
     const { files, entrypoints } = await filesFor(axioms);
+    if (!submitted) { beforeSubmit(); submitted = true; }
     const written = await callTool("lexlean_draft_write", { profile: PROFILE, files });
     const draft = written && written.structuredContent && written.structuredContent.draft;
     if (!draft || written.isError) return { ok: false, error: "the verifier did not take the draft" };

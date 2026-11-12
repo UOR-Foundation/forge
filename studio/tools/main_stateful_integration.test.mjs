@@ -61,3 +61,80 @@ test('a stateful proof whose source or phase is already stale sends no request',
     assert.equal(h.log.proofs, 0); assert.equal(h.log.writes, 0);
   }
 });
+
+function turnHarness(phase, mutate = source => source) {
+  const begin = host.indexOf('async function appAfterTurn('), end = host.indexOf('const afterTurn =', begin);
+  assert.ok(begin >= 0 && end > begin);
+  const known = {phase, sourceKappa: 'identity', ...(phase === 'drafting' ? {unchecked: 'permission denied'} : {})};
+  const source = {reference: 'captured', files: [['prism/App.lex.tex', 'module\n'], ['prism/app.json', JSON.stringify(known)]]};
+  const log = {checks: 0, writes: 0};
+  const environment = {
+    Map, JSON, enc: new TextEncoder(), coreReady: Promise.resolve(), dbReady: Promise.resolve({}), core: {},
+    appShape: {moduleFromTurn: () => ({text: 'module'}), isAppShape: () => true, SOURCE_PATH: 'prism/App.lex.tex', STATE_PATH: 'prism/app.json', card: state => state},
+    assertGenerationActive() {}, kappa: async () => 'identity', now: () => 'now',
+    nextPhase: async (_phase, event) => event === 'check' ? 'checked' : 'drafting',
+    checkAppModule: async () => {log.checks++; return {ok: true, issues: []};},
+    applyStoredProjectPatch: async (_db, _app, patch, options) => {assert.equal(options.source, source); log.writes++; return {changed: patch.writes.length, source};},
+  };
+  return {run: vm.runInNewContext(mutate(host.slice(begin, end)) + ';appAfterTurn', environment), source, log};
+}
+async function retryDraft(mutate) {
+  const h = turnHarness('drafting', mutate), result = await h.run(1, '', {source: h.source});
+  assert.equal(h.log.checks, 1); assert.equal(result.card.phase, 'checked');
+  assert.equal(result.card.unchecked, undefined); assert.equal(h.log.writes, 1);
+}
+test('a later approved turn rechecks identical previously denied draft source', async () => {
+  await retryDraft();
+  await assert.rejects(retryDraft(source => source.replace(' && ["checked", "proving", "proved", "published"].includes(known.phase)', '')), {name: 'AssertionError'});
+});
+test('identical checked proving proved and published state retains its standing', async () => {
+  for (const phase of ['checked', 'proving', 'proved', 'published']) {
+    const h = turnHarness(phase), result = await h.run(1, '', {source: h.source});
+    assert.equal(result.card.phase, phase); assert.equal(h.log.checks, 0); assert.equal(h.log.writes, 0);
+  }
+});
+
+function frameBoundary() {
+  const begin = host.indexOf('async function settleAppFrames('), end = host.indexOf('function pushLive(', begin);
+  assert.ok(begin >= 0 && end > begin, 'settlement must use the production frame boundary');
+  const transition = host.slice(host.indexOf('// T6: completed batches'), host.indexOf('const sm = full.match', host.indexOf('// T6: completed batches')));
+  assert.ok(transition.includes('await settleAppFrames(appId, abort.signal)'), 'streaming work settles before source writes');
+  return {helper: host.slice(begin, end), transition};
+}
+async function commitAfterFrames({cancel = false, mutate = source => source} = {}) {
+  const {helper, transition} = frameBoundary();
+  let finish, commits = 0;
+  const abort = new AbortController();
+  const pending = new Promise(resolve => {finish = resolve;});
+  const run = vm.runInNewContext(helper + ';async function run(){' + mutate(transition) + ';commit();}run', {
+    appFrames: Promise.resolve({settled: () => pending}), appApps: new Set([1]), appId: 1, hostedSession: {}, execution: {sourceEffects: true}, abort,
+    assertGenerationActive: signal => {if (signal?.aborted) throw Object.assign(Error('cancelled'), {code: 'generationCancelled'});},
+    commit: () => {commits++;},
+  });
+  const result = run();
+  await new Promise(setImmediate);
+  assert.equal(commits, 0, 'CAS cannot advance source while a streaming parser still owns the previous snapshot');
+  if (cancel) abort.abort();
+  finish();
+  if (cancel) {await assert.rejects(result, {code: 'generationCancelled'}); assert.equal(commits, 0);}
+  else {await result; assert.equal(commits, 1);}
+}
+test('streaming frames settle before source commits and late cancellation prevents writes', async () => {
+  await commitAfterFrames(); await commitAfterFrames({cancel: true});
+  await assert.rejects(commitAfterFrames({mutate: source => source.replace('await settleAppFrames(appId, abort.signal)', 'void 0')}), {name: 'AssertionError'});
+});
+test('failed preview initialization still closes permission and reaches chat completion', async () => {
+  const {helper} = frameBoundary();
+  const begin = host.indexOf('    try { if (hostedSession', host.indexOf('// T6: completed batches'));
+  const end = host.indexOf('\n  m.abort = null;', begin);
+  assert.ok(begin >= 0 && end > begin);
+  // Exclude the brace belonging to chatTurn's outer finally, not its cleanup.
+  const cleanup = host.slice(begin, end).replace(/\n  \}\s*$/, '');
+  let closed = 0;
+  const run = vm.runInNewContext(helper + ';async function run(){let error=null;' + cleanup + ';return {error,completed:true};}run', {
+    appFrames: Promise.resolve().then(() => {throw Error('preview unavailable');}), appApps: new Set([1]), appId: 1,
+    hostedSession: {close: () => closed++}, abort: new AbortController(), assertGenerationActive() {},
+  });
+  const result = await run();
+  assert.equal(closed, 1); assert.equal(result.completed, true); assert.match(result.error, /preview unavailable/);
+});

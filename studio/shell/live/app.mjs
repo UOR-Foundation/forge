@@ -206,8 +206,8 @@ export function createApp(data, library, name = "App") {
  * `post(appId, message)` delivers a `live/presentation` message to that app's frame.
  */
 export function appLive({ post, library, fetchImpl = globalThis.fetch, now = () => performance.now(), permissionOptions = {} }) {
-  const apps = new Map(); // appId -> { source, app, last, wanted, busy, trust, note }
-  const entry = (appId) => { if (!apps.has(appId)) apps.set(appId, { source: null, app: null, last: null, wanted: null, busy: false, trust: "draft", wantedTrust: "draft", frameSource: null, note: null, options: {}, controller: null }); return apps.get(appId); };
+  const apps = new Map(); // Each wanted/attempted identity includes source and its permission scope.
+  const entry = (appId) => { if (!apps.has(appId)) apps.set(appId, { app: null, last: null, wanted: null, attempted: null, busy: false, trust: "draft", frameSource: null, note: null, controller: null }); return apps.get(appId); };
   const send = (appId) => {
     const a = apps.get(appId);
     if (!a || !a.last) return;
@@ -218,22 +218,22 @@ export function appLive({ post, library, fetchImpl = globalThis.fetch, now = () 
     if (a.busy) return;
     a.busy = true;
     try {
-      while (apps.get(appId) === a && a.wanted !== null && a.wanted !== a.source) {
-        const source = a.wanted, t0 = now(), options = a.options;
+      while (apps.get(appId) === a && a.wanted !== null && a.wanted !== a.attempted) {
+        const requested = a.wanted, { source, options } = requested, t0 = now();
         const controller = new AbortController(), abort = () => controller.abort(); a.controller = controller;
         options.signal?.addEventListener("abort", abort, { once: true });
         if (options.signal?.aborted) abort();
         try {
           const app = createApp(await dataForm(source, fetchImpl, { ...permissionOptions, ...options, signal: controller.signal }), library);
-          if (controller.signal.aborted || apps.get(appId) !== a || a.wanted !== source) throw new Error("Hosted preview was superseded");
+          if (controller.signal.aborted || apps.get(appId) !== a || a.wanted !== requested) throw new Error("Hosted preview was superseded");
           const frame = app.frame();
-          a.app = app; a.last = { ...frame, ms: Math.round(now() - t0) }; a.frameSource = source; a.trust = a.wantedTrust; a.note = null;
+          a.app = app; a.last = { ...frame, ms: Math.round(now() - t0) }; a.frameSource = source; a.trust = requested.trust; a.note = null;
         } catch (e) {
           // A start of a module that does not run yet (a helper still to come, a frame not yet valid)
           // keeps the last frame that did; only the note changes.
-          if (!controller.signal.aborted && apps.get(appId) === a && a.wanted === source) a.note = String(e && e.message || e).slice(0, 200);
+          if (!controller.signal.aborted && apps.get(appId) === a && a.wanted === requested) a.note = String(e && e.message || e).slice(0, 200);
         } finally { options.signal?.removeEventListener("abort", abort); if (a.controller === controller) a.controller = null; }
-        if (a.wanted === source) { a.source = source; if (!controller.signal.aborted) send(appId); }
+        if (a.wanted === requested) { a.attempted = requested; if (!controller.signal.aborted) send(appId); }
       }
     } finally { a.busy = false; }
   }
@@ -242,12 +242,19 @@ export function appLive({ post, library, fetchImpl = globalThis.fetch, now = () 
     push(appId, module, trust = "draft", options = {}) {
       const prefix = wholePrefix(module);
       const a = entry(appId);
-      a.wantedTrust = trust;
-      if (!prefix.ready) return false;
-      // The same module with a new standing (checked, say) is the same frame under a new badge.
-      if (prefix.source === a.frameSource && a.last) { a.trust = trust; send(appId); return true; }
-      if (a.wanted !== prefix.source || a.options.session !== options.session || a.options.signal !== options.signal) a.controller?.abort();
-      a.options = options; a.wanted = prefix.source;
+      if (!prefix.ready) {
+        a.controller?.abort(); a.wanted = null;
+        return false;
+      }
+      const sameRequest = a.wanted && a.wanted.source === prefix.source && a.wanted.options.session === options.session && a.wanted.options.signal === options.signal;
+      if (!sameRequest) {
+        a.controller?.abort();
+        a.wanted = { source: prefix.source, trust, options: { ...options } };
+      } else a.wanted.trust = trust;
+      // Reusing a rendered frame still supersedes every other pending request first.
+      if (prefix.source === a.frameSource && a.last) {
+        a.attempted = a.wanted; a.trust = trust; a.note = null; send(appId); return true;
+      }
       run(appId);
       return true;
     },

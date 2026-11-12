@@ -10,7 +10,7 @@ function operation(name, end, environment) {
 }
 test("approval completion refuses a competing state instead of starting proof", async () => {
   let expected;
-  const approve = operation("approveRules", "// The approve turn", { rulesOf: async () => rule, nextPhase: async () => "proving", saveRules: async (_, state, prior) => { expected = prior; assert.equal(state.phase, "proving"); return false; }, now: () => "now", prism: { provingMessage() { assert.fail("must not claim approval"); } } });
+  const approve = operation("approveRules", "// The approve turn", { crypto: {randomUUID: () => "approval-fixture"}, rulesOf: async () => rule, nextPhase: async () => "proving", saveRules: async (_, state, prior) => { expected = prior; assert.equal(state.phase, "proving"); return false; }, now: () => "now", prism: { provingMessage() { assert.fail("must not claim approval"); } } });
   const result = await approve(1);
   assert.equal(expected, rule); assert.match(result.text, /changed/); assert.equal(result.prove, undefined);
 });

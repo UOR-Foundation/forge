@@ -18,23 +18,34 @@ mapped to the same existing browser refusal adapter used by the document.
 Source/output SHA-256 pairs record the module transformation. No parser,
 verifier, proof implementation or runtime dependency version changes here.
 
-Local frame-lock consistency, syntax and whitespace checks pass. The upstream
-19-control production-module suite passes, including the actual module graph,
-byte preservation, refusal and transport controls. Upstream real Chromium acceptance passes at the preceding runtime-identical
-revision `26c1d717aabbc2f22c1ab336a91685f84bbe3c91` in run
-43235099167 (job 131240244333): normal worker-only execution and 22/22 fixture
-replay, malformed archive refusal, offline reload/dispatch, and a no-worker
-control proving document execution is detected. The original Try page, identity
-journeys and frame/sign-in builds also pass. Earlier fixture setup/instrumentation
-failures are retained in the PR history. This is browser functional evidence,
-not a downstream Lighthouse performance result.
+The exact upstream head `0b7c323035b2bbb3729f4afad75820cac228cb09`
+passes all three required workflows:
+
+- [Immutable-SDK bootstrap and complete just vv](https://github.com/UOR-Foundation/template/actions/runs/43236144122).
+- [Real Chromium and canonical frame](https://github.com/UOR-Foundation/template/actions/runs/43236143825).
+- [Codespace acceptance](https://github.com/UOR-Foundation/template/actions/runs/43236143628).
+
+All 19 Node production-module controls and all 17 frame hashes pass. Real
+Chromium passes five controls: worker-only execution and 22/22 fixture replay,
+malformed archive refusal, offline reload/dispatch, a no-worker positive control
+proving document execution is detected, and fresh no-holo scaffold rendering
+without staged vendor files. The original Try page, identity journeys and
+frame/sign-in builds also pass. Earlier fixture setup/instrumentation failures
+are retained in the PR history. This is browser functional evidence, not a
+downstream Lighthouse performance result.
 
 Independent review found a local scaffold-rendering regression in the first
 pin: the packager expected site/vendor to have been staged. The current pin
 requires an explicit source root and the page names its authoritative try/vendor;
-fixtures retain isolated sources. The added no-staged-vendor source-root test
-fails before the correction and passes after it. Full SDK/browser requalification
-of this latest upstream revision, including a real no-holo scaffold, is pending.
+fixtures retain isolated sources. The added source-root test fails before the
+correction and passes after it. The corrected exact head was independently
+reviewed, and the 19 Node controls and 17 frame hashes were rerun. The review
+also exercised the packaged Calculator runtime: 22/22 acceptance, dispatch
+result 42 and malformed-archive refusal.
+
+[Template PR #68](https://github.com/UOR-Foundation/template/pull/68) merged as
+`bfa057f42a671873d4f87d4c0ef7fd6e368e0cfa`. The frame remains pinned to the
+exact reviewed and CI-qualified head, which is an ancestor of template main.
 
 The combined Foundry candidate still requires its exact immutable SDK,
 Studio/browser, Forge performance, Prism-page Lighthouse and remaining

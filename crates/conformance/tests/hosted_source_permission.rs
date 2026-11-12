@@ -21,8 +21,8 @@ fn hosted_source_permission_fa_83() {
         String::from_utf8_lossy(&output.stderr)
     );
     for required in [
-        "# tests 15",
-        "# pass 15",
+        "# tests 18",
+        "# pass 18",
         "# fail 0",
         "# cancelled 0",
         "# skipped 0",

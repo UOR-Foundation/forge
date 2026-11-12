@@ -681,3 +681,9 @@ id = "FA-83"
 level = "build"
 suite = "hosted-source-permission"
 statement = "Stateful preview parsing and checking transmit source only under disclosed source-bound or turn-scoped revocable hosted permission"
+
+[[id]]
+id = "FA-84"
+level = "build"
+suite = "application-shape-authority"
+statement = "Application shape edits and transitions retain one source-bound authority and cannot obtain proof standing from authored files"

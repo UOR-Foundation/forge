@@ -155,7 +155,7 @@ jobs:
           node tools/host_bundle.mjs --check
           node tools/host_bundle_runtime.mjs
       - name: Stateful source transactions and combined workflow reuse remain qualified
-        run: node --test tools/main_stateful_integration.test.mjs tools/backlog_workflows.test.mjs
+        run: node --test tools/main_stateful_integration.test.mjs tools/backlog_workflows.test.mjs tools/application_shape_authority.test.mjs tools/proof_approval_cancellation.test.mjs
       - name: The site's Featherless relay takes only the site's offered, bounded chat requests, and keeps its key private
         run: node --test relay/featherless/worker.test.mjs
       - name: Every shell script parses the way the browser parses it

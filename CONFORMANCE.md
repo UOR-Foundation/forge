@@ -36,6 +36,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-59` | `build` | Current-main experience rules and renderer improvements coexist with complete application protocols and verified private offline closure |
 
+## application-shape-authority
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-84` | `build` | Application shape edits and transitions retain one source-bound authority and cannot obtain proof standing from authored files |
+
 ## atomic-browser-settings
 
 | ID | Level | Statement |
