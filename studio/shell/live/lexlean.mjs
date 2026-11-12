@@ -209,11 +209,18 @@ export function readLexLean(text) {
     const v = /^\d+$/.exec(bodyOf(b)); if (v) consts.set(b.name, Number(v[0]));
   }
   const choices = {}, constOf = new Map();
+  // Values named after something other than their field (measured: Haiku's `submittedYes` for
+  // `projectSubmitted`; GLM's `timePeak` and `timeOffPeak` for `peak`, and told of one it renamed only that
+  // one). Every such value of a group is named, with the name it must have, so one repair renames them all.
+  const ownerOf = (k) => fieldIds.find((f) => k.startsWith(f) && /^[A-Z]/.test(k.slice(f.length)));
+  const strays = (prefix) => [...consts.keys()].filter((k) => !/^answer[A-Z]/.test(k) && !ownerOf(k) && (!prefix || k.startsWith(prefix)));
+  const renames = (fid, ks) => ks.map((k) => `${k} to ${fid}${k.replace(/^[a-z][a-z0-9]*/, "") || k[0].toUpperCase() + k.slice(1)}`).join(", ");
+  const misnamed = (fid, ks) => (ks.length ? `; ${ks.join(", ")} ${ks.length > 1 ? "are" : "is"} named after no field, and every value of ${fid} is named ${fid}<Value>: rename ${renames(fid, ks)}, everywhere ${ks.length > 1 ? "they appear" : "it appears"}` : "");
   for (const fid of fieldIds) {
     const own = [...consts].filter(([k]) => k.startsWith(fid) && /^[A-Z]/.test(k.slice(fid.length)) && !fieldIds.some((g) => g !== fid && g.startsWith(fid) && k.startsWith(g)));
     if (own.length) {
       own.sort((a, b) => a[1] - b[1]);
-      own.forEach(([k, code], i) => { if (code !== i) throw new LexLeanError(`codes must run 0, 1, 2…; ${k} is ${code}`, k); });
+      own.forEach(([k, code], i) => { if (code !== i) throw new LexLeanError(`codes must run 0, 1, 2…; ${k} is ${code}${misnamed(fid, strays())}`, k); });
       choices[fid] = own.map(([k]) => kebab(k.slice(fid.length)));
       own.forEach(([k], i) => constOf.set(k, { field: fid, value: choices[fid][i] }));
     }
@@ -249,7 +256,7 @@ export function readLexLean(text) {
       const x = lf ? b.right : b.left, id = x.id ?? (x.app && !x.args.length ? x.app : null);
       // A value is found by its name alone: `<field><Value>`. A model that names it otherwise (measured:
       // `submittedYes` for field `projectSubmitted`) is told the name the reader looks for.
-      if (id && consts.has(id)) throw new LexLeanError(`${id} is not a value of ${fid}: a choice's values are named after their field, so this one is ${fid}${(/[A-Z]\w*$/.exec(id) || [""])[0] || id[0].toUpperCase() + id.slice(1)}`, where);
+      if (id && consts.has(id)) throw new LexLeanError(`${id} is not a value of ${fid}${misnamed(fid, strays((/^[a-z][a-z0-9]*/.exec(id) || [id])[0]))}`, where);
       throw new LexLeanError(`${id ?? "this"} is not a value of ${fid}: compare ${fid} with a whole number${choices[fid] ? " or one of " + Object.keys(Object.fromEntries([...constOf].filter(([, c]) => c.field === fid))).join(", ") : ""}`, where);
     }
     if (v.choice) {
@@ -262,8 +269,7 @@ export function readLexLean(text) {
       if (bound && lf && b.op === "<?" && !neg) {
         // A count that disagrees usually means a value named after something else: it is not counted.
         const owned = [...constOf].filter(([, c]) => c.field === fid).map(([k]) => k);
-        const stray = [...consts.keys()].filter((k) => !constOf.has(k) && !/^answer[A-Z]/.test(k));
-        throw new LexLeanError(`${fid} has ${owned.length} values (${owned.join(", ")}), not ${v.num}${stray.length ? `; ${stray.join(", ")} is named after no field, and a value of ${fid} is named ${fid}<Value>, as ${fid}${(/[A-Z]\w*$/.exec(stray[0]) || [""])[0]}` : ""}`, where);
+        throw new LexLeanError(`${fid} has ${owned.length} values (${owned.join(", ")}), not ${v.num}${misnamed(fid, strays())}`, where);
       }
       throw new LexLeanError(`${fid} is a choice: compare it with one of its codes`, where);
     }
@@ -382,10 +388,17 @@ export function canonicalSource(spec) {
  * last module.
  */
 export function specFromTurn(text) {
-  const all = [...(text || "").matchAll(/<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/g)];
+  const all = [...(text || "").matchAll(/<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/g)].map((m) => m[1]);
+  // A module whose block was left open (measured: GLM ended at \end{lexlean} without </prism-lexlean>) is
+  // whole once \end{lexlean} is written; it is read as written.
+  const at = (text || "").lastIndexOf("<prism-lexlean>");
+  if (at >= 0 && !text.slice(at).includes("</prism-lexlean>")) {
+    const rest = text.slice(at + 15), end = rest.indexOf("\\end{lexlean}");
+    if (end >= 0) all.push(rest.slice(0, end + 13));
+  }
   if (!all.length) return null;
   try {
-    const spec = readLexLean(all[all.length - 1][1].trim() + "\n");
+    const spec = readLexLean(all[all.length - 1].trim() + "\n");
     return { ...canonicalSource(spec), spec };
   } catch (e) { return { error: "The LexLean module does not read: " + e.message }; }
 }

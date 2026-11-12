@@ -196,6 +196,10 @@ claim("cap: proving an app over 24 rules is refused, and says why", /24 rules/.t
 claim("only the module: the prompt asks for the module and refuses code", /You never write code, files or dependencies: Forge does not apply them/.test(SPEC_RULES) && !/write its files|write no module/.test(SPEC_RULES));
 claim("only the module: a turn sends the prompt and the module, and applies no code", hostSource.includes('{ role: "system", content: prism.SPEC_RULES }') && !hostSource.includes("buildSystemPrompt(rules) + ") && hostSource.includes("prism.moduleContext(") && hostSource.includes("writes: [], deletes: [], renames: [], deps: []") && hostSource.includes("prism.CODE_REFUSED"));
 const exDraft = example ? example[1] : "";
+// GLM on the live site ended its module at \end{lexlean} and never closed the block: a whole module reads.
+const unclosed = lex.specFromTurn("Here is the module.\n<prism-lexlean>\n" + (example ? example[1].trim() : "") + "\n");
+const halfOpen = lex.specFromTurn("<prism-lexlean>\n" + (example ? example[1].trim().split("\\end{semanticmodule}")[0] : ""));
+claim("turn: a block left open reads once its module is whole, and not before", !!unclosed && !unclosed.error && unclosed.name === "ParkingFee" && halfOpen === null);
 const exSpec = example ? lex.readLexLean(exDraft.trim() + "\n") : null;
 const ex = exSpec ? lex.toLexLean(exSpec).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "") : "";
 const refusal = (text) => { try { lex.readLexLean(text.trim() + "\n"); return ""; } catch (e) { return e.message; } };
@@ -211,7 +215,7 @@ claim("errors: a \")\" missing is named", /^judge: 1 "\)" missing/.test(missing)
 const several = refusal(ex.replaceAll("<? 3))", "<? 3)))"));
 claim("errors: every unbalanced declaration is named at once", /^2 declarations have unbalanced parentheses: inBounds: .*; breaksInv001: /.test(several), several);
 const misnamed = refusal(ex.replaceAll("vehicleTruck", "typeTruck"));
-claim("errors: a value named after anything but its field is told its name", /typeTruck .*vehicleTruck$/.test(misnamed), misnamed);
+claim("errors: a value named after anything but its field is told its name", /typeTruck .*to vehicleTruck/.test(misnamed), misnamed);
 claim("reads: `x <? N` bounds a number as `x <=? N - 1`", sameAsExample(ex.replaceAll("(project request hours) <=? 24)", "(project request hours) <? 25)")));
 claim("reads: a guarantee may name inBounds and its rule, and leave its outer pair off", sameAsExample(ex.replace(/(name: breaksInv001,[\s\S]*?body: )[^\n]*/, "$1((inBounds request) && (rule1 request)) && ((judge request) =? (answerPremium))")));
 
