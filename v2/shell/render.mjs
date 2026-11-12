@@ -29,7 +29,7 @@ const KINDS = {
   Table: ([caption, columns, chunks], words) => ({ tag: "table", caption: words(caption), columns: toArray(columns).map(words), rows: toArray(chunks).flatMap((chunk) => toArray(chunk.rows).map((row) => toArray(row.cells))) }),
 };
 
-function describe(presentation, catalogue) {
+export function describe(presentation, catalogue) {
   const words = (index) => { const w = catalogue[Number(index)]; if (w === undefined) throw new RenderError("label outside the catalogue: " + index); return w; };
   return toArray(presentation.nodes).map((node) => {
     if (!node.content.c.startsWith(PREFIX)) throw new RenderError("not a content value: " + node.content.c);
@@ -90,6 +90,8 @@ export function createView(root, onAction) {
   const press = (button) => {
     if (!button || button.disabled) return;
     const node = nodes[elements.indexOf(button)];
+    // A button this view did not draw (the root was handed to a newer view) is not this view's to answer.
+    if (!node) return;
     const fields = node.binds.map((id) => {
       const target = nodes[id - 1], control = elements[id - 1].children[1];
       return target.control === "select" ? { node: BigInt(id), choice: BigInt(control.value) } : { node: BigInt(id), text: control.value };

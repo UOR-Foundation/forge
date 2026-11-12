@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { tableKernel } from "../../shell/live/table.mjs";
 import { Live, Editor, NodeBody, nodeProps, gapBefore, mainClass, EMPTY } from "./view.jsx";
 import { defaults, fillValues } from "../../shell/live/card-runtime.mjs";
+import { Presentation } from "./presentation.jsx";
 // tools/fixtures/live/rsvp.json's projection, its first field given seven answers so a select is drawn too
 import WARM from "./warm.json";
 
@@ -161,7 +162,12 @@ function App() {
       {s.trust && <Badge variant={s.trust === "proved" || s.trust === "published" ? "default" : "outline"} className={cn("fixed top-3 right-3 z-10", (s.trust === "proved" || s.trust === "published") && "bg-brand text-brand-foreground", s.trust === "proving" && "animate-pulse border-brand text-brand")} aria-live="polite">{TRUST[s.trust] || s.trust}</Badge>}
       <main className={mainClass}>
         {s.diff && <Diff diff={s.diff} />}
-        {s.nodes.length === 0
+        {s.presentation
+          ? <>
+              <Presentation frame={s.presentation} interactive={s.presentation.interactive} onIntent={(intent) => post({ type: "live/intent", ...intent })} />
+              {s.presentation.note && <p className="text-sm text-muted-foreground" role="status">{s.presentation.note}</p>}
+            </>
+          : s.nodes.length === 0
           ? <p className="pt-[30vh] text-center text-sm text-muted-foreground">{EMPTY}</p>
           : s.nodes.map((n, i) => <Node key={n.key} node={n} pointed={s.pointed === n.key} refused={s.refused && s.refused.key === n.key ? s.refused.message : null} gap={gapBefore(s.nodes, i)} />)}
       </main>
@@ -189,8 +195,18 @@ function apply(m) {
   const work = Math.round((performance.now() - t0) * 10) / 10, rendered = renders;
   requestAnimationFrame(() => parent.postMessage({ type: "live/painted", app: state.app, root: m.root, changed, rendered, work, ms: Math.round((performance.now() - t0) * 10) / 10 }, "*"));
 }
+// A stateful app: the host ran its spec and sends the frame to draw (shell/live/app.mjs). The frame
+// replaces the projection of a decision; the two are never on the screen together.
+function present(m) {
+  const t0 = performance.now();
+  document.documentElement.classList.toggle("dark", m.theme === "dark");
+  renders = 0;
+  flushSync(() => { state = { ...state, presentation: { revision: m.revision, live: m.live, nodes: m.nodes, interactive: !!m.interactive, note: m.note || null }, trust: m.trust || "", theme: m.theme }; emit(); });
+  const work = Math.round((performance.now() - t0) * 10) / 10, rendered = renders;
+  requestAnimationFrame(() => parent.postMessage({ type: "live/painted", app: state.app, root: "presentation:" + m.revision, changed: 1, rendered, work, ms: Math.round((performance.now() - t0) * 10) / 10 }, "*"));
+}
 function hello() {
-  state = { app: decodeURIComponent(location.hash.slice(1)), root: null, nodes: [], logic: null, logicKappa: null, trust: "", theme: state.theme, values: {}, table: null, diff: null };
+  state = { app: decodeURIComponent(location.hash.slice(1)), presentation: null, root: null, nodes: [], logic: null, logicKappa: null, trust: "", theme: state.theme, values: {}, table: null, diff: null };
   emit();
   parent.postMessage({ type: "live/hello", app: state.app, style: __STYLE__ }, "*");
   // Every app with rules needs the table worker; starting it now keeps its start out of the first patch.
@@ -199,7 +215,8 @@ function hello() {
 addEventListener("message", (e) => {
   if (e.source !== parent) return;
   const m = e.data;
-  if (m && m.type === "live/projection" && m.app === state.app && Array.isArray(m.nodes)) apply(m);
+  if (m && m.type === "live/projection" && m.app === state.app && Array.isArray(m.nodes)) { if (state.presentation) { state = { ...state, presentation: null }; } apply(m); }
+  if (m && m.type === "live/presentation" && m.app === state.app && Array.isArray(m.nodes)) present(m);
   if (m && m.type === "live/refused" && m.app === state.app) {
     state = { ...state, refused: { key: m.key, message: m.message } }; emit();
     setTimeout(() => { if (state.refused && state.refused.message === m.message) { state = { ...state, refused: null }; emit(); } }, 6000);

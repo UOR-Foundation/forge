@@ -27,6 +27,7 @@ import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
 import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
 import * as lexlean from "./live/lexlean.mjs";
+import * as appShape from "./live/app.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
@@ -572,6 +573,13 @@ function sendLive(appId) {
   for (const [win, app] of liveWindows) { if (win.closed) liveWindows.delete(win); else if (app === appId) win.postMessage(message, "*"); }
 }
 // Coalesced to one projection per animation frame: a model streams far faster than a screen draws.
+// A stateful app (shell/live/app.mjs): its module is run as it is written, and each frame goes to the
+// same live frame a decision's projection goes to. The library model is fetched on the first such app.
+const appApps = new Set();     // apps whose preview is a running module, not a projection
+const postApp = (appId, message) => { const m = { ...message, theme: themeOf() }; for (const [win, app] of liveWindows) { if (win.closed) liveWindows.delete(win); else if (app === appId) win.postMessage(m, "*"); } };
+let appFrames = null;
+const appFramesReady = () => appFrames || (appFrames = fetch(new URL("live/v2/Model.json", BASE)).then((r) => { if (!r.ok) throw new Error("live/v2/Model.json answered " + r.status); return r.json(); }).then((model) => appShape.appLive({ post: postApp, library: { "Foundation.View.Browser.V1.Model": model } })));
+function pushApp(appId, module, trust = "draft") { appApps.add(appId); appFramesReady().then((frames) => frames.push(appId, module, trust)).catch((e) => console.error(e)); }
 function pushLive(appId, raw, trust, edit = false) {
   liveLatest.set(appId, { raw, trust, edit });
   // An edit is one change a person just made: it goes now, not at the next frame, so the frame can paint
@@ -585,11 +593,12 @@ window.addEventListener("message", (e) => {
   const m = e.data;
   if (!m || typeof m.type !== "string" || !m.type.startsWith("live/") || !isLiveFrame(e.source)) return;
   // The frame reads its app from the address (a string); the host keys apps as the store does (a number).
-  if (m.type === "live/hello") { const app = /^[0-9]+$/.test(String(m.app)) ? Number(m.app) : m.app; liveWindows.set(e.source, app); if (liveLatest.has(app)) sendLive(app); else refreshLive(app); return; }
+  if (m.type === "live/hello") { const app = /^[0-9]+$/.test(String(m.app)) ? Number(m.app) : m.app; liveWindows.set(e.source, app); if (appApps.has(app)) appFramesReady().then((frames) => (frames.has(app) ? frames.resend(app) : refreshLive(app))).catch(() => {}); else if (liveLatest.has(app)) sendLive(app); else refreshLive(app); return; }
   if (m.type === "live/painted") { if (m.changed) { liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift(); } return; }
   // Everything else acts on an app: the one this frame was shown, never the one the message names.
   const appId = liveWindows.get(e.source);
   if (!appId) return;
+  if (m.type === "live/intent") { if (appApps.has(appId)) appFramesReady().then((frames) => frames.intent(appId, m)).catch(() => {}); return; }
   if (m.type === "live/patch" && Array.isArray(m.ops)) patchSpec(appId, m.ops, { author: "user", key: m.key || null }).catch(() => {});
   else if (m.type === "live/undo" || m.type === "live/redo") stepSpec(appId, m.type === "live/undo" ? "undo" : "redo").catch(() => {});
   else if (m.type === "live/point") { if (livePointed.get(appId)?.key === m.key) livePointed.delete(appId); else livePointed.set(appId, { key: m.key, kind: m.kind, edit: m.edit || {}, text: String(m.text || "").slice(0, 200) }); }
@@ -597,6 +606,9 @@ window.addEventListener("message", (e) => {
 new MutationObserver(() => { for (const appId of liveLatest.keys()) pushLive(appId, liveLatest.get(appId).raw, liveLatest.get(appId).trust); }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 // The rules as they stand: the checked spec at its kernel phase, else what the model wrote, as a draft.
 async function refreshLive(appId) {
+  // A stateful app is its module: it is run again from the stored source.
+  const appSource = await get("files", appId + ":" + appShape.SOURCE_PATH);
+  if (typeof appSource === "string" && appShape.isAppShape(appSource)) { pushApp(appId, appSource); return; }
   const json = await get("files", appId + ":prism/spec.json");
   if (!json) return;
   const state = await rulesOf(appId);
@@ -720,7 +732,8 @@ async function showLive(appId) {
   publish(appId, { phase: "ready", operation: null, invocationRef: null, startedAt: Date.now(), operationError: null, exit: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: m.state.previewReloadEpoch + 1 });
   return appUrl;
 }
-const hasRules = async (appId) => !!(await get("files", appId + ":prism/spec.json"));
+// An app whose preview is the live frame: one with rules, or one that is a running module.
+const hasRules = async (appId) => !!(await get("files", appId + ":prism/spec.json")) || !!(await get("files", appId + ":" + appShape.SOURCE_PATH));
 // Warm before the first spec: the frame is built (about 90 ms of fetching, encoding and hashing) and
 // loaded once, hidden, while the page is idle, so the worker has it cached and its kernel has verified
 // itself and answered the gate before a model writes a word. The hidden copy goes once it says hello.
@@ -738,7 +751,7 @@ function warmLive() {
   }).catch(() => {});
 }
 (window.requestIdleCallback || ((fn) => setTimeout(fn, 1500)))(warmLive, { timeout: 4000 });
-window.__live = { liveFrame, showLive, pushLive, refreshLive, patchSpec, stepSpec, pointed: livePointed, times: liveTimes, project: live.project };
+window.__live = { liveFrame, showLive, pushLive, pushApp, appFrames: appFramesReady, refreshLive, patchSpec, stepSpec, pointed: livePointed, times: liveTimes, project: live.project };
 
 handlers.set("distributed-machine:subscribe", async ({ machineId, encodedKey }) => {
   if (machineId === "chat_stream") return chatSubscribe({ machineId, encodedKey });
@@ -999,6 +1012,15 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
   // A LexLean module, when the model wrote one, carries the rules: the spec is read from it, keeping the
   // screen's words (purpose, view, meanings) the spec already had, since the module holds only the logic.
+  // A stateful app: its module is kept as its source, in the same source transaction as any other
+  // write. It has no rules for the checker here to check; the card says it is a draft.
+  const appModule = appShape.moduleFromTurn(text);
+  if (appModule && appShape.isAppShape(appModule.text)) {
+    stage(appShape.SOURCE_PATH, appModule.text.trim() + "\n");
+    const kept = writes.length ? await applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, ...options, source }) : { changed: 0, source };
+    assertGenerationActive(options.signal);
+    return { changed: kept.changed, source: kept.source, card: appShape.CARD };
+  }
   const lex = lexlean.specFromTurn(text);
   if (lex && lex.error) return { changed: 0, source, card: `**Rules** · not read\n\n- ${lex.error}\n\nAsk me to fix the module.` };
   if (lex) {
@@ -1245,7 +1267,7 @@ async function chatTurn(chatId, intent) {
     const moduleNow = [...new Map(projectSource.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p));
     const request = [
       { role: "system", content: prism.SPEC_RULES },
-      { role: "user", content: prism.moduleContext(moduleNow ? moduleNow[1] : null) },
+      { role: "user", content: moduleNow && appShape.isAppShape(moduleNow[1]) ? appShape.moduleContext(moduleNow[1]) : prism.moduleContext(moduleNow ? moduleNow[1] : null) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
@@ -1281,8 +1303,10 @@ async function chatTurn(chatId, intent) {
         // The frame opens on the tag, not on the first whole declaration (thousands of characters
         // later), so it has mounted by the time there is something to paint.
         if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); }
-        const part = lexlean.partialFromTurn(full);
-        if (part) pushLive(appId, part.spec, "draft");
+        // The app shape is run; the decision shape is read and projected.
+        const writing = appShape.moduleFromTurn(full);
+        if (writing && appShape.isAppShape(writing.text)) pushApp(appId, writing.text);
+        else { const part = lexlean.partialFromTurn(full); if (part) pushLive(appId, part.spec, "draft"); }
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = shown; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
@@ -1296,6 +1320,9 @@ async function chatTurn(chatId, intent) {
     // words, streamed into this answer, so the user sees a fixed app rather than an error to relay.
     const repaired = async (genBody) => {
       const before = full;
+      // The decision reader cannot read the app shape, and would ask for a repair of a module that runs.
+      const wrote = appShape.moduleFromTurn(before);
+      if (wrote && appShape.isAppShape(wrote.text)) return;
       const next = await lexlean.withRepair(before, async (prompt) => {
         const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: prompt }] };
         const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);

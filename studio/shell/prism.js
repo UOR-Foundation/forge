@@ -9,6 +9,7 @@ import { SpecError, validateSpec, unreachableRules, counterexample, describeCond
 import { names, renderModel, renderProofs, acceptanceVectors, renderSpecDocument } from "./prism/render.mjs";
 import { TEMPLATE_EXAMPLE, appJson, conformanceText, featureText, idsToml, lexleanLockText, rustTestText, suiteOf } from "./prism/template.mjs";
 import { toLexLean, draftOf } from "./live/lexlean.mjs";
+import { PROMPT as APP_SHAPE } from "./live/app.mjs";
 import { checkObligations } from "./live/obligations.mjs";
 import { tableKernel } from "./live/table.mjs";
 
@@ -47,7 +48,7 @@ Every app here is one LexLean module: its inputs, its answers, its rules and its
 - To change the rules, write the whole module again in a new <prism-lexlean> block, starting from the current module when one is given.
 Example: <prism-lexlean>
 ${PARKING_LEXLEAN.trim()}
-</prism-lexlean>`;
+</prism-lexlean>` + APP_SHAPE;
 
 /** What a model is shown of the app: its current module, in the draft form it writes, or that there is none. */
 export function moduleContext(source) {

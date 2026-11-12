@@ -446,3 +446,37 @@ What will not be true at first, and should be said in the app:
 - Speed while streaming. Each partial render needs a data form from the hosted service; one sample each of 0.2 and 1.1 s. If that is too slow to feel live, the data form must be produced in the tab, which needs LexLean's reader compiled for the browser (an upstream request).
 
 Order of work: steps 1 to 3 give a stateful app appearing in the existing preview while the model writes it. That is the first thing worth showing, and it touches three files of the studio plus one new one. Steps 4 to 6 make it trustworthy. Each step lands with the studio's own gates extended (the journey check, the contract check, the performance budgets), a planted defect, and a browser run of the real journey.
+
+## Steps 1 to 3, done: a stateful app in Foundry's own preview (2026-11-12)
+
+The first three steps of the direction above are built in the studio, with nothing in its look changed.
+
+What changed:
+- `studio/shell/live/app.mjs` (new): tells the app shape from the decision shape, splits a streamed module at its whole declarations, asks the hosted service for the data form once `State`, `catalogue`, `initial` and `view` are whole, runs it, and posts frames. A press comes back as an intent and is answered with the next frame.
+- `studio/shell/live/v2/` (new): the interpreter, the presentation reader, the library model and the model's instructions, as copies of the files under `v2/`. `tools/v2_engine.mjs --check` holds them to their sources.
+- `studio/live-src/src/presentation.jsx` (new) and `frame.jsx`: the live frame draws a frame of the protocol with the kit's own shadcn/ui components, and sends `live/intent`.
+- `studio/shell/host.js`: the `<prism-lexlean>` branch of the stream runs an app-shape module instead of reading it as a decision; the end of the turn keeps the module as `prism/App.lex.tex`; a stored module reopens in the live frame; the repair turn is not asked of a module that runs.
+- `studio/shell/prism.js`: the model's instructions gain the app shape, from `v2/loop/RULES.txt`.
+
+Tested in the real Foundry. `tools/overlay_serve.mjs` serves this branch's shell over the deployed site's built files, under `/foundry/`. In that app, in Chromium:
+- The guest list an independent model wrote was streamed through the host's own functions at about 1,000 characters a second. It drew in the preview panel while the rest was still arriving.
+- Real typing and clicks in the preview: "Ada" with Enter, "Grace" with the Add button. The name box emptied each time and the table read Grace, then Ada.
+- The end of the turn kept one file and showed the card "App · draft … not checked or proved yet, and it cannot be published yet". No rules phase was invented for it.
+- After a full reload, and after the preview's own refresh button, the app ran again from its stored module.
+- The studio's own end-to-end gate for a decision app (`tools/live_e2e.mjs`, the RSVP fixture) passed against this branch: first node to first pixel 25 ms, every patch inside a frame, check on screen in 51 ms, no reload of the live frame, no page errors. The existing journey is not regressed.
+
+Measured in the standalone frame harness (the real frame, the real hosted service): the declarations a first frame needs were whole 316 ms into a stream; the frame was on screen at 765 ms, of which 449 ms was the hosted service; the app was interactive at 1,138 ms; the stream ended at 966 ms. A press took 0.4 to 0.5 ms to answer.
+
+Gates: every studio gate that runs without the lane passes (parse, look, experience, journey, template, components byte for byte, live preview, table, edit, LexLean, published preview, self-contained), plus the two new ones, each armed with a planted defect. All suites: 74 pass, 1 skipped (it needs the network and passes when run).
+
+Found on the way:
+- The browser pane was hidden during testing, so animation frames did not run; a freshly drawn screen stayed at the first frame of its fade-in until the pane produced a frame. Screenshots taken a moment later show it. This is the test environment, not the app, and it affects the existing decision nodes in the same way.
+- `tools/live_lexlean.mjs` holds the host to the exact text of the model's request. The instructions were therefore added inside `prism.js`, not beside the request in `host.js`.
+- The repository's self-contained gate refuses a personal account name; the build-speed report named one. Reworded.
+
+Not done, and the app says so where it matters:
+- Check, proof and publish for the app shape (steps 4 to 6). The card says the app is a draft.
+- A real model writing the app shape in this app. The stream was replayed, as the studio's own end-to-end gate does. The app's default cloud model has not been tried on these instructions, which add about 14,000 characters to every request.
+- Editing a stateful app by clicking its words, undo, and the outcome diff: those exist for decisions only.
+- Keeping what a person typed across a new version of the module: a new version starts from `initial`.
+- The lane, the renderer's build and the performance budgets in CI: they run on GitHub, not here.
