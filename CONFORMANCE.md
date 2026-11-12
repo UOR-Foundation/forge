@@ -132,6 +132,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-15` | `build` | Unimplemented browser queries return typed unsupported errors rather than fabricated resource status or empty findings |
 
+## chat-owner-recovery
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-74` | `build` | Surviving chat windows retain execution-lock interest until closed-owner recovery pauses the exact durable head |
+
 ## chat-queue-model
 
 | ID | Level | Statement |

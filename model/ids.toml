@@ -603,3 +603,9 @@ id = "FA-73"
 level = "build"
 suite = "kernel-owner-readiness"
 statement = "Service-worker guest requests await an initializing matching document owner without accepting unverified executables"
+
+[[id]]
+id = "FA-74"
+level = "build"
+suite = "chat-owner-recovery"
+statement = "Surviving chat windows retain execution-lock interest until closed-owner recovery pauses the exact durable head"

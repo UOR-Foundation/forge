@@ -110,8 +110,17 @@ try {
   // retaining the prompt without transmitting it again automatically.
   await send(other,active.chatId,{type:'RESUME_QUEUE',expectedQueueRevision:before.state.revision,mutationId:'resume',observedStopPolicyVersion:1});
   owner=await consentTab();await waitJournal(owner,active.chatId,j=>j.state.active!==0);
-  const survivor=owner===page?peer:page;await owner.close();
+  const survivor=owner===page?peer:page;
   await call(survivor,'distributed-machine:subscribe',{protocolVersion:1,machineId:'chat_stream',encodedKey:{chatId:active.chatId}});
+  // Establish interest while the owner still holds its lock. Closing must wake
+  // that existing waiter without another command, notification or subscription.
+  let interested=false;
+  for(let n=0;n<300;n++){
+    interested=await survivor.evaluate(async chatId=>(await navigator.locks.query()).pending.some(lock=>lock.name===`foundry:chat-execution:${chatId}`),active.chatId);
+    if(interested)break;await new Promise(resolve=>setTimeout(resolve,10));
+  }
+  assert.equal(interested,true,'surviving subscriber must retain execution-lock interest');
+  await owner.close();
   await waitJournal(survivor,active.chatId,j=>!j.state.active&&j.state.paused===1&&j.entries.length===1);
   assert.equal(submitted,1);
   const recovered=await journal(survivor,active.chatId);
@@ -119,6 +128,6 @@ try {
   owner=await consentTab();await call(survivor,'delete-chat',active.chatId);
   await owner.waitForFunction(()=>!document.querySelector('[aria-label="Review cloud request"]'));
   assert.equal(await journal(survivor,active.chatId),undefined);assert.equal(submitted,1);
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({actualHost:true,actualGuest:true,tabs:2,persistedPrompts:3,edit:true,reorder:true,remove:true,staleRevisionRefused:true,reload:true,staleActorRefused:true,clear:true,delete:true,activeBusySubmit:true,crossTabStop:true,ownerCloseRecovery:true,activeDeletion:true,actualLateAbort:true,pageExceptions:0}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({actualHost:true,actualGuest:true,tabs:2,persistedPrompts:3,edit:true,reorder:true,remove:true,staleRevisionRefused:true,reload:true,staleActorRefused:true,clear:true,delete:true,activeBusySubmit:true,crossTabStop:true,ownerCloseRecovery:true,waitingRecovery:true,activeDeletion:true,actualLateAbort:true,pageExceptions:0}));
 
 }catch(error){console.error(error);throw error;}finally{for(const resolve of held.splice(0))resolve();if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
