@@ -4,12 +4,14 @@
 
 const td = new TextDecoder();
 
-export function parse(bytes) {
+// `from`: a parsed export whose bytes these continue (the library, when `bytes` is a bundle's own part). Its tables
+// are copied, not shared, so the library's parse is never changed by a bundle.
+export function parse(bytes, from) {
   const text = typeof bytes === "string" ? bytes : td.decode(bytes);
-  const names = [""], levels = [{ zero: true }], exprs = [];
-  const decls = new Map(); // full name -> { kind, record, line }
-  const order = [];
-  let meta = null, line = 0;
+  const names = from ? from.names.slice() : [""], levels = from ? from.levels.slice() : [{ zero: true }], exprs = from ? from.exprs.slice() : [];
+  const decls = from ? new Map(from.decls) : new Map(); // full name -> { kind, record, line }
+  const order = from ? from.order.slice() : [];
+  let meta = from?.meta ?? null, line = from ? from.lines : 0;
   for (let start = 0; start < text.length; ) {
     let end = text.indexOf("\n", start);
     if (end < 0) end = text.length;
@@ -32,7 +34,7 @@ export function parse(bytes) {
     }
     start = end + 1;
   }
-  return { meta, names, levels, exprs, decls, order, lines: line, bytes: text.length };
+  return { meta, names, levels, exprs, decls, order, lines: line, bytes: (from?.bytes ?? 0) + text.length };
 }
 
 // The constants an expression refers to, directly.
@@ -169,6 +171,8 @@ export class Writer {
   }
   // A term built by emit.mjs: {b}, {s: level}, {c, us}, {a: [f, x]}, {l|p: [name, type, body]}, {n}, {t}, {j: [type, idx, e]}
   term(t) {
+    if (t.raw !== undefined) return t.raw; // an expression already in the export, by its number
+    if (t.let) return this.expr({ letE: { body: this.term(t.let[3]), name: this.name(t.let[0]), nondep: false, type: this.term(t.let[1]), value: this.term(t.let[2]) } });
     if (t.b !== undefined) return this.expr({ bvar: t.b });
     if (t.s !== undefined) return this.expr({ sort: this.level(t.s) });
     if (t.c !== undefined) return this.expr({ const: { name: this.name(t.c), us: (t.us ?? []).map((u) => this.level(u)) } });

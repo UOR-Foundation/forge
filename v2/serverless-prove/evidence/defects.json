@@ -1,0 +1,40 @@
+[
+ {
+  "defect": "the tab stops binding definitions: no defining equations are declared",
+  "exit": 1,
+  "failed": [
+   "every planted bundle fault is refused"
+  ],
+  "restored": true
+ },
+ {
+  "defect": "a record is admitted under any key",
+  "exit": 1,
+  "failed": [
+   "a record is admitted only under the key the tab computed, for the theorem asked, with bytes of its address"
+  ],
+  "restored": true
+ },
+ {
+  "defect": "the axioms observed need not equal the declared ones",
+  "exit": 1,
+  "failed": [
+   "the spec's faults are refused when bound to the original proofs"
+  ],
+  "restored": true
+ },
+ {
+  "defect": "the tab's statement is replaced by the bundle's own: the binding proves whatever the bundle states",
+  "exit": 1,
+  "failed": [
+   "the spec's faults are refused when bound to the original proofs",
+   "every planted bundle fault is refused"
+  ],
+  "restored": true
+ },
+ {
+  "after": "all restored",
+  "exit": 0,
+  "pass": "9"
+ }
+]

@@ -39,12 +39,16 @@ export const bundleFaults = {
   // clearAdvances closed by sorryAx: an axiom the spec does not declare.
   "proof by an undeclared axiom": (payment) => rewriteSorry(payment),
   // breaksEmpty redefined as constantly false, and emptyIgnored proved by reflexivity against that: a bundle the
-  // kernel accepts, whose definition is not the spec's.
+  // kernel accepts, whose definition is not the spec's. The proof also mentions a library theorem that uses exactly
+  // the axioms the spec declares (propext, Quot.sound), so neither the kernel nor the axiom audit can refuse it: only
+  // the binding of breaksEmpty to the spec's equation can.
   "definition altered": (guests) => {
-    const State = C("PrismTextRequest.App.State"), Str = C("String");
+    const State = C("PrismTextRequest.App.State"), Str = C("String"), ex = parse(guests);
+    const lemma = "Nat.one_and_eq_mod_two", lemmaType = ex.decls.get(lemma).record.type;
+    const proof = { let: ["h", { raw: lemmaType }, C(lemma), A(C("Eq.refl", [{ succ: 0 }]), C("Bool"), C("Bool.false"))] };
     return rewrite(guests, [
       { name: "PrismTextRequest.App.breaksEmpty", value: Lam("state", State, Lam("words", Str, C("Bool.false"))) },
-      { name: "PrismTextRequest.App.emptyIgnored", value: Lam("state", State, Lam("words", Str, A(C("Eq.refl", [{ succ: 0 }]), C("Bool"), C("Bool.false")))) },
+      { name: "PrismTextRequest.App.emptyIgnored", value: Lam("state", State, Lam("words", Str, proof)) },
     ]);
   },
   // A second declaration of a library name.

@@ -1,0 +1,12 @@
+{
+ "what": "bench.html?runs=12 in the Claude desktop in-app browser, each run a new dedicated module worker; milliseconds; median and worst over 12 runs. The pane was hidden and other sessions were building, so the numbers are pessimistic.",
+ "summary": {"viewport":"0x0 (pane hidden)","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/5.1231.2 Chrome/156.0.8078.75 Safari/537.36 MSIX","fetchMs":262,"ready":{"median":280,"worst":330,"n":12},"roundTrip":{"median":4659,"worst":5953,"n":12},"admitBundle":{"median":9,"worst":16,"n":12},"guestsFirst":{"median":1196,"worst":1655,"n":12},"guestsWhole":{"median":535,"worst":727,"n":12},"guestsKernel":{"median":420,"worst":570,"n":12},"paymentFirst":{"median":1151,"worst":1365,"n":12},"paymentWhole":{"median":464,"worst":610,"n":12},"editTrue":{"median":470,"worst":593,"n":12},"editFalse":{"median":530,"worst":811,"n":12},"cachedVerdict":{"median":0,"worst":1,"n":12},"wasmMemoryMB":{"median":102,"worst":102,"n":12},"heapMB":{"note":"performance.memory is not available in a worker"},"verdicts":{"guests":["startsEmpty:kernel-checked","clearEmpties:kernel-checked","emptyIgnored:kernel-checked","longIgnored:kernel-checked","staleIgnored:kernel-checked"],"payment":["viewKeepsRevision:kernel-checked","clearAdvances:kernel-checked"],"edits":{"true":{"verdict":"kernel-checked","keyChanged":true},"false":{"verdict":"refused","keyChanged":true}},"cachedHit":true},"crossOriginIsolated":false,"sharedArrayBuffer":false,"workerNetwork":"refused"},
+ "readyParts": "per run: verify and compile the checker 19 to 26 ms; parse the library 231 to 304 ms",
+ "perRun": {
+  "ready": [317,266,330,280,305,263,250,253,253,293,319,323],
+  "guestsWhole": [727,711,535,577,506,454,501,520,499,693,627,672],
+  "paymentWhole": [464,569,427,496,428,407,390,463,575,601,610,570],
+  "editTrue": [500,539,397,470,402,404,364,477,434,593,550,586],
+  "editFalse": [811,596,463,521,537,467,427,528,530,621,640,579]
+ }
+}

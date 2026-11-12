@@ -1,0 +1,44 @@
+[
+ {
+  "label": "checker (nanoda wasm)",
+  "raw": 834536,
+  "gzip": 252067,
+  "brotli": 188775
+ },
+ {
+  "label": "tab scripts (tab, bind, emit, export, records, worker, kernel host)",
+  "raw": 58014,
+  "gzip": 19737,
+  "brotli": 17463
+ },
+ {
+  "label": "pinned library (Init + LexLean runtime closure), once per toolchain",
+  "raw": 25745953,
+  "gzip": 4060412,
+  "brotli": 2716493
+ },
+ {
+  "label": "guests proof bundle (its own part)",
+  "raw": 526935,
+  "gzip": 76929,
+  "brotli": 50134
+ },
+ {
+  "label": "payment proof bundle (its own part)",
+  "raw": 510280,
+  "gzip": 72560,
+  "brotli": 46840
+ },
+ {
+  "label": "guests whole export, for comparison",
+  "raw": 26272888,
+  "gzip": 4137137,
+  "brotli": 2766099
+ },
+ {
+  "label": "manifest and records",
+  "raw": 2229,
+  "gzip": 843,
+  "brotli": 752
+ }
+]
