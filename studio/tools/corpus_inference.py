@@ -121,6 +121,10 @@ if manifest_path.exists():
     absent = [f["path"] for f in manifest["files"] if not (root / "shell" / f["path"]).is_file()]
     if absent:
         sys.exit(f"shell/manifest.json lists files the shell does not have, so the worker could not install: {absent}")
+    # The same failure on the site: the Pages artifact leaves dotfiles out, so a listed dotfile 404s there.
+    unserved = [f["path"] for f in manifest["files"] if any(s.startswith(".") for s in f["path"].split("/"))]
+    if unserved:
+        sys.exit(f"shell/manifest.json lists files the Pages artifact leaves out, so the worker could not install on the site: {unserved}")
     bad = [f["path"] for f in manifest["files"] if hashlib.sha256((root / "shell" / f["path"]).read_bytes()).hexdigest() != f["sha256"]]
     if bad:
         sys.exit(f"shell/manifest.json digests differ from hashlib on: {bad}")
