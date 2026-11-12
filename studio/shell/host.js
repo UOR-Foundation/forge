@@ -1021,6 +1021,8 @@ const saveRules = async (appId, state, expected, signal) => saveBoundRules(await
 // null when the turn wrote none, and the turn is then a decision's (rulesAfterTurn).
 async function appAfterTurn(appId, text, options = {}) {
   const appModule = appShape.moduleFromTurn(text);
+  // Lines that still do not read change nothing; the chat says what the reader said.
+  if (appModule && appModule.notation && !appModule.text) return { changed: 0, source: options.source || await captureProjectSource(await dbReady, appId), card: appShape.notationCard(appModule.issues) };
   if (!appModule || !appShape.isAppShape(appModule.text)) return null;
   assertGenerationActive(options.signal);
   await coreReady;
@@ -1029,6 +1031,7 @@ async function appAfterTurn(appId, text, options = {}) {
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
   const appSource = appModule.text.trim() + "\n";
   stage(appShape.SOURCE_PATH, appSource);
+  if (appModule.notation) stage(appShape.NOTATION_PATH, appModule.notation);
   // The phase is the kernel's answer: an edit sends the app back to drafting, a check that passes
   // moves it to checked. A check that could not be made leaves it drafting and says why.
   let known = null;
@@ -1345,7 +1348,7 @@ async function chatTurn(chatId, intent) {
     const moduleNow = [...new Map(projectSource.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p));
     const request = [
       { role: "system", content: prism.SPEC_RULES },
-      { role: "user", content: moduleNow && appShape.isAppShape(moduleNow[1]) ? appShape.moduleContext(moduleNow[1]) : prism.moduleContext(moduleNow ? moduleNow[1] : null) },
+      { role: "user", content: moduleNow && appShape.isAppShape(moduleNow[1]) ? appShape.moduleContext(moduleNow[1], new Map(projectSource.files).get(appShape.NOTATION_PATH)) : prism.moduleContext(moduleNow ? moduleNow[1] : null) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
@@ -1401,6 +1404,17 @@ async function chatTurn(chatId, intent) {
       // A stateful app is checked by the hosted checker, not read by the decision reader. A refusal gets
       // one repair turn from the same model, with the checker's words, streamed into this answer.
       const wrote = appShape.moduleFromTurn(before);
+      // Lines in the app notation are read here, not checked: the module they stand for is Forge's own
+      // writing. Lines that do not read get one repair turn, with the reader's words.
+      if (wrote && wrote.notation) {
+        if (wrote.issues.length) {
+          const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: appShape.notationRepairPrompt(wrote.issues) }] };
+          const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
+          settleText();
+          await onText(before + "\n\n" + text);
+        }
+        return;
+      }
       if (wrote && appShape.isAppShape(wrote.text)) {
         const verdict = await checkAppModule(wrote.text).catch(() => null);
         if (verdict && !verdict.ok) {
@@ -1441,10 +1455,7 @@ async function chatTurn(chatId, intent) {
       // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
       const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
-      // A first attempt thinks only if the kernel allows it (think 0, FK-22). A kernel that does not know the
-      // question answers neither word, and the model is then left as it is.
-      const think = (await kernelReady.then((k) => k.ask("think 0")).catch(() => "")) !== "deny";
-      const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking, { think });
+      const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
       settleText();
       await onText(text);
       await repaired(body);

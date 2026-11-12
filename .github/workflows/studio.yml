@@ -115,6 +115,8 @@ jobs:
         run: node --test tools/live_app_check.test.mjs
       - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
         run: node --test tools/live_app_prove.test.mjs
+      - name: The app notation always expands to the same checked module, and lines that do not read are refused
+        run: node --test tools/live_notation.test.mjs
       - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
         run: |
           node tools/live_proof.mjs --check
