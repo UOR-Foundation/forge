@@ -1,0 +1,9 @@
+{
+  "name": "foundry-v2-compare",
+  "private": true,
+  "type": "module",
+  "description": "Development only: holds the interpreter to a compiled guest.",
+  "dependencies": {
+    "prism-code": "0.7.2"
+  }
+}

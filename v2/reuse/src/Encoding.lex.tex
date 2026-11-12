@@ -1,0 +1,141 @@
+\begin{lexlean}{Encoding}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+definition{
+  name: byteOf,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (match (prim slice 0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff (prim remainder value 256 0 : Nat) 1 : (Option Bytes))
+    | Option.none => 0x
+    | Option.some byte => byte)
+}
+
+definition{
+  name: bytesFixed,
+  parameters: [value : Nat, width : Nat],
+  result: Bytes,
+  body: (match width
+    | Nat.zero => 0x
+    | Nat.succ rest => (prim append (bytesFixed (prim quotient value 256 0 : Nat) rest) (byteOf value) : Bytes)),
+  recursive_argument: width
+}
+
+definition{
+  name: addressBytes,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (bytesFixed value 32)
+}
+
+definition{
+  name: countBytes,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (bytesFixed value 8)
+}
+
+definition{
+  name: framed,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (prim append (countBytes (prim length bytes : Nat)) bytes : Bytes)
+}
+
+definition{
+  name: addresses,
+  parameters: [list : (List Nat)],
+  result: Bytes,
+  body: (match list
+    | List.nil => 0x
+    | List.cons head rest => (prim append (addressBytes head) (addresses rest) : Bytes)),
+  recursive_argument: list
+}
+
+definition{
+  name: insertOrdered,
+  parameters: [value : Nat, list : (List Nat)],
+  result: (List Nat),
+  body: (match list
+    | List.nil => (cons value (nil Nat))
+    | List.cons head rest => (cons (if (value <=? head) then value else head) (insertOrdered (if (value <=? head) then head else value) rest))),
+  recursive_argument: list
+}
+
+definition{
+  name: ordered,
+  parameters: [list : (List Nat)],
+  result: (List Nat),
+  body: (match list
+    | List.nil => (nil Nat)
+    | List.cons head rest => (insertOrdered head (ordered rest))),
+  recursive_argument: list
+}
+
+definition{
+  name: ascendingCode,
+  parameters: [list : (List Nat)],
+  result: Nat,
+  body: (match list
+    | List.nil => 0
+    | List.cons head rest => (match rest
+      | List.nil => 0
+      | List.cons next more => (if (head <? next) then (ascendingCode rest) else 1))),
+  recursive_argument: list
+}
+
+definition{
+  name: sameList,
+  parameters: [left : (List Nat), right : (List Nat)],
+  result: Bool,
+  body: (match left
+    | List.nil => (match right
+      | List.nil => true
+      | List.cons head rest => false)
+    | List.cons head rest => (match right
+      | List.nil => false
+      | List.cons other more => ((head =? other) && (sameList rest more)))),
+  recursive_argument: left
+}
+
+theorem{
+  name: pairOrderFree,
+  parameters: [a : Nat, b : Nat],
+  statement: ((sameList (ordered (cons a (cons b (nil Nat)))) (ordered (cons b (cons a (nil Nat))))) = true),
+  proof: linear_arithmetic{definitions: [insertOrdered, ordered, sameList]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+theorem{
+  name: tripleSwapFirst,
+  parameters: [a : Nat, b : Nat, c : Nat],
+  statement: ((sameList (ordered (cons a (cons b (cons c (nil Nat))))) (ordered (cons b (cons a (cons c (nil Nat)))))) = true),
+  proof: linear_arithmetic{definitions: [insertOrdered, ordered, sameList]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+theorem{
+  name: tripleSwapLast,
+  parameters: [a : Nat, b : Nat, c : Nat],
+  statement: ((sameList (ordered (cons a (cons b (cons c (nil Nat))))) (ordered (cons a (cons c (cons b (nil Nat)))))) = true),
+  proof: linear_arithmetic{definitions: [insertOrdered, ordered, sameList]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAscending,
+  parameters: [a : Nat, b : Nat, rest : (List Nat)],
+  result: Bool,
+  body: ((b <=? a) && ((ascendingCode (cons a (cons b rest))) =? 0))
+}
+
+theorem{
+  name: unorderedOrDuplicateRefused,
+  parameters: [a : Nat, b : Nat, rest : (List Nat)],
+  statement: ((breaksAscending a b rest) = false),
+  proof: linear_arithmetic{definitions: [ascendingCode, breaksAscending]},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

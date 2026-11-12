@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Probe preview</title>
+<style>
+  :root { color-scheme: light dark; --ink: #16130f; --ground: #f6f3ee; --line: #d8d2c8; --accent: #b4532a; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #efeae2; --ground: #16130f; --line: #3a342c; --accent: #e08a5e; } }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--ground); }
+  main { max-width: 28rem; margin: 0 auto; padding: 2rem 1rem; }
+  .col { display: grid; gap: 1rem; padding: 1.5rem; border: 1px solid var(--line); border-radius: 12px; }
+  .text { font-weight: 600; font-size: 1.25rem; margin: 0; }
+  output { font-size: 3rem; font-variant-numeric: tabular-nums; }
+  button { font: inherit; min-height: 44px; padding: 0 1rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; font-size: .875rem; margin-top: 2rem; }
+  dt { opacity: .7; } dd { margin: 0; font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+  <div id="app" aria-live="polite"></div>
+  <dl>
+    <dt>Source</dt><dd>probe/Probe.json, interpreted in this tab</dd>
+    <dt>Theorems stated</dt><dd id="theorems"></dd>
+    <dt>Last request</dt><dd id="request"></dd>
+    <dt>Last response</dt><dd id="response"></dd>
+    <dt>Effects</dt><dd id="effects"></dd>
+    <dt>Load to first view</dt><dd id="load"></dd>
+    <dt>Event to view</dt><dd id="timing"></dd>
+  </dl>
+</main>
+<script type="module">
+import { load } from "./interp.mjs";
+import { decodeResponse } from "./wire.mjs";
+
+const started = performance.now();
+const enc = new TextEncoder(), dec = new TextDecoder();
+const $ = (id) => document.getElementById(id);
+const root = $("app");
+const app = load(await (await fetch("../probe/Probe.json")).json());
+$("theorems").textContent = app.theorems.join(", ");
+
+let state = "0001", drawn = "";
+
+// Same shape as last time: change only the words. A new shape: rebuild.
+function draw(nodes) {
+  const shape = nodes.map((n) => n.kind).join();
+  if (shape !== drawn) {
+    root.textContent = "";
+    const stack = [root];
+    for (const n of nodes) {
+      if (n.kind === "open") { const el = document.createElement("div"); el.className = "col"; stack.at(-1).append(el); stack.push(el); }
+      else if (n.kind === "close") stack.pop();
+      else { const el = document.createElement(n.kind === "button" ? "button" : n.kind === "number" ? "output" : "p"); el.className = n.kind; el.dataset.leaf = ""; stack.at(-1).append(el); }
+    }
+    drawn = shape;
+  }
+  const leaves = root.querySelectorAll("[data-leaf]");
+  nodes.filter((n) => n.kind !== "open" && n.kind !== "close").forEach((n, i) => {
+    const el = leaves[i], words = n.kind === "number" ? String(n.value) : n.label;
+    if (el.textContent !== words) el.textContent = words;
+    if (n.kind === "button") el.dataset.event = n.event;
+  });
+}
+
+function send(event) {
+  const t0 = performance.now();
+  const request = state + event;
+  const bytes = app.call("dispatch", enc.encode(request));
+  const response = decodeResponse(bytes);
+  $("request").textContent = request;
+  $("response").textContent = dec.decode(bytes);
+  if (response.refused) { $("effects").textContent = "refused: " + response.refused; return; }
+  state = response.state;
+  draw(response.nodes);
+  $("effects").textContent = response.effects.map((e) => e.kind + (e.value === undefined ? "" : " " + e.value)).join(", ") || "none";
+  const ms = performance.now() - t0;
+  $("timing").textContent = ms.toFixed(2) + " ms";
+  return ms;
+}
+
+root.addEventListener("click", (e) => { const b = e.target.closest("button[data-event]"); if (b) send(b.dataset.event); });
+
+// The first view: set the stride to its own value, an event that changes nothing.
+send("02" + state.slice(2));
+$("load").textContent = (performance.now() - started).toFixed(1) + " ms";
+window.probe = { send, get state() { return state; } };
+</script>
+</body>
+</html>

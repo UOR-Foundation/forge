@@ -1,0 +1,269 @@
+\begin{lexlean}{ProofCache}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Query,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: address, type: Nat}, {name: toolchain, type: Nat}, {name: claim, type: Nat}]
+}
+
+structure{
+  name: ReuseRecord,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: address, type: Nat}, {name: toolchain, type: Nat}, {name: claim, type: Nat}, {name: attestation, type: (Option Nat)}]
+}
+
+inductive{
+  name: Refusal,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: addressMismatch, fields: []},
+    {name: toolchainMismatch, fields: []},
+    {name: claimMismatch, fields: []},
+    {name: attestationMissing, fields: []},
+    {name: attestationUnverified, fields: []}
+  ]
+}
+
+inductive{
+  name: Admission,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: admitted, fields: [Nat]}, {name: refused, fields: [Refusal]}]
+}
+
+inductive{
+  name: Step,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: consult, fields: []}, {name: reuse, fields: [Nat]}, {name: work, fields: []}]
+}
+
+definition{
+  name: codeAdmitted,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: codeAddressMismatch,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: codeToolchainMismatch,
+  parameters: [],
+  result: Nat,
+  body: 2
+}
+
+definition{
+  name: codeClaimMismatch,
+  parameters: [],
+  result: Nat,
+  body: 3
+}
+
+definition{
+  name: codeAttestationMissing,
+  parameters: [],
+  result: Nat,
+  body: 4
+}
+
+definition{
+  name: codeAttestationUnverified,
+  parameters: [],
+  result: Nat,
+  body: 5
+}
+
+definition{
+  name: admissionCode,
+  parameters: [query : Query, entry : ReuseRecord, observed : (Option Nat)],
+  result: Nat,
+  body: (if (not ((project query address) =? (project entry address))) then (codeAddressMismatch) else (if (not ((project query toolchain) =? (project entry toolchain))) then (codeToolchainMismatch) else (if (not ((project query claim) =? (project entry claim))) then (codeClaimMismatch) else (match (project entry attestation)
+    | Option.none => (codeAttestationMissing)
+    | Option.some attestation => (match observed
+      | Option.none => (codeAttestationUnverified)
+      | Option.some seen => (if (attestation =? seen) then (codeAdmitted) else (codeAttestationUnverified)))))))
+}
+
+definition{
+  name: refusalOf,
+  parameters: [code : Nat],
+  result: Refusal,
+  body: (if (code =? (codeAddressMismatch)) then (ctor Refusal.addressMismatch) else (if (code =? (codeToolchainMismatch)) then (ctor Refusal.toolchainMismatch) else (if (code =? (codeClaimMismatch)) then (ctor Refusal.claimMismatch) else (if (code =? (codeAttestationMissing)) then (ctor Refusal.attestationMissing) else (ctor Refusal.attestationUnverified)))))
+}
+
+definition{
+  name: admitRecord,
+  parameters: [query : Query, entry : ReuseRecord, observed : (Option Nat)],
+  result: Admission,
+  body: (if ((admissionCode query entry observed) =? (codeAdmitted)) then (match (project entry attestation)
+    | Option.none => (ctor Admission.refused (ctor Refusal.attestationMissing))
+    | Option.some attestation => (ctor Admission.admitted attestation)) else (ctor Admission.refused (refusalOf (admissionCode query entry observed))))
+}
+
+definition{
+  name: stepConsult,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: stepReuse,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: stepWork,
+  parameters: [],
+  result: Nat,
+  body: 2
+}
+
+definition{
+  name: nextStepCode,
+  parameters: [consulted : Nat, code : Nat],
+  result: Nat,
+  body: (if (consulted =? 1) then (if (code =? (codeAdmitted)) then (stepReuse) else (stepWork)) else (stepConsult))
+}
+
+definition{
+  name: nextStep,
+  parameters: [consulted : Nat, query : Query, stored : (Option ReuseRecord), observed : (Option Nat)],
+  result: Step,
+  body: (match stored
+    | Option.none => (if (consulted =? 1) then (ctor Step.work) else (ctor Step.consult))
+    | Option.some found => (if ((nextStepCode consulted (admissionCode query found observed)) =? (stepReuse)) then (match (admitRecord query found observed)
+      | Admission.admitted attestation => (ctor Step.reuse attestation)
+      | Admission.refused reason => (ctor Step.work)) else (if ((nextStepCode consulted (admissionCode query found observed)) =? (stepWork)) then (ctor Step.work) else (ctor Step.consult))))
+}
+
+definition{
+  name: breaksAddress,
+  parameters: [query : Query, entry : ReuseRecord, observed : (Option Nat)],
+  result: Bool,
+  body: ((not ((project query address) =? (project entry address))) && ((admissionCode query entry observed) =? (codeAdmitted)))
+}
+
+theorem{
+  name: noAdmissionOnAddressMismatch,
+  parameters: [query : Query, entry : ReuseRecord, observed : (Option Nat)],
+  statement: ((breaksAddress query entry observed) = false),
+  proof: linear_arithmetic{definitions: [admissionCode, breaksAddress, codeAddressMismatch, codeAdmitted, codeAttestationMissing, codeAttestationUnverified, codeClaimMismatch, codeToolchainMismatch]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksToolchain,
+  parameters: [query : Query, entry : ReuseRecord, observed : (Option Nat)],
+  result: Bool,
+  body: ((not ((project query toolchain) =? (project entry toolchain))) && ((admissionCode query entry observed) =? (codeAdmitted)))
+}
+
+theorem{
+  name: noAdmissionOnToolchainMismatch,
+  parameters: [query : Query, entry : ReuseRecord, observed : (Option Nat)],
+  statement: ((breaksToolchain query entry observed) = false),
+  proof: linear_arithmetic{definitions: [admissionCode, breaksToolchain, codeAddressMismatch, codeAdmitted, codeAttestationMissing, codeAttestationUnverified, codeClaimMismatch, codeToolchainMismatch]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksClaim,
+  parameters: [query : Query, entry : ReuseRecord, observed : (Option Nat)],
+  result: Bool,
+  body: ((not ((project query claim) =? (project entry claim))) && ((admissionCode query entry observed) =? (codeAdmitted)))
+}
+
+theorem{
+  name: noAdmissionOnClaimMismatch,
+  parameters: [query : Query, entry : ReuseRecord, observed : (Option Nat)],
+  statement: ((breaksClaim query entry observed) = false),
+  proof: linear_arithmetic{definitions: [admissionCode, breaksClaim, codeAddressMismatch, codeAdmitted, codeAttestationMissing, codeAttestationUnverified, codeClaimMismatch, codeToolchainMismatch]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+theorem{
+  name: missingAttestationNeverAdmitted,
+  parameters: [query : Query, address : Nat, toolchain : Nat, claim : Nat, observed : (Option Nat)],
+  statement: (((admissionCode query (record ReuseRecord {address := address, toolchain := toolchain, claim := claim, attestation := (ctor Option.none [Nat])}) observed) =? (codeAdmitted)) = false),
+  proof: linear_arithmetic{definitions: [admissionCode, codeAddressMismatch, codeAdmitted, codeAttestationMissing, codeAttestationUnverified, codeClaimMismatch, codeToolchainMismatch]},
+  axioms: [Quot.sound, propext]
+}
+
+theorem{
+  name: unverifiedAttestationNeverAdmitted,
+  parameters: [query : Query, entry : ReuseRecord],
+  statement: (((admissionCode query entry (ctor Option.none [Nat])) =? (codeAdmitted)) = false),
+  proof: linear_arithmetic{definitions: [admissionCode, codeAddressMismatch, codeAdmitted, codeAttestationMissing, codeAttestationUnverified, codeClaimMismatch, codeToolchainMismatch]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksAttestation,
+  parameters: [query : Query, address : Nat, toolchain : Nat, claim : Nat, stored : Nat, seen : Nat],
+  result: Bool,
+  body: ((not (stored =? seen)) && ((admissionCode query (record ReuseRecord {address := address, toolchain := toolchain, claim := claim, attestation := (ctor Option.some [Nat] stored)}) (ctor Option.some [Nat] seen)) =? (codeAdmitted)))
+}
+
+theorem{
+  name: differentAttestationNeverAdmitted,
+  parameters: [query : Query, address : Nat, toolchain : Nat, claim : Nat, stored : Nat, seen : Nat],
+  statement: ((breaksAttestation query address toolchain claim stored seen) = false),
+  proof: linear_arithmetic{definitions: [admissionCode, breaksAttestation, codeAddressMismatch, codeAdmitted, codeAttestationMissing, codeAttestationUnverified, codeClaimMismatch, codeToolchainMismatch]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksExact,
+  parameters: [query : Query, entry : ReuseRecord, stored : Nat, seen : Nat],
+  result: Bool,
+  body: ((((((project query address) =? (project entry address)) && ((project query toolchain) =? (project entry toolchain))) && ((project query claim) =? (project entry claim))) && (stored =? seen)) && (not ((admissionCode query (record ReuseRecord {address := (project entry address), toolchain := (project entry toolchain), claim := (project entry claim), attestation := (ctor Option.some [Nat] stored)}) (ctor Option.some [Nat] seen)) =? (codeAdmitted))))
+}
+
+theorem{
+  name: exactRecordAdmitted,
+  parameters: [query : Query, entry : ReuseRecord, stored : Nat, seen : Nat],
+  statement: ((breaksExact query entry stored seen) = false),
+  proof: linear_arithmetic{definitions: [admissionCode, breaksExact, codeAddressMismatch, codeAdmitted, codeAttestationMissing, codeAttestationUnverified, codeClaimMismatch, codeToolchainMismatch]},
+  axioms: [Quot.sound, propext]
+}
+
+theorem{
+  name: consultBeforeWork,
+  parameters: [consulted : Nat, code : Nat],
+  statement: ((((nextStepCode consulted code) =? (stepConsult)) || (consulted =? 1)) = true),
+  proof: linear_arithmetic{definitions: [codeAdmitted, nextStepCode, stepConsult, stepReuse, stepWork]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksReuse,
+  parameters: [consulted : Nat, code : Nat],
+  result: Bool,
+  body: (((nextStepCode consulted code) =? (stepReuse)) && (not (code =? (codeAdmitted))))
+}
+
+theorem{
+  name: reuseOnlyWhenAdmitted,
+  parameters: [consulted : Nat, code : Nat],
+  statement: ((breaksReuse consulted code) = false),
+  proof: linear_arithmetic{definitions: [breaksReuse, codeAdmitted, nextStepCode, stepConsult, stepReuse, stepWork]},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

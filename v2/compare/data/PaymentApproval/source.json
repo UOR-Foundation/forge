@@ -1,0 +1,10 @@
+{
+ "draft": "prism-app/5c4168f22139cd89ea45b6379aa3feb08654afe9777251e9746a8d68aeb35a5a",
+ "profile": "prism-app",
+ "files": [
+  "src/Foundation/Bytes.lex.tex",
+  "src/Foundation/Utf8.lex.tex",
+  "src/Foundation/View/Text/V1/Model.lex.tex",
+  "src/PaymentApproval.lex.tex"
+ ]
+}

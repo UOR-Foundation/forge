@@ -1,0 +1,111 @@
+\begin{lexlean}{TextRequest}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\importmodule{Probe}
+\importmodule{Foundation.View.Text.V1.Model}
+\importmodule{Foundation.View.Browser.V1.Model}
+\importmodule{Foundation.View.Browser.V1.Wire}
+\title{Text application model}
+\begin{semanticmodule}
+definition{
+  name: application,
+  parameters: [],
+  result: Foundation.View.Text.V1.Model::TextApplication,
+  body: (record Foundation.View.Text.V1.Model::TextApplication {profile := "prismpm/text-application/1", name := "Counter view probe", cargoName := "prism-text-request", cargoVersion := "0.1.0", cargoDescription := "A counter that answers a browser presentation to an intent.", cargoRepository := "https://github.com/UOR-Foundation/foundry", cargoHomepage := "https://github.com/UOR-Foundation/foundry", libraryRoots := (cons "PrismTextRequest.TextRequest.dispatch" (nil String)), acceptanceVectors := (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x30303031, response := 0x30303031383730313030303030303031303038363832303038323030303038323031383330333031303038323031383230343631333038323031383230323033383230343836303830313031663566353830383230343836303830323032663566343830}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x303530328401050180, response := 0x30373032383730313037303030303031303038363832303038323030303038323031383330333031303038323031383230343631333738323031383230323033383230343836303830313031663566353830383230343836303830323032663566343830}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x303930338401090280, response := 0x30303033383730313030303030303031303038363832303038323030303038323031383330333031303038323031383230343631333038323031383230323033383230343836303830313031663566353830383230343836303830323032663566343830}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x313730318401170180, response := 0x3138303138373031313831383030303030313030383638323030383230303030383230313833303330313030383230313832303436323332333438323031383230323033383230343836303830313031663566353830383230343836303830323032663566343830}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x36333031840118630180, response := 0x36343031383730313138363430303030303130303836383230303832303030303832303138333033303130303832303138323034363333313330333038323031383230323033383230343836303830313031663566353830383230343836303830323032663566343830}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x66653031840118fe0180, response := 0x66663031383730313138666630303030303130303836383230303832303030303832303138333033303130303832303138323034363333323335333538323031383230323033383230343836303830313031663566353830383230343836303830323032663566343830}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x66663031840118ff0180, response := 0x6f766572666c6f77}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x303530328401050380, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x303530328401040180, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x30353032840105018000, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x3035303284010501, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x30353032840118050180, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7a7a3032, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x303530, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161, response := 0x696e76616c6964}) (nil Foundation.View.Text.V1.Model::AcceptanceVector))))))))))))))))))), entryRoot := "PrismTextRequest.TextRequest.dispatch", coreContract := "hologram:guest/core-wasm@1", requestMaximum := (64 : UInt32), responseMaximum := (256 : UInt32), guestAllocationMaximum := (128 : UInt32), capabilitiesEmpty := true, fatArchive := true, primaryLayer := (0 : UInt8), viewLayer := (1 : UInt8), view := (record Foundation.View.Text.V1.Model::TextView {title := "Counter view probe", heading := "Counter view probe", inputLabel := "Request", submitLabel := "Submit", outputLabel := "Response", inputError := "Invalid request", responseError := "Invalid response"})})
+}
+
+definition{
+  name: catalogue,
+  parameters: [],
+  result: (List String),
+  body: (cons "Counter" (cons "Add" (cons "Reset" (cons "Actions" (nil String)))))
+}
+
+definition{
+  name: digit,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (if (value =? 8) then 0x38 else (if (value =? 7) then 0x37 else (if (value =? 6) then 0x36 else (if (value =? 5) then 0x35 else (if (value =? 4) then 0x34 else (if (value =? 3) then 0x33 else (if (value =? 2) then 0x32 else (if (value =? 1) then 0x31 else (if (value =? 0) then 0x30 else 0x39)))))))))
+}
+
+definition{
+  name: decimal,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (if (value <? 10) then (digit value) else (if (value <? 100) then (prim append (digit (prim quotient value 10 0 : Nat)) (digit (prim remainder value 10 0 : Nat)) : Bytes) else (prim append (digit (prim quotient value 100 0 : Nat)) (prim append (digit (prim remainder (prim quotient value 10 0 : Nat) 10 0 : Nat)) (digit (prim remainder value 10 0 : Nat)) : Bytes) : Bytes)))
+}
+
+definition{
+  name: countText,
+  parameters: [value : Nat],
+  result: String,
+  body: (match (prim utf8_decode (decimal value) : (Option String))
+    | Option.none => ""
+    | Option.some words => words),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: present,
+  parameters: [state : Probe::State],
+  result: Foundation.View.Browser.V1.Model::Presentation,
+  body: (record Foundation.View.Browser.V1.Model::Presentation {revision := (project state count), phase := 0, status := 0, live := 1, focus := 0, nodes := (cons (record Foundation.View.Browser.V1.Model::Node {parent := 0, content := (ctor Foundation.View.Browser.V1.Model::Content.Section 0)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 1, content := (ctor Foundation.View.Browser.V1.Model::Content.Heading 1 0)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 1, content := (ctor Foundation.View.Browser.V1.Model::Content.Text (countText (project state count)))}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 1, content := (ctor Foundation.View.Browser.V1.Model::Content.Form 3)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 4, content := (ctor Foundation.View.Browser.V1.Model::Content.Action 1 1 true true (nil Nat))}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 4, content := (ctor Foundation.View.Browser.V1.Model::Content.Action 2 2 true false (nil Nat))}) (nil Foundation.View.Browser.V1.Model::Node)))))))}),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: eventOf,
+  parameters: [action : Nat],
+  result: (Option Probe::Event),
+  body: (if (action =? 1) then (ctor Option.some [Probe::Event] (ctor Probe::Event.increment)) else (if (action =? 2) then (ctor Option.some [Probe::Event] (ctor Probe::Event.reset)) else (ctor Option.none [Probe::Event])))
+}
+
+definition{
+  name: hexFrame,
+  parameters: [frame : Bytes, offset : Nat, fuel : Nat],
+  result: Bytes,
+  body: (match fuel
+    | Nat.zero => 0x
+    | Nat.succ rest => (match (Probe::byteAsNat frame offset)
+      | Option.none => 0x
+      | Option.some value => (prim append (Probe::hexByte value) (hexFrame frame (offset + 1) rest) : Bytes))),
+  axioms: [Quot.sound, propext],
+  recursive_argument: fuel
+}
+
+definition{
+  name: respond,
+  parameters: [state : Probe::State],
+  result: Bytes,
+  body: (if (255 <? (project state count)) then 0x6f766572666c6f77 else (match (Foundation.View.Browser.V1.Wire::writeViewPresentation (present state))
+    | Result.error cause => 0x696e76616c6964
+    | Result.ok frame => (prim append (prim append (Probe::hexByte (project state count)) (Probe::hexByte (project state stride)) : Bytes) (hexFrame frame 0 (prim length frame : Nat)) : Bytes))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: act,
+  parameters: [state : Probe::State, value : Bytes],
+  result: Bytes,
+  body: (match (Foundation.View.Browser.V1.Wire::readViewIntent (record Foundation.View.Browser.V1.Wire::ViewWireInput {bytes := value}) 4 64)
+    | Result.error cause => 0x696e76616c6964
+    | Result.ok read => (if ((project read cursor) =? (prim length value : Nat)) then (if ((project (project read value) revision) =? (project state count)) then (match (eventOf (project (project read value) action))
+      | Option.none => 0x696e76616c6964
+      | Option.some event => (respond (project (Probe::step state event) state))) else 0x696e76616c6964) else 0x696e76616c6964)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: dispatch,
+  parameters: [value : Bytes],
+  result: Bytes,
+  body: (if (64 <? (prim length value : Nat)) then 0x696e76616c6964 else (match (Probe::readHexByte value 0)
+    | Option.none => 0x696e76616c6964
+    | Option.some count => (match (Probe::readHexByte value 2)
+      | Option.none => 0x696e76616c6964
+      | Option.some stride => (if ((prim length value : Nat) =? 4) then (respond (record Probe::State {count := count, stride := stride})) else (act (record Probe::State {count := count, stride := stride}) value))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

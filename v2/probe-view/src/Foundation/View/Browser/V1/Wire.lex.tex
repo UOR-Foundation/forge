@@ -1,0 +1,1869 @@
+\begin{lexlean}{Foundation.View.Browser.V1.Wire}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\importmodule{Foundation.View.Browser.V1.Model}
+\importmodule{Foundation.Bytes}
+\importmodule{Foundation.Codec}
+\importmodule{Foundation.Codec.Cbor.V1.Primitive}
+\title{Browser view wire format}
+\begin{semanticmodule}
+definition{
+  name: viewWireLimits,
+  parameters: [],
+  result: Foundation.Codec.Cbor.V1.Primitive::CborLimits,
+  body: (record Foundation.Codec.Cbor.V1.Primitive::CborLimits {maximumInput := 67108864, maximumOutput := 67108864, maximumBytes := 2097152, maximumText := 67108864, maximumArrayItems := 4096}),
+  axioms: []
+}
+
+structure{
+  name: ViewWireInput,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: bytes, type: Bytes}]
+}
+
+structure{
+  name: ViewWireHeader,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: count, type: Nat}, {name: cursor, type: Nat}]
+}
+
+structure{
+  name: ViewWirePrimitive,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.Codec.Cbor.V1.Primitive::CborValue},
+    {name: cursor, type: Nat}
+  ]
+}
+
+definition{
+  name: viewWireWindow,
+  parameters: [input : ViewWireInput, cursor : Nat],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (cursor <=? (prim length (project input bytes) : Nat))
+    | Bool.false => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.BadCursor))
+    | Bool.true => (match (prim slice (project input bytes) cursor (match ((prim subtract (prim length (project input bytes) : Nat) cursor : Nat) <=? 5)
+        | Bool.false => 5
+        | Bool.true => (prim subtract (prim length (project input bytes) : Nat) cursor : Nat)) : (Option Bytes))
+      | Option.none => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.Truncated))
+      | Option.some window => (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] window))),
+  axioms: []
+}
+
+definition{
+  name: viewWireReadHeader,
+  parameters: [input : ViewWireInput, cursor : Nat, major : Nat],
+  result: (Result ViewWireHeader Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireWindow input cursor)
+    | Result.error wireCause => (ctor Result.error [ViewWireHeader, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+    | Result.ok window => (match (Foundation.Codec.Cbor.V1.Primitive::cborReadHead (record Foundation.Codec::BoundedCursor {bytes := window, offset := 0, limit := (prim length window : Nat)}) (viewWireLimits) major)
+      | Result.error wireCause => (ctor Result.error [ViewWireHeader, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+      | Result.ok header => (ctor Result.ok [ViewWireHeader, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewWireHeader {count := (project header argument), cursor := (cursor + (project (project header cursor) offset))})))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: viewWireReadArray,
+  parameters: [input : ViewWireInput, cursor : Nat, maximum : Nat],
+  result: (Result ViewWireHeader Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireReadHeader input cursor 4)
+    | Result.error wireCause => (ctor Result.error [ViewWireHeader, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+    | Result.ok header => (match ((project header count) <=? maximum)
+      | Bool.false => (ctor Result.error [ViewWireHeader, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+      | Bool.true => (ctor Result.ok [ViewWireHeader, Foundation.Codec.Cbor.V1.Primitive::CborError] header))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: viewWireReadAtom,
+  parameters: [input : ViewWireInput, cursor : Nat],
+  result: (Result ViewWirePrimitive Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireWindow input cursor)
+    | Result.error wireCause => (ctor Result.error [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+    | Result.ok window => (match (Foundation.Codec.Cbor.V1.Primitive::readCborPrimitive (record Foundation.Codec::BoundedCursor {bytes := window, offset := 0, limit := (prim length window : Nat)}) (record Foundation.Codec.Cbor.V1.Primitive::CborLimits {maximumInput := 67108864, maximumOutput := 67108864, maximumBytes := 0, maximumText := 67108864, maximumArrayItems := 4096}))
+      | Result.error wireCause => (ctor Result.error [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+      | Result.ok decoded => (ctor Result.ok [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewWirePrimitive {value := (project decoded value), cursor := (cursor + (project (project decoded cursor) offset))})))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewWireReadNat,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: Nat}, {name: cursor, type: Nat}]
+}
+
+definition{
+  name: readViewWireNat,
+  parameters: [input : ViewWireInput, cursor : Nat],
+  result: (Result ViewWireReadNat Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireReadAtom input cursor)
+    | Result.error wireCause => (ctor Result.error [ViewWireReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+    | Result.ok decoded => (match (project decoded value)
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Unsigned scalar => (ctor Result.ok [ViewWireReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewWireReadNat {value := scalar, cursor := (project decoded cursor)}))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.ByteString scalar => (ctor Result.error [ViewWireReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.TextString scalar => (ctor Result.error [ViewWireReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Boolean scalar => (ctor Result.error [ViewWireReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Null => (ctor Result.error [ViewWireReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewWireReadBool,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: Bool}, {name: cursor, type: Nat}]
+}
+
+definition{
+  name: readViewWireBool,
+  parameters: [input : ViewWireInput, cursor : Nat],
+  result: (Result ViewWireReadBool Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireReadAtom input cursor)
+    | Result.error wireCause => (ctor Result.error [ViewWireReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+    | Result.ok decoded => (match (project decoded value)
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Unsigned scalar => (ctor Result.error [ViewWireReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.ByteString scalar => (ctor Result.error [ViewWireReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.TextString scalar => (ctor Result.error [ViewWireReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Boolean scalar => (ctor Result.ok [ViewWireReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewWireReadBool {value := scalar, cursor := (project decoded cursor)}))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Null => (ctor Result.error [ViewWireReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewWireReadText,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: String}, {name: cursor, type: Nat}]
+}
+
+definition{
+  name: viewWireReadString,
+  parameters: [input : ViewWireInput, cursor : Nat, maximum : Nat, textMode : Bool],
+  result: (Result ViewWirePrimitive Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireReadHeader input cursor (match textMode | Bool.false => 2 | Bool.true => 3))
+    | Result.error wireCause => (ctor Result.error [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+    | Result.ok header => (match ((project header count) <=? maximum)
+      | Bool.false => (ctor Result.error [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+      | Bool.true => (match (prim slice (project input bytes) (project header cursor) (project header count) : (Option Bytes))
+        | Option.none => (ctor Result.error [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.Truncated))
+        | Option.some payload => (match textMode
+          | Bool.false => (ctor Result.ok [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewWirePrimitive {value := (ctor Foundation.Codec.Cbor.V1.Primitive::CborValue.ByteString payload), cursor := ((project header cursor) + (project header count))}))
+          | Bool.true => (match (prim utf8_decode payload : (Option String))
+            | Option.none => (ctor Result.error [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.InvalidUtf8))
+            | Option.some text => (ctor Result.ok [ViewWirePrimitive, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewWirePrimitive {value := (ctor Foundation.Codec.Cbor.V1.Primitive::CborValue.TextString text), cursor := ((project header cursor) + (project header count))}))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewWireText,
+  parameters: [input : ViewWireInput, cursor : Nat],
+  result: (Result ViewWireReadText Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireReadString input cursor 67108864 true)
+    | Result.error wireCause => (ctor Result.error [ViewWireReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] wireCause)
+    | Result.ok decoded => (match (project decoded value)
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Unsigned scalar => (ctor Result.error [ViewWireReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.ByteString scalar => (ctor Result.error [ViewWireReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.TextString scalar => (ctor Result.ok [ViewWireReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewWireReadText {value := scalar, cursor := (project decoded cursor)}))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Boolean scalar => (ctor Result.error [ViewWireReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+      | Foundation.Codec.Cbor.V1.Primitive::CborValue.Null => (ctor Result.error [ViewWireReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewWireOutput,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Bytes},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+definition{
+  name: viewWireOutput,
+  parameters: [value : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)],
+  result: ViewWireOutput,
+  body: (match value
+    | Result.error cause => (record ViewWireOutput {value := 0x, cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok bytes => (record ViewWireOutput {value := bytes, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+structure{
+  name: ViewWireSizes,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: left, type: Nat}, {name: right, type: Nat}]
+}
+
+definition{
+  name: viewWireAppend,
+  parameters: [left : Bytes, right : Bytes],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (record ViewWireSizes {left := (prim length left : Nat), right := (prim length right : Nat)})
+    | ViewWireSizes.mk leftSize rightSize => (match (leftSize <=? 67108864)
+      | Bool.false => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+      | Bool.true => (match (rightSize <=? 67108864)
+        | Bool.false => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+        | Bool.true => (match ((leftSize + rightSize) <=? 67108864)
+          | Bool.false => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+          | Bool.true => (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (prim append left right : Bytes)))))),
+  axioms: []
+}
+
+definition{
+  name: viewWireJoin,
+  parameters: [
+    left : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+    right : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireOutput left)
+    | ViewWireOutput.mk prefix leftCause => (match leftCause
+      | Option.some cause => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Option.none => (match (viewWireOutput right)
+        | ViewWireOutput.mk suffix rightCause => (match rightCause
+          | Option.some cause => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Option.none => (viewWireAppend prefix suffix))))),
+  axioms: []
+}
+
+definition{
+  name: viewWireErrorBytes,
+  parameters: [cause : Foundation.Codec.Cbor.V1.Primitive::CborError],
+  result: Bytes,
+  body: (match cause
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.BadLimits => 0x83010100
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.BadCursor => 0x83010101
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.Truncated => 0x83010102
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType => 0x83010103
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.UnsupportedHead => 0x83010104
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.NonCanonical => 0x83010105
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit => 0x83010106
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.InvalidUtf8 => 0x83010107
+    | Foundation.Codec.Cbor.V1.Primitive::CborError.TrailingInput => 0x83010108),
+  axioms: []
+}
+
+structure{
+  name: ViewReadPresentation,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::Presentation},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadNat,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: Nat}, {name: cursor, type: Nat}, {name: remaining, type: Nat}]
+}
+
+structure{
+  name: ViewReadNodeList,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List Foundation.View.Browser.V1.Model::Node)},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadNode,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::Node},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadContent,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::Content},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadText,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: String}, {name: cursor, type: Nat}, {name: remaining, type: Nat}]
+}
+
+structure{
+  name: ViewReadBool,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: Bool}, {name: cursor, type: Nat}, {name: remaining, type: Nat}]
+}
+
+structure{
+  name: ViewReadChoiceList,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List Foundation.View.Browser.V1.Model::Choice)},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadTextChoiceList,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List Foundation.View.Browser.V1.Model::TextChoice)},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadChoice,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::Choice},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadTextChoice,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::TextChoice},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadNatList,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: (List Nat)}, {name: cursor, type: Nat}, {name: remaining, type: Nat}]
+}
+
+structure{
+  name: ViewReadTableRowList,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List Foundation.View.Browser.V1.Model::TableRow)},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadTableRow,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::TableRow},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadTextList,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List String)},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadIntent,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::Intent},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadFieldValueList,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List Foundation.View.Browser.V1.Model::FieldValue)},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadFieldValue,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::FieldValue},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadValue,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: Foundation.View.Browser.V1.Model::Value},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+definition{
+  name: readViewNat,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadNat Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (readViewWireNat input cursor)
+      | Result.error cause => (ctor Result.error [ViewReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok parsed => (ctor Result.ok [ViewReadNat, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadNat {value := (project parsed value), cursor := (project parsed cursor), remaining := (prim subtract remaining 1 : Nat)})))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewText,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadText Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (readViewWireText input cursor)
+      | Result.error cause => (ctor Result.error [ViewReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok parsed => (ctor Result.ok [ViewReadText, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadText {value := (project parsed value), cursor := (project parsed cursor), remaining := (prim subtract remaining 1 : Nat)})))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewBool,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadBool Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (readViewWireBool input cursor)
+      | Result.error cause => (ctor Result.error [ViewReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok parsed => (ctor Result.ok [ViewReadBool, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadBool {value := (project parsed value), cursor := (project parsed cursor), remaining := (prim subtract remaining 1 : Nat)})))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewChoice,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadChoice Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 2)
+      | Result.error cause => (ctor Result.error [ViewReadChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (match ((project header count) =? 2)
+        | Bool.false => (ctor Result.error [ViewReadChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+        | Bool.true => (match (readViewNat input (project header cursor) (prim subtract remaining 1 : Nat))
+          | Result.error cause => (ctor Result.error [ViewReadChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Result.ok field0 => (match (readViewNat input (project field0 cursor) (project field0 remaining))
+            | Result.error cause => (ctor Result.error [ViewReadChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+            | Result.ok field1 => (ctor Result.ok [ViewReadChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadChoice {value := (record Foundation.View.Browser.V1.Model::Choice {id := (project field0 value), label := (project field1 value)}), cursor := (project field1 cursor), remaining := (project field1 remaining)}))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewTextChoice,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadTextChoice Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadTextChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 2)
+      | Result.error cause => (ctor Result.error [ViewReadTextChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (match ((project header count) =? 2)
+        | Bool.false => (ctor Result.error [ViewReadTextChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+        | Bool.true => (match (readViewNat input (project header cursor) (prim subtract remaining 1 : Nat))
+          | Result.error cause => (ctor Result.error [ViewReadTextChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Result.ok field0 => (match (readViewText input (project field0 cursor) (project field0 remaining))
+            | Result.error cause => (ctor Result.error [ViewReadTextChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+            | Result.ok field1 => (ctor Result.ok [ViewReadTextChoice, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTextChoice {value := (record Foundation.View.Browser.V1.Model::TextChoice {id := (project field0 value), text := (project field1 value)}), cursor := (project field1 cursor), remaining := (project field1 remaining)}))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewReadChoiceListOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: ViewReadChoiceList},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+structure{
+  name: ViewReadTextChoiceListOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: ViewReadTextChoiceList},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+definition{
+  name: viewReadChoiceListOutcome,
+  parameters: [result : (Result ViewReadChoiceList Foundation.Codec.Cbor.V1.Primitive::CborError)],
+  result: ViewReadChoiceListOutcome,
+  body: (match result
+    | Result.error cause => (record ViewReadChoiceListOutcome {value := (record ViewReadChoiceList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::Choice]), cursor := 0, remaining := 0}), cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok value => (record ViewReadChoiceListOutcome {value := value, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+definition{
+  name: viewReadTextChoiceListOutcome,
+  parameters: [
+    result : (Result ViewReadTextChoiceList Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: ViewReadTextChoiceListOutcome,
+  body: (match result
+    | Result.error cause => (record ViewReadTextChoiceListOutcome {value := (record ViewReadTextChoiceList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::TextChoice]), cursor := 0, remaining := 0}), cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok value => (record ViewReadTextChoiceListOutcome {value := value, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+definition{
+  name: readViewChoiceListItems,
+  parameters: [input : ViewWireInput, cursor : Nat, count : Nat, remaining : Nat],
+  result: (Result ViewReadChoiceList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match count
+    | Nat.zero => (ctor Result.ok [ViewReadChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadChoiceList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::Choice]), cursor := cursor, remaining := remaining}))
+    | Nat.succ restCount => (match (readViewChoice input cursor remaining)
+      | Result.error cause => (ctor Result.error [ViewReadChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok item => (match (viewReadChoiceListOutcome (readViewChoiceListItems input (project item cursor) restCount (project item remaining)))
+        | ViewReadChoiceListOutcome.mk rest readCause => (match readCause
+          | Option.some cause => (ctor Result.error [ViewReadChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Option.none => (ctor Result.ok [ViewReadChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadChoiceList {value := (ctor List.cons [Foundation.View.Browser.V1.Model::Choice] (project item value) (project rest value)), cursor := (project rest cursor), remaining := (project rest remaining)})))))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: count
+}
+
+definition{
+  name: readViewTextChoiceListItems,
+  parameters: [input : ViewWireInput, cursor : Nat, count : Nat, remaining : Nat],
+  result: (Result ViewReadTextChoiceList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match count
+    | Nat.zero => (ctor Result.ok [ViewReadTextChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTextChoiceList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::TextChoice]), cursor := cursor, remaining := remaining}))
+    | Nat.succ restCount => (match (readViewTextChoice input cursor remaining)
+      | Result.error cause => (ctor Result.error [ViewReadTextChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok item => (match (viewReadTextChoiceListOutcome (readViewTextChoiceListItems input (project item cursor) restCount (project item remaining)))
+        | ViewReadTextChoiceListOutcome.mk rest readCause => (match readCause
+          | Option.some cause => (ctor Result.error [ViewReadTextChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Option.none => (ctor Result.ok [ViewReadTextChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTextChoiceList {value := (ctor List.cons [Foundation.View.Browser.V1.Model::TextChoice] (project item value) (project rest value)), cursor := (project rest cursor), remaining := (project rest remaining)})))))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: count
+}
+
+definition{
+  name: readViewChoiceList,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadChoiceList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 256)
+      | Result.error cause => (ctor Result.error [ViewReadChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (readViewChoiceListItems input (project header cursor) (project header count) (prim subtract remaining 1 : Nat)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewTextChoiceList,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadTextChoiceList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadTextChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 256)
+      | Result.error cause => (ctor Result.error [ViewReadTextChoiceList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (readViewTextChoiceListItems input (project header cursor) (project header count) (prim subtract remaining 1 : Nat)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewReadNatListOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: ViewReadNatList},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+definition{
+  name: viewReadNatListOutcome,
+  parameters: [result : (Result ViewReadNatList Foundation.Codec.Cbor.V1.Primitive::CborError)],
+  result: ViewReadNatListOutcome,
+  body: (match result
+    | Result.error cause => (record ViewReadNatListOutcome {value := (record ViewReadNatList {value := (ctor List.nil [Nat]), cursor := 0, remaining := 0}), cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok value => (record ViewReadNatListOutcome {value := value, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+definition{
+  name: readViewNatListItems,
+  parameters: [input : ViewWireInput, cursor : Nat, count : Nat, remaining : Nat],
+  result: (Result ViewReadNatList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match count
+    | Nat.zero => (ctor Result.ok [ViewReadNatList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadNatList {value := (ctor List.nil [Nat]), cursor := cursor, remaining := remaining}))
+    | Nat.succ restCount => (match (readViewNat input cursor remaining)
+      | Result.error cause => (ctor Result.error [ViewReadNatList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok item => (match (viewReadNatListOutcome (readViewNatListItems input (project item cursor) restCount (project item remaining)))
+        | ViewReadNatListOutcome.mk rest readCause => (match readCause
+          | Option.some cause => (ctor Result.error [ViewReadNatList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Option.none => (ctor Result.ok [ViewReadNatList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadNatList {value := (ctor List.cons [Nat] (project item value) (project rest value)), cursor := (project rest cursor), remaining := (project rest remaining)})))))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: count
+}
+
+definition{
+  name: readViewNatList,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadNatList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadNatList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 16)
+      | Result.error cause => (ctor Result.error [ViewReadNatList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (readViewNatListItems input (project header cursor) (project header count) (prim subtract remaining 1 : Nat)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewReadTableChunkList,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List Foundation.View.Browser.V1.Model::TableChunk)},
+    {name: cursor, type: Nat},
+    {name: remaining, type: Nat}
+  ]
+}
+
+structure{
+  name: ViewReadTextListOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: ViewReadTextList},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+definition{
+  name: viewReadTextListOutcome,
+  parameters: [result : (Result ViewReadTextList Foundation.Codec.Cbor.V1.Primitive::CborError)],
+  result: ViewReadTextListOutcome,
+  body: (match result
+    | Result.error cause => (record ViewReadTextListOutcome {value := (record ViewReadTextList {value := (ctor List.nil [String]), cursor := 0, remaining := 0}), cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok value => (record ViewReadTextListOutcome {value := value, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+definition{
+  name: readViewTextListItems,
+  parameters: [input : ViewWireInput, cursor : Nat, count : Nat, remaining : Nat],
+  result: (Result ViewReadTextList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match count
+    | Nat.zero => (ctor Result.ok [ViewReadTextList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTextList {value := (ctor List.nil [String]), cursor := cursor, remaining := remaining}))
+    | Nat.succ restCount => (match (readViewText input cursor remaining)
+      | Result.error cause => (ctor Result.error [ViewReadTextList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok item => (match (viewReadTextListOutcome (readViewTextListItems input (project item cursor) restCount (project item remaining)))
+        | ViewReadTextListOutcome.mk rest readCause => (match readCause
+          | Option.some cause => (ctor Result.error [ViewReadTextList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Option.none => (ctor Result.ok [ViewReadTextList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTextList {value := (ctor List.cons [String] (project item value) (project rest value)), cursor := (project rest cursor), remaining := (project rest remaining)})))))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: count
+}
+
+definition{
+  name: readViewTextList,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadTextList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadTextList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 16)
+      | Result.error cause => (ctor Result.error [ViewReadTextList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (readViewTextListItems input (project header cursor) (project header count) (prim subtract remaining 1 : Nat)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewTableRow,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadTableRow Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadTableRow, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (readViewTextList input cursor remaining)
+      | Result.error cause => (ctor Result.error [ViewReadTableRow, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok row => (ctor Result.ok [ViewReadTableRow, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTableRow {value := (record Foundation.View.Browser.V1.Model::TableRow {cells := (project row value)}), cursor := (project row cursor), remaining := (project row remaining)})))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewReadTableRowListOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: ViewReadTableRowList},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+definition{
+  name: viewReadTableRowListOutcome,
+  parameters: [
+    result : (Result ViewReadTableRowList Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: ViewReadTableRowListOutcome,
+  body: (match result
+    | Result.error cause => (record ViewReadTableRowListOutcome {value := (record ViewReadTableRowList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::TableRow]), cursor := 0, remaining := 0}), cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok value => (record ViewReadTableRowListOutcome {value := value, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+definition{
+  name: readViewTableRowListItems,
+  parameters: [input : ViewWireInput, cursor : Nat, count : Nat, remaining : Nat],
+  result: (Result ViewReadTableRowList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match count
+    | Nat.zero => (ctor Result.ok [ViewReadTableRowList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTableRowList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::TableRow]), cursor := cursor, remaining := remaining}))
+    | Nat.succ restCount => (match (readViewTableRow input cursor remaining)
+      | Result.error cause => (ctor Result.error [ViewReadTableRowList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok item => (match (viewReadTableRowListOutcome (readViewTableRowListItems input (project item cursor) restCount (project item remaining)))
+        | ViewReadTableRowListOutcome.mk tailRows readCause => (match readCause
+          | Option.some cause => (ctor Result.error [ViewReadTableRowList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Option.none => (ctor Result.ok [ViewReadTableRowList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTableRowList {value := (ctor List.cons [Foundation.View.Browser.V1.Model::TableRow] (project item value) (project tailRows value)), cursor := (project tailRows cursor), remaining := (project tailRows remaining)})))))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: count
+}
+
+structure{
+  name: ViewReadTableChunkListOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: ViewReadTableChunkList},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+definition{
+  name: viewReadTableChunkListOutcome,
+  parameters: [
+    result : (Result ViewReadTableChunkList Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: ViewReadTableChunkListOutcome,
+  body: (match result
+    | Result.error cause => (record ViewReadTableChunkListOutcome {value := (record ViewReadTableChunkList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::TableChunk]), cursor := 0, remaining := 0}), cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok value => (record ViewReadTableChunkListOutcome {value := value, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+definition{
+  name: readViewTableGroups,
+  parameters: [input : ViewWireInput, cursor : Nat, groups : Nat, rowsLeft : Nat, remaining : Nat],
+  result: (Result ViewReadTableChunkList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match groups
+    | Nat.zero => (match (rowsLeft =? 0)
+      | Bool.false => (ctor Result.error [ViewReadTableChunkList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+      | Bool.true => (ctor Result.ok [ViewReadTableChunkList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTableChunkList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::TableChunk]), cursor := cursor, remaining := remaining})))
+    | Nat.succ restGroups => (match (0 <? rowsLeft)
+      | Bool.false => (ctor Result.error [ViewReadTableChunkList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+      | Bool.true => (match (readViewTableRowListItems input cursor (match (rowsLeft <=? 16)
+          | Bool.false => 16
+          | Bool.true => rowsLeft) remaining)
+        | Result.error cause => (ctor Result.error [ViewReadTableChunkList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+        | Result.ok batch => (match (viewReadTableChunkListOutcome (readViewTableGroups input (project batch cursor) restGroups (prim subtract rowsLeft (match (rowsLeft <=? 16)
+            | Bool.false => 16
+            | Bool.true => rowsLeft) : Nat) (project batch remaining)))
+          | ViewReadTableChunkListOutcome.mk tailGroups readCause => (match readCause
+            | Option.some cause => (ctor Result.error [ViewReadTableChunkList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+            | Option.none => (ctor Result.ok [ViewReadTableChunkList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadTableChunkList {value := (ctor List.cons [Foundation.View.Browser.V1.Model::TableChunk] (record Foundation.View.Browser.V1.Model::TableChunk {rows := (project batch value)}) (project tailGroups value)), cursor := (project tailGroups cursor), remaining := (project tailGroups remaining)}))))))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: groups
+}
+
+definition{
+  name: readViewTableChunkList,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadTableChunkList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadTableChunkList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 4096)
+      | Result.error cause => (ctor Result.error [ViewReadTableChunkList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (readViewTableGroups input (project header cursor) (prim quotient ((project header count) + 15) 16 0 : Nat) (project header count) (prim subtract remaining 1 : Nat)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewContent,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadContent Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 8)
+      | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (match (readViewNat input (project header cursor) (prim subtract remaining 1 : Nat))
+        | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+        | Result.ok tag => (match ((project tag value) =? 11)
+          | Bool.false => (match ((project tag value) =? 10)
+            | Bool.false => (match ((project tag value) =? 9)
+              | Bool.false => (match ((project tag value) =? 8)
+                | Bool.false => (match ((project tag value) =? 7)
+                  | Bool.false => (match ((project tag value) =? 6)
+                    | Bool.false => (match ((project tag value) =? 5)
+                      | Bool.false => (match ((project tag value) =? 4)
+                        | Bool.false => (match ((project tag value) =? 3)
+                          | Bool.false => (match ((project tag value) =? 2)
+                            | Bool.false => (match ((project tag value) =? 1)
+                              | Bool.false => (match ((project tag value) =? 0)
+                                | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                                | Bool.true => (match ((project header count) =? 2)
+                                  | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                                  | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                                    | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                    | Result.ok field0 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Section (project field0 value)), cursor := (project field0 cursor), remaining := (project field0 remaining)})))))
+                              | Bool.true => (match ((project header count) =? 2)
+                                | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                                | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                                  | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                  | Result.ok field0 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Navigation (project field0 value)), cursor := (project field0 cursor), remaining := (project field0 remaining)})))))
+                            | Bool.true => (match ((project header count) =? 2)
+                              | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                              | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                                | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                | Result.ok field0 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Form (project field0 value)), cursor := (project field0 cursor), remaining := (project field0 remaining)})))))
+                          | Bool.true => (match ((project header count) =? 3)
+                            | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                            | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                              | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                              | Result.ok field0 => (match (readViewNat input (project field0 cursor) (project field0 remaining))
+                                | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                | Result.ok field1 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Heading (project field0 value) (project field1 value)), cursor := (project field1 cursor), remaining := (project field1 remaining)}))))))
+                        | Bool.true => (match ((project header count) =? 2)
+                          | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                          | Bool.true => (match (readViewText input (project tag cursor) (project tag remaining))
+                            | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                            | Result.ok field0 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Text (project field0 value)), cursor := (project field0 cursor), remaining := (project field0 remaining)})))))
+                      | Bool.true => (match ((project header count) =? 7)
+                        | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                        | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                          | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                          | Result.ok field0 => (match (readViewBool input (project field0 cursor) (project field0 remaining))
+                            | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                            | Result.ok field1 => (match (readViewBool input (project field1 cursor) (project field1 remaining))
+                              | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                              | Result.ok field2 => (match (readViewNat input (project field2 cursor) (project field2 remaining))
+                                | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                | Result.ok field3 => (match (readViewText input (project field3 cursor) (project field3 remaining))
+                                  | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                  | Result.ok field4 => (match (readViewNat input (project field4 cursor) (project field4 remaining))
+                                    | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                    | Result.ok field5 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Input (project field0 value) (project field1 value) (project field2 value) (project field3 value) (project field4 value) (project field5 value)), cursor := (project field5 cursor), remaining := (project field5 remaining)}))))))))))
+                    | Bool.true => (match ((project header count) =? 7)
+                      | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                      | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                        | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                        | Result.ok field0 => (match (readViewBool input (project field0 cursor) (project field0 remaining))
+                          | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                          | Result.ok field1 => (match (readViewBool input (project field1 cursor) (project field1 remaining))
+                            | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                            | Result.ok field2 => (match (readViewNat input (project field2 cursor) (project field2 remaining))
+                              | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                              | Result.ok field3 => (match (readViewText input (project field3 cursor) (project field3 remaining))
+                                | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                | Result.ok field4 => (match (readViewNat input (project field4 cursor) (project field4 remaining))
+                                  | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                  | Result.ok field5 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Multiline (project field0 value) (project field1 value) (project field2 value) (project field3 value) (project field4 value) (project field5 value)), cursor := (project field5 cursor), remaining := (project field5 remaining)}))))))))))
+                  | Bool.true => (match ((project header count) =? 7)
+                    | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                    | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                      | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                      | Result.ok field0 => (match (readViewBool input (project field0 cursor) (project field0 remaining))
+                        | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                        | Result.ok field1 => (match (readViewBool input (project field1 cursor) (project field1 remaining))
+                          | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                          | Result.ok field2 => (match (readViewNat input (project field2 cursor) (project field2 remaining))
+                            | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                            | Result.ok field3 => (match (readViewChoiceList input (project field3 cursor) (project field3 remaining))
+                              | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                              | Result.ok field4 => (match (readViewNat input (project field4 cursor) (project field4 remaining))
+                                | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                                | Result.ok field5 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Select (project field0 value) (project field1 value) (project field2 value) (project field3 value) (project field4 value) (project field5 value)), cursor := (project field5 cursor), remaining := (project field5 remaining)}))))))))))
+                | Bool.true => (match ((project header count) =? 6)
+                  | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                  | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                    | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                    | Result.ok field0 => (match (readViewNat input (project field0 cursor) (project field0 remaining))
+                      | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                      | Result.ok field1 => (match (readViewBool input (project field1 cursor) (project field1 remaining))
+                        | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                        | Result.ok field2 => (match (readViewBool input (project field2 cursor) (project field2 remaining))
+                          | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                          | Result.ok field3 => (match (readViewNatList input (project field3 cursor) (project field3 remaining))
+                            | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                            | Result.ok field4 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Action (project field0 value) (project field1 value) (project field2 value) (project field3 value) (project field4 value)), cursor := (project field4 cursor), remaining := (project field4 remaining)})))))))))
+              | Bool.true => (match ((project header count) =? 4)
+                | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+                | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                  | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                  | Result.ok field0 => (match (readViewNatList input (project field0 cursor) (project field0 remaining))
+                    | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                    | Result.ok field1 => (match (readViewTableChunkList input (project field1 cursor) (project field1 remaining))
+                      | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                      | Result.ok field2 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.Table (project field0 value) (project field1 value) (project field2 value)), cursor := (project field2 cursor), remaining := (project field2 remaining)})))))))
+            | Bool.true => (match ((project header count) =? 6)
+              | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+              | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+                | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                | Result.ok field0 => (match (readViewBool input (project field0 cursor) (project field0 remaining))
+                  | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                  | Result.ok field1 => (match (readViewBool input (project field1 cursor) (project field1 remaining))
+                    | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                    | Result.ok field2 => (match (readViewNat input (project field2 cursor) (project field2 remaining))
+                      | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                      | Result.ok field3 => (match (readViewNat input (project field3 cursor) (project field3 remaining))
+                        | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                        | Result.ok field4 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.SecretInput (project field0 value) (project field1 value) (project field2 value) (project field3 value) (project field4 value)), cursor := (project field4 cursor), remaining := (project field4 remaining)})))))))))
+          | Bool.true => (match ((project header count) =? 7)
+            | Bool.false => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+            | Bool.true => (match (readViewNat input (project tag cursor) (project tag remaining))
+              | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+              | Result.ok field0 => (match (readViewBool input (project field0 cursor) (project field0 remaining))
+                | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                | Result.ok field1 => (match (readViewBool input (project field1 cursor) (project field1 remaining))
+                  | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                  | Result.ok field2 => (match (readViewNat input (project field2 cursor) (project field2 remaining))
+                    | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                    | Result.ok field3 => (match (readViewTextChoiceList input (project field3 cursor) (project field3 remaining))
+                      | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                      | Result.ok field4 => (match (readViewNat input (project field4 cursor) (project field4 remaining))
+                        | Result.error cause => (ctor Result.error [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                        | Result.ok field5 => (ctor Result.ok [ViewReadContent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadContent {value := (ctor Foundation.View.Browser.V1.Model::Content.TextSelect (project field0 value) (project field1 value) (project field2 value) (project field3 value) (project field4 value) (project field5 value)), cursor := (project field5 cursor), remaining := (project field5 remaining)}))))))))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewNode,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadNode Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadNode, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 2)
+      | Result.error cause => (ctor Result.error [ViewReadNode, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (match ((project header count) =? 2)
+        | Bool.false => (ctor Result.error [ViewReadNode, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+        | Bool.true => (match (readViewNat input (project header cursor) (prim subtract remaining 1 : Nat))
+          | Result.error cause => (ctor Result.error [ViewReadNode, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Result.ok field0 => (match (readViewContent input (project field0 cursor) (project field0 remaining))
+            | Result.error cause => (ctor Result.error [ViewReadNode, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+            | Result.ok field1 => (ctor Result.ok [ViewReadNode, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadNode {value := (record Foundation.View.Browser.V1.Model::Node {parent := (project field0 value), content := (project field1 value)}), cursor := (project field1 cursor), remaining := (project field1 remaining)}))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewReadNodeListOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: ViewReadNodeList},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+definition{
+  name: viewReadNodeListOutcome,
+  parameters: [result : (Result ViewReadNodeList Foundation.Codec.Cbor.V1.Primitive::CborError)],
+  result: ViewReadNodeListOutcome,
+  body: (match result
+    | Result.error cause => (record ViewReadNodeListOutcome {value := (record ViewReadNodeList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::Node]), cursor := 0, remaining := 0}), cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok value => (record ViewReadNodeListOutcome {value := value, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+definition{
+  name: readViewNodeListItems,
+  parameters: [input : ViewWireInput, cursor : Nat, count : Nat, remaining : Nat],
+  result: (Result ViewReadNodeList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match count
+    | Nat.zero => (ctor Result.ok [ViewReadNodeList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadNodeList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::Node]), cursor := cursor, remaining := remaining}))
+    | Nat.succ restCount => (match (readViewNode input cursor remaining)
+      | Result.error cause => (ctor Result.error [ViewReadNodeList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok item => (match (viewReadNodeListOutcome (readViewNodeListItems input (project item cursor) restCount (project item remaining)))
+        | ViewReadNodeListOutcome.mk rest readCause => (match readCause
+          | Option.some cause => (ctor Result.error [ViewReadNodeList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Option.none => (ctor Result.ok [ViewReadNodeList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadNodeList {value := (ctor List.cons [Foundation.View.Browser.V1.Model::Node] (project item value) (project rest value)), cursor := (project rest cursor), remaining := (project rest remaining)})))))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: count
+}
+
+definition{
+  name: readViewNodeList,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadNodeList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadNodeList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 256)
+      | Result.error cause => (ctor Result.error [ViewReadNodeList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (readViewNodeListItems input (project header cursor) (project header count) (prim subtract remaining 1 : Nat)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewPresentation,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadPresentation Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 7)
+      | Result.error cause => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (match ((project header count) =? 7)
+        | Bool.false => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+        | Bool.true => (match (readViewNat input (project header cursor) (prim subtract remaining 1 : Nat))
+          | Result.error cause => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Result.ok version => (match ((project version value) =? 1)
+            | Bool.false => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+            | Bool.true => (match (readViewNat input (project version cursor) (project version remaining))
+              | Result.error cause => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+              | Result.ok field0 => (match (readViewNat input (project field0 cursor) (project field0 remaining))
+                | Result.error cause => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                | Result.ok field1 => (match (readViewNat input (project field1 cursor) (project field1 remaining))
+                  | Result.error cause => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                  | Result.ok field2 => (match (readViewNat input (project field2 cursor) (project field2 remaining))
+                    | Result.error cause => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                    | Result.ok field3 => (match (readViewNat input (project field3 cursor) (project field3 remaining))
+                      | Result.error cause => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                      | Result.ok field4 => (match (readViewNodeList input (project field4 cursor) (project field4 remaining))
+                        | Result.error cause => (ctor Result.error [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                        | Result.ok field5 => (ctor Result.ok [ViewReadPresentation, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadPresentation {value := (record Foundation.View.Browser.V1.Model::Presentation {revision := (project field0 value), phase := (project field1 value), status := (project field2 value), live := (project field3 value), focus := (project field4 value), nodes := (project field5 value)}), cursor := (project field5 cursor), remaining := (project field5 remaining)}))))))))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: viewCountNodeList,
+  parameters: [items : (List Foundation.View.Browser.V1.Model::Node)],
+  result: Nat,
+  body: (match items | List.nil => 0 | List.cons head tail => (1 + (viewCountNodeList tail))),
+  axioms: [],
+  recursive_argument: items
+}
+
+definition{
+  name: viewCountChoiceList,
+  parameters: [items : (List Foundation.View.Browser.V1.Model::Choice)],
+  result: Nat,
+  body: (match items | List.nil => 0 | List.cons head tail => (1 + (viewCountChoiceList tail))),
+  axioms: [],
+  recursive_argument: items
+}
+
+definition{
+  name: viewCountTextChoiceList,
+  parameters: [items : (List Foundation.View.Browser.V1.Model::TextChoice)],
+  result: Nat,
+  body: (match items | List.nil => 0 | List.cons head tail => (1 + (viewCountTextChoiceList tail))),
+  axioms: [],
+  recursive_argument: items
+}
+
+definition{
+  name: viewCountNatList,
+  parameters: [items : (List Nat)],
+  result: Nat,
+  body: (match items | List.nil => 0 | List.cons head tail => (1 + (viewCountNatList tail))),
+  axioms: [],
+  recursive_argument: items
+}
+
+definition{
+  name: readViewTableRowList,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadTableRowList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadTableRowList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 16)
+      | Result.error cause => (ctor Result.error [ViewReadTableRowList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (readViewTableRowListItems input (project header cursor) (project header count) (prim subtract remaining 1 : Nat)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: viewCountTableRowList,
+  parameters: [items : (List Foundation.View.Browser.V1.Model::TableRow)],
+  result: Nat,
+  body: (match items | List.nil => 0 | List.cons head tail => (1 + (viewCountTableRowList tail))),
+  axioms: [],
+  recursive_argument: items
+}
+
+definition{
+  name: viewCountTextList,
+  parameters: [items : (List String)],
+  result: Nat,
+  body: (match items | List.nil => 0 | List.cons head tail => (1 + (viewCountTextList tail))),
+  axioms: [],
+  recursive_argument: items
+}
+
+definition{
+  name: readViewValue,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadValue Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadHeader input cursor 3)
+      | Result.error peekCause => (match peekCause
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.BadLimits => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] peekCause)
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.BadCursor => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] peekCause)
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.Truncated => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] peekCause)
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType => (match (readViewNat input cursor remaining)
+          | Result.error cause => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Result.ok number => (ctor Result.ok [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadValue {value := (ctor Foundation.View.Browser.V1.Model::Value.Choice (project number value)), cursor := (project number cursor), remaining := (project number remaining)})))
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.UnsupportedHead => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] peekCause)
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.NonCanonical => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] peekCause)
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] peekCause)
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.InvalidUtf8 => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] peekCause)
+        | Foundation.Codec.Cbor.V1.Primitive::CborError.TrailingInput => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] peekCause))
+      | Result.ok peek => (match (readViewText input cursor remaining)
+        | Result.error cause => (ctor Result.error [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+        | Result.ok text => (ctor Result.ok [ViewReadValue, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadValue {value := (ctor Foundation.View.Browser.V1.Model::Value.Text (project text value)), cursor := (project text cursor), remaining := (project text remaining)}))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewFieldValue,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadFieldValue Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadFieldValue, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 2)
+      | Result.error cause => (ctor Result.error [ViewReadFieldValue, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (match ((project header count) =? 2)
+        | Bool.false => (ctor Result.error [ViewReadFieldValue, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+        | Bool.true => (match (readViewNat input (project header cursor) (prim subtract remaining 1 : Nat))
+          | Result.error cause => (ctor Result.error [ViewReadFieldValue, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Result.ok field0 => (match (readViewValue input (project field0 cursor) (project field0 remaining))
+            | Result.error cause => (ctor Result.error [ViewReadFieldValue, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+            | Result.ok field1 => (ctor Result.ok [ViewReadFieldValue, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadFieldValue {value := (record Foundation.View.Browser.V1.Model::FieldValue {node := (project field0 value), value := (project field1 value)}), cursor := (project field1 cursor), remaining := (project field1 remaining)}))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+structure{
+  name: ViewReadFieldValueListOutcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: ViewReadFieldValueList},
+    {name: cause, type: (Option Foundation.Codec.Cbor.V1.Primitive::CborError)}
+  ]
+}
+
+definition{
+  name: viewReadFieldValueListOutcome,
+  parameters: [
+    result : (Result ViewReadFieldValueList Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: ViewReadFieldValueListOutcome,
+  body: (match result
+    | Result.error cause => (record ViewReadFieldValueListOutcome {value := (record ViewReadFieldValueList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::FieldValue]), cursor := 0, remaining := 0}), cause := (ctor Option.some [Foundation.Codec.Cbor.V1.Primitive::CborError] cause)})
+    | Result.ok value => (record ViewReadFieldValueListOutcome {value := value, cause := (ctor Option.none [Foundation.Codec.Cbor.V1.Primitive::CborError])})),
+  axioms: []
+}
+
+definition{
+  name: readViewFieldValueListItems,
+  parameters: [input : ViewWireInput, cursor : Nat, count : Nat, remaining : Nat],
+  result: (Result ViewReadFieldValueList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match count
+    | Nat.zero => (ctor Result.ok [ViewReadFieldValueList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadFieldValueList {value := (ctor List.nil [Foundation.View.Browser.V1.Model::FieldValue]), cursor := cursor, remaining := remaining}))
+    | Nat.succ restCount => (match (readViewFieldValue input cursor remaining)
+      | Result.error cause => (ctor Result.error [ViewReadFieldValueList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok item => (match (viewReadFieldValueListOutcome (readViewFieldValueListItems input (project item cursor) restCount (project item remaining)))
+        | ViewReadFieldValueListOutcome.mk rest readCause => (match readCause
+          | Option.some cause => (ctor Result.error [ViewReadFieldValueList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Option.none => (ctor Result.ok [ViewReadFieldValueList, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadFieldValueList {value := (ctor List.cons [Foundation.View.Browser.V1.Model::FieldValue] (project item value) (project rest value)), cursor := (project rest cursor), remaining := (project rest remaining)})))))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: count
+}
+
+definition{
+  name: readViewFieldValueList,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadFieldValueList Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadFieldValueList, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 16)
+      | Result.error cause => (ctor Result.error [ViewReadFieldValueList, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (readViewFieldValueListItems input (project header cursor) (project header count) (prim subtract remaining 1 : Nat)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readViewIntent,
+  parameters: [input : ViewWireInput, cursor : Nat, remaining : Nat],
+  result: (Result ViewReadIntent Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (0 <? remaining)
+    | Bool.false => (ctor Result.error [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit))
+    | Bool.true => (match (viewWireReadArray input cursor 4)
+      | Result.error cause => (ctor Result.error [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+      | Result.ok header => (match ((project header count) =? 4)
+        | Bool.false => (ctor Result.error [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+        | Bool.true => (match (readViewNat input (project header cursor) (prim subtract remaining 1 : Nat))
+          | Result.error cause => (ctor Result.error [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Result.ok version => (match ((project version value) =? 1)
+            | Bool.false => (ctor Result.error [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+            | Bool.true => (match (readViewNat input (project version cursor) (project version remaining))
+              | Result.error cause => (ctor Result.error [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+              | Result.ok field0 => (match (readViewNat input (project field0 cursor) (project field0 remaining))
+                | Result.error cause => (ctor Result.error [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                | Result.ok field1 => (match (readViewFieldValueList input (project field1 cursor) (project field1 remaining))
+                  | Result.error cause => (ctor Result.error [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+                  | Result.ok field2 => (ctor Result.ok [ViewReadIntent, Foundation.Codec.Cbor.V1.Primitive::CborError] (record ViewReadIntent {value := (record Foundation.View.Browser.V1.Model::Intent {revision := (project field0 value), action := (project field1 value), fields := (project field2 value)}), cursor := (project field2 cursor), remaining := (project field2 remaining)})))))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: viewCountFieldValueList,
+  parameters: [items : (List Foundation.View.Browser.V1.Model::FieldValue)],
+  result: Nat,
+  body: (match items | List.nil => 0 | List.cons head tail => (1 + (viewCountFieldValueList tail))),
+  axioms: [],
+  recursive_argument: items
+}
+
+definition{
+  name: writeViewNat,
+  parameters: [value : Nat],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (Foundation.Codec.Cbor.V1.Primitive::writeCborPrimitive (ctor Foundation.Codec.Cbor.V1.Primitive::CborValue.Unsigned value) (viewWireLimits)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewText,
+  parameters: [value : String],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (Foundation.Codec.Cbor.V1.Primitive::writeCborPrimitive (ctor Foundation.Codec.Cbor.V1.Primitive::CborValue.TextString value) (viewWireLimits)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewBool,
+  parameters: [value : Bool],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (Foundation.Codec.Cbor.V1.Primitive::writeCborPrimitive (ctor Foundation.Codec.Cbor.V1.Primitive::CborValue.Boolean value) (viewWireLimits)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewChoiceInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::Choice,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 2 (viewWireLimits))) (writeViewNat (project value id))) (writeViewNat (project value label))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTextChoiceInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::TextChoice,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 2 (viewWireLimits))) (writeViewNat (project value id))) (writeViewText (project value text))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewChoiceListItemsInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::Choice),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | List.nil => accumulated
+    | List.cons head tail => (writeViewChoiceListItemsInto tail (writeViewChoiceInto head accumulated))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: value
+}
+
+definition{
+  name: writeViewTextChoiceListItemsInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::TextChoice),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | List.nil => accumulated
+    | List.cons head tail => (writeViewTextChoiceListItemsInto tail (writeViewTextChoiceInto head accumulated))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: value
+}
+
+definition{
+  name: writeViewChoiceListInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::Choice),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match ((viewCountChoiceList value) <=? 256)
+    | Bool.false => (viewWireJoin accumulated (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit)))
+    | Bool.true => (writeViewChoiceListItemsInto value (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead (viewCountChoiceList value) (viewWireLimits))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTextChoiceListInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::TextChoice),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match ((viewCountTextChoiceList value) <=? 256)
+    | Bool.false => (viewWireJoin accumulated (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit)))
+    | Bool.true => (writeViewTextChoiceListItemsInto value (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead (viewCountTextChoiceList value) (viewWireLimits))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewNatListItemsInto,
+  parameters: [
+    value : (List Nat),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | List.nil => accumulated
+    | List.cons head tail => (writeViewNatListItemsInto tail (viewWireJoin accumulated (writeViewNat head)))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: value
+}
+
+definition{
+  name: writeViewNatListInto,
+  parameters: [
+    value : (List Nat),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match ((viewCountNatList value) <=? 16)
+    | Bool.false => (viewWireJoin accumulated (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit)))
+    | Bool.true => (writeViewNatListItemsInto value (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead (viewCountNatList value) (viewWireLimits))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: viewChunkRowCount,
+  parameters: [items : (List Foundation.View.Browser.V1.Model::TableChunk)],
+  result: Nat,
+  body: (match items
+    | List.nil => 0
+    | List.cons head tail => ((viewCountTableRowList (project head rows)) + (viewChunkRowCount tail))),
+  axioms: [],
+  recursive_argument: items
+}
+
+definition{
+  name: writeViewTextListItemsInto,
+  parameters: [
+    value : (List String),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | List.nil => accumulated
+    | List.cons head tail => (writeViewTextListItemsInto tail (viewWireJoin accumulated (writeViewText head)))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: value
+}
+
+definition{
+  name: writeViewTextListInto,
+  parameters: [
+    value : (List String),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match ((viewCountTextList value) <=? 16)
+    | Bool.false => (viewWireJoin accumulated (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit)))
+    | Bool.true => (writeViewTextListItemsInto value (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead (viewCountTextList value) (viewWireLimits))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTableRowInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::TableRow,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTextListInto (project value cells) accumulated),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTableRowListItemsInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::TableRow),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | List.nil => accumulated
+    | List.cons head tail => (writeViewTableRowListItemsInto tail (writeViewTableRowInto head accumulated))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: value
+}
+
+definition{
+  name: writeViewTableChunkListItemsInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::TableChunk),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | List.nil => accumulated
+    | List.cons head tail => (writeViewTableChunkListItemsInto tail (writeViewTableRowListItemsInto (project head rows) accumulated))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: value
+}
+
+definition{
+  name: writeViewTableChunkListInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::TableChunk),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match ((viewChunkRowCount value) <=? 4096)
+    | Bool.false => (viewWireJoin accumulated (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit)))
+    | Bool.true => (writeViewTableChunkListItemsInto value (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead (viewChunkRowCount value) (viewWireLimits))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewContentInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::Content,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | Foundation.View.Browser.V1.Model::Content.Section x0 => (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 2 (viewWireLimits))) (writeViewNat 0)) (writeViewNat x0))
+    | Foundation.View.Browser.V1.Model::Content.Navigation x0 => (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 2 (viewWireLimits))) (writeViewNat 1)) (writeViewNat x0))
+    | Foundation.View.Browser.V1.Model::Content.Form x0 => (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 2 (viewWireLimits))) (writeViewNat 2)) (writeViewNat x0))
+    | Foundation.View.Browser.V1.Model::Content.Heading x0 x1 => (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 3 (viewWireLimits))) (writeViewNat 3)) (writeViewNat x0)) (writeViewNat x1))
+    | Foundation.View.Browser.V1.Model::Content.Text x0 => (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 2 (viewWireLimits))) (writeViewNat 4)) (writeViewText x0))
+    | Foundation.View.Browser.V1.Model::Content.Input x0 x1 x2 x3 x4 x5 => (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 7 (viewWireLimits))) (writeViewNat 5)) (writeViewNat x0)) (writeViewBool x1)) (writeViewBool x2)) (writeViewNat x3)) (writeViewText x4)) (writeViewNat x5))
+    | Foundation.View.Browser.V1.Model::Content.Multiline x0 x1 x2 x3 x4 x5 => (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 7 (viewWireLimits))) (writeViewNat 6)) (writeViewNat x0)) (writeViewBool x1)) (writeViewBool x2)) (writeViewNat x3)) (writeViewText x4)) (writeViewNat x5))
+    | Foundation.View.Browser.V1.Model::Content.Select x0 x1 x2 x3 x4 x5 => (viewWireJoin (writeViewChoiceListInto x4 (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 7 (viewWireLimits))) (writeViewNat 7)) (writeViewNat x0)) (writeViewBool x1)) (writeViewBool x2)) (writeViewNat x3))) (writeViewNat x5))
+    | Foundation.View.Browser.V1.Model::Content.Action x0 x1 x2 x3 x4 => (writeViewNatListInto x4 (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 6 (viewWireLimits))) (writeViewNat 8)) (writeViewNat x0)) (writeViewNat x1)) (writeViewBool x2)) (writeViewBool x3)))
+    | Foundation.View.Browser.V1.Model::Content.Table x0 x1 x2 => (writeViewTableChunkListInto x2 (writeViewNatListInto x1 (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 4 (viewWireLimits))) (writeViewNat 9)) (writeViewNat x0))))
+    | Foundation.View.Browser.V1.Model::Content.SecretInput x0 x1 x2 x3 x4 => (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 6 (viewWireLimits))) (writeViewNat 10)) (writeViewNat x0)) (writeViewBool x1)) (writeViewBool x2)) (writeViewNat x3)) (writeViewNat x4))
+    | Foundation.View.Browser.V1.Model::Content.TextSelect x0 x1 x2 x3 x4 x5 => (viewWireJoin (writeViewTextChoiceListInto x4 (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 7 (viewWireLimits))) (writeViewNat 11)) (writeViewNat x0)) (writeViewBool x1)) (writeViewBool x2)) (writeViewNat x3))) (writeViewNat x5))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewNodeInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::Node,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewContentInto (project value content) (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 2 (viewWireLimits))) (writeViewNat (project value parent)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewNodeListItemsInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::Node),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | List.nil => accumulated
+    | List.cons head tail => (writeViewNodeListItemsInto tail (writeViewNodeInto head accumulated))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: value
+}
+
+definition{
+  name: writeViewNodeListInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::Node),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match ((viewCountNodeList value) <=? 256)
+    | Bool.false => (viewWireJoin accumulated (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit)))
+    | Bool.true => (writeViewNodeListItemsInto value (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead (viewCountNodeList value) (viewWireLimits))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewPresentationInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::Presentation,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewNodeListInto (project value nodes) (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 7 (viewWireLimits))) (writeViewNat 1)) (writeViewNat (project value revision))) (writeViewNat (project value phase))) (writeViewNat (project value status))) (writeViewNat (project value live))) (writeViewNat (project value focus)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewPresentation,
+  parameters: [value : Foundation.View.Browser.V1.Model::Presentation],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewPresentationInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewValueInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::Value,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | Foundation.View.Browser.V1.Model::Value.Text text => (viewWireJoin accumulated (writeViewText text))
+    | Foundation.View.Browser.V1.Model::Value.Choice choiceId => (viewWireJoin accumulated (writeViewNat choiceId))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewFieldValueInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::FieldValue,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewValueInto (project value value) (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 2 (viewWireLimits))) (writeViewNat (project value node)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewFieldValueListItemsInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::FieldValue),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match value
+    | List.nil => accumulated
+    | List.cons head tail => (writeViewFieldValueListItemsInto tail (writeViewFieldValueInto head accumulated))),
+  axioms: [Classical.choice, Quot.sound, propext],
+  recursive_argument: value
+}
+
+definition{
+  name: writeViewFieldValueListInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::FieldValue),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match ((viewCountFieldValueList value) <=? 16)
+    | Bool.false => (viewWireJoin accumulated (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit)))
+    | Bool.true => (writeViewFieldValueListItemsInto value (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead (viewCountFieldValueList value) (viewWireLimits))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewIntentInto,
+  parameters: [
+    value : Foundation.View.Browser.V1.Model::Intent,
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewFieldValueListInto (project value fields) (viewWireJoin (viewWireJoin (viewWireJoin (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead 4 (viewWireLimits))) (writeViewNat 1)) (writeViewNat (project value revision))) (writeViewNat (project value action)))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewIntent,
+  parameters: [value : Foundation.View.Browser.V1.Model::Intent],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewIntentInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: viewWireParse,
+  parameters: [input : ViewWireInput],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match (viewWireReadArray input 0 7)
+    | Result.error cause => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+    | Result.ok header => (match ((project header count) =? 4)
+      | Bool.false => (match ((project header count) =? 7)
+        | Bool.false => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.WrongType))
+        | Bool.true => (match (readViewPresentation input 0 20000)
+          | Result.error cause => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+          | Result.ok parsed => (match ((project parsed cursor) =? (prim length (project input bytes) : Nat))
+            | Bool.false => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.TrailingInput))
+            | Bool.true => (match (Foundation.View.Browser.V1.Model::presentationValid (project parsed value))
+              | Bool.false => (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x83010109)
+              | Bool.true => (writeViewPresentation (project parsed value))))))
+      | Bool.true => (match (readViewIntent input 0 20000)
+        | Result.error cause => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] cause)
+        | Result.ok parsed => (match ((project parsed cursor) =? (prim length (project input bytes) : Nat))
+          | Bool.false => (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.TrailingInput))
+          | Bool.true => (match (Foundation.View.Browser.V1.Model::intentValid (project parsed value))
+            | Bool.false => (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x83010109)
+            | Bool.true => (writeViewIntent (project parsed value))))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: viewWireBytes,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (match ((prim length bytes : Nat) <=? 67108864)
+    | Bool.false => 0x83010106
+    | Bool.true => (match (viewWireParse (record ViewWireInput {bytes := bytes}))
+      | Result.error cause => (viewWireErrorBytes cause)
+      | Result.ok output => output)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewNodeListItems,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::Node)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewNodeListItemsInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewNodeList,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::Node)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewNodeListInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewNode,
+  parameters: [value : Foundation.View.Browser.V1.Model::Node],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewNodeInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewContent,
+  parameters: [value : Foundation.View.Browser.V1.Model::Content],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewContentInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewChoiceListItems,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::Choice)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewChoiceListItemsInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTextChoiceListItems,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::TextChoice)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTextChoiceListItemsInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewChoiceList,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::Choice)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewChoiceListInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTextChoiceList,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::TextChoice)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTextChoiceListInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewChoice,
+  parameters: [value : Foundation.View.Browser.V1.Model::Choice],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewChoiceInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTextChoice,
+  parameters: [value : Foundation.View.Browser.V1.Model::TextChoice],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTextChoiceInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewNatListItems,
+  parameters: [value : (List Nat)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewNatListItemsInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewNatList,
+  parameters: [value : (List Nat)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewNatListInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTableRowListItems,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::TableRow)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTableRowListItemsInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTableRowListInto,
+  parameters: [
+    value : (List Foundation.View.Browser.V1.Model::TableRow),
+    accumulated : (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError)
+  ],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (match ((viewCountTableRowList value) <=? 4096)
+    | Bool.false => (viewWireJoin accumulated (ctor Result.error [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] (ctor Foundation.Codec.Cbor.V1.Primitive::CborError.ValueLimit)))
+    | Bool.true => (writeViewTableRowListItemsInto value (viewWireJoin accumulated (Foundation.Codec.Cbor.V1.Primitive::writeCborArrayHead (viewCountTableRowList value) (viewWireLimits))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTableRowList,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::TableRow)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTableRowListInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTableRow,
+  parameters: [value : Foundation.View.Browser.V1.Model::TableRow],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTableRowInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTextListItems,
+  parameters: [value : (List String)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTextListItemsInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTextList,
+  parameters: [value : (List String)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTextListInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewFieldValueListItems,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::FieldValue)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewFieldValueListItemsInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewFieldValueList,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::FieldValue)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewFieldValueListInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewFieldValue,
+  parameters: [value : Foundation.View.Browser.V1.Model::FieldValue],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewFieldValueInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewValue,
+  parameters: [value : Foundation.View.Browser.V1.Model::Value],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewValueInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTableChunkListItems,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::TableChunk)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTableChunkListItemsInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeViewTableChunkList,
+  parameters: [value : (List Foundation.View.Browser.V1.Model::TableChunk)],
+  result: (Result Bytes Foundation.Codec.Cbor.V1.Primitive::CborError),
+  body: (writeViewTableChunkListInto value (ctor Result.ok [Bytes, Foundation.Codec.Cbor.V1.Primitive::CborError] 0x)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

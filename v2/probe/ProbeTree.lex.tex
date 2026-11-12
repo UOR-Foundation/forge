@@ -1,0 +1,75 @@
+\begin{lexlean}{Probe}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+inductive{
+  name: Event,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: increment, fields: []},
+    {name: reset, fields: []},
+    {name: setStride, fields: [Nat]}
+  ]
+}
+
+inductive{
+  name: Effect,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: persist, fields: [Nat]}, {name: announce, fields: [String]}]
+}
+
+inductive{
+  name: Node,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: text, fields: [String]},
+    {name: number, fields: [Nat]},
+    {name: button, fields: [String, Event]},
+    {name: column, fields: [(List Node)]}
+  ]
+}
+
+structure{
+  name: State,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: count, type: Nat}, {name: stride, type: Nat}]
+}
+
+structure{
+  name: Outcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: state, type: State}, {name: effects, type: (List Effect)}]
+}
+
+definition{
+  name: step,
+  parameters: [state : State, event : Event],
+  result: Outcome,
+  body: (match event
+    | Event.increment => (record Outcome {state := (record State {count := ((project state count) + (project state stride)), stride := (project state stride)}), effects := (cons (ctor Effect.persist ((project state count) + (project state stride))) (nil Effect))})
+    | Event.reset => (record Outcome {state := (record State {count := 0, stride := (project state stride)}), effects := (cons (ctor Effect.announce "reset") (nil Effect))})
+    | Event.setStride n => (record Outcome {state := (record State {count := (project state count), stride := n}), effects := (nil Effect)}))
+}
+
+definition{
+  name: view,
+  parameters: [state : State],
+  result: Node,
+  body: (ctor Node.column (cons (ctor Node.text "Counter") (cons (ctor Node.number (project state count)) (cons (ctor Node.button "Add" (ctor Event.increment)) (cons (ctor Node.button "Reset" (ctor Event.reset)) (nil Node))))))
+}
+
+theorem{
+  name: resetClears,
+  parameters: [state : State],
+  statement: ((project (project (step state (ctor Event.reset)) state) count) = 0),
+  proof: linear_arithmetic{definitions: [step]},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}

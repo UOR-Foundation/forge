@@ -1,0 +1,241 @@
+\begin{lexlean}{Address}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{Encoding}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Toolchain,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: semantics, type: Bytes}, {name: lean, type: Bytes}, {name: lexicons, type: Bytes}]
+}
+
+structure{
+  name: Declaration,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: kind, type: Nat}, {name: name, type: Bytes}, {name: body, type: Bytes}, {name: dependencies, type: (List Nat)}]
+}
+
+structure{
+  name: Key,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: toolchain, type: Nat}, {name: own, type: Nat}, {name: dependencies, type: Nat}]
+}
+
+structure{
+  name: Change,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: index, type: Nat}, {name: previous, type: (Option Key)}, {name: current, type: Key}]
+}
+
+inductive{
+  name: Staleness,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: fresh, fields: []},
+    {name: toolchainChanged, fields: []},
+    {name: ownChanged, fields: []},
+    {name: dependencyChanged, fields: []},
+    {name: added, fields: []}
+  ]
+}
+
+definition{
+  name: toolchainPreimage,
+  parameters: [toolchain : Toolchain],
+  result: Bytes,
+  body: (prim append 0x707269736d2f72657573652f746f6f6c636861696e2f310a (prim append (Encoding::framed (project toolchain semantics)) (prim append (Encoding::framed (project toolchain lean)) (Encoding::framed (project toolchain lexicons)) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: ownPreimage,
+  parameters: [declaration : Declaration],
+  result: Bytes,
+  body: (prim append 0x707269736d2f72657573652f6465636c61726174696f6e2f310a (prim append (Encoding::countBytes (project declaration kind)) (prim append (Encoding::framed (project declaration name)) (Encoding::framed (project declaration body)) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: dependenciesPreimage,
+  parameters: [dependencies : (List Nat)],
+  result: Bytes,
+  body: (prim append 0x707269736d2f72657573652f646570656e64656e636965732f310a (prim append (Encoding::countBytes (prim length dependencies : Nat)) (Encoding::addresses (Encoding::ordered dependencies)) : Bytes) : Bytes)
+}
+
+definition{
+  name: dependenciesValid,
+  parameters: [dependencies : (List Nat)],
+  result: Bool,
+  body: ((Encoding::ascendingCode (Encoding::ordered dependencies)) =? 0)
+}
+
+definition{
+  name: keyPreimage,
+  parameters: [key : Key],
+  result: Bytes,
+  body: (prim append 0x707269736d2f72657573652f6b65792f310a (prim append (Encoding::addressBytes (project key toolchain)) (prim append (Encoding::addressBytes (project key own)) (Encoding::addressBytes (project key dependencies)) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: codeFresh,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: codeToolchainChanged,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: codeOwnChanged,
+  parameters: [],
+  result: Nat,
+  body: 2
+}
+
+definition{
+  name: codeDependencyChanged,
+  parameters: [],
+  result: Nat,
+  body: 3
+}
+
+definition{
+  name: codeAdded,
+  parameters: [],
+  result: Nat,
+  body: 4
+}
+
+definition{
+  name: stalenessCode,
+  parameters: [previous : Key, current : Key],
+  result: Nat,
+  body: (if (not ((project previous toolchain) =? (project current toolchain))) then (codeToolchainChanged) else (if (not ((project previous own) =? (project current own))) then (codeOwnChanged) else (if (not ((project previous dependencies) =? (project current dependencies))) then (codeDependencyChanged) else (codeFresh))))
+}
+
+definition{
+  name: changeCode,
+  parameters: [change : Change],
+  result: Nat,
+  body: (match (project change previous)
+    | Option.none => (codeAdded)
+    | Option.some previous => (stalenessCode previous (project change current)))
+}
+
+definition{
+  name: stalenessOf,
+  parameters: [code : Nat],
+  result: Staleness,
+  body: (if (code =? (codeFresh)) then (ctor Staleness.fresh) else (if (code =? (codeToolchainChanged)) then (ctor Staleness.toolchainChanged) else (if (code =? (codeOwnChanged)) then (ctor Staleness.ownChanged) else (if (code =? (codeDependencyChanged)) then (ctor Staleness.dependencyChanged) else (ctor Staleness.added)))))
+}
+
+definition{
+  name: staleness,
+  parameters: [change : Change],
+  result: Staleness,
+  body: (stalenessOf (changeCode change))
+}
+
+definition{
+  name: recheck,
+  parameters: [changes : (List Change)],
+  result: (List Nat),
+  body: (match changes
+    | List.nil => (nil Nat)
+    | List.cons head rest => (if ((changeCode head) =? (codeFresh)) then (recheck rest) else (cons (project head index) (recheck rest)))),
+  recursive_argument: changes
+}
+
+definition{
+  name: breaksUnchanged,
+  parameters: [previous : Key, current : Key],
+  result: Bool,
+  body: (((((project previous toolchain) =? (project current toolchain)) && ((project previous own) =? (project current own))) && ((project previous dependencies) =? (project current dependencies))) && (not ((stalenessCode previous current) =? (codeFresh))))
+}
+
+theorem{
+  name: unchangedKeepsAddress,
+  parameters: [previous : Key, current : Key],
+  statement: ((breaksUnchanged previous current) = false),
+  proof: linear_arithmetic{definitions: [breaksUnchanged, codeDependencyChanged, codeFresh, codeOwnChanged, codeToolchainChanged, stalenessCode]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksToolchainChange,
+  parameters: [previous : Key, current : Key],
+  result: Bool,
+  body: ((not ((project previous toolchain) =? (project current toolchain))) && (not ((stalenessCode previous current) =? (codeToolchainChanged))))
+}
+
+theorem{
+  name: nothingReusedAcrossToolchains,
+  parameters: [previous : Key, current : Key],
+  statement: ((breaksToolchainChange previous current) = false),
+  proof: linear_arithmetic{definitions: [breaksToolchainChange, codeDependencyChanged, codeFresh, codeOwnChanged, codeToolchainChanged, stalenessCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksOwnChange,
+  parameters: [previous : Key, current : Key],
+  result: Bool,
+  body: ((not ((project previous own) =? (project current own))) && ((stalenessCode previous current) =? (codeFresh)))
+}
+
+theorem{
+  name: changedBytesAreStale,
+  parameters: [previous : Key, current : Key],
+  statement: ((breaksOwnChange previous current) = false),
+  proof: linear_arithmetic{definitions: [breaksOwnChange, codeDependencyChanged, codeFresh, codeOwnChanged, codeToolchainChanged, stalenessCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksDependencyChange,
+  parameters: [previous : Key, current : Key],
+  result: Bool,
+  body: ((not ((project previous dependencies) =? (project current dependencies))) && ((stalenessCode previous current) =? (codeFresh)))
+}
+
+theorem{
+  name: changedDependencyIsStale,
+  parameters: [previous : Key, current : Key],
+  statement: ((breaksDependencyChange previous current) = false),
+  proof: linear_arithmetic{definitions: [breaksDependencyChange, codeDependencyChanged, codeFresh, codeOwnChanged, codeToolchainChanged, stalenessCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksFreshOnlyUnchanged,
+  parameters: [previous : Key, current : Key],
+  result: Bool,
+  body: (((stalenessCode previous current) =? (codeFresh)) && (not ((((project previous toolchain) =? (project current toolchain)) && ((project previous own) =? (project current own))) && ((project previous dependencies) =? (project current dependencies)))))
+}
+
+theorem{
+  name: freshExactlyWhenUnchanged,
+  parameters: [previous : Key, current : Key],
+  statement: ((breaksFreshOnlyUnchanged previous current) = false),
+  proof: linear_arithmetic{definitions: [breaksFreshOnlyUnchanged, codeDependencyChanged, codeFresh, codeOwnChanged, codeToolchainChanged, stalenessCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+theorem{
+  name: addedIsChecked,
+  parameters: [index : Nat, current : Key],
+  statement: ((changeCode (record Change {index := index, previous := (ctor Option.none [Key]), current := current})) = (codeAdded)),
+  proof: linear_arithmetic{definitions: [changeCode, codeAdded]},
+  axioms: [propext]
+}
+\end{semanticmodule}
+\end{lexlean}

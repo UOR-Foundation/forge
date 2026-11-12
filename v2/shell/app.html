@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spec preview</title>
+<style>
+  :root { color-scheme: light dark; --ink: #16130f; --ground: #f6f3ee; --line: #d8d2c8; --accent: #b4532a; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #efeae2; --ground: #16130f; --line: #3a342c; --accent: #e08a5e; } }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--ground); }
+  main { max-width: 34rem; margin: 0 auto; padding: 2rem 1rem; }
+  #app > section { display: grid; gap: 1rem; padding: 1.5rem; border: 1px solid var(--line); border-radius: 12px; }
+  h1 { font-size: 1.25rem; margin: 0; }
+  form { display: grid; gap: .75rem; }
+  label { display: grid; gap: .25rem; font-size: .875rem; }
+  input, select, textarea, button { font: inherit; min-height: 44px; padding: 0 .75rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; box-sizing: border-box; width: 100%; }
+  button { cursor: pointer; } button[type=submit] { border-color: var(--accent); }
+  #app p { margin: 0; min-height: 1.5rem; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: .875rem; }
+  caption { text-align: left; opacity: .7; padding-bottom: .25rem; }
+  th, td { text-align: left; padding: .25rem .5rem .25rem 0; border-bottom: 1px solid var(--line); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; font-size: .875rem; margin-top: 2rem; }
+  dt { opacity: .7; } dd { margin: 0; font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+  <div id="app"></div>
+  <dl>
+    <dt>Source</dt><dd id="source"></dd>
+    <dt>Frame valid</dt><dd id="valid"></dd>
+    <dt>Load to first view</dt><dd id="load"></dd>
+    <dt>Action to view</dt><dd id="timing"></dd>
+  </dl>
+</main>
+<script type="module">
+// Runs any spec that follows the convention: <Entry>::initial, ::step(state, intent), ::view(state)
+// and ::catalogue. Usage: app.html?data=../probe-payment/data/&entry=Payment
+import { loadProject, NIL, cons } from "./interp.mjs";
+import { createView, fieldValue } from "./render.mjs";
+
+const started = performance.now();
+const $ = (id) => document.getElementById(id);
+const query = new URLSearchParams(location.search);
+const base = new URL(query.get("data") ?? "../probe-payment/data/", location.href);
+const entry = query.get("entry") ?? "Payment";
+const names = await (await fetch(new URL("modules.json", base))).json();
+const modules = Object.fromEntries(await Promise.all(names.map(async (name) => [name, await (await fetch(new URL(name.replaceAll(".", "/") + ".json", base))).json()])));
+const app = loadProject(modules);
+$("source").textContent = `${entry}: ${names.length} modules, ${app.definitions.length} definitions, interpreted in this tab`;
+
+const list = (items) => items.reduceRight((tail, head) => cons(head, tail), NIL);
+const catalogue = (() => { const out = []; for (let l = app.call(entry + "::catalogue"); l.c === "List.cons"; l = l.a[1]) out.push(l.a[0]); return out; })();
+const validate = "Foundation.View.Browser.V1.Model::presentationValid";
+let state = app.call(entry + "::initial");
+
+function show() {
+  const frame = app.call(entry + "::view", state);
+  // The library's own validity rule decides whether a frame may be drawn.
+  const valid = app.call(validate, frame);
+  $("valid").textContent = String(valid);
+  if (!valid) throw new Error("the model produced a frame the protocol does not admit");
+  draw(frame, catalogue);
+}
+function act(action, fields) {
+  const t0 = performance.now();
+  state = app.call(entry + "::step", state, { revision: state.revision, action, fields: list(fields.map(fieldValue)) });
+  show();
+  const ms = performance.now() - t0;
+  $("timing").textContent = ms.toFixed(2) + " ms";
+  return ms;
+}
+const draw = createView($("app"), act);
+show();
+$("load").textContent = (performance.now() - started).toFixed(1) + " ms";
+window.preview = { act, get state() { return state; } };
+</script>
+</body>
+</html>
