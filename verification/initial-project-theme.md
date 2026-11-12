@@ -11,3 +11,5 @@ Six mutations are rejected and restored: omitted inheritance, skipped selection 
 Full integrated qualification, hosted exact-head acceptance and independent approval remain separately tracked. This feature does not claim whole-application conversion or factory consumer qualification.
 
 All 52 mandatory browser journeys pass. The initial sweep passed 48 and exposed four isolated fixture servers that omitted the new transitive theme-library module. Those four fixtures now serve that production dependency and each rerun passes; the original failures are retained in `initial-theme-integrated-browser-results.json`. Production source did not change. The full Rust workspace, Clippy, formatting, shell parsing and complete byte-identity corpus pass. Renderer typecheck adds zero errors over the pinned upstream baseline of 28. Final closure is 588 files, 51,367,157 bytes, digest `cb4941131d70e7ced9c34fff51ad6d806461adf3b190ac0206a975a61e85c45e`.
+
+The full seven-route/three-run performance gate passes with unchanged budgets: median cold LCP 9,544 ms, warm LCP 1,572 ms, INP 216 ms and first token 2,852 ms. Raw runs are retained in `initial-theme-performance.json`.

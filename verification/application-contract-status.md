@@ -37,7 +37,7 @@ Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implement
 | FA-68 sidebar tools | #132 at fc2c833e19254ff8f7422f52f388100fd7f81435 | SDK 43145069884, Studio 43145070030 and Forge performance 43145069883 pass; separate Prism-page gate fails. |
 | FA-69 live integration | #135; `live-main-integration.md` | All 50 local browser journeys, four actual app replays and full mobile performance pass. Hosted CI fixes retain history, hidden assets, executable mode and locked Playwright. Exact final-head acceptance pending. |
 | FA-70 gallery | #136; `source-bound-gallery.md` | 430 Node controls, all 51 browser journeys, seven rejected mutations, full mobile performance and author review. Exact final-head hosted acceptance pending. |
-| FA-71 initial theme | #137; `initial-project-theme.md` | 434 Node controls, full Rust/Clippy/fmt, renderer typecheck with zero added errors, actual transaction browser and six mutations pass. Integrated browser/performance and hosted acceptance in progress. |
+| FA-71 initial theme | #137; `initial-project-theme.md` | 434 Node controls, full Rust/Clippy/fmt, renderer typecheck with zero added errors, actual transaction browser and six mutations pass. All 52 mandatory browser journeys and full mobile performance pass. Exact-head hosted acceptance and independent approval remain outstanding. |
 
 Author completeness reviews are not independent approval. Earlier green revisions do not establish acceptance for newer heads.
 
