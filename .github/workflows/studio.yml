@@ -113,6 +113,8 @@ jobs:
         run: node --test tools/live_app.test.mjs
       - name: A stateful app is checked at the end of its turn, and the card claims no more than the check found
         run: node --test tools/live_app_check.test.mjs
+      - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
+        run: node --test tools/live_app_prove.test.mjs
       # Needs the built checker at v2/in-tab-check/dist/lexlean-tab-lean.wasm, which is not committed: it is
       # built from a patched LexLean (UOR-Foundation/LexLean 494 and 495) and Foundry ships no fork. Until the
       # SDK publishes the checker and a step before this one places it, this step fails, and it is meant to:

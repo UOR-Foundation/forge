@@ -444,12 +444,22 @@ const callTool = (tool, args, tasks = false) => rpc("tools/call", tool, { name: 
 
 /** Ask Lean to prove the spec's guarantees. Resolves { ok, record, seconds } or { ok: false, error }. */
 export async function prove(spec, { onWait = () => {} } = {}) {
-  if (spec.rules.length > PROVE_RULES_MAX) throw new Error(`These ${spec.rules.length} rules are checked on every request, but Lean proves at most ${PROVE_RULES_MAX} rules today: its proofs are one theorem per guarantee over the whole rule chain. Proving more waits for local proofs in LexLean (UOR-Foundation/PrismPM#605).`);
+  const result = await proveFiles(async (axioms) => { const files = await projectFiles(spec, axioms); return { files, entrypoints: files.map((f) => f.path) }; }, { onWait, before: () => { if (spec.rules.length > PROVE_RULES_MAX) throw new Error(`These ${spec.rules.length} rules are checked on every request, but Lean proves at most ${PROVE_RULES_MAX} rules today: its proofs are one theorem per guarantee over the whole rule chain. Proving more waits for local proofs in LexLean (UOR-Foundation/PrismPM#605).`); } });
+  if (result.ok) { const { seconds, ...rest } = result.record; result.record = { ...rest, properties: spec.properties.map((p) => p.id), seconds }; }
+  return result;
+}
+/**
+ * Proves LexLean files on the hosted verifier: every theorem through Lean and leanchecker, each with
+ * its exact axioms. `filesFor(axioms)` gives { files, entrypoints } for the axiom sets Lean has named
+ * so far (declaration name -> "[a, b]"); a wrong set is corrected from what Lean observed and proved
+ * again. Resolves { ok, record, seconds, axioms } or { ok: false, error }.
+ */
+export async function proveFiles(filesFor, { onWait = () => {}, before = () => {} } = {}) {
+  before();
   const t0 = Date.now();
   const axioms = {};
   for (let round = 1; round <= 6; round++) {
-    const files = await projectFiles(spec, axioms);
-    const entrypoints = files.map((f) => f.path);
+    const { files, entrypoints } = await filesFor(axioms);
     const written = await callTool("lexlean_draft_write", { profile: PROFILE, files });
     const draft = written && written.structuredContent && written.structuredContent.draft;
     if (!draft || written.isError) return { ok: false, error: "the verifier did not take the draft" };
@@ -479,7 +489,7 @@ export async function prove(spec, { onWait = () => {} } = {}) {
     const absent = modules.filter((m) => !proved.has(m));
     if (absent.length) return { ok: false, error: "the verifier did not verify " + absent.join(", ") };
     const seconds = Math.round((Date.now() - t0) / 1000);
-    return { ok: true, seconds, axioms: { ...axioms }, record: { schema: "prism/hosted-verification/1", server: HOSTED, profile: PROFILE, draft, entrypoints, verified_at: new Date().toISOString(), attestation_id: body.attestation_id, semantic_id: body.semantic_id || null, source_id: body.source_id || null, modules: [...proved], properties: spec.properties.map((p) => p.id), seconds } };
+    return { ok: true, seconds, axioms: { ...axioms }, record: { schema: "prism/hosted-verification/1", server: HOSTED, profile: PROFILE, draft, entrypoints, verified_at: new Date().toISOString(), attestation_id: body.attestation_id, semantic_id: body.semantic_id || null, source_id: body.source_id || null, modules: [...proved], seconds } };
   }
   return { ok: false, error: "the axiom sets did not settle" };
 }

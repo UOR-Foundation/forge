@@ -12,6 +12,7 @@ use repo_model::{codegen, Model};
 
 mod audit;
 mod bootstrap;
+mod reuse;
 mod scaffold;
 
 fn main() -> ExitCode {
@@ -27,6 +28,7 @@ fn main() -> ExitCode {
         "audit-deferral" => audit::audit_deferral(&root),
         "audit-bootstrap" => bootstrap::audit(&root),
         "audit-dependency-updates" => bootstrap::audit_dependency_updates(&root),
+        "audit-reuse" => reuse::audit(&root),
         "validate" => validate(&root),
         "new-capability" => {
             let args: Vec<String> = std::env::args().skip(2).collect();
@@ -41,6 +43,7 @@ fn main() -> ExitCode {
                  audit-deferral    R4: no deferral marker, no stub, no capability behind a flag\n\
                  audit-bootstrap   immutable SDK and least-privilege workflow trust root\n\
                  audit-dependency-updates   SDK ownership and ordinary dependency maintenance\n\
+                 audit-reuse       work runs only on its inputs, or is reused by address\n\
                  validate          run every gate above\n\
                  new-capability <ID> <level> <suite> <statement>\n\
                                    R3: write the register row, scenario and failing test\n\
@@ -106,6 +109,7 @@ fn validate(root: &Path) -> Result<(), Fail> {
     audit::audit_limits(root)?;
     audit::audit_deferral(root)?;
     bootstrap::audit(root)?;
+    reuse::audit(root)?;
     println!("validate: every gate passed");
     Ok(())
 }

@@ -514,3 +514,28 @@ About the end-to-end gate (`tools/live_e2e.mjs`, a decision app, real Chromium).
 Every miss was an edit reaching the screen 2 to 17 ms past the two-frame budget of 33.4 ms. The deployed site missed more often than this branch, so the misses are this machine, not this change. The gate's verdict that counts is the one in CI.
 
 Next: step 5, proof. The existing path proves a decision on the hosted verifier; a stateful app's module imports the library, whose title the hosted lexicon refuses, so the proof draft must carry a retitled library copy and the attestation will be over that draft. That, the time a hosted proof takes (over ten minutes for a small module), and showing each promise beside the statement proved are the work.
+
+## Step 5, built: a stateful app is proved on approval (2026-11-12)
+
+What changed in the studio:
+- `prism.js`: the proof loop (`proveFiles`) takes any set of LexLean files; a decision's proof (`prove`) is one caller of it and behaves as before. A wrong axiom set is corrected from what Lean observed and proved again, as it already was.
+- `shell/live/app.mjs`: `theoremsOf` and `promisesOf` read a module's theorems and its plain sentences; `proofFiles` gives the files a proof is asked on and names the app's own module as the one that must come back verified; `proofMessage` lists each promise beside the exact statement proved.
+- `host.js`: replying "approve" to a checked stateful app has the kernel move it to proving and asks Lean. On an attestation the kernel moves it to proved, and the module Lean verified becomes the stored one; on a refusal or a failure it goes back to checked, with the reason kept. A proof whose module changed meanwhile is dropped.
+
+What the proof is about. The hosted lexicon lacks the words of the library module's title, so the draft carries the library with its title's words replaced, as a check does, and the app's own title likewise. Every declaration is sent as written. The attestation is therefore about that draft: the module's and the library's own declarations, under replaced titles.
+
+Evidence:
+- The exact files the app sends were verified by Lean in the pinned SDK image: `verified 2 modules`, attestation `d702372d3170fe628a2a17aa30e5ece118852eb3dfcd76c9b87fa2bf11f77c98`, 6 min 9 s. So the draft proves, with replaced titles and all.
+- `node --test studio/tools/live_app_prove.test.mjs`: 7 claims against a stand-in that speaks the verifier's protocol. They cover a verified proof, an axiom correction, a refused theorem, a verifier that verified some other module, and one that gave no attestation. They caught a real fault in the refactor: the success path still named a decision's spec. Fixed.
+- Planted defect: `proofFiles` made to name no module that must come back verified. Three claims failed. Restored, green.
+- In the real Foundry over the deployed site: approval moved the app from checked to proving, the preview's badge read "Lean is proving", and a second approval answered that Lean was already proving.
+- Every studio gate that runs without the lane passes.
+
+Not shown: a proof completed through the hosted verifier. Every attempt that day ended after about a minute with `No space left on device`, reported by the verifier itself as a build diagnostic (`LLB6003`). That is the verifier's machine, not the app or the module, and it blocks every proof in Foundry, a decision's included, until someone with access frees it.
+
+That failure did exercise the refusal path for real: the kernel answered `fail`, the app went back to checked, and the reason was kept. It also showed a wording fault, now fixed and tested: the message told the person to fix a property when the verifier had failed. It now tells the two apart. A verification diagnostic (`LLV…`) is Lean refusing a theorem; anything else is the verifier, and the message says it says nothing about the app.
+
+Still true, and said in the app:
+- A sentence can say more than its theorem. The message shows both and says the statement is what is proved.
+- A proved stateful app cannot be published yet (step 6).
+- A hosted proof of a small module has taken over ten minutes when it has run at all. The proof loop gives up after fifteen.

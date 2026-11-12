@@ -132,15 +132,23 @@ Each finding gives the screen, viewport and appearance, the problem, the fix and
 
 ## What the kernel decides
 
-Foundry is a Prism app: its decisions are FK requirements in `app/src/ForgeKernel.lex.tex`, with theorems in `ForgeKernelProofs.lex.tex` that Lean proves for every request (`prismpm --project app verify`). The words the page shows stay in the View (`studio/src`). The kernel's guest runs in the page and in the worker, pinned by `KERNEL_REV`, and replays all 100 acceptance vectors before it answers anything.
+Foundry is a Prism app: its decisions are FK requirements in `app/src/ForgeKernel.lex.tex`, with theorems in `ForgeKernelProofs.lex.tex` that Lean proves for every request (`prismpm --project app verify`). The words the page shows stay in the View (`studio/src`). The kernel's guest runs in the page and in the worker, pinned by `KERNEL_REV`, and replays all 174 acceptance vectors before it answers anything.
 
 | Rule | Kernel request and answer | Theorems (Lean) | Who asks |
 |---|---|---|---|
 | Performance budgets: mobile cold and warm LCP, INP, first token (ms; first token 5,000 since main's atomic project creation, measured 4.5 s); first-load JS per route (gzip KB) | `budget JOURNEY VALUE`: `within` or `over` | FK-12 never within when over, FK-13 never over when within, FK-14 INP budget at most 500 ms, FK-15 no route below the first load | the Performance gate, for every verdict; the numbers exist nowhere else |
+| The build journey (ms): `preview` 1,999 Enter to the preview frame, `declaration` 19,999 Enter to the model's first declaration, `pixel` 99 first declaration to first pixel, `update` 15 work per preview update, `edit` 33 an edit to the screen, `checked` 2,999 the module complete to its check on screen, `built` 29,999 Enter to a checked app | `budget JOURNEY VALUE`: `within` or `over` | FK-12, FK-13; FK-23 `built` at most 30 s; FK-24 `edit` at most 33 ms | the live preview gate (`tools/live_e2e.mjs`) for `pixel`, `update` and `checked`. Nothing measures `preview`, `declaration`, `edit` or `built` against the kernel yet: the first and the last two need a real model's turn, which no gate runs |
+| Model thinking: none on a first attempt, allowed on a repair | `think ATTEMPT`: `allow` or `deny` | FK-22 | the chat, before a first attempt on the site's GLM; a `deny` is sent to the relay as Featherless's `chat_template_kwargs.enable_thinking: false` |
 | Chat and preview stack under 768 px | `layout WIDTH`: `tabs` or `split` | FK-16, FK-17 | the chat page, on load and on resize |
 | Motion: at most 200 ms, none when reduced motion is asked | `motion MS REDUCED`: `allow` or `deny` | FK-18, FK-19 | the Experience gate, for every duration in `appearance.css` |
 | Tap targets at least 44 px | `target PX`: `ok` or `small` | FK-20 | the Experience gate, for the touch hit area |
 | "This week" on the Apps page: seven days | `recent SECONDS`: `yes` or `no` | FK-21 | the Apps page, for each date |
+
+Where the build journey stood on 2026-11-12, by the owner's measurements on the deployed site with GLM 5.3 Flash: `preview` 1.3 s (within); `declaration` 99 to 290 s (over); `pixel` 31 to 64 ms (within); `update` 4.8 to 8.5 ms (within); `edit` 16 to 25 ms, rarely 34 to 37 (over when it is); `checked` 35 to 70 ms (within); `built` 167 to 196 s (over). Both misses that matter are the model reasoning before it writes, which is what FK-22 turns off.
+
+FK-22 to FK-24 were proved by Lean in the kernel pin run that built the kernel this branch pins (blake3:2562a0ed, attestation `655c6d4b…`), and the pinned guest replays all 174 vectors, the twenty new ones among them.
+
+Not established about FK-22: that GLM 5.3 Flash honours the switch on Featherless, how long a first declaration then takes, and how often a module written without reasoning reads at the first try. The relay must be redeployed before the switch reaches Featherless at all; until then it is dropped and nothing changes.
 
 What stays outside the kernel, and why:
 

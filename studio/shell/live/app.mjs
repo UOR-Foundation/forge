@@ -10,7 +10,7 @@
 import { loadProject, NIL, cons } from "./v2/interp.mjs";
 import { describe, fieldValue } from "./v2/render.mjs";
 import RULES from "./v2/rules.mjs";
-import { check as hostedCheck, loadLibrary } from "./v2/check.mjs";
+import { check as hostedCheck, loadLibrary, prepare } from "./v2/check.mjs";
 import { createClient } from "./v2/in-tab/client.mjs";
 
 const HOSTED = "https://mcp.uor.foundation/";
@@ -24,6 +24,8 @@ export const STATE_PATH = "prism/app.json";
 /** What the chat shows for a state. It claims no more than the state holds. */
 export function card(state) {
   const route = routeLine(state.by);
+  if (state.phase === "proving") return "**App** · Lean is proving\n\nLean is checking this app's properties on the hosted verifier.";
+  if (state.phase === "proved") return "**App** · proved by Lean\n\nLean proved " + (state.theorems || []).length + " theorem" + ((state.theorems || []).length === 1 ? "" : "s") + " about this app. Attestation `" + String(state.proof && state.proof.attestation_id || "").slice(0, 16) + "…`. It cannot be published yet.";
   if (state.phase === "checked") return "**App** · checked\n\nThe checker accepts this app's module, and it runs in the preview from it. It is not proved yet, and it cannot be published yet." + (route ? "\n\n" + route : "");
   if (state.issues && state.issues.length) return "**App** · not checked\n\n" + state.issues.map((i) => "- " + i).join("\n") + (route ? "\n\n" + route : "") + "\n\nIt still runs in the preview as far as it can. Ask me to fix the module.";
   return CARD + (state.unchecked ? "\n\nIt could not be checked just now: " + state.unchecked : "");
@@ -39,6 +41,56 @@ export function routeLine(by) {
   if (by.instead.code === "ITC_NOT_LOADED") return "Checked by the hosted service while the checker in this tab loads.";
   return "Checked by the hosted service, because the checker in this tab could not run: " + by.instead.message + " (" + by.instead.code + ")";
 }
+/** The theorems a module states: name, exact statement, proof form. */
+export function theoremsOf(module) {
+  return splitDeclarations(String(module)).declarations.filter((d) => d.kind === "theorem").map((d) => ({
+    name: d.name,
+    statement: (/\n\s*statement:\s*([\s\S]*?),\s*\n\s*proof:/.exec(d.source) || [])[1]?.trim() ?? "",
+    form: (/proof:\s*([a-z_]+)/.exec(d.source) || [])[1] ?? "",
+  }));
+}
+/** The plain sentences a module promises, in order: the string literals of its `promises` definition. */
+export function promisesOf(module) {
+  const d = splitDeclarations(String(module)).declarations.find((x) => x.kind === "definition" && x.name === "promises");
+  if (!d) return [];
+  return [...d.source.slice(d.source.indexOf("body:")).matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1].replace(/\\(.)/g, "$1"));
+}
+/** The module with the axiom sets Lean named ({ theorem: "[a, b]" }) written into those declarations. */
+export function withAxioms(module, axioms) {
+  let text = String(module);
+  for (const [name, set] of Object.entries(axioms || {})) {
+    const d = splitDeclarations(text).declarations.find((x) => x.name === name);
+    if (!d) continue;
+    const fixed = /axioms:\s*\[[^\]]*\]/.test(d.source) ? d.source.replace(/axioms:\s*\[[^\]]*\]/, "axioms: " + set) : d.source.replace(/\s*\}$/, ",\n  axioms: " + set + "\n}");
+    text = text.replace(d.source, fixed);
+  }
+  return text;
+}
+/**
+ * The files a proof of this module is asked on, and which of them must come back verified. The
+ * library module goes with its title's words replaced, as for a check: the hosted lexicon lacks them.
+ * So the attestation is about this draft, whose declarations are the module's and the library's own.
+ */
+export function proofFiles(module, library) {
+  const prepared = prepare(String(module).trim() + "\n", { library });
+  return { files: prepared.files, entrypoints: prepared.files.filter((f) => prepared.origin[f.path] === "author").map((f) => f.path) };
+}
+/** What the chat says while Lean works, and when it ends. */
+export const provingMessage = (count) => "Proving " + count + " propert" + (count === 1 ? "y" : "ies") + " of this app with Lean on the hosted verifier. This can take ten minutes or more. The preview keeps working meanwhile.";
+export function proofMessage(result) {
+  if (!result.ok) {
+    // Lean refusing a theorem (a verification diagnostic, LLV…) is about the app. Anything else, a
+    // verifier that ran out of room or time or did not answer, is about the verifier, and says so.
+    const refused = (result.diagnostics || []).some((d) => /^LLV/.test(String(d.code || "")));
+    const why = String(result.error || "Lean refused the proof").replace(/\.+$/, "");
+    return refused
+      ? "**Not proved.** Lean refused it: " + why + ". The app is back to checked. Ask me to fix the property, or to drop it."
+      : "**Not proved.** The verifier could not run the proof: " + why + ". This says nothing about the app. It is back to checked; reply approve to try again.";
+  }
+  const lines = result.theorems.map((t, i) => "- " + (result.promises[i] ? result.promises[i] + "\n  Lean proved: " : "Lean proved: ") + "`" + t.statement + "`");
+  return "**Proved by Lean.** " + result.theorems.length + " theorem" + (result.theorems.length === 1 ? "" : "s") + " about this app, for every state, in " + result.seconds + " s. Attestation `" + result.record.attestation_id.slice(0, 16) + "…`.\n\n" + lines.join("\n") + "\n\nA sentence can say more than its theorem: the statement is what is proved. The app cannot be published yet.";
+}
+
 /** One line a person or a model can act on. */
 export const issueLine = (d) => (d.line ? "Line " + d.line + ": " : "") + d.message + (d.code ? " (" + d.code + ")" : "");
 /** What a model is asked when the checker refuses its module: its own module, the checker's words, the whole module again. */
