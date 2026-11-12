@@ -113,6 +113,8 @@ jobs:
         run: node --test tools/live_app.test.mjs
       - name: A stateful app is checked at the end of its turn, and the card claims no more than the check found
         run: node --test tools/live_app_check.test.mjs
+      - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
+        run: node --test tools/live_app_prove.test.mjs
       - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
         run: |
           node tools/live_proof.mjs --check

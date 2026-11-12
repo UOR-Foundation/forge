@@ -1124,7 +1124,50 @@ async function proveRules(appId, logicKey, onWait) {
 }
 // "approve" is the user's yes to the guarantees on the card: no model is asked. The answer is a
 // message, and, when Lean was started, the proof to wait for.
+// A stateful app's standing (shell/live/app.mjs, STATE_PATH), only while it is about the stored module.
+async function appStateOf(appId) {
+  const source = await get("files", appId + ":" + appShape.SOURCE_PATH);
+  if (typeof source !== "string" || !appShape.isAppShape(source)) return null;
+  let state = null;
+  try { state = JSON.parse(await get("files", appId + ":" + appShape.STATE_PATH) || "null"); } catch (e) {}
+  return { source, state: state && state.sourceKappa === await kappa(enc.encode(source)) ? state : null };
+}
+const saveAppFiles = async (appId, writes) => applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, source: await captureProjectSource(await dbReady, appId) });
+// Approval of a stateful app: the kernel moves it from checked to proving, and Lean is asked.
+async function approveApp(appId, app) {
+  const { source, state } = app;
+  if (!state) return { text: "This app's module is not checked yet, so there is nothing to approve. Ask me to fix it." };
+  if (state.phase === "proving") return { text: "Lean is already proving this app's properties." };
+  if (state.phase === "proved" || state.phase === "published") return { text: "This app's properties are already proved by Lean." };
+  if (state.phase !== "checked") return { text: "This app's module is not checked yet, so there is nothing to approve. Ask me to fix it." };
+  const count = appShape.theoremsOf(source).length;
+  if (!count) return { text: "This app's module states no properties, so there is nothing for Lean to prove. Ask me to add its promises." };
+  const phase = await nextPhase("checked", "approve");
+  await saveAppFiles(appId, [{ path: appShape.STATE_PATH, content: JSON.stringify({ ...state, phase, approved: now() }, null, 2) + "\n" }]);
+  await refreshLive(appId);
+  return { text: appShape.provingMessage(count), message: appShape.proofMessage, prove: (onWait) => proveApp(appId, state.sourceKappa, source, onWait) };
+}
+// Lean proves the module on the hosted verifier; the kernel moves the phase on its attestation or its
+// refusal. A proof whose module changed meanwhile is dropped: it is about other bytes. The module Lean
+// verified (its axiom sets as Lean observed them) becomes the stored one.
+async function proveApp(appId, sourceKappa, source, onWait) {
+  const library = await (appLibrary || (appLibrary = appShape.checkLibrary(readEngine)));
+  let proved = source;
+  const result = await prism.proveFiles(async (axioms) => { proved = appShape.withAxioms(source, axioms); return appShape.proofFiles(proved, library); }, { onWait }).catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
+  const latest = await appStateOf(appId);
+  if (!latest || !latest.state || latest.state.sourceKappa !== sourceKappa || latest.state.phase !== "proving") return null;
+  const phase = await nextPhase("proving", result.ok ? "attest" : "fail");
+  const kept = result.ok ? proved.trim() + "\n" : latest.source;
+  const theorems = appShape.theoremsOf(kept), promises = appShape.promisesOf(kept);
+  const state = { ...latest.state, phase, sourceKappa: await kappa(enc.encode(kept)), proof: result.ok ? result.record : null, proofError: result.ok ? null : result.error, theorems: result.ok ? theorems : [], promises: result.ok ? promises : [], updated: now() };
+  await saveAppFiles(appId, [...(kept !== latest.source ? [{ path: appShape.SOURCE_PATH, content: kept }] : []), { path: appShape.STATE_PATH, content: JSON.stringify(state, null, 2) + "\n" }]);
+  await put("audit", Date.now() + ":prism:" + appId, { timestamp_millis: Date.now(), principal: "app:" + appId, operation: "prism.app.prove", resource: sourceKappa, outcome: result.ok ? "proved" : "refused" });
+  await refreshLive(appId);
+  return { ...result, theorems, promises };
+}
 async function approveRules(appId) {
+  const app = await appStateOf(appId);
+  if (app) return approveApp(appId, app);
   const state = await rulesOf(appId);
   if (!state) return { text: "This app has no rules to prove yet. Tell me what it decides and I will draft them." };
   if (state.phase === "proving") return { text: "Lean is already proving these rules." };
@@ -1158,7 +1201,7 @@ async function approveTurn(chatId, appId, messages, userId, ref, intentId) {
       await show(started.text + "\n\nStopped watching. Lean keeps working; the result is kept with the app's rules.");
       proof.catch(() => {});
     } else {
-      await show(started.text + "\n\n" + (result ? prism.proofMessage(started.spec, result) : "The rules changed while Lean worked, so this proof is about other rules and was dropped."));
+      await show(started.text + "\n\n" + (result ? (started.message ? started.message(result) : prism.proofMessage(started.spec, result)) : "The rules changed while Lean worked, so this proof is about other rules and was dropped."));
     }
   }
   publishChat(chatId, { phase: "finalizing", error: null, lastCompletion: { intentId, invocationRef: ref, outcome: "completed", updatedFiles: false, suppressAutoReview: true, targetAppId: appId } });
@@ -1245,7 +1288,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   await show(`${head}\n\n**Live:** ${result.live}\n\nBuilt by the Prism SDK on GitHub Actions in ${minutes} min: Lean export, Rust, WebAssembly, and Lean checked every theorem in the gate. Forge fetched the holo and replayed ${result.vectors.passed} of ${result.vectors.total} acceptance vectors in its compiled guest. Holo \`${String(result.fingerprint).slice(0, 12)}…\` · [repository](https://github.com/${result.repository})${links}`);
   finish();
 }
-window.__prism = { rulesAfterTurn, approveRules, rulesOf, nextPhase, check: prism.checkSpec };
+window.__prism = { rulesAfterTurn, approveRules, rulesOf, appStateOf, nextPhase, check: prism.checkSpec };
 
 async function chatTurn(chatId, intent) {
   const m = chatMachineOf(chatId);
