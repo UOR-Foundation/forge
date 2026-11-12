@@ -68,28 +68,23 @@ log("worker controls page", "yes");
 
 const { appId, chatId } = await page.evaluate(async (name) => { const r = await window.electron.ipcRenderer.invoke("create-app", { name, initialChatMode: "build" }); return { appId: r.app.id, chatId: r.chatId }; }, spec.name || "prism-app");
 log("app created", { appId, chatId });
-// The renderer may open the chat before it has picked the new app up ("Select an app to see the
-// preview"); the preview panel is what the test needs, so wait for it. A loaded chat URL does not select
-// its app in the current renderer, so the second attempt opens the chat the way a user does: from the
-// app's page, by "Open in Chat".
-for (let attempt = 0; attempt < 2; attempt++) {
-  if (attempt) {
-    await page.goto(BASE + "app-details?appId=" + appId);
-    await page.locator("text=Open in Chat >> visible=true").first().click();
-  } else await page.goto(BASE + "chat?id=" + chatId);
-  await page.waitForFunction(() => !!window.__live, null, { timeout: 30000 });
-  const ready = await page.waitForSelector('[data-testid="preview-iframe-element"]', { timeout: 20000 }).then(() => true, () => false);
-  if (ready) break;
-  if (attempt) throw new Error("the renderer never showed the app's preview panel");
-}
-await page.waitForTimeout(3000);
-
+// Select the app explicitly. The initial generated-code preview requires consent;
+// decline that unrelated effect, then use the same speculative live frame the
+// module-generation path opens before its first declaration arrives.
+await page.goto(BASE + "chat?id=" + chatId + "&appId=" + appId);
+await page.waitForFunction(() => !!window.__live, null, { timeout: 30000 });
+const previewDisclosure = page.getByRole("dialog", { name: "Review preview permissions", exact: true });
+await previewDisclosure.getByRole("button", { name: "Don't allow", exact: true }).click();
 // count every load of the live frame: a reload is a load after the first
 const liveLoads = [];
 // A real load of the live frame runs its script, which says hello; Playwright's framenavigated also fires
 // for same-document navigations (the renderer re-asserting the same address), which keep the page.
 await page.exposeFunction("__liveLoaded", (url) => liveLoads.push({ t: Date.now(), url }));
 await page.evaluate(() => addEventListener("message", (e) => { if (e.data && e.data.type === "live/hello") window.__liveLoaded(String(e.data.app)); }));
+
+await page.evaluate(id => window.__live.showLive(id), appId);
+await page.waitForSelector('[data-testid="preview-iframe-element"]', { timeout: 20000 });
+await page.waitForTimeout(3000);
 
 // paint reports from the live frame, as the host sees them
 // paint reports, and each edit as it reaches the host (the user's action, on the host's clock)
@@ -160,7 +155,8 @@ if (lex) {
 }
 
 // the live frame inside Dyad's preview panel
-const frame = page.frames().find((f) => f.url().includes("/p/blake3:"));
+const previewElement = await page.getByTestId("preview-iframe-element").elementHandle();
+const frame = await previewElement.contentFrame();
 log("live frame in preview", frame ? "yes" : "NO");
 const tables = await page.evaluate(() => window.__tables || []);
 log("table", tables.length ? tables[tables.length - 1] : "none");
