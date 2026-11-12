@@ -322,6 +322,19 @@ export const commandRegistryData = {
       "quality": "Independent finite relevance and latency qualification; no permission authority."
     },
     {
+      "id": "theme-library",
+      "version": 1,
+      "owner": "FoundrySpecification.themeLibraryBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Atomic durable theme selection and exact generation disclosure; theme text grants no effects."
+    },
+    {
       "id": "unavailable",
       "version": 1,
       "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
@@ -1137,11 +1150,11 @@ export const commandRegistryData = {
     },
     {
       "channel": "create-custom-theme",
-      "feature": "unavailable",
+      "feature": "theme-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.themeLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },
@@ -1207,11 +1220,11 @@ export const commandRegistryData = {
     },
     {
       "channel": "delete-custom-theme",
-      "feature": "unavailable",
+      "feature": "theme-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.themeLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },
@@ -1567,9 +1580,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "get-app-theme",
-      "feature": "local-read",
+      "feature": "theme-library",
       "version": 1,
-      "owner": "FoundrySpecification.browserReadBoundary",
+      "owner": "FoundrySpecification.themeLibraryBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",
@@ -1667,11 +1680,11 @@ export const commandRegistryData = {
     },
     {
       "channel": "get-custom-themes",
-      "feature": "unavailable",
+      "feature": "theme-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.themeLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },
@@ -1827,11 +1840,11 @@ export const commandRegistryData = {
     },
     {
       "channel": "get-themes",
-      "feature": "unavailable",
+      "feature": "theme-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.themeLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },
@@ -2957,11 +2970,11 @@ export const commandRegistryData = {
     },
     {
       "channel": "set-app-theme",
-      "feature": "unavailable",
+      "feature": "theme-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.themeLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },
@@ -3377,11 +3390,11 @@ export const commandRegistryData = {
     },
     {
       "channel": "update-custom-theme",
-      "feature": "unavailable",
+      "feature": "theme-library",
       "version": 1,
-      "owner": "FoundrySpecification.capabilityAvailabilityBoundary",
-      "adapter": "studio/shell/host-boundary.mjs",
-      "availability": "unavailable",
+      "owner": "FoundrySpecification.themeLibraryBoundary",
+      "adapter": "studio/shell/host.js",
+      "availability": "adapter",
       "input": "imported-renderer",
       "output": "imported-renderer"
     },

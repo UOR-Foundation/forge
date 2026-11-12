@@ -116,6 +116,8 @@ jobs:
           node tools/durable_version_preview_browser.mjs
           node tools/verified_working_tree_browser.mjs
           node tools/durable_prompt_library_browser.mjs
+          node tools/builtin_themes_projection.mjs --check
+          node tools/durable_theme_library_browser.mjs
           node tools/renderer_stylesheet_identity_browser.mjs
           node tools/atomic_browser_settings_browser.mjs
           node tools/site_relay_authorization_browser.mjs

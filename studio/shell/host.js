@@ -1,3 +1,5 @@
+import {createThemeLibrary} from "./theme-library.mjs";
+import {themesData} from "./builtin-themes.mjs";
 import {changeUserSettings} from "./settings-transactions.mjs";
 import {createPromptLibrary} from "./prompt-library.mjs";
 import {readWorkingTree} from "./working-tree.mjs";
@@ -91,6 +93,14 @@ const keys = (store) => tx(store, "readonly", (s) => s.getAllKeys());
 // An app's files are the keys "<id>:<path>": read by key range instead of walking every app's keys.
 const appRange = (appId) => IDBKeyRange.bound(appId + ":", appId + ":￿");
 
+const themeLibrary=createThemeLibrary(dbReady,themesData);
+handlers.set("get-themes", () => themeLibrary("catalog"));
+handlers.set("get-custom-themes", () => themeLibrary("list"));
+handlers.set("create-custom-theme", input => themeLibrary("create",input));
+handlers.set("update-custom-theme", input => themeLibrary("update",input));
+handlers.set("delete-custom-theme", input => themeLibrary("delete",input));
+handlers.set("set-app-theme", input => themeLibrary("select",input));
+handlers.set("get-app-theme", input => themeLibrary("selected",input));
 const promptLibrary=createPromptLibrary(dbReady);
 handlers.set("prompts:list", () => promptLibrary("list"));
 handlers.set("prompts:create", input => promptLibrary("create",input));
@@ -404,7 +414,7 @@ handlers.set("chat:count-tokens", async ({ chatId, input }) => {
   const contextWindow = (models.find((m) => m.apiName === chosen.name) || models[0] || { contextWindow: 4096 }).contextWindow;
   const tokens = (text) => Math.ceil(String(text || "").length / 4);
   const codebaseTokens = chat && chat.appId != null ? tokens(await codebaseOf(chat.appId)) : 0;
-  const systemPromptTokens = tokens(buildSystemPrompt(chat && chat.appId != null ? await get("files", chat.appId + ":AI_RULES.md") : ""));
+  const systemPromptTokens = tokens(buildSystemPrompt(chat && chat.appId != null ? await get("files", chat.appId + ":AI_RULES.md") : "") + "\n\n" + (chat && chat.appId != null ? await themeLibrary("resolve",{appId:chat.appId}) : "") + "\n\n" + prism.SPEC_RULES);
   const messageHistoryTokens = ((chat && chat.messages) || []).reduce((n, m) => n + tokens(m.content), 0);
   const inputTokens = tokens(input);
   return { estimatedTotalTokens: codebaseTokens + systemPromptTokens + messageHistoryTokens + inputTokens, actualMaxTokens: null, messageHistoryTokens, codebaseTokens, mentionedAppsTokens: 0, inputTokens, systemPromptTokens, contextWindow };
@@ -870,7 +880,6 @@ handlers.set("version-preview:restore-window-interest", ({appId}) => versionPrev
 handlers.set("version-preview:release-window-interest", ({appId,operationId}) => versionPreview.release(appId,operationId));
 window.addEventListener("pagehide",()=>versionPreview.dispose(),{once:true});
 handlers.set("is-capacitor", () => false);
-handlers.set("get-app-theme", () => null);
 handlers.set("get-proposal", () => null);
 handlers.set("select-app-for-preview", () => undefined);
 handlers.set("git:get-uncommitted-files", async input => readWorkingTree(await dbReady,input,await versionHistoryBoundary()));
@@ -1328,7 +1337,7 @@ async function chatTurn(chatId, intent) {
     const rules = new Map(projectSource.files).get("AI_RULES.md");
     const history = messages.slice(0, -2).filter((x) => x.content).map((x) => ({ role: x.role, content: x.content }));
     const request = [
-      { role: "system", content: buildSystemPrompt(rules) + "\n\n" + prism.SPEC_RULES },
+      { role: "system", content: buildSystemPrompt(rules) + "\n\n" + await themeLibrary("resolve",{appId}) + "\n\n" + prism.SPEC_RULES },
       { role: "user", content: "This is my codebase. " + (await codebaseOf(appId, projectSource)) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
