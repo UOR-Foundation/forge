@@ -140,7 +140,9 @@ const monacoPatches = [
   let themed = false;
   loader.init = () => {
     const ready = init();
-    if (!themed) { themed = true; void ready.then((monaco) => {`,
+    const configured = ready.then((monaco) => {
+      try {
+        if (!themed) {`,
   },
   {
     file: "src/components/chat/monaco.ts",
@@ -150,8 +152,17 @@ const monacoPatches = [
 }`,
     to: `      noSemanticValidation: true,
     });
-  }); }
-    return ready;
+          themed = true;
+        }
+      } catch {
+        throw Object.assign(new Error("The browser editor could not be configured"), { code: "editorThemeFailed" });
+      }
+      return monaco;
+    }, (error) => {
+      if (error?.type === "cancelation") throw error;
+      throw Object.assign(new Error("The browser editor could not load"), { code: "editorLoadFailed" });
+    });
+    return Object.assign(configured, { cancel: () => ready.cancel() });
   };
 }`,
   },

@@ -1209,8 +1209,6 @@ definition{
   result: String,
   body: "Inference credential routing is a finite tagged choice. A nonempty validated device credential selects its direct provider with visitor ownership, including a credential whose literal bytes equal site-relay. Only an absent Featherless credential selects the declared Featherless relay with site ownership and an empty browser credential; an absent OpenRouter credential retains its pre-disclosure unauthorized refusal. No credential string is interpreted as an effect-routing sentinel. The captured route selects both the disclosure endpoint and the transport endpoint. Before any request, the visitor reviews the exact serialized model request, endpoint and credential ownership and may decline or cancel. Site ownership is valid only for the site relay, and direct providers require visitor ownership. The relay receives no Authorization header, cookies or redirected request, and a credential offered to it refuses. Direct credentials never appear in disclosure text or public artifacts. Existing streaming validation, deadlines, cancellation, offline handling and private errors remain mandatory. The historical public credential file remains forbidden. The site's server policy remains bounded and independently tested; this integration does not attest live relay availability, server-held credential rotation, remote retention policy or deployment ownership."
 }
-\end{semanticmodule}
-\end{lexlean}
 
 inductive{
   name: EditorLoadPhase,
@@ -1230,7 +1228,8 @@ inductive{
   parameters: [],
   constructors: [
     {name: editorLoadFailed, fields: []},
-    {name: editorThemeFailed, fields: []}
+    {name: editorThemeFailed, fields: []},
+    {name: editorLoaderProjectionMismatch, fields: []}
   ]
 }
 
@@ -1238,5 +1237,7 @@ definition{
   name: editorLoadLifecycleBoundary,
   parameters: [],
   result: String,
-  body: "The imported editor remains lazy. Each init returns one owned cancelable result that settles only after the locked Monaco loader and theme configuration settle. Cancellation retains the imported loader cancellation discriminator and affects only that caller. No detached theme promise may reject after cancellation, loading failure or configuration failure. Successful configuration installs both existing themes and the existing language options once; readiness is recorded only after every configuration call succeeds. Concurrent and replacement callers share successful theme readiness without sharing cancellation ownership. A cancelled first mount cannot prevent a later mount from configuring the editor. A failed configuration cannot mark readiness and a later request may retry. Loading and configuration failures have fixed private-data-free editorLoadFailed and editorThemeFailed codes; original provider and script text is not exposed. The adapter preserves the underlying loader's resource and retry semantics, without promising a network retry the imported loader does not implement. Acceptance evaluates the actual build projection and exercises the locked loader in a real browser, including cancellation before first load, remount, concurrent ownership, load failure, configuration failure and absence of unhandled rejections. The offline editor and language-worker journey remains mandatory."
+  body: "The imported editor remains lazy. Each init returns one owned cancelable result that settles only after the locked Monaco loader and theme configuration settle. Cancellation retains the imported loader cancellation discriminator and affects only that caller. No detached theme promise may reject after cancellation, loading failure or configuration failure. Successful configuration installs both existing themes and the existing language options once; readiness is recorded only after every configuration call succeeds. Concurrent and replacement callers share successful theme readiness without sharing cancellation ownership. A cancelled first mount cannot prevent a later mount from configuring the editor. A failed configuration cannot mark readiness and a later request may retry. Loading and configuration failures have fixed private-data-free editorLoadFailed and editorThemeFailed codes; original provider and script text is not exposed. The locked @monaco-editor/loader 1.5.0 cancelable wrapper is transformed only at its exact ES or CommonJS source SHA256: its single then owns both success and rejection instead of creating a detached success-only promise. Changed inputs refuse with editorLoaderProjectionMismatch and a renderer build that never applies the projection refuses. The original installed package is not modified; its license remains attached to the fixture. The adapter preserves the underlying loader's resource and retry semantics, without promising a network retry the imported loader does not implement. Acceptance evaluates the actual build projection and exercises the locked loader in a real browser, including cancellation before first load, remount, concurrent ownership, load failure, configuration failure and absence of unhandled rejections. The offline editor and language-worker journey remains mandatory."
 }
+\end{semanticmodule}
+\end{lexlean}

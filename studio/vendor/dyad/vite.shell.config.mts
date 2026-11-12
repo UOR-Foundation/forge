@@ -22,6 +22,8 @@ import base from "./vite.renderer.config.mts";
 import { audit, kitUi, registry, resolveUi } from "./hologram.ui.mjs";
 import { toRadix } from "./hologram.radix.mjs";
 import { screenSource, unapplied } from "./hologram.screens.mjs";
+import { editorLoaderSource } from "./hologram.editor-loader.mjs";
+const projectedEditorLoaders = new Set<string>();
 
 const src = path.resolve(__dirname, "src").replace(/\\/g, "/");
 const mark = path.resolve(__dirname, "../../shell/mark.svg");
@@ -54,6 +56,11 @@ const hologramUi: Plugin = {
   // components with Base UI's props, are rewritten for the kit's, which are Radix (hologram.radix.mjs).
   transform(code, id) {
     const file = id.replace(/\\/g, "/").split("?")[0];
+    const loader = editorLoaderSource(file, code);
+    if (loader !== null) {
+      projectedEditorLoaders.add(file);
+      return { code: loader, map: null };
+    }
     if (!file.startsWith(src) || !/\.tsx?$/.test(file)) return null;
     const shell = screenSource(file, code);
     // A .ts module has no JSX to rewrite for Radix: its patches are all it gets.
@@ -64,6 +71,8 @@ const hologramUi: Plugin = {
     return r.code === code ? null : { code: r.code, map: null };
   },
   generateBundle() {
+    if (!projectedEditorLoaders.size)
+      this.error("The locked editor loader projection was not applied");
     const missed = unapplied();
     if (missed.length) this.error("patches the build never applied (their file was not read):\n" + missed.join("\n"));
     const bad = audit(this.getModuleIds(), (id) => [...(this.getModuleInfo(id)?.importers ?? [])]);

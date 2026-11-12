@@ -81,6 +81,7 @@ jobs:
           node tools/privacy_browser.mjs
           node tools/privacy_shell_browser.mjs
           node tools/editor_browser.mjs
+          node tools/editor_load_lifecycle_browser.mjs
           node tools/compiler_browser.mjs
       - name: Verify snapshot rollback in browser storage
         run: |
