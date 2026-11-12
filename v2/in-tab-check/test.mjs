@@ -35,6 +35,8 @@ test("the lock it writes is byte for byte the lock the image wrote for the same 
 test("the manifest's LexLean is the SDK image's, and the checker reports the same", () => {
   const said = image().version;
   assert.equal(manifest().image, image().image);
+  // The image is the one the repository's SDK lock selects: when the SDK moves, this fails until the checker is rebuilt.
+  assert.equal(manifest().image, readFileSync(join(here, "..", "..", "prismpm.lock"), "utf8").match(/"sdk_image":"([^"]+)"/)[1]);
   assert.equal(`lexlean ${checker.by.lexlean}`, said.split("\n")[0]);
   assert.equal(`compiler-semantics ${checker.by.semantics}`, said.split("\n")[2]);
 });

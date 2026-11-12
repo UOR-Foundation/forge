@@ -19,7 +19,7 @@
    "sha256:dcec004c6bd04f44d5054b1c026e908e1dd6e22f389f754cdb58fb206df1debf"
   ],
   "wrapper": "sha256:6e06ee87e947de69bab8687cd8c5f7fbe686fab2b20c13960ae338e39fa4b093",
-  "build": "sha256:f2033b8cf39b9406c41370d2fdcfbf43e397df74c078e69d7c4738e7bf3f9fd6",
+  "build": "sha256:01ff36a2e9041cc841a0308bb3d4c221ff4e3326ba37c8b17a56751fffe17340",
   "rust": "1.97.1",
   "target": "wasm32-wasip1"
  },
