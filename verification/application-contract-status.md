@@ -1,6 +1,6 @@
 # Application specification implementation status
 
-Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-71. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
+Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-72. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
 
 | Obligation | Implemented scope and evidence | Remaining acceptance or implementation |
 | --- | --- | --- |
@@ -8,7 +8,7 @@ Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implement
 | features | Versioned feature contracts, composition admission, registry-bound command dispatch and imported schemas. | Bind every product behavior, projection, quality and accessibility obligation to its complete versioned feature contract. |
 | routing | Guest-admitted finite typed ranking, dependency closure, ambiguity/abstention, twelve fixed typed judgments and catalog application discovery (FA-18, 48–49). | Replaceable learned R4 proposal adapter and independently labeled natural-language relevance beyond the finite catalog. |
 | composition | Signed guest independently checks compositions, work, events, interactions, routing, chat queues and version previews. Non-decision gallery/garden and multidomain catalog applications have actual browser journeys. | Generalized domain authoring/generation and separately qualified finite release scopes. The conversational module path remains a bounded decision profile. |
-| projection | Exact source admission, generated projection ownership, local compiler/editor closure, checked command schemas and reproducible static host bundle. | Remaining renderer/native capabilities and full semantic coverage; module profile changes can preserve incompatible prior presentation and need explicit migration/refusal. |
+| projection | Exact source admission, generated projection ownership, local compiler/editor closure, checked command schemas and reproducible static host bundle. | Remaining renderer/native capabilities and full semantic coverage; FA-72 now replaces incompatible module presentation while preserving compatible words. |
 | proofScope | Exact-source signatures, mutation-tested gates, byte-identical independent combined-guest builds and explicit diagnostic/SDK distinctions. | Complete source/executable/dependency/oracle binding for the whole product and each release claim. |
 | effects | Explicit inference/build/publication consent, revocable preview permission, private credentials, bounded transport, durable event/build ownership. | Complete cross-window consent ownership, remaining media/attachment/network effects, all revocation/offline/recovery combinations and owner-controlled credential rotation. |
 | identity | Canonical snapshots, verified import/history/differences/restoration, source-bound build artifacts, current-source gallery media and closure verification. | Full release transformation graph and independently retrieved live deployment identity. |
@@ -35,9 +35,11 @@ Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implement
 | FA-66 editor lifecycle | #126; `editor-load-lifecycle.md` | Exact SDK 43136182424, Studio 43136182519 and Forge performance 43136182417 pass. |
 | FA-67 durable themes | #130; `durable-theme-library.md` | Exact SDK 43139271613, Studio 43139271626 and Forge performance 43139271767 pass. |
 | FA-68 sidebar tools | #132 at fc2c833e19254ff8f7422f52f388100fd7f81435 | SDK 43145069884, Studio 43145070030 and Forge performance 43145069883 pass; separate Prism-page gate fails. |
-| FA-69 live integration | #135; `live-main-integration.md` | All 50 local browser journeys, four actual app replays and full mobile performance pass. Hosted CI fixes retain history, hidden assets, executable mode and locked Playwright. Exact final-head acceptance pending. |
-| FA-70 gallery | #136; `source-bound-gallery.md` | 430 Node controls, all 51 browser journeys, seven rejected mutations, full mobile performance and author review. Exact final-head hosted acceptance pending. |
+| FA-69 live integration | #135; `live-main-integration.md` | All 50 local browser journeys, four actual app replays and full mobile performance pass. Hosted CI fixes retain history, hidden assets, executable mode and locked Playwright. Exact SDK 43151216436, Studio 43151216446 and Forge performance 43151216563 pass at b84f7ca. |
+| FA-70 gallery | #136; `source-bound-gallery.md` | 430 Node controls, all 51 browser journeys, seven rejected mutations, full mobile performance and author review. Studio 43151356015 and Forge performance 43151356020 pass at 412fd21; exact-SDK acceptance remains pending. |
 | FA-71 initial theme | #137; `initial-project-theme.md` | 434 Node controls, full Rust/Clippy/fmt, renderer typecheck with zero added errors, actual transaction browser and six mutations pass. All 52 mandatory browser journeys and full mobile performance pass. Exact-head hosted acceptance and independent approval remain outstanding. |
+
+FA-72 (#138) records all 438 Node controls, all 53 mandatory browser journeys, seven qualified mutations, exact source/preview checks and complete local Rust/corpus/closure gates. Full hosted mobile and SDK acceptance remain pending. Full-page guest-owner initialization/recovery is a distinct open obligation exposed by this work.
 
 Author completeness reviews are not independent approval. Earlier green revisions do not establish acceptance for newer heads.
 
