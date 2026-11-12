@@ -14,9 +14,8 @@ lexlean = { path = "../../../../lexlean" }
 camino = "1.2"
 
 [profile.release]
+# Full link-time optimisation was not used: it needs more memory than the build machine had free.
 opt-level = 3
-lto = "fat"
-codegen-units = 1
 panic = "abort"
 strip = true
 

@@ -1,6 +1,6 @@
 // node --test v2/in-tab-check/test.mjs
 // Needs dist/lexlean-tab.wasm (bash v2/in-tab-check/build.sh). A missing checker fails these tests; none is skipped.
-import test from "node:test";
+import nodeTest from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -8,18 +8,28 @@ import { fileURLToPath } from "node:url";
 import { load, address, derive } from "./checker.mjs";
 import { open, tree } from "./wasi.mjs";
 import { createClient } from "./client.mjs";
-import { describe } from "./make-manifest.mjs";
-import { compareAll, fromDisk, manifest, image, checkerBytes } from "./agree.mjs";
+import { describe, variants } from "./make-manifest.mjs";
+import { compareAll, fromDisk as fromDiskOf, manifest as manifestOf, image, checkerBytes } from "./agree.mjs";
 import { cases } from "../hosted-check/corpus.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pack = readFileSync(join(here, "pack.json"));
-const wasm = checkerBytes();
-const checker = await fromDisk();
 const guests = cases().find((c) => c.id === "guests-2").spec;
 
+// Every test runs on both checkers: the full build and the lean one.
+for (const variant of variants) {
+const wasm = checkerBytes(variant), manifest = () => manifestOf(variant);
+const fromDisk = (options = {}) => fromDiskOf({ variant, ...options });
+const checker = await fromDisk();
+const test = (name, fn) => nodeTest(`${variant ? "lean" : "full"}: ${name}`, fn);
+
 test("checker.json describes the built checker, the pack, the patch, the wrapper and the build script", () => {
-  assert.deepEqual(describe(), manifest());
+  assert.deepEqual(describe(variant), manifest());
+});
+
+test("the lock it writes is byte for byte the lock the image wrote for the same project", () => {
+  const c = cases().find((x) => x.id === "payment");
+  assert.equal(checker.lock(c.spec, { extras: c.extras }), readFileSync(join(here, "..", "probe-payment", "lexlean.lock"), "utf8"));
 });
 
 test("the manifest's LexLean is the SDK image's, and the checker reports the same", () => {
@@ -43,11 +53,17 @@ test("the module imports the 25 file-system calls and nothing else", () => {
   const imports = WebAssembly.Module.imports(new WebAssembly.Module(wasm));
   assert.ok(imports.every((i) => i.module === "wasi_snapshot_preview1" && i.kind === "function"));
   assert.ok(!imports.some((i) => /^sock_|^poll_/.test(i.name)), "no socket or poll call");
-  assert.deepEqual(WebAssembly.Module.exports(new WebAssembly.Module(wasm)).filter((e) => e.kind === "function").map((e) => e.name).sort(), ["_initialize", "data", "run", "warm"]);
+  assert.deepEqual(WebAssembly.Module.exports(new WebAssembly.Module(wasm)).filter((e) => e.kind === "function").map((e) => e.name).sort(), ["data", "run", "warm"]);
 });
 
-test("verdict, codes, messages, lines and columns equal the image's on every corpus file", async () => {
-  const rows = await compareAll(checker);
+test("the library alone passes `check --all`, so naming only the author's modules leaves nothing unchecked", () => {
+  const r = checker.library();
+  assert.equal(r.success, true);
+  assert.deepEqual(r.modules, image().library.filter((l) => l.endsWith(".lex.tex")).map((l) => l.split(" ")[1].replace(".lex.tex", "").split("/").join(".")).sort());
+});
+
+for (const scope of ["author", "all"]) test(`verdict, codes, messages, lines and columns equal the image's on every corpus file (scope ${scope})`, async () => {
+  const rows = await compareAll(checker, scope);
   assert.equal(rows.length, 17);
   assert.deepEqual(Object.keys(image().cases).sort(), rows.map((r) => r.id).sort());
   for (const r of rows) {
@@ -143,7 +159,7 @@ test("a trap ends the instance and the next check gets a new one", async () => {
 
 test("the client answers in the tab when ready, through the hosted route while loading, and says which", async () => {
   const worker = () => {
-    const w = { onmessage: null, postMessage: async (m) => {
+    const w = { onmessage: null, postMessage: (m) => w.handle(m).catch((e) => w.onmessage({ data: { id: m.id, error: { code: e.code, message: e.message } } })), handle: async (m) => {
       if (m.type === "load") { w.checker = await load({ wasm: m.wasm, pack: m.pack, manifest: m.manifest }); w.onmessage({ data: { id: m.id, by: w.checker.by, loadMs: w.checker.loadMs } }); }
       else if (m.type === "warm") w.onmessage({ data: { id: m.id, ms: w.checker.warm() } });
       else w.onmessage({ data: { id: m.id, result: await w.checker.check(m.spec, { extras: m.extras }) } });
@@ -168,3 +184,4 @@ test("the client answers in the tab when ready, through the hosted route while l
   assert.equal((await wrong.check(guests)).by.instead.code, "ITC_UNAVAILABLE");
   await assert.rejects(wrong.check(guests, { only: "in-tab" }), { code: "ITC_ADDRESS" });
 });
+}

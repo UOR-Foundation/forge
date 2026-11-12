@@ -13,11 +13,12 @@ const RUNS = Number(new URLSearchParams(location.search).get("runs") ?? 12);
 const state = document.getElementById("state"), out = document.getElementById("out");
 const text = async (url) => (await fetch(url)).text();
 const stats = (list) => { const s = [...list].sort((a, b) => a - b); const r = (x) => Math.round(x * 10) / 10; return { median: r((s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2), worst: r(s.at(-1)), best: r(s[0]), n: s.length }; };
-const manifest = await (await fetch("./checker.json")).json();
+const variant = new URLSearchParams(location.search).get("variant") ?? "";
+const manifest = await (await fetch(`./checker${variant}.json`)).json();
 const report = { userAgent: navigator.userAgent, cores: navigator.hardwareConcurrency, isolated: crossOriginIsolated, manifest };
 
 // The bytes, by address: from the Cache API when it holds them, else from the network and into the cache.
-const names = { checker: "./dist/lexlean-tab.wasm", pack: "./pack.json" };
+const names = { checker: `./dist/lexlean-tab${variant}.wasm`, pack: "./pack.json" };
 const fetched = {};
 async function bytesOf(name, address) {
   const cache = await caches.open("in-tab-check"), key = new Request(`/by-address/${address}`);

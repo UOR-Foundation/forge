@@ -77,7 +77,10 @@ export async function load({ wasm, pack, manifest, store = null, recycleBytes = 
   };
 
   // One uncached check: lock (once per configuration), check, and on a pass the data form of each of the author's modules.
-  const compute = (spec, extras) => {
+  // scope "author" names the author's modules, so LexLean checks them and all they import; scope "all" is
+  // `check --all`, which also checks the library modules nothing imports. The library is fixed by the pack's address
+  // and passes `check --all` on its own (test.mjs holds that), so the two differ only in time.
+  const compute = (spec, extras, scope) => {
     const { own, files, toml } = project(spec, extras), ms = {};
     let t = performance.now(), checked;
     for (let attempt = 0; ; attempt++) {
@@ -88,7 +91,8 @@ export async function load({ wasm, pack, manifest, store = null, recycleBytes = 
         ms.lock = performance.now() - t; t = performance.now();
       }
       files.set("/lexlean.lock", locks.get(toml));
-      checked = call("run", ["--project", "/lexlean.toml", "--diagnostic-format", "json", "check", "--all"], files);
+      const selection = scope === "all" ? ["--all"] : own.map((m) => modulePath(m.name));
+      checked = call("run", ["--project", "/lexlean.toml", "--diagnostic-format", "json", "check", ...selection], files);
       // A lock LexLean calls stale is made again, once; it is LexLean that decides.
       if (attempt === 0 && /"code":"LLC0102"/.test(checked.stdout)) { locks.delete(toml); continue; }
       break;
@@ -116,6 +120,20 @@ export async function load({ wasm, pack, manifest, store = null, recycleBytes = 
     memoryBytes: () => instance.memoryBytes(),
     // Computes the compiler's identity for language 1.2 ahead of the first check.
     warm() { const t = performance.now(); call("warm", [], new Map()); return performance.now() - t; },
+    // The lock LexLean writes for a spec's project, as text.
+    lock(spec, { extras = [] } = {}) {
+      const { files } = project(spec, extras);
+      const locked = call("run", ["--project", "/lexlean.toml", "--diagnostic-format", "json", "lock"], files);
+      return new TextDecoder().decode(listing(locked.root).get("/lexlean.lock"));
+    },
+    // `check --all` on the pack alone: the library and lexicon with no module of an author's.
+    library() {
+      const files = new Map(base.map(([path, bytes]) => [`/${path}`, bytes]));
+      files.set("/lexlean.toml", enc.encode(fixed["lexlean.toml"].replace(/^entrypoints = .*$/m, 'entrypoints = ["src/Foundation/Bytes.lex.tex"]')));
+      const locked = call("run", ["--project", "/lexlean.toml", "--diagnostic-format", "json", "lock"], files);
+      files.set("/lexlean.lock", listing(locked.root).get("/lexlean.lock").slice());
+      return JSON.parse(call("run", ["--project", "/lexlean.toml", "--diagnostic-format", "json", "check", "--all"], files).stdout);
+    },
     // The data form of one library module, by LexLean's own reader.
     libraryData(name) {
       const r = call("data", [`/${modulePath(name)}`], new Map(base.map(([path, bytes]) => [`/${path}`, bytes])));
@@ -125,9 +143,10 @@ export async function load({ wasm, pack, manifest, store = null, recycleBytes = 
     // Returns { ok, diagnostics, data?, by, cached, ms }. A result is reused only under the address of everything that
     // produced it: the checker, the pack and every module's text. A stored result that does not hash to what was
     // recorded with it is dropped and the check is run.
-    async check(spec, { extras = [] } = {}) {
+    async check(spec, { extras = [], scope = "author" } = {}) {
+      if (scope !== "author" && scope !== "all") throw fail("ITC_SCOPE", `unknown scope ${scope}`);
       const started = performance.now();
-      const key = await derive("foundry/in-tab-check/result/1", [wasmAddress, packAddress, spec, ...extras]);
+      const key = await derive("foundry/in-tab-check/result/1", [wasmAddress, packAddress, scope, spec, ...extras]);
       const keyed = performance.now();
       let text = memo.get(key), cached = text ? "memory" : false;
       if (!text && store) {
@@ -141,7 +160,7 @@ export async function load({ wasm, pack, manifest, store = null, recycleBytes = 
       }
       let ms = {};
       if (!text) {
-        const fresh = compute(spec, extras);
+        const fresh = compute(spec, extras, scope);
         ms = fresh.ms;
         text = JSON.stringify(fresh.out);
         if (store) await store.put(key, JSON.stringify({ key, value: text, value_address: await address(text) }));

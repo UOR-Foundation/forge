@@ -1,0 +1,333 @@
+{
+ "by": {
+  "route": "in-tab",
+  "checker": "sha256:c02e19eaa7fc399b423851f82bfe0f041472f88308cb248739d5397e88e3cf37",
+  "pack": "sha256:b5fcb63d09a173c3dba11fe71f028dc0feaffa03867b0eeb588833c059f5afa6",
+  "lexlean": "0.3.0",
+  "semantics": "8554008034f6e9284382619a7aa71e0f0071ad404ea9d821068294d2d8804851"
+ },
+ "image": "ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58",
+ "imageVersion": "lexlean 0.3.0\nlanguage 1.0\ncompiler-semantics 8554008034f6e9284382619a7aa71e0f0071ad404ea9d821068294d2d8804851\nlean-toolchain leanprover/lean4:v4.32.1",
+ "rows": [
+  {
+   "id": "broken/bad-qualifier",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLT4001"
+   ],
+   "tabCodes": [
+    "LLT4001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 37.2,
+   "msAll": 196.4,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/constructor-arity",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLT4001"
+   ],
+   "tabCodes": [
+    "LLT4001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 30.2,
+   "msAll": 61.6,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/malformed-syntax",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLP2001"
+   ],
+   "tabCodes": [
+    "LLP2001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 25.7,
+   "msAll": 60.2,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/missing-field",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLT4001"
+   ],
+   "tabCodes": [
+    "LLT4001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 34.1,
+   "msAll": 54.3,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/non-terminating",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLT4001"
+   ],
+   "tabCodes": [
+    "LLT4001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 34.5,
+   "msAll": 58.5,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/reserved-name",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLT4001"
+   ],
+   "tabCodes": [
+    "LLT4001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 37.9,
+   "msAll": 46.8,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/title-hosted-word",
+   "image": true,
+   "tab": true,
+   "verdictAgrees": true,
+   "imageCodes": [],
+   "tabCodes": [],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 90.4,
+   "msAll": 159.1,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/title-lowercase",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLL1004"
+   ],
+   "tabCodes": [
+    "LLL1004"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 39.3,
+   "msAll": 40.7,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/title-not-in-lexicon",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLL1004"
+   ],
+   "tabCodes": [
+    "LLL1004"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 42.5,
+   "msAll": 47.9,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/title-phrase-then-unknown",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLL1004"
+   ],
+   "tabCodes": [
+    "LLL1004"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 38.5,
+   "msAll": 59.8,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/title-two-phrases",
+   "image": true,
+   "tab": true,
+   "verdictAgrees": true,
+   "imageCodes": [],
+   "tabCodes": [],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 47.8,
+   "msAll": 171.2,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/unknown-name",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLT4001"
+   ],
+   "tabCodes": [
+    "LLT4001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 36.5,
+   "msAll": 38.2,
+   "identicalAll": true
+  },
+  {
+   "id": "broken/wrong-type",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLT4001"
+   ],
+   "tabCodes": [
+    "LLT4001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 38.8,
+   "msAll": 42.7,
+   "identicalAll": true
+  },
+  {
+   "id": "guests-1",
+   "image": true,
+   "tab": true,
+   "verdictAgrees": true,
+   "imageCodes": [],
+   "tabCodes": [],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 43.4,
+   "msAll": 148.3,
+   "identicalAll": true
+  },
+  {
+   "id": "guests-2",
+   "image": true,
+   "tab": true,
+   "verdictAgrees": true,
+   "imageCodes": [],
+   "tabCodes": [],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 41.9,
+   "msAll": 130.3,
+   "identicalAll": true
+  },
+  {
+   "id": "guests-3",
+   "image": false,
+   "tab": false,
+   "verdictAgrees": true,
+   "imageCodes": [
+    "LLT4001"
+   ],
+   "tabCodes": [
+    "LLT4001"
+   ],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 40.8,
+   "msAll": 37.9,
+   "identicalAll": true
+  },
+  {
+   "id": "payment",
+   "image": true,
+   "tab": true,
+   "verdictAgrees": true,
+   "imageCodes": [],
+   "tabCodes": [],
+   "identical": true,
+   "differences": {
+    "imageOnly": [],
+    "tabOnly": []
+   },
+   "ms": 65.9,
+   "msAll": 148.3,
+   "identicalAll": true
+  }
+ ]
+}

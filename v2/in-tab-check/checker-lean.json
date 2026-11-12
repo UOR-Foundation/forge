@@ -1,0 +1,29 @@
+{
+ "spec": "foundry/in-tab-checker/1",
+ "checker": "sha256:11b9a6caf12347ddcdfec1107d9ca362d411eb092112b9bb71f8028c84541798",
+ "checker_bytes": 15146666,
+ "checker_gzip_bytes": 3499274,
+ "checker_brotli_bytes": 2382926,
+ "pack": "sha256:b5fcb63d09a173c3dba11fe71f028dc0feaffa03867b0eeb588833c059f5afa6",
+ "pack_bytes": 253612,
+ "pack_gzip_bytes": 20299,
+ "lexlean": {
+  "version": "0.3.0",
+  "semantics": "8554008034f6e9284382619a7aa71e0f0071ad404ea9d821068294d2d8804851"
+ },
+ "source": {
+  "repository": "https://github.com/UOR-Foundation/PrismPM",
+  "commit": "35e9f01d5415ed4b0b64c152238f291546957ec4",
+  "crate": "vendor/lexlean",
+  "patches": [
+   "sha256:dcec004c6bd04f44d5054b1c026e908e1dd6e22f389f754cdb58fb206df1debf",
+   "sha256:b4141c7c4e5409cab92bb7de720af0b57229ad9849cd587bde99ba463f863435"
+  ],
+  "semantics_1_2": "5262e5b4c8b5668ae7066ad686757a6bb7f80c941d515fb9d586894fbc7de69a",
+  "wrapper": "sha256:6e06ee87e947de69bab8687cd8c5f7fbe686fab2b20c13960ae338e39fa4b093",
+  "build": "sha256:f2033b8cf39b9406c41370d2fdcfbf43e397df74c078e69d7c4738e7bf3f9fd6",
+  "rust": "1.97.1",
+  "target": "wasm32-wasip1"
+ },
+ "image": "ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58"
+}
