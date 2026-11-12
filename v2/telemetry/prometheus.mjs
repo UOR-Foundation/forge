@@ -100,7 +100,7 @@ function render(data, om) {
 
   family(METRICS.suggestion, "info");
   const last = points[points.length - 1];
-  const infoName = om ? METRICS.suggestion.name + "_info" : METRICS.suggestion.name + "_info";
+  const infoName = METRICS.suggestion.name + "_info";
   for (const s of data.suggestions) out.push(`${infoName}${labels({ kpi: s.kpi, lever: s.lever })} 1${om ? " " + seconds(last.at) : ""}`);
 
   if (om) out.push("# EOF");

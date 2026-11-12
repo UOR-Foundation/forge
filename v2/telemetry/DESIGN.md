@@ -1,6 +1,6 @@
 # On-device build telemetry: design
 
-Status: prototype, unfinished. See "Not established" before trusting anything here.
+Status: prototype in `v2/`, not wired into the shell. Evidence is in [VERIFICATION.md](VERIFICATION.md); read "Not established" first.
 
 ## Decision
 
@@ -10,6 +10,7 @@ Measure in the shell, the live frame and the kernel worker with one tiny probe (
 
 - Clock: `performance.timeOrigin + performance.now()` in whole microseconds. Monotonic, and it puts page, frame and worker on one time line, so a cross-context span is a subtraction. Resolution is the browser's: 5 us cross-origin isolated, 100 us otherwise in Chromium.
 - Cost: a mark writes four numbers into a preallocated `Float64Array`; no allocation, promise, message or I/O. Measured in Chrome in the in-app browser: about 290 to 380 ns per mark (100,000 marks), about 1/50,000 of a frame.
+- Bound: 1,024 events a turn; more are counted as dropped. The model runs in an interpreter that recurses once per event and overflows Node's stack between 1,000 and 2,000 events. A replayed turn records about 130.
 - Where: Enter, first token, first whole declaration, complete, Checked, reads and checks in the shell (`host.js` `chatTurn`); frame ready, each paint (with its own work and time) and the edit's start in the live frame, which already posts `live/painted`; a full ring counts drops instead of overwriting.
 - Pixel time is the frame's next animation frame after the change, the frame it is painted in; the paint itself is not observable from script.
 
@@ -24,7 +25,8 @@ Measure in the shell, the live frame and the kernel worker with one tiny probe (
 1. Model: `flowAllows` admits store, show, save-on-user-act and inference only on device; fetch, serve and frame are never allowed (`zeroEgress` proved).
 2. Page policy: the panel and frame run under `connect-src 'none'`; data is loaded as script modules so even the page's own JSON is not a connection.
 3. Runtime: `browser-test.mjs` records every request in headless Chrome and requires none after load except the saved file's `blob:`.
-4. Planned, not built: a static gate over the telemetry sources refusing network APIs, with a planted `sendBeacon` defect.
+4. Source: `egress-gate.mjs` refuses any network API, URL scheme, `postMessage` to "*", import from outside the allowed files, an inline script or a page without `connect-src 'none'`, any file it neither scans nor names, and any file outside the telemetry that imports the store. A planted `sendBeacon` in the store and a planted unlisted file both fail it.
+5. Run time: `test.mjs` replaces `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` and `sendBeacon` with tripwires and runs record, report, the loop, both exports and erase: none is touched.
 
 ## The loop
 
@@ -40,14 +42,17 @@ Deterministic and on device. A KPI over budget in a majority of observed turns g
 
 ## Evidence
 
-- `lexlean check --all` and `lexlean verify --all` in the SDK image pinned by `prismpm.lock` (`sdk.sh`, `tools/verify-loop.mjs`): verified, 14 theorems, attestation `d5ea4e3552084571b9531b35ed5e2b7e89ac8092cd72a2efe85a0e56029d6ea8`.
-- The data form (`data/`) runs in `v2/shell/interp.mjs`; smoke-tested only.
+- Lean, in the SDK image pinned by `prismpm.lock`: 15 theorems verified, attestation `d5ea4e35…` (see VERIFICATION.md for which source).
+- `node --test v2/telemetry/test.mjs`: 21 of 21. `node v2/telemetry/browser-test.mjs`: 25 of 25. `node v2/telemetry/defects.mjs`: 6 of 6 caught.
 
 ## Not established
 
-- The data form in `data/` was fetched before the last edits (loop split, axioms); refetch with `node v2/telemetry/tools/data-form.mjs` before relying on it.
-- `browser-test.mjs` stalls after starting the replay in headless Chrome: Node's heartbeat keeps running but CDP replies stop. Cause not found; no replayed-turn KPI has been measured end to end yet.
-- No `test.mjs`, no planted defects, no static egress gate, no `promtool` run (image `prom/prometheus:v3.5.0` is pulled in WSL, not used yet).
-- Nothing is wired into the shell (`host.js`, the live frame, the worker); no ID in `model/ids.toml`, no scenario in `features/suites/` (R3), no FK in the kernel.
-- KPIs over list recursion (`kpiOf`, `observe`, `bestSwitch`) are checked, not proved; there is no induction tactic.
-- The 11 seeded turns are synthesized from the owner's hand-measured ranges, not captured.
+- Prometheus compatibility is not yet confirmed by Prometheus: `tools/prometheus-check.sh` (promtool check metrics, check and test rules, backfill and read back) is written but has not run, because WSL could not attach its disk and restarting WSL was not permitted. The formats were written to the 0.0.4 and OpenMetrics 1.0 rules and are tested by this suite's own parser, which is not promtool.
+- The current source's `maxValue` and `worstOf` (rewritten to be linear) were not re-verified in the SDK image for the same reason. No theorem refers to them; the hosted service checked the source.
+- Nothing is wired into the shell (`host.js`, the live frame, the worker): no ID in `model/ids.toml`, no scenario in `features/suites/` (R3), no FK in the kernel. Wiring needs the six marks named under "Where" and a kernel decision `telemetry EFFECT USER DEVICE` (FK-25 onward) mirroring `flowAllows`.
+- The replay's model time is a schedule divided by 100: `declaration` and `built` in a replayed turn are the schedule's, not a model's. The 11 seeded turns are synthesized from the owner's hand-measured ranges, not captured.
+- Per-model read rates in the replay: the replayed turn is labelled model-a.
+- KPIs over list recursion (`kpiOf`, `observe`, `bestSwitch`) are checked and tested, not proved: there is no induction tactic.
+- Interpreter and compiled guest agreement for this model: no holo was built.
+- A browser extension or devtools can read any page's storage; zero egress is about Foundry's code, not the user's own browser.
+- Safari and Firefox, OPFS or IndexedDB under quota pressure, and cross-origin-isolated clock resolution were not exercised.

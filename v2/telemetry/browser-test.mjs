@@ -36,7 +36,7 @@ const ws = new WebSocket(target.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r, { once: true }));
 let id = 0; const pending = new Map(), requests = [], errors = [];
 ws.addEventListener("message", (e) => {
-  const m = JSON.parse(e.data); globalThis.__count?.(m.method ?? "reply");
+  const m = JSON.parse(e.data);
   if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
   if (m.method === "Network.requestWillBeSent") requests.push({ url: m.params.request.url, t: Date.now() });
   if (m.method === "Runtime.exceptionThrown") errors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text);
@@ -49,7 +49,7 @@ const evaluate = async (expression) => { if (process.env.DEBUG) console.log("# e
 let failed = 0;
 const check = (ok, what) => { console.log(`${ok ? "ok" : "not ok"} - ${what}`); if (!ok) failed++; };
 try {
-  await send("Network.enable"); await send("Runtime.enable"); await send("Log.enable"); await send("Page.enable");
+  await send("Network.enable"); await send("Debugger.enable"); await send("Runtime.enable"); await send("Log.enable"); await send("Page.enable");
   // Network.enable on the page target also reports its frame's requests (same process, same origin).
   await send("Page.navigate", { url: pageUrl });
   for (let i = 0; i < 100 && !(await evaluate("!!window.__telemetry").catch(() => false)); i++) await new Promise((r) => setTimeout(r, 100));
@@ -61,7 +61,7 @@ try {
   for (let i = 0; i < 100; i++) {
     await new Promise((r) => setTimeout(r, 100));
     state = await Promise.race([evaluate(`JSON.stringify({ busy: document.getElementById("replay").disabled, status: document.getElementById("status").textContent })`), new Promise((r) => setTimeout(() => r(null), 3000))]);
-    if (state === null) { await send("Debugger.enable"); send("Debugger.pause"); await new Promise((r) => setTimeout(r, 2000)); throw new Error("the page's main thread is blocked"); }
+    if (state === null) { send("Debugger.pause"); await new Promise((r) => setTimeout(r, 2000)); throw new Error("the page's main thread is blocked"); }
     if (!JSON.parse(state).busy) break;
   }
   if (JSON.parse(state).busy) {

@@ -18,7 +18,7 @@ for (let round = 1; round <= 20; round++) {
   let result = null;
   for (const line of out.split("\n")) { try { const j = JSON.parse(line); if (j.spec === "lexlean/command-result/1") result = j; } catch {} }
   const s = Math.round((Date.now() - t0) / 1000);
-  if (!result) { log(`round ${round} (${s} s): no result, retrying: ${out.trim().slice(-300)}`); continue; }
+  if (!result) { log(`round ${round} (${s} s): no result, retrying in 30 s: ${out.trim().slice(-300)}`); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30000); continue; }
   if (result.success) { log(`round ${round} (${s} s): verified. ${out.split("\n").filter((l) => /^[0-9a-f]{64}$/.test(l.trim())).join(" ")}`); process.exit(0); }
   const d = result.diagnostics;
   log(`round ${round} (${s} s): ${d.map((x) => x.code + " " + x.message.slice(0, 200)).join(" | ")}`);

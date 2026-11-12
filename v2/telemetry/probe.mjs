@@ -11,12 +11,18 @@
 // message, no storage on the hot path; the ring is drained once per turn. A mark that finds the ring full
 // is counted in `dropped`, never written over an earlier one, so a span is never computed from a stale
 // event. Nothing here can reach the network: this file imports nothing and calls no I/O.
+//
+// Capacity is 1,024 events a turn. The model's list functions run in an interpreter that recurses once
+// per event, and in Node that overflows between 1,000 and 2,000 events; a turn records about 130 (the
+// replay) to a few hundred (one paint per change). A turn that fills the ring says so in `dropped`.
 
 export const now = () => Math.round((performance.timeOrigin + performance.now()) * 1000);
 
 const FIELDS = 4;
 
-export function createProbe(capacity = 4096) {
+export const CAPACITY = 1024;
+
+export function createProbe(capacity = CAPACITY) {
   const ring = new Float64Array(capacity * FIELDS);
   let count = 0, dropped = 0;
   return {

@@ -208,11 +208,11 @@ definition{
 
 definition{
   name: maxValue,
-  parameters: [events : (List Event), kind : Nat],
+  parameters: [events : (List Event), kind : Nat, best : Nat],
   result: Nat,
   body: (match events
-    | List.nil => 0
-    | List.cons head rest => (if (((project head kind) =? kind) && ((maxValue rest kind) <? (project head value))) then (project head value) else (maxValue rest kind))),
+    | List.nil => best
+    | List.cons head rest => (maxValue rest kind (if (((project head kind) =? kind) && (best <? (project head value))) then (project head value) else best))),
   recursive_argument: events
 }
 
@@ -239,7 +239,7 @@ definition{
   name: kpiOf,
   parameters: [events : (List Event), code : Nat],
   result: (Option Nat),
-  body: (if (code =? (kpiPreview)) then (span events (kindEnter) (kindFrame)) else (if (code =? (kpiDeclaration)) then (span events (kindEnter) (kindDeclaration)) else (if (code =? (kpiPixel)) then (span events (kindDeclaration) (kindPixel)) else (if (code =? (kpiUpdate)) then (present events (kindUpdate) (maxValue events (kindUpdate))) else (if (code =? (kpiEdit)) then (present events (kindEditScreen) (editWorst events (ctor Option.none [Nat]) 0)) else (if (code =? (kpiChecked)) then (span events (kindComplete) (kindChecked)) else (if (code =? (kpiBuilt)) then (span events (kindEnter) (kindChecked)) else (if (code =? (kpiReloads)) then (present events (kindEnter) (countKind events (kindReload))) else (if (code =? (kpiThink)) then (span events (kindEnter) (kindToken)) else (if (code =? (kpiLead)) then (span events (kindToken) (kindDeclaration)) else (if (code =? (kpiWrite)) then (span events (kindDeclaration) (kindComplete)) else (if (code =? (kpiFirstTry)) then (present events (kindEnter) (countValue events (kindRead) 1)) else (if (code =? (kpiRepaired)) then (present events (kindEnter) (countValue events (kindRead) 2)) else (if (code =? (kpiRefused)) then (present events (kindEnter) (countKind events (kindRefused))) else (if (code =? (kpiReused)) then (present events (kindEnter) (countKind events (kindReused))) else (if (code =? (kpiRechecked)) then (present events (kindEnter) (countKind events (kindRechecked))) else (ctor Option.none [Nat])))))))))))))))))
+  body: (if (code =? (kpiPreview)) then (span events (kindEnter) (kindFrame)) else (if (code =? (kpiDeclaration)) then (span events (kindEnter) (kindDeclaration)) else (if (code =? (kpiPixel)) then (span events (kindDeclaration) (kindPixel)) else (if (code =? (kpiUpdate)) then (present events (kindUpdate) (maxValue events (kindUpdate) 0)) else (if (code =? (kpiEdit)) then (present events (kindEditScreen) (editWorst events (ctor Option.none [Nat]) 0)) else (if (code =? (kpiChecked)) then (span events (kindComplete) (kindChecked)) else (if (code =? (kpiBuilt)) then (span events (kindEnter) (kindChecked)) else (if (code =? (kpiReloads)) then (present events (kindEnter) (countKind events (kindReload))) else (if (code =? (kpiThink)) then (span events (kindEnter) (kindToken)) else (if (code =? (kpiLead)) then (span events (kindToken) (kindDeclaration)) else (if (code =? (kpiWrite)) then (span events (kindDeclaration) (kindComplete)) else (if (code =? (kpiFirstTry)) then (present events (kindEnter) (countValue events (kindRead) 1)) else (if (code =? (kpiRepaired)) then (present events (kindEnter) (countValue events (kindRead) 2)) else (if (code =? (kpiRefused)) then (present events (kindEnter) (countKind events (kindRefused))) else (if (code =? (kpiReused)) then (present events (kindEnter) (countKind events (kindReused))) else (if (code =? (kpiRechecked)) then (present events (kindEnter) (countKind events (kindRechecked))) else (ctor Option.none [Nat])))))))))))))))))
 }
 
 definition{name: budgeted, parameters: [code : Nat], result: Bool, body: (code <=? (kpiReloads))}
@@ -270,11 +270,11 @@ definition{
 
 definition{
   name: worstOf,
-  parameters: [values : (List Nat)],
+  parameters: [values : (List Nat), best : Nat],
   result: Nat,
   body: (match values
-    | List.nil => 0
-    | List.cons head rest => (if ((worstOf rest) <? head) then head else (worstOf rest))),
+    | List.nil => best
+    | List.cons head rest => (worstOf rest (if (best <? head) then head else best))),
   recursive_argument: values
 }
 
@@ -302,7 +302,7 @@ definition{
   name: observe,
   parameters: [code : Nat, values : (List Nat), budget : Nat],
   result: Observation,
-  body: (record Observation {kpi := code, turns := (prim length values : Nat), over := (if (budgeted code) then (countOver values code budget) else 0), worst := (worstOf values), total := (totalOf values), last := (lastOf values)})
+  body: (record Observation {kpi := code, turns := (prim length values : Nat), over := (if (budgeted code) then (countOver values code budget) else 0), worst := (worstOf values 0), total := (totalOf values), last := (lastOf values)})
 }
 
 definition{

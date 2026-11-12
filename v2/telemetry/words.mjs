@@ -49,5 +49,5 @@ export const METRICS = {
   reads: { name: "prism_module_reads", help: "Modules that read, by model and by attempt (first, or after one repair)." },
   refusals: { name: "prism_module_refusals", help: "Modules the reader refused, by model." },
   checks: { name: "prism_checks", help: "Checks after a turn, by whether the result was reused." },
-  suggestion: { name: "prism_suggestion_info", help: "A suggestion the on-device loop makes now; 1 while it stands." },
+  suggestion: { name: "prism_suggestion", help: "A suggestion the on-device loop makes now; 1 while it stands." },
 };

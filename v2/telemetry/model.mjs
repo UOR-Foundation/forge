@@ -13,7 +13,7 @@ const opt = (o) => (o.c === "Option.some" ? num(o.a[0]) : null);
 export function fromData(modules) {
   const project = loadProject(modules);
   if (project.missingPrimitives.length) throw new Error("interpreter lacks " + project.missingPrimitives.join(", "));
-  return bind(project);
+  return bind(project, modules.Telemetry);
 }
 
 export async function loadModelNode() {
@@ -24,13 +24,14 @@ export async function loadModelNode() {
   return fromData(modules);
 }
 
-function bind(project) {
+function bind(project, data) {
   const call = (name, ...args) => project.call("Telemetry::" + name, ...args);
   const constant = (name) => num(call(name));
-  const names = project.definitions.filter((d) => d.startsWith("Telemetry::")).map((d) => d.slice(11));
+  // The model's named codes: its definitions without parameters.
+  const names = data.declarations.filter((d) => d.kind === "definition" && d.parameters.length === 0).map((d) => d.name);
   const table = (prefix) => Object.fromEntries(names.filter((n) => n.startsWith(prefix) && /^[A-Z]/.test(n.slice(prefix.length))).map((n) => [n.slice(prefix.length, prefix.length + 1).toLowerCase() + n.slice(prefix.length + 1), constant(n)]));
   const KIND = table("kind"), KPI = table("kpi"), LEVER = table("lever"), EFFECT = table("effect"), LOOP = table("loop");
-  delete KPI.count; delete KPI.of; delete LOOP.step;
+  delete KPI.count;
   const event = ([kind, at, value, model]) => ({ kind: big(kind), at: big(at), value: big(value), model: big(model) });
   // The model reads "first" as first in the list; events from several contexts arrive out of order, so
   // the list is put in time order here (a stable sort keeps marks with the same microsecond in order).
