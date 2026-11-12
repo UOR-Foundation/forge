@@ -107,7 +107,11 @@ A stored result is about 23 KB. The last 64 are kept.
 
 Planted defects, each caught and restored: `studio/VERIFICATION.md`, row "In-tab check" (seven in code, one in the browser: a checker with one byte changed gave the hosted route with the reason, not a pass).
 
-Also run: `node --test v2/in-tab-check/test.mjs` (34 of 34), `node studio/tools/v2_engine.mjs --check`, `node studio/tools/shell_parse.mjs`, and every `studio/tools/*.test.mjs` (4 failures in `current_main_integration.test.mjs`, "appShape is not defined", the same 4 on the commit this branch starts from).
+Also run, on this branch with `main` merged in (`5fe6c73`): `node --test v2/in-tab-check/test.mjs` (34 of 34), `node studio/tools/v2_engine.mjs --check` (13 ok), `node studio/tools/shell_parse.mjs`, every `studio/tools/*.test.mjs` (202 pass, 0 fail, 2 skipped), and the lane's `studio/tools/generation_patch_browser.mjs` in Chrome (passes).
+
+Why `main` is merged in. The pull request's first CI run failed in two places that were not the missing checker: `acceptance` (`current_main_integration_fa_24`: tests 1 to 3 and 7, "appShape is not defined") and `lane` (`generation_patch_browser.mjs`: "no-op batch lost source binding before rules"). Both harnesses cut `rulesAfterTurn` out of `host.js` and run it alone. On the base branch (`claude/in-tab-checker-63d945`, 14 commits behind `main`) that function still held the app-shape code, which needs `appShape`; `main` moved that code into `appAfterTurn` (`657b6de`). Both failures reproduce on the base branch alone, locally, and both pass on `main`. Pull request 154 shows green only because GitHub tests it merged into `main`, and its lane did not run. The wiring now sits in `appAfterTurn`, and the three harnessed functions are `main`'s bytes. Until the base branch takes `main` too, this pull request's diff also shows `main`'s 14 commits.
+
+What still fails in CI, and must: the `lane` step "A module is checked in the tab first, by the hosted service only while the tab cannot, and the card says which" (`node --test tools/live_app_tab.test.mjs`). It reads the built checker at `v2/in-tab-check/dist/lexlean-tab-lean.wasm`, which is not committed because it is built from a patched LexLean.
 
 Seen once and worth knowing: on one first visit the browser could not give the checker its memory ("Cannot allocate Wasm memory for new instance") while other tabs held instances. The studio fell back to the hosted service and said why. That is what led to the retry.
 
