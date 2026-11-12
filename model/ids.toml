@@ -579,3 +579,9 @@ id = "FA-69"
 level = "build"
 suite = "live-main-integration"
 statement = "Current live module generation and every-app replay integrate without losing canonical ownership or consent"
+
+[[id]]
+id = "FA-70"
+level = "build"
+suite = "source-bound-gallery"
+statement = "Gallery media and descriptions publish atomically only for their captured current project source"
