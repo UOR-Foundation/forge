@@ -1747,7 +1747,7 @@ if ("serviceWorker" in navigator) {
   const idle = (fn) => (self.requestIdleCallback ? requestIdleCallback(fn, { timeout: 10000 }) : setTimeout(fn, 3000));
   addEventListener("load", () => idle(() => navigator.serviceWorker.ready.then((r) => r.active && r.active.postMessage("fill")).catch(() => {})), { once: true });
 }
-// The tab's own checker is loaded once the page has loaded and is idle: nothing of it but its 1.5 KB client
+// The tab's own checker is loaded once the page has loaded and is idle: nothing of it but its client (2.2 KB gzip)
 // is in the first load. Until it is ready, and if it cannot run, the hosted service checks and the card says so.
 addEventListener("load", () => (self.requestIdleCallback ? requestIdleCallback(() => appCheck.start(), { timeout: 10000 }) : setTimeout(() => appCheck.start(), 3000)), { once: true });
 // After a deployment a page can run an entry that names a chunk the origin no longer serves: the worker has
