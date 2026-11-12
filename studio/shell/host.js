@@ -605,7 +605,11 @@ async function refreshLive(appId) {
   try {
     const bound = state?.spec && state.specKappa === await kappa(enc.encode(json));
     const trust = bound ? state.phase === "published" && state.publicationCurrent === false ? "proved" : state.phase : "draft";
-    pushLive(appId, JSON.parse(json), trust);
+    const spec = JSON.parse(json);
+    pushLive(appId, spec, trust);
+    // The edit history is ready before the first click, so even the first edit is drawn optimistically,
+    // before any storage read, instead of waiting for the history to be built.
+    if (liveEditors.has(appId)) liveEditors.get(appId).sync(spec); else liveEditors.set(appId, createEditor(spec, checkForEdit));
   } catch (e) {}
 }
 
@@ -658,6 +662,9 @@ async function patchSpec(appId, ops, { author = "user", key = null, ...options }
     const before = ed.spec;
     try { if (!drawn) pushLive(appId, applyOps(before, ops), "draft", true); }
     catch (e) { if (!(e instanceof PatchError)) throw e; refuse(appId, key, e.message); return { ok: false, issues: [e.message] }; }
+    // The check samples up to 200,000 requests on this thread, which the live frame shares: it waits
+    // until the frame has painted the edit, so the person sees their change before it is judged.
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
     const result = ed.apply(ops);
     if (!result.ok) { await refreshLive(appId); refuse(appId, key, result.issues[0]); return result; }
     try {
@@ -688,6 +695,15 @@ function pointedNote(appId) {
   if (!p) return "";
   const paths = Object.entries(p.edit).filter(([, v]) => Array.isArray(v)).map(([slot, v]) => `${slot} at ${JSON.stringify(v)}`).join("; ");
   return `\n\n(The user is pointing at the ${p.kind} "${p.text}" on the screen${paths ? ": " + paths : ""}. To change it, write a <dyad-spec-patch>.)`;
+}
+// The built page takes the preview back from the live frame (an app's first turn opened the frame, then
+// wrote code, not rules): announced as a restart, so the renderer forgets the live frame's route.
+async function showBuilt(appId) {
+  const { appUrl } = await buildPreview(appId);
+  if (liveShown.has(appId)) return;
+  const m = machineOf(appId);
+  publish(appId, { phase: "starting", operation: "restart", invocationRef: { kind: "app-run", entityKey: appId, operationId: "built-" + appId + "-" + Date.now() }, startedAt: Date.now(), operationError: null, exit: null });
+  publish(appId, { phase: "ready", operation: null, invocationRef: null, startedAt: Date.now(), operationError: null, exit: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: m.state.previewReloadEpoch + 1 });
 }
 // Point the app's preview at the live frame. The iframe loads once: after this, the address it shows
 // never changes for this app, so the preview never reloads.
@@ -1199,6 +1215,12 @@ async function chatTurn(chatId, intent) {
   emit("chat:stream:start", { chatId, invocationRef: ref });
   if (prism.isApproval(intent.prompt)) return approveTurn(chatId, appId, messages, userId, ref, intent.intentId);
   if (prism.isPublish(intent.prompt)) return publishTurn(chatId, appId, messages, userId, ref, intent.intentId);
+  // An app's first build turn opens the live frame now, while the model thinks, not when the spec's tag
+  // streams in: the frame takes about a tenth of a second to mount, and a spec can name its first field
+  // right after the tag. If the turn ends without rules (an app built as code), the built page takes the
+  // preview back. Later turns of a code app keep their built preview throughout.
+  const speculativeLive = !(await hasRules(appId)) && messages.filter((x) => x.role === "user").length === 1;
+  if (speculativeLive) showLive(appId).catch(() => liveShown.delete(appId));
   // T3: the assistant placeholder
   const projectSource = await captureProjectSource(await dbReady, appId);
   const head = projectSource.reference;
@@ -1358,6 +1380,7 @@ async function chatTurn(chatId, intent) {
     }
     changed += spec.changed;
     if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshLive(appId); }
+    else if (speculativeLive && liveShown.has(appId)) { liveShown.delete(appId); showBuilt(appId).catch(() => {}); }
     updatedFiles = updatedFiles || changed > 0;
     const commit = committed.at(-1) || null;
     messages[messages.length - 1] = { ...messages[messages.length - 1], content: prism.withCard(full, spec.card), commitHash: commit, approvalState: "approved", requestId: provenance && provenance.receipt || null };

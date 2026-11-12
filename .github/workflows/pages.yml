@@ -355,3 +355,40 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
+
+  live:
+    # After the deploy, not before it: the live site is checked as visitors get it (the worker installs,
+    # every app fixture streams, edits and undoes within its budgets); a miss reports, it never holds a
+    # deploy back. The same check runs on every pull request that changes Forge (forge-perf.yml).
+    name: every Prism app previews live within its budgets, on the deployed site
+    needs: [deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: studio
+    steps:
+      - name: Check out the deployed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: The browser
+        run: |
+          npm install --no-audit --no-fund --global playwright@1.56.1
+          playwright install --with-deps chromium
+      - name: Every Prism app previews live within its budgets
+        run: |
+          export PLAYWRIGHT_MODULE="$(npm root --global)/playwright/index.mjs"
+          scripts/live_e2e_all.sh "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" "$RUNNER_TEMP/live-e2e"
+      - name: Keep what the check saw
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: live-e2e
+          path: ${{ runner.temp }}/live-e2e
+          if-no-files-found: ignore
