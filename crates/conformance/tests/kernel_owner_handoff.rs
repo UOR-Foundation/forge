@@ -21,8 +21,8 @@ fn kernel_owner_handoff_fa_75() {
         String::from_utf8_lossy(&output.stderr)
     );
     for required in [
-        "# tests 4",
-        "# pass 4",
+        "# tests 6",
+        "# pass 6",
         "# fail 0",
         "# cancelled 0",
         "# skipped 0",

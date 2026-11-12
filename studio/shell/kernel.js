@@ -118,18 +118,49 @@
       if (pending >= 64 || queuedBytes + request.length > 64 * 1024 * 1024) throw fail("kernelExecutionFailed");
       pending++; queuedBytes += request.length; const ports = []; let timer;
       try {
-        const clients = (await scope.clients.matchAll({type:"window",includeUncontrolled:false})).slice(0,8);
+        let clients = (await scope.clients.matchAll({type:"window",includeUncontrolled:false})).slice(0,8);
         if (!clients.length) throw fail("kernelExecutionFailed");
         const deadline = new Promise((_, reject) => {timer=setTimeout(()=>reject(fail("kernelExecutionFailed")),30000);});
-        const answer = Promise.any(clients.map(client=>new Promise((resolve,reject)=>{
-          const pair = new MessageChannel(); ports.push(pair.port1,pair.port2);
-          pair.port1.onmessage = ({data}) => {
-            if (!data?.ok || !(data.result instanceof Uint8Array) || data.result.length>maximum) {reject(fail(data?.code === "kernelResponseTooLarge" || data?.result?.length>maximum ? "kernelResponseTooLarge" : "kernelExecutionFailed"));return;}
-            resolve(data.result.slice());
-          };
-          try {client.postMessage({kind:"foundry:kernel-execute/1",key,request},[pair.port2]);} catch {reject(fail("kernelExecutionFailed"));}
-        })));
-        try {return await Promise.race([answer,deadline]);} catch (error) {throw fail(error?.errors?.some(e=>e?.code==="kernelResponseTooLarge") ? "kernelResponseTooLarge" : "kernelExecutionFailed");}
+        // FoundrySpecification.kernelOwnerHandoffBoundary: a navigation can destroy
+        // an owner mid-replay. Keep the same request and deadline across replacements.
+        for (let batch=0;batch<8;batch++) {
+          let observer, readyListener, closed=false; const selected=new Set(clients.map(client=>client.id)), batchPorts=[];
+          try {
+            const answer = Promise.any(clients.map(client=>new Promise((resolve,reject)=>{
+              const pair = new MessageChannel(); batchPorts.push(pair.port1,pair.port2); ports.push(pair.port1,pair.port2);
+              pair.port1.onmessage = ({data}) => {
+                selected.delete(client.id);
+                if (!data?.ok || !(data.result instanceof Uint8Array) || data.result.length>maximum) {reject(fail(data?.code === "kernelResponseTooLarge" || data?.result?.length>maximum ? "kernelResponseTooLarge" : "kernelExecutionFailed"));return;}
+                resolve({result:data.result.slice()});
+              };
+              try {client.postMessage({kind:"foundry:kernel-execute/1",key,request},[pair.port2]);} catch {reject(fail("kernelExecutionFailed"));}
+            })));
+            const handoff = new Promise((resolve,reject)=>{
+              readyListener=async event=>{
+                if(event.data?.kind!=="foundry:kernel-owner-ready/1"||event.data.key!==key||!event.source?.id)return;
+                try {
+                  const current=(await scope.clients.matchAll({type:"window",includeUncontrolled:false})).slice(0,8);
+                  if(!closed&&current.some(client=>client.id===event.source.id))resolve({clients:current});
+                } catch {if(!closed)reject(fail("kernelExecutionFailed"));}
+              };
+              scope.addEventListener?.("message",readyListener);
+              const observe=async()=>{
+                try {
+                  const current=(await scope.clients.matchAll({type:"window",includeUncontrolled:false})).slice(0,8);
+                  if(closed)return;
+                  if(current.length&&!current.some(client=>selected.has(client.id))) {resolve({clients:current});return;}
+                  observer=setTimeout(observe,50);
+                } catch {if(!closed)reject(fail("kernelExecutionFailed"));}
+              };
+              observer=setTimeout(observe,50);
+            });
+            const next=await Promise.race([answer,handoff,deadline]);
+            if(next.result)return next.result;
+            clients=next.clients;
+          } catch (error) {throw fail(error?.errors?.some(e=>e?.code==="kernelResponseTooLarge") ? "kernelResponseTooLarge" : "kernelExecutionFailed");}
+          finally {closed=true;clearTimeout(observer);scope.removeEventListener?.("message",readyListener);for(const port of batchPorts)port.close();}
+        }
+        throw fail("kernelExecutionFailed");
       } finally {clearTimeout(timer);for(const port of ports)port.close();pending--;queuedBytes-=request.length;}
     }};
   }
@@ -190,6 +221,9 @@
     if (typeof Worker === "function" && scope.navigator?.serviceWorker) {
       if (browserKernels.size>=8&&!browserKernels.has(key)) browserKernels.delete(browserKernels.keys().next().value);
       browserKernels.set(key,request=>executeBounded(request,limits.guestAllocation));
+      // A replacement client can be discoverable before its listener starts.
+      // Readiness only wakes transport; the receiving document still checks identity.
+      try {scope.navigator.serviceWorker.controller?.postMessage?.({kind:"foundry:kernel-owner-ready/1",key});} catch {}
     }
     return Object.freeze({
       digest: meta.digest, vectors: vectors.length, dispatch,

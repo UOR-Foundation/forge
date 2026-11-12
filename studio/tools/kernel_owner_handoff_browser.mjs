@@ -29,10 +29,10 @@ try {
   browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox"] });
   const context = await browser.newContext({ serviceWorkers: "allow" }), page = await context.newPage(), errors = [], sent = [];
   await context.addInitScript(() => {
-    if(window!==window.top||location.pathname.endsWith('/chat'))return;
+    if(window!==window.top)return;
     navigator.serviceWorker?.addEventListener('message',event=>{
       if(event.data?.kind!=='foundry:kernel-execute/1'||!event.ports[0])return;
-      window.__lostOwnerRequest=true;event.stopImmediatePropagation();
+      if(!location.pathname.endsWith('/chat')){window.__lostOwnerRequest=true;event.stopImmediatePropagation();}
     });
   });
   page.on("pageerror", error => errors.push(error.message));
@@ -68,13 +68,18 @@ try {
   for(const key of ['purpose','view','meanings'])assert.deepEqual(after[key],custom[key]);
   assert.equal(canonicalSource(after).source,editModule.source);
   const head=await get(page,'refs',appId+':main');const bad=await apply('<prism-lexlean>invalid</prism-lexlean>');assert.equal(bad.changed,0);assert.equal(await get(page,'refs',appId+':main'),head);
+  await page.evaluate(async()=>{const url=await window.__live.liveFrame();void fetch(url).catch(()=>{});});
   await page.waitForFunction(()=>window.__lostOwnerRequest);
+  let refusePreview;const previewRefusal=new Promise(resolve=>refusePreview=resolve);
+  page.on('response',response=>{if(response.status()===503&&new URL(response.url()).pathname.includes('/foundry/p/'))void response.text().then(body=>refusePreview(body));});
   await page.goto(base+'chat?id='+made.chatId+'&appId='+appId);
-  await page.evaluate(()=>window.__forgeKernel.ask('drafting check')); 
+  await page.waitForFunction(()=>!!window.__forgeKernel&&!!window.__live);
+  await page.evaluate(()=>window.__forgeKernel.ask('drafting check'));
   await page.evaluate(async appId=>{await window.__live.showLive(appId);await window.__live.refreshLive(appId);},appId);
   await page.getByTestId('preview-iframe-element').waitFor();
   const frame=page.frameLocator('[data-testid="preview-iframe-element"]');
-  try{await frame.getByText('Your parking quote',{exact:true}).waitFor({timeout:20000});}catch(error){console.log('frames',page.frames().map(f=>f.url()));console.log('body',await page.locator('body').innerText());console.log('preview',await frame.locator('body').innerText().catch(()=>''));console.log('exceptions',errors);throw error;}
+  const outcome=await Promise.race([frame.getByText('Your parking quote',{exact:true}).waitFor({timeout:40000}).then(()=>null),previewRefusal]);
+  assert.equal(outcome,null,'verified preview refused during owner handoff: '+outcome);
   assert.ok(!(await frame.locator('body').innerText()).includes("You're invited"));
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({profile:'foundry/kernel-owner-handoff-acceptance/1',lostOwner:true,fullNavigation:true,crossProfile:true,oldModuleRemoved:true,canonicalBytes:true,compatiblePresentation:true,invalidModuleNoWrite:true,actualPreview:true,pageErrors:errors}));
