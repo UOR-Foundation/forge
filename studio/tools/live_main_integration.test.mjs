@@ -44,5 +44,6 @@ test('cancellation between accepted live operations stops retries without erasin
 });
 test('generation context meters the canonical module and theme and cannot apply model-written files',()=>{
  const text=host();assert.ok(text.includes('content: prism.SPEC_RULES + "\\n\\n" + await themeLibrary("resolve",{appId})'));assert.ok(text.includes('prism.moduleContext(moduleNow ? moduleNow[1] : null)'));assert.ok(text.includes('writes: [], deletes: [], renames: [], deps: []'));assert.ok(!text.includes('buildSystemPrompt('));assert.ok(text.lastIndexOf('if (refusedCode)')>text.indexOf('    for (const match of full.matchAll(/<dyad-spec-patch>'));assert.ok(text.includes('await settleText();'));assert.ok(text.includes('await textWork;'));assert.ok(text.includes('const history = chat ? await messagesOf(chatId) : [];'));
+ assert.ok(fs.statSync(new URL('../scripts/live_e2e_all.sh',import.meta.url)).mode & 0o111,'mandatory every-app replay must be executable');
  assert.ok(fs.readFileSync(new URL('../../app/src/FoundrySpecification.lex.tex',import.meta.url),'utf8').includes('name: liveMainIntegrationBoundary,'));assert.ok(fs.readFileSync(new URL('../../.github/workflows/studio.yml',import.meta.url),'utf8').includes('node tools/live_main_integration_browser.mjs'));
 });
