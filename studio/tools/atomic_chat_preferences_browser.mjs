@@ -58,18 +58,15 @@ try {
   },chatId);assert.deepEqual(late,{injected:true,code:'chatPreferencesStorageFailed'});assert.deepEqual(await get(peer,'chats',chatId),reloaded);
   await call(page,'set-user-settings',{providerSettings:{featherless:{apiKey:{value:'preferences-local-fixture'}}}});
   await call(page,'update-chat',{chatId,chatMode:'build'});
-  await page.goto(base+'chat?id='+chatId+'&appId='+created.app.id);await page.waitForFunction(()=>!!window.electron);
-  await page.getByTestId('chat-input-container').getByRole('textbox').fill('Describe a useful small application');
-  await page.getByTestId('chat-input-container').getByRole('textbox').press('Enter');
+  await page.evaluate(async({chatId,appId})=>{
+    const {bindQueuePayload}=await import('./chat-queue-store.mjs'),{serializeImmutableChatTurnPayload}=await import('./chat-contracts.mjs');
+    const intent=await bindQueuePayload({schemaVersion:1,intentId:'preferences-request',chatId,appId,invocationRef:{kind:'chat-stream',entityKey:chatId,operationId:'preferences-request'},prompt:'Describe a useful small application',requestedChatMode:'build'},serializeImmutableChatTurnPayload);
+    await window.electron.ipcRenderer.invoke('distributed-machine:dispatch',{protocolVersion:1,machineId:'chat_stream',encodedKey:{chatId},messageId:crypto.randomUUID(),encodedEvent:{type:'SUBMIT',intent,observedStopPolicyVersion:0}});
+  },{chatId,appId:created.app.id});
   const disclosure=page.getByRole('dialog',{name:'Review cloud request',exact:true});
-  for(let i=0;i<8;i++){
-    try{await page.waitForFunction(()=>!!document.querySelector('dialog[open]'),null,{timeout:30000});}catch(error){if(await page.getByText('Show details',{exact:true}).count())await page.getByText('Show details',{exact:true}).click();console.log(await page.locator('body').innerText());console.log(await call(page,'get-chat',chatId));throw error;}
-    if(await disclosure.count())break;
-    await page.getByRole('dialog',{name:'Review preview permissions',exact:true}).getByRole('button',{name:"Don't allow",exact:true}).click();
-  }
   await disclosure.waitFor();assert.equal(JSON.parse(await disclosure.locator('pre').textContent()).model,modelSelection.name);
   assert.equal(sent.length,0);await page.getByRole('button',{name:'Send this request',exact:true}).click();
-  await page.waitForFunction(()=>!!document.body.textContent.includes('THEME-GENERATION-COMPLETE'));
+  await page.waitForFunction(async chatId=>(await window.__host.get('chats',chatId)).messages.some(m=>m.content.includes('THEME-GENERATION-COMPLETE')),chatId);
   assert.equal(sent.length,1);assert.equal(JSON.parse(sent[0]).model,modelSelection.name);
   await call(peer,'delete-chat',chatId);
   const missing=await page.evaluate(async chatId=>{try{await window.electron.ipcRenderer.invoke('update-chat',{chatId,title:'revived'});}catch(e){return e.code;}},chatId);

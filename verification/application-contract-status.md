@@ -1,6 +1,6 @@
 # Application specification implementation status
 
-Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-74. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
+Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-77. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
 
 | Obligation | Implemented scope and evidence | Remaining acceptance or implementation |
 | --- | --- | --- |
@@ -52,3 +52,9 @@ The selected SDK remains `ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd
 The R6 dependency issue includes `uor-hologram` 0.12.1 at Git revision `2bda6a9a9476872dade705bd61ece4209607f6da` and six transitive Git packages, without qualified registry replacements. The separate `site/` Prism page remains byte-bound to the official frame and fails its mobile performance gate; importing a verified official frame update is the supported correction path. Neither hold is waived by Studio feature acceptance.
 
 FA-74 (#140) closes the surviving-window execution-lock race under `FoundrySpecification.chatOwnerRecoveryBoundary`: all 445 Node controls, full Rust/Clippy/fmt, 54 mandatory browser journeys, five Node mutations and the actual browser mutation pass. Author review 5869211564 records scoped completeness, not independent approval. FA-73 broader actual-app replay exposed document loss during service-worker acceptance; owner handoff remains under implementation.
+
+## Latest registered boundaries
+
+FA-75 recovers lost verified document owners during bounded service-worker kernel replay, including post-verification readiness hints. FA-76 admits all rules of a structurally valid large canonical module while preserving the explicit 24-rule Lean proof restriction. Its 56 mandatory browsers, full mobile and four-app replay pass; two initial Verdant patch-work timings exceed the unchanged budget before attempt 3 passes. Hosted Studio and Forge performance pass at b81d7d326f67ade0f9fc97d5b72420740610d941; SDK acceptance at that revision was superseded/cancelled by the next evidence commit, not accepted.
+
+FA-77 registers and implements atomic chat preference persistence under the imported renderer schema. Focused unit/actual-browser mutation controls pass; the full 57-browser integration is in progress. Stored mode selection does not implement Ask/Plan execution semantics. Further identified work includes chat-screen preview-refusal/submission races and legacy OpenRouter model routing. See `atomic-chat-preferences.md`; the conversion remains incomplete.
