@@ -375,3 +375,167 @@ The build-speed work produced the first probe holo: `Counter probe.holo`, sha256
 So for the counter, "the interpreter was tested against vectors written by hand" is replaced by "the interpreter agrees with the compiled guest on every state for two of its three events". Together with the Payment Approval comparison, the interpreter has now been held to two shipped guests.
 
 Still not compared: `probe-view` and `probe-payment`, which run PrismPM's CBOR codec and have no holo yet. The holo itself is in the build-speed work, which is not part of this branch, so this comparison cannot be rerun from this branch alone until that work lands.
+
+## The live site against this plan (2026-11-12)
+
+Checked: https://uor-foundation.github.io/foundry/ after pull request 133 merged.
+
+What the live site served: the existing studio at the root (its entry script is 1.93 MB), the kernel's Prism page under `app/`, and the second chat under `ui/`. Every v2 address answered 404. Merging `v2/` put the work in the repository and nowhere a person could open it.
+
+Gaps between the live site and the plan in [PROMPT.md](PROMPT.md), and what was done about each:
+
+| Plan | Live site | Now |
+| --- | --- | --- |
+| The browser runs the spec | Nothing of v2 was served | Closed here: [site/](site) is built by `site/build.mjs` and deployed under `v2/` by the Pages workflow. Open `v2/index.html`. |
+| One thin shell, no framework, first-load code at most 60 KB gzip | 603 KB gzip for the home screen | Closed for the v2 page: 9.4 KB gzip of code for the gallery, 12.1 KB for the studio, 24 KB gzip of spec data. A test holds the 60 KB budget. |
+| Proof speeds never blurred; the UI says what produced each badge | Not applicable | Closed here: beside each running app the page shows the attestation, the exact statement Lean proved for each promise, the proof form and axioms, where a theorem proves less than its sentence, and what is not proved at all. The page states that it does not check the attestation itself. |
+| A sentence must not claim more than its theorem | Found in the model loop | Closed in presentation, not in proof: the page shows sentence and statement side by side and flags the three that fall short. A test fails if a "changes nothing" promise loses its flag. Proving them needs proof forms LexLean does not offer here. |
+| The tab checks a spec with no local toolchain | Not possible | Closed here: [hosted-check/](hosted-check) is now in the repository and served as the studio. From the built site, press to verdict took 648 ms and press to first frame 876 ms (one run). |
+| The evidence is in the repository | `v2/hosted-check` and `v2/build-speed` were untracked | Closed here: both are committed. `build-speed` carries the first probe holo, its sources, the report and the proposed workflow; its logs and the unchanged "before" copy are left out. |
+| A model writes the spec in the product | Not present | Open. No model is reachable without a key the person supplies. The loop was run with an independent model outside the page. |
+| Publish composes a holo from the page | Not present | Open. Holos are built by the SDK; the measured route is GitHub Actions (7 min 39 s cold, by the build-speed report). |
+| Works offline after first load | Not for v2 | Open. Forge's worker owns the origin and answers v2 paths from the network. |
+| The old studio is removed | Still the homepage | Open, and deliberately: it is the owner's decision, and the v2 page covers two apps, not the product. |
+| The spec-only law and the budgets live in the kernel | Not modeled | Open. The budget is held by a test in `site/test.mjs`, not by a kernel requirement. |
+| Foundry's own state and journeys are a spec | The v2 page's own behavior is handwritten JavaScript | Open. About 100 lines in `site/gallery.mjs` are not projected from a spec. |
+
+One constraint found while doing this: Forge's service worker answers any navigation whose path has no dot with its own shell. So every link on the v2 site names a file, and a test refuses a link that does not.
+
+Tested:
+- `node --test v2/site/test.mjs`, 7 of 7: every app runs from the built files and its first frame is admitted by the protocol's own rule; every promise shown stands beside a theorem the served spec states; a weaker theorem carries its limit; the studio finds every library source; every link names a served file; the code stays inside 60 KB gzip; nothing but the listed files reaches the site.
+- Planted defects: dropping the limit on one weaker theorem failed one test; linking to a folder failed another. Restored, green.
+- The workflow step was rehearsed on a copy holding only the paths its sparse checkout fetches: tests pass, build succeeds.
+- In the browser, served under `/foundry/v2/` as Pages serves it: the guest list with real typing and Enter (box empties, rows Grace then Ada, 0.9 ms); the payment app over 200 actions (median 1.0 ms, worst 9.8 ms); the studio's Check and run against the hosted service.
+- All suites together: `node --test v2/shell/test.mjs v2/shell/test-payment.mjs v2/loop/test-guests.mjs v2/reuse/test.mjs v2/hosted-check/test.mjs v2/site/test.mjs`.
+
+Not tested: the deployed page itself, which exists only after this change merges and the Pages workflow runs; Safari and Firefox; a phone.
+
+## Direction: v2 lives inside Foundry's own app, not beside it (2026-11-12)
+
+Decided by the owner: v2 must keep the look, the functions and the journey of the app at https://uor-foundation.github.io/foundry/ (sidebar, home composer, model picker, chat beside a live preview, publish). It should feel like Lovable. Models edit LexLean specs; the specs are projected into the live preview inside that app.
+
+So the page under `v2/` is evidence, not the product surface. The product surface is the existing shell, and the v2 engine goes into it.
+
+What the existing app already does (read in `studio/shell` at this commit):
+
+- The chat model already writes LexLean. `prism.js` tells it to answer with one `<prism-lexlean>` block and streams it.
+- The preview already draws from the spec as it streams. `host.js` (the `<prism-lexlean>` branch of the stream handler) reads whatever declarations are whole with `live/lexlean.mjs`, projects them with `live/project.mjs`, and posts `live/projection` to the live frame, which draws a closed set of node kinds with the kit's components (`live/components.js`).
+- Proving already goes to the hosted service: `prism.js` writes a draft and calls `lexlean_verify` at `mcp.uor.foundation`. The phase shown is the kernel's answer (FK-01 to FK-04).
+- A module that does not read gets one repair turn from the same model, streamed into the same answer.
+
+So the journey the owner describes exists. Its limit is the shape of app it can express: `live/lexlean.mjs` reads one shape only, a decision (a request of fields, rules, a first-match `judge`, and `breaks…` properties). Its reader is a hand-written parser for that shape, and its preview is a projection of that shape. An app with state, a form that adds to a list, or a table is outside it.
+
+What v2 adds, and where each piece plugs in:
+
+| Step | Change | Where | Evidence it rests on |
+| --- | --- | --- | --- |
+| 1 | A second shape in the same block: `State`, `catalogue`, `initial`, `view`, `step`, then promises and theorems. The decision shape stays for "decide one answer". | the system prompt in `prism.js`, from `v2/loop/RULES.txt` | An independent model wrote this shape correctly from those instructions, first attempt. |
+| 2 | When the block is the app shape, split it into whole declarations as it streams; once `State`, `catalogue`, `initial` and `view` are whole, fetch the data form and run it. | a new `live/app.mjs` beside `live/lexlean.mjs`, called from the same branch in `host.js` | `v2/loop/loop.mjs` splits declarations; the hosted service returns a data form in 0.2 to 1.1 s; the interpreter's first frame takes about 13 ms. |
+| 3 | Draw the frame with the kit's own components, and send a pressed action back as an intent; the host runs `step` and posts the next frame. | a `live/presentation` message handled in `live/components.js`, mapping PrismPM's content kinds to the components the frame already has | `v2/shell/render.mjs` covers ten content kinds; an action reaches the page in about 1 ms. |
+| 4 | Check at the end of the turn; a refusal becomes the existing repair turn, with the checker's diagnostics. | `v2/hosted-check/check.mjs`, called where `lexlean.withRepair` is called today | Same verdicts as the SDK image on 17 files; press to verdict 648 ms. |
+| 5 | Prove with the existing path, sending the library modules with the app's. Show each promise beside the exact statement proved, and flag a theorem that proves less. | `prism.js` proof call; the frame's existing guarantees block | Lean verified the model-written app's five theorems; the v2 page already shows sentence against statement. |
+| 6 | Hold the interpreter to the built guest before anything publishes. | the Publish panel's existing gate | `v2/compare/compare.mjs`: 395,625 of 395,625 on the counter. |
+
+Nothing in the sidebar, the composer, the model picker, the chat, the panels or the appearance changes.
+
+What will not be true at first, and should be said in the app:
+
+- Publish for the app shape. A holo of a stateful app needs the text-application wrapper and a build of about eight minutes on GitHub. Until that is wired, the app shape previews and proves; it does not publish. Decision apps publish as today.
+- Proof strength. Without induction, some promises can only be tested. The app must show which.
+- Model quality. The app shape was written correctly by one strong model. The app's default cloud model has not been tried on it.
+- Speed while streaming. Each partial render needs a data form from the hosted service; one sample each of 0.2 and 1.1 s. If that is too slow to feel live, the data form must be produced in the tab, which needs LexLean's reader compiled for the browser (an upstream request).
+
+Order of work: steps 1 to 3 give a stateful app appearing in the existing preview while the model writes it. That is the first thing worth showing, and it touches three files of the studio plus one new one. Steps 4 to 6 make it trustworthy. Each step lands with the studio's own gates extended (the journey check, the contract check, the performance budgets), a planted defect, and a browser run of the real journey.
+
+## Steps 1 to 3, done: a stateful app in Foundry's own preview (2026-11-12)
+
+The first three steps of the direction above are built in the studio, with nothing in its look changed.
+
+What changed:
+- `studio/shell/live/app.mjs` (new): tells the app shape from the decision shape, splits a streamed module at its whole declarations, asks the hosted service for the data form once `State`, `catalogue`, `initial` and `view` are whole, runs it, and posts frames. A press comes back as an intent and is answered with the next frame.
+- `studio/shell/live/v2/` (new): the interpreter, the presentation reader, the library model and the model's instructions, as copies of the files under `v2/`. `tools/v2_engine.mjs --check` holds them to their sources.
+- `studio/live-src/src/presentation.jsx` (new) and `frame.jsx`: the live frame draws a frame of the protocol with the kit's own shadcn/ui components, and sends `live/intent`.
+- `studio/shell/host.js`: the `<prism-lexlean>` branch of the stream runs an app-shape module instead of reading it as a decision; the end of the turn keeps the module as `prism/App.lex.tex`; a stored module reopens in the live frame; the repair turn is not asked of a module that runs.
+- `studio/shell/prism.js`: the model's instructions gain the app shape, from `v2/loop/RULES.txt`.
+
+Tested in the real Foundry. `tools/overlay_serve.mjs` serves this branch's shell over the deployed site's built files, under `/foundry/`. In that app, in Chromium:
+- The guest list an independent model wrote was streamed through the host's own functions at about 1,000 characters a second. It drew in the preview panel while the rest was still arriving.
+- Real typing and clicks in the preview: "Ada" with Enter, "Grace" with the Add button. The name box emptied each time and the table read Grace, then Ada.
+- The end of the turn kept one file and showed the card "App · draft … not checked or proved yet, and it cannot be published yet". No rules phase was invented for it.
+- After a full reload, and after the preview's own refresh button, the app ran again from its stored module.
+- The studio's own end-to-end gate for a decision app (`tools/live_e2e.mjs`, the RSVP fixture) passed against this branch: first node to first pixel 25 ms, every patch inside a frame, check on screen in 51 ms, no reload of the live frame, no page errors. The existing journey is not regressed.
+
+Measured in the standalone frame harness (the real frame, the real hosted service): the declarations a first frame needs were whole 316 ms into a stream; the frame was on screen at 765 ms, of which 449 ms was the hosted service; the app was interactive at 1,138 ms; the stream ended at 966 ms. A press took 0.4 to 0.5 ms to answer.
+
+Gates: every studio gate that runs without the lane passes (parse, look, experience, journey, template, components byte for byte, live preview, table, edit, LexLean, published preview, self-contained), plus the two new ones, each armed with a planted defect. All suites: 74 pass, 1 skipped (it needs the network and passes when run).
+
+Found on the way:
+- The browser pane was hidden during testing, so animation frames did not run; a freshly drawn screen stayed at the first frame of its fade-in until the pane produced a frame. Screenshots taken a moment later show it. This is the test environment, not the app, and it affects the existing decision nodes in the same way.
+- `tools/live_lexlean.mjs` holds the host to the exact text of the model's request. The instructions were therefore added inside `prism.js`, not beside the request in `host.js`.
+- The repository's self-contained gate refuses a personal account name; the build-speed report named one. Reworded.
+
+Not done, and the app says so where it matters:
+- Check, proof and publish for the app shape (steps 4 to 6). The card says the app is a draft.
+- A real model writing the app shape in this app. The stream was replayed, as the studio's own end-to-end gate does. The app's default cloud model has not been tried on these instructions, which add about 14,000 characters to every request.
+- Editing a stateful app by clicking its words, undo, and the outcome diff: those exist for decisions only.
+- Keeping what a person typed across a new version of the module: a new version starts from `initial`.
+- The lane, the renderer's build and the performance budgets in CI: they run on GitHub, not here.
+
+## Step 4, done: a stateful app is checked at the end of its turn (2026-11-12)
+
+What changed in the studio:
+- `shell/live/app.mjs`: `checkApp` sends the module, as the model wrote it, and the one library module it imports to the hosted checker through `shell/live/v2/check.mjs` (a copy of `v2/hosted-check/check.mjs`, held by the Engine gate). `card` says what the state holds and no more. `repairPrompt` gives the model the checker's own words.
+- `host.js`: at the end of a turn the module is checked and its standing kept beside it as `prism/app.json`. The phase is the kernel's answer: an edit sends the app to drafting, a check that passes moves it to checked. A refusal gets one repair turn from the same model, as a decision's unreadable module already does. A module that has not changed is not checked again. The preview's badge shows the stored phase only while it is about the very bytes on screen.
+
+Tested in the real Foundry, over the deployed site, by ending turns through the host's own `rulesAfterTurn`:
+
+| Turn | Result | Time |
+| --- | --- | --- |
+| A model-written module | "App · checked … not proved yet, and it cannot be published yet"; the preview's badge reads Checked | 950 ms |
+| The same module again | nothing written, nothing asked of the service | 5 ms |
+| The module with a planted fault (a type that does not exist) | "App · not checked", with the checker's line naming the missing type; the app still runs as far as it can | 535 ms |
+| The fault fixed | checked again | 570 ms |
+
+Tests: `node --test studio/tools/live_app_check.test.mjs`, 5 claims and a sixth against the hosted service (`LIVE_APP_HOSTED=1`), all passing. Planted defect: `card` made to call every state checked; the claim failed; restored, green. With the earlier suite and all v2 suites: 79 pass, 2 skipped (both need the network and pass when run).
+
+Not shown:
+- The repair turn itself. It needs a model, and none is reachable from a script here. What is tested is everything around it: the refusal, the lines given to the model, and the request built from them.
+- Where a fault is. For a fault found while linking, LexLean gives the module's line, not the declaration's, on the hosted service and in the SDK image alike. The message names the thing, which is what a model can act on. A better position is an upstream request.
+- That checked means right. A check is not a proof, and the card says so.
+
+About the end-to-end gate (`tools/live_e2e.mjs`, a decision app, real Chromium). Its budgets are tight, and on this machine it does not pass every time:
+
+| Target | Runs | Passed |
+| --- | --- | --- |
+| This branch, before step 4 | 1 | 1 |
+| This branch, with step 4 | 6 | 3 |
+| The deployed site, with none of this code | 3 | 0 |
+
+Every miss was an edit reaching the screen 2 to 17 ms past the two-frame budget of 33.4 ms. The deployed site missed more often than this branch, so the misses are this machine, not this change. The gate's verdict that counts is the one in CI.
+
+Next: step 5, proof. The existing path proves a decision on the hosted verifier; a stateful app's module imports the library, whose title the hosted lexicon refuses, so the proof draft must carry a retitled library copy and the attestation will be over that draft. That, the time a hosted proof takes (over ten minutes for a small module), and showing each promise beside the statement proved are the work.
+
+## Step 5, built: a stateful app is proved on approval (2026-11-12)
+
+What changed in the studio:
+- `prism.js`: the proof loop (`proveFiles`) takes any set of LexLean files; a decision's proof (`prove`) is one caller of it and behaves as before. A wrong axiom set is corrected from what Lean observed and proved again, as it already was.
+- `shell/live/app.mjs`: `theoremsOf` and `promisesOf` read a module's theorems and its plain sentences; `proofFiles` gives the files a proof is asked on and names the app's own module as the one that must come back verified; `proofMessage` lists each promise beside the exact statement proved.
+- `host.js`: replying "approve" to a checked stateful app has the kernel move it to proving and asks Lean. On an attestation the kernel moves it to proved, and the module Lean verified becomes the stored one; on a refusal or a failure it goes back to checked, with the reason kept. A proof whose module changed meanwhile is dropped.
+
+What the proof is about. The hosted lexicon lacks the words of the library module's title, so the draft carries the library with its title's words replaced, as a check does, and the app's own title likewise. Every declaration is sent as written. The attestation is therefore about that draft: the module's and the library's own declarations, under replaced titles.
+
+Evidence:
+- The exact files the app sends were verified by Lean in the pinned SDK image: `verified 2 modules`, attestation `d702372d3170fe628a2a17aa30e5ece118852eb3dfcd76c9b87fa2bf11f77c98`, 6 min 9 s. So the draft proves, with replaced titles and all.
+- `node --test studio/tools/live_app_prove.test.mjs`: 7 claims against a stand-in that speaks the verifier's protocol. They cover a verified proof, an axiom correction, a refused theorem, a verifier that verified some other module, and one that gave no attestation. They caught a real fault in the refactor: the success path still named a decision's spec. Fixed.
+- Planted defect: `proofFiles` made to name no module that must come back verified. Three claims failed. Restored, green.
+- In the real Foundry over the deployed site: approval moved the app from checked to proving, the preview's badge read "Lean is proving", and a second approval answered that Lean was already proving.
+- Every studio gate that runs without the lane passes.
+
+Not shown: a proof completed through the hosted verifier. Every attempt that day ended after about a minute with `No space left on device`, reported by the verifier itself as a build diagnostic (`LLB6003`). That is the verifier's machine, not the app or the module, and it blocks every proof in Foundry, a decision's included, until someone with access frees it.
+
+That failure did exercise the refusal path for real: the kernel answered `fail`, the app went back to checked, and the reason was kept. It also showed a wording fault, now fixed and tested: the message told the person to fix a property when the verifier had failed. It now tells the two apart. A verification diagnostic (`LLV…`) is Lean refusing a theorem; anything else is the verifier, and the message says it says nothing about the app.
+
+Still true, and said in the app:
+- A sentence can say more than its theorem. The message shows both and says the statement is what is proved.
+- A proved stateful app cannot be published yet (step 6).
+- A hosted proof of a small module has taken over ten minutes when it has run at all. The proof loop gives up after fifteen.

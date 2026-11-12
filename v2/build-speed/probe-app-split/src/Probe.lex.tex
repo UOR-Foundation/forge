@@ -1,0 +1,204 @@
+\begin{lexlean}{Probe}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+inductive{
+  name: Event,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: increment, fields: []},
+    {name: reset, fields: []},
+    {name: setStride, fields: [Nat]}
+  ]
+}
+
+inductive{
+  name: Effect,
+  type_parameters: [],
+  parameters: [],
+  constructors: [{name: persist, fields: [Nat]}, {name: announce, fields: []}]
+}
+
+inductive{
+  name: Node,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: text, fields: [Bytes]},
+    {name: number, fields: [Nat]},
+    {name: button, fields: [Bytes, Event]},
+    {name: open, fields: []},
+    {name: close, fields: []}
+  ]
+}
+
+structure{
+  name: State,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: count, type: Nat}, {name: stride, type: Nat}]
+}
+
+structure{
+  name: Outcome,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: state, type: State}, {name: effects, type: (List Effect)}]
+}
+
+definition{
+  name: step,
+  parameters: [state : State, event : Event],
+  result: Outcome,
+  body: (match event
+    | Event.increment => (record Outcome {state := (record State {count := ((project state count) + (project state stride)), stride := (project state stride)}), effects := (cons (ctor Effect.persist ((project state count) + (project state stride))) (nil Effect))})
+    | Event.reset => (record Outcome {state := (record State {count := 0, stride := (project state stride)}), effects := (cons (ctor Effect.announce) (nil Effect))})
+    | Event.setStride n => (record Outcome {state := (record State {count := (project state count), stride := n}), effects := (nil Effect)}))
+}
+
+definition{
+  name: view,
+  parameters: [state : State],
+  result: (List Node),
+  body: (cons (ctor Node.open) (cons (ctor Node.text 0x436f756e746572) (cons (ctor Node.number (project state count)) (cons (ctor Node.button 0x416464 (ctor Event.increment)) (cons (ctor Node.button 0x5265736574 (ctor Event.reset)) (cons (ctor Node.close) (nil Node)))))))
+}
+
+definition{
+  name: hexDigit,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (if (value =? 0) then 0x30 else (if (value =? 1) then 0x31 else (if (value =? 2) then 0x32 else (if (value =? 3) then 0x33 else (if (value =? 4) then 0x34 else (if (value =? 5) then 0x35 else (if (value =? 6) then 0x36 else (if (value =? 7) then 0x37 else (if (value =? 8) then 0x38 else (if (value =? 9) then 0x39 else (if (value =? 10) then 0x61 else (if (value =? 11) then 0x62 else (if (value =? 12) then 0x63 else (if (value =? 13) then 0x64 else (if (value =? 14) then 0x65 else 0x66)))))))))))))))
+}
+
+definition{
+  name: hexByte,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (prim append (hexDigit (prim quotient value 16 0 : Nat)) (hexDigit (prim remainder value 16 0 : Nat)) : Bytes)
+}
+
+definition{
+  name: byteAsNat,
+  parameters: [bytes : Bytes, offset : Nat],
+  result: (Option Nat),
+  body: (match (prim index bytes offset : (Option UInt8))
+    | Option.none => (ctor Option.none [Nat])
+    | Option.some value => (ctor Option.some [Nat] (prim to_nat value : Nat))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: readNibble,
+  parameters: [bytes : Bytes, offset : Nat],
+  result: (Option Nat),
+  body: (match (byteAsNat bytes offset)
+    | Option.none => (ctor Option.none [Nat])
+    | Option.some value => (if ((48 <=? value) && (value <=? 57)) then (ctor Option.some [Nat] (prim subtract value 48 : Nat)) else (if ((97 <=? value) && (value <=? 102)) then (ctor Option.some [Nat] ((prim subtract value 97 : Nat) + 10)) else (ctor Option.none [Nat])))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: readHexByte,
+  parameters: [bytes : Bytes, offset : Nat],
+  result: (Option Nat),
+  body: (match (readNibble bytes offset)
+    | Option.none => (ctor Option.none [Nat])
+    | Option.some high => (match (readNibble bytes (offset + 1))
+      | Option.none => (ctor Option.none [Nat])
+      | Option.some low => (ctor Option.some [Nat] ((prim multiply high 16 : Nat) + low)))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: encodeEvent,
+  parameters: [event : Event],
+  result: Bytes,
+  body: (match event
+    | Event.increment => 0x30303030
+    | Event.reset => 0x30313030
+    | Event.setStride n => (prim append 0x3032 (hexByte n) : Bytes))
+}
+
+definition{
+  name: decodeEvent,
+  parameters: [tag : Nat, argument : Nat],
+  result: (Option Event),
+  body: (if (tag =? 0) then (ctor Option.some [Event] (ctor Event.increment)) else (if (tag =? 1) then (ctor Option.some [Event] (ctor Event.reset)) else (if (tag =? 2) then (ctor Option.some [Event] (ctor Event.setStride argument)) else (ctor Option.none [Event]))))
+}
+
+definition{
+  name: encodeEffect,
+  parameters: [effect : Effect],
+  result: Bytes,
+  body: (match effect
+    | Effect.persist n => (prim append 0x50 (hexByte n) : Bytes)
+    | Effect.announce => 0x41)
+}
+
+definition{
+  name: encodeEffects,
+  parameters: [effects : (List Effect)],
+  result: Bytes,
+  body: (match effects
+    | List.nil => 0x
+    | List.cons head rest => (prim append (encodeEffect head) (encodeEffects rest) : Bytes)),
+  recursive_argument: effects
+}
+
+definition{
+  name: encodeNode,
+  parameters: [node : Node],
+  result: Bytes,
+  body: (match node
+    | Node.text label => (prim append 0x54 (prim append (hexByte (prim length label : Nat)) label : Bytes) : Bytes)
+    | Node.number n => (prim append 0x4e (hexByte n) : Bytes)
+    | Node.button label event => (prim append 0x42 (prim append (hexByte (prim length label : Nat)) (prim append label (encodeEvent event) : Bytes) : Bytes) : Bytes)
+    | Node.open => 0x5b
+    | Node.close => 0x5d)
+}
+
+definition{
+  name: encodeNodes,
+  parameters: [nodes : (List Node)],
+  result: Bytes,
+  body: (match nodes
+    | List.nil => 0x
+    | List.cons head rest => (prim append (encodeNode head) (encodeNodes rest) : Bytes)),
+  recursive_argument: nodes
+}
+
+definition{
+  name: encodeView,
+  parameters: [state : State],
+  result: Bytes,
+  body: (prim append (encodeNode (ctor Node.open)) (prim append (encodeNode (ctor Node.text 0x436f756e746572)) (prim append (encodeNode (ctor Node.number (project state count))) (prim append (encodeNode (ctor Node.button 0x416464 (ctor Event.increment))) (prim append (encodeNode (ctor Node.button 0x5265736574 (ctor Event.reset))) (encodeNode (ctor Node.close)) : Bytes) : Bytes) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: encodeOutcome,
+  parameters: [outcome : Outcome],
+  result: Bytes,
+  body: (if (255 <? (project (project outcome state) count)) then 0x6f766572666c6f77 else (prim append (prim append (hexByte (project (project outcome state) count)) (hexByte (project (project outcome state) stride)) : Bytes) (prim append (encodeEffects (project outcome effects)) (prim append 0x7c (encodeView (project outcome state)) : Bytes) : Bytes) : Bytes))
+}
+
+definition{
+  name: respond,
+  parameters: [value : Bytes],
+  result: Bytes,
+  body: (if ((prim length value : Nat) =? 8) then (match (readHexByte value 0)
+    | Option.none => 0x696e76616c6964
+    | Option.some count => (match (readHexByte value 2)
+      | Option.none => 0x696e76616c6964
+      | Option.some stride => (match (readHexByte value 4)
+        | Option.none => 0x696e76616c6964
+        | Option.some tag => (match (readHexByte value 6)
+          | Option.none => 0x696e76616c6964
+          | Option.some argument => (match (decodeEvent tag argument)
+            | Option.none => 0x696e76616c6964
+            | Option.some event => (encodeOutcome (step (record State {count := count, stride := stride}) event))))))) else 0x696e76616c6964),
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

@@ -1,0 +1,182 @@
+# Proposed, not installed: the fastest correct build of one Prism app on
+# GitHub Actions. It is a draft for review under v2/build-speed/, never copied
+# into .github/ without the owner's approval. REPORT.md gives the timings it is
+# designed from and says which are measured and which are estimated.
+#
+# Three rules decide its shape:
+#   1. The proof inputs have one address: the SDK image digest from
+#      prismpm.lock and every byte of the app that `prismpm verify` reads.
+#   2. A pull request whose proof inputs equal those of an earlier verified run
+#      reuses that run's holo and attestation id; it does not prove again.
+#      A push to main or a tag always proves in full, so every merged commit
+#      has a verdict of its own. This is the rule `just app` already applies.
+#   3. Only the work that needs the SDK image waits for it. The address and the
+#      reuse lookup run on a bare runner in seconds; the 5.5 GB image pull
+#      happens only when a proof is actually needed.
+#
+# Nothing here changes what is proved: the verify job runs the same
+# `prismpm verify` in the same digest-pinned image as build.yml.
+name: app build (proposed)
+
+on:
+  push:
+    branches: [main]
+    tags: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('app-build-pr-{0}', github.event.pull_request.number) || format('app-build-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The app directory. probe-app-split is the layout REPORT.md recommends:
+  # theorems in a module that the application entrypoint does not import.
+  APP: app
+
+jobs:
+  address:
+    name: address the proof inputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+      reuse: ${{ steps.lookup.outputs.cache-hit == 'true' && github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: The address of every byte the proof reads
+        id: key
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
+          [[ $image =~ @sha256:[0-9a-f]{64}$ ]] || { echo 'prismpm.lock does not select an immutable SDK image' >&2; exit 64; }
+          # Build outputs (.lexlean, .prism) are excluded: they are results, not inputs.
+          # LC_ALL=C sort makes the list, and so the key, independent of the runner's locale.
+          sources=$(cd "$APP" && git ls-files -z -- . ':!:.lexlean' ':!:.prism' | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          echo "key=prism-holo-${image##*@sha256:}-${sources}" >>"$GITHUB_OUTPUT"
+      - name: Whether an earlier run proved these exact inputs
+        id: lookup
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: prism-holo
+          key: ${{ steps.key.outputs.key }}
+          lookup-only: true
+
+  verify:
+    name: prove and build the holo
+    needs: address
+    if: needs.address.outputs.reuse != 'true'
+    # amd64: the kernel's verify took 497 to 502 s here against 670 s or more on
+    # ubuntu-24.04-arm (runs 43133564443, 43133564374). PrismPM bounds Lean to
+    # two threads, so a larger runner is not expected to help the Lean stages.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: The SDK image digest
+        id: sdk
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
+          echo "digest=${image##*@sha256:}" >>"$GITHUB_OUTPUT"
+      # The Hologram oracle harness is SDK-owned: its sources and Cargo.lock
+      # are embedded in prismpm, so its compiled target is a function of the
+      # image digest alone. PrismPM keeps it in <app>/target/hologram-oracle and
+      # reuses it on the next local run; this restores the same directory.
+      # Cargo's own fingerprints still decide what is fresh, and the oracle
+      # still runs and asserts in full. Measured on ubuntu-24.04: verify 176 s
+      # warm against 270 s cold; the cache is 409 MB compressed (1.9 GB on
+      # disk) and restores in 4 s (REPORT.md).
+      - name: The oracle harness compiled by an earlier run of this SDK image
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.APP }}/target/hologram-oracle
+          key: prism-oracle-target-${{ runner.os }}-${{ runner.arch }}-${{ steps.sdk.outputs.digest }}
+      - name: Prove and build through the locked SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
+          docker_config=$(mktemp -d); trap 'rm -rf "$docker_config"' EXIT
+          printf '{}\n' >"$docker_config/config.json"
+          # /tmp on the runner's disk, not a 2 GB tmpfs: the SDK seeds a 1.2 GB
+          # Cargo home under /tmp, which in memory competes with the build
+          # (PrismPM measured 814 s on tmpfs against 317 s on disk on one machine).
+          mkdir -p "$RUNNER_TEMP/sdk-tmp"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --group-add "$(stat -c '%g' /var/run/docker.sock)" \
+            --volume "$RUNNER_TEMP/sdk-tmp:/tmp" \
+            --volume "$PWD:$PWD" \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume "$docker_config:/tmp/prismpm-home/.docker:ro" \
+            --workdir "$PWD/$APP" \
+            --env DOCKER_CONFIG=/tmp/prismpm-home/.docker \
+            --env BUILDX_CONFIG=/tmp/prismpm-buildx \
+            --env HOME=/tmp/prismpm-home \
+            --env PRISMPM_EPHEMERAL_HOME=1 \
+            "$image" sh -c 'lexlean fmt --check --all && lexlean lock --check && prismpm verify' 2>&1 | tee "$RUNNER_TEMP/verify.log"
+      - name: Collect the holo
+        id: collect
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          holos=("$APP"/.prism/build/*/*.holo)
+          [[ ${#holos[@]} -eq 1 ]] || { echo "expected one holo, found ${#holos[@]}" >&2; exit 64; }
+          mkdir -p prism-holo
+          cp -r "$(dirname "${holos[0]}")"/. prism-holo/
+          grep -o 'verified attestation: [0-9a-f]*' "$RUNNER_TEMP/verify.log" | tail -1 >prism-holo/attestation.txt
+          echo "holo=prism-holo/$(basename "${holos[0]}")" >>"$GITHUB_OUTPUT"
+      - name: Sign the holo's provenance as this repository's workflow
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: ${{ steps.collect.outputs.holo }}
+      # Kept by address so a pull request with the same proof inputs reuses it.
+      # Saved by every run that proved, main included.
+      - name: Keep the holo under its proof-input address
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: prism-holo
+          key: ${{ needs.address.outputs.key }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-holo-${{ github.sha }}
+          path: prism-holo
+          if-no-files-found: error
+
+  reuse:
+    name: reuse the holo proved for these exact inputs
+    needs: address
+    if: needs.address.outputs.reuse == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: prism-holo
+          key: ${{ needs.address.outputs.key }}
+          fail-on-cache-miss: true
+      - name: Say what was reused
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "reused the holo proved for these exact proof inputs: $(cat prism-holo/attestation.txt); main proves the merge commit in full" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-holo-${{ github.sha }}
+          path: prism-holo
+          if-no-files-found: error

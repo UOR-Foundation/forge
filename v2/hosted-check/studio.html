@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The only request that leaves this origin is the check itself. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://mcp.uor.foundation; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
+<title>Spec studio</title>
+<style>
+  :root { color-scheme: light dark; --ink: #16130f; --ground: #f6f3ee; --line: #d8d2c8; --accent: #b4532a; --bad: #a3271b; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #efeae2; --ground: #16130f; --line: #3a342c; --accent: #e08a5e; --bad: #ef7d6f; } }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--ground); }
+  main { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 1.5rem 1rem; max-width: 72rem; margin: 0 auto; }
+  @media (max-width: 800px) { main { grid-template-columns: minmax(0, 1fr); } }
+  h2 { font-size: 1rem; margin: 0 0 .5rem; }
+  #spec { width: 100%; box-sizing: border-box; min-height: 60vh; font: 13px/1.45 ui-monospace, monospace; padding: .75rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; white-space: pre; }
+  .bar { display: flex; gap: .75rem; align-items: center; margin-top: .75rem; flex-wrap: wrap; }
+  #run { font: inherit; min-height: 44px; padding: 0 1.25rem; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: inherit; cursor: pointer; }
+  #verdict { font-weight: 600; }
+  #diagnostics { list-style: none; padding: 0; margin: .75rem 0 0; display: grid; gap: .5rem; }
+  #diagnostics button { all: unset; cursor: pointer; display: block; border-left: 3px solid var(--bad); padding: .25rem .5rem; font-size: .875rem; overflow-wrap: anywhere; }
+  #diagnostics code { font-weight: 600; }
+  #app > section { display: grid; gap: 1rem; padding: 1.5rem; border: 1px solid var(--line); border-radius: 12px; }
+  #app h1 { font-size: 1.25rem; margin: 0; }
+  #app form { display: grid; gap: .75rem; }
+  #app label { display: grid; gap: .25rem; font-size: .875rem; }
+  #app input, #app select, #app textarea, #app button { font: inherit; min-height: 44px; padding: 0 .75rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; box-sizing: border-box; width: 100%; }
+  #app button { cursor: pointer; } #app button[type=submit] { border-color: var(--accent); }
+  #app p { margin: 0; min-height: 1.5rem; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: .875rem; }
+  caption { text-align: left; opacity: .7; padding-bottom: .25rem; }
+  th, td { text-align: left; padding: .25rem .5rem .25rem 0; border-bottom: 1px solid var(--line); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; font-size: .875rem; margin-top: 1.5rem; }
+  dt { opacity: .7; } dd { margin: 0; font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+  .note { font-size: .8125rem; opacity: .75; margin: .5rem 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <section aria-labelledby="spec-title">
+    <h2 id="spec-title">Spec</h2>
+    <textarea id="spec" spellcheck="false" aria-label="Spec source"></textarea>
+    <div class="bar">
+      <button id="run" type="button">Check and run</button>
+      <span id="verdict" role="status" aria-live="polite"></span>
+    </div>
+    <ol id="diagnostics" aria-label="Diagnostics"></ol>
+    <p class="note">Checked on the hosted LexLean service, which keeps drafts unlisted, not private. A pass means checked, not proved.</p>
+  </section>
+  <section aria-labelledby="app-title">
+    <h2 id="app-title">App</h2>
+    <div id="app"></div>
+    <dl>
+      <dt>Press to verdict</dt><dd id="t-verdict"></dd>
+      <dt>Press to first frame</dt><dd id="t-frame"></dd>
+      <dt>Hosted stages</dt><dd id="t-stages"></dd>
+      <dt>Frame valid</dt><dd id="valid"></dd>
+      <dt>Action to view</dt><dd id="t-action"></dd>
+    </dl>
+  </section>
+</main>
+<script type="module">
+import { check, loadLibrary } from "./check.mjs";
+import { loadProject, NIL, cons } from "../shell/interp.mjs";
+import { createView, fieldValue } from "../shell/render.mjs";
+
+const $ = (id) => document.getElementById(id);
+const here = new URL(".", import.meta.url);
+const text = async (path) => { const r = await fetch(new URL(path, here)); if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`); return r.text(); };
+const library = await loadLibrary(text);
+// The library's data forms, fetched once from the SDK copies; the author's modules come from the check.
+const libraryData = Object.fromEntries(await Promise.all(Object.keys(library.modules).map(async (name) => [name, JSON.parse(await text(`../probe-payment/data/${name.split(".").join("/")}.json`))])));
+const query = new URLSearchParams(location.search);
+$("spec").value = await text(query.get("spec") ?? "corpus/guests-2/App.lex.tex");
+
+const list = (items) => items.reduceRight((tail, head) => cons(head, tail), NIL);
+const validate = "Foundation.View.Browser.V1.Model::presentationValid";
+let running = null;
+
+function showDiagnostics(diagnostics) {
+  const ol = $("diagnostics"); ol.replaceChildren();
+  for (const d of diagnostics) {
+    const li = document.createElement("li"), b = document.createElement("button");
+    const where = d.origin === "author" ? `line ${d.line}, column ${d.column}` : `${d.origin} ${d.path}:${d.line}:${d.column}`;
+    b.innerHTML = `<code></code> <span></span><br><span></span>`;
+    b.children[0].textContent = d.code; b.children[1].textContent = where; b.children[3].textContent = d.message;
+    if (d.origin === "author" && d.byteStart != null) b.addEventListener("click", () => select(d));
+    li.append(b); ol.append(li);
+  }
+}
+// Byte offsets from the checker become character offsets in the text area.
+function select(d) {
+  const area = $("spec"), bytes = new TextEncoder().encode(area.value), dec = new TextDecoder();
+  const at = (b) => dec.decode(bytes.subarray(0, b)).length;
+  area.focus(); area.setSelectionRange(at(d.byteStart), at(d.byteEnd ?? d.byteStart));
+}
+
+async function checkAndRun() {
+  const pressed = performance.now();
+  $("verdict").textContent = "Checking…"; $("diagnostics").replaceChildren(); $("app").replaceChildren();
+  for (const id of ["t-verdict", "t-frame", "t-stages", "valid", "t-action"]) $(id).textContent = "";
+  let result, verdictMs;
+  const onVerdict = () => { verdictMs = performance.now() - pressed; $("t-verdict").textContent = verdictMs.toFixed(0) + " ms"; };
+  try { result = await check($("spec").value, { library, onVerdict }); }
+  catch (e) { $("verdict").textContent = `Not checked: ${e.message}`; return { error: e.code ?? "error" }; }
+  $("t-stages").textContent = Object.entries(result.ms).map(([k, v]) => `${k} ${v.toFixed(0)}`).join(", ") + " ms";
+  showDiagnostics(result.diagnostics);
+  if (!result.ok) { $("verdict").textContent = `Refused: ${result.diagnostics.length} diagnostic${result.diagnostics.length === 1 ? "" : "s"}`; return { ok: false, verdictMs, diagnostics: result.diagnostics }; }
+  $("verdict").textContent = "Checked";
+
+  const entry = result.entry;
+  const app = loadProject({ ...libraryData, ...result.data });
+  const catalogue = []; for (let l = app.call(entry + "::catalogue"); l.c === "List.cons"; l = l.a[1]) catalogue.push(l.a[0]);
+  let state = app.call(entry + "::initial");
+  const show = () => {
+    const frame = app.call(entry + "::view", state);
+    const valid = app.call(validate, frame);
+    $("valid").textContent = String(valid);
+    if (!valid) throw new Error("the model produced a frame the protocol does not admit");
+    draw(frame, catalogue);
+  };
+  const act = (action, fields) => {
+    const t0 = performance.now();
+    state = app.call(entry + "::step", state, { revision: state.revision, action, fields: list(fields.map(fieldValue)) });
+    show();
+    $("t-action").textContent = (performance.now() - t0).toFixed(2) + " ms";
+  };
+  const draw = createView($("app"), act);
+  show();
+  // Two figures: the first frame written to the page, and the next paint after it. A hidden tab delays the paint.
+  const frameMs = performance.now() - pressed;
+  const painted = await Promise.race([new Promise((r) => requestAnimationFrame(() => setTimeout(() => r(true), 0))), new Promise((r) => setTimeout(() => r(false), 2000))]);
+  const paintMs = painted ? performance.now() - pressed : null;
+  $("t-frame").textContent = `${frameMs.toFixed(0)} ms written, ${painted ? paintMs.toFixed(0) + " ms painted" : "paint not observed (hidden tab)"}`;
+  running = { act, get state() { return state; } };
+  return { ok: true, verdictMs, frameMs, paintMs, ms: result.ms };
+}
+
+$("run").addEventListener("click", () => { window.studio.last = checkAndRun(); });
+window.studio = { checkAndRun, get app() { return running; }, last: null };
+</script>
+</body>
+</html>

@@ -6,11 +6,13 @@
 name: studio
 
 on:
+  # v2/shell, v2/loop and the library model under v2/probe-payment are the sources of the copies the
+  # shell serves (tools/v2_engine.mjs): a change there must be held to the Engine gate too.
   push:
     branches: [main]
-    paths: ["studio/**", ".github/workflows/studio.yml"]
+    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**"]
   pull_request:
-    paths: ["studio/**", ".github/workflows/studio.yml"]
+    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**"]
 
 permissions:
   contents: read
@@ -105,6 +107,14 @@ jobs:
         run: node tools/live_edit.mjs --check
       - name: An app's canonical LexLean module is its source, and its obligations agree with the table
         run: node tools/live_lexlean.mjs --check
+      - name: The engine a stateful app runs on is v2's, byte for byte
+        run: node tools/v2_engine.mjs --check
+      - name: A stateful app's module, streamed, becomes frames; a press becomes the next frame
+        run: node --test tools/live_app.test.mjs
+      - name: A stateful app is checked at the end of its turn, and the card claims no more than the check found
+        run: node --test tools/live_app_check.test.mjs
+      - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
+        run: node --test tools/live_app_prove.test.mjs
       - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
         run: |
           node tools/live_proof.mjs --check

@@ -1,0 +1,23 @@
+\begin{lexlean}{ProbeProofs}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{Probe}
+\title{Boolean}
+\begin{semanticmodule}
+theorem{
+  name: resetClears,
+  parameters: [state : Probe::State],
+  statement: ((project (project (Probe::step state (ctor Probe::Event.reset)) state) count) = 0),
+  proof: linear_arithmetic{definitions: [Probe::step]},
+  axioms: [propext]
+}
+
+theorem{
+  name: strideKeepsCount,
+  parameters: [state : Probe::State, n : Nat],
+  statement: ((project (project (Probe::step state (ctor Probe::Event.setStride n)) state) count) = (project state count)),
+  proof: linear_arithmetic{definitions: [Probe::step]},
+  axioms: [propext]
+}
+\end{semanticmodule}
+\end{lexlean}

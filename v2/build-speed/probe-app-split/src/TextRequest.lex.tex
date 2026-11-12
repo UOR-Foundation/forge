@@ -1,0 +1,24 @@
+\begin{lexlean}{TextRequest}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\importmodule{Probe}
+\importmodule{Foundation.View.Text.V1.Model}
+\title{Text application model}
+\begin{semanticmodule}
+definition{
+  name: application,
+  parameters: [],
+  result: Foundation.View.Text.V1.Model::TextApplication,
+  body: (record Foundation.View.Text.V1.Model::TextApplication {profile := "prismpm/text-application/1", name := "Counter probe", cargoName := "prism-text-request", cargoVersion := "0.1.0", cargoDescription := "A counter whose state, effects and view cross one bytes-in, bytes-out function.", cargoRepository := "https://github.com/UOR-Foundation/foundry", cargoHomepage := "https://github.com/UOR-Foundation/foundry", libraryRoots := (cons "PrismTextRequest.TextRequest.dispatch" (nil String)), acceptanceVectors := (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x3035303230303030, response := 0x303730325030377c5b543037436f756e7465724e3037423033416464303030304230355265736574303130305d}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x3039303330313030, response := 0x30303033417c5b543037436f756e7465724e3030423033416464303030304230355265736574303130305d}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x3039303330323061, response := 0x303930617c5b543037436f756e7465724e3039423033416464303030304230355265736574303130305d}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x3030303130323031, response := 0x303030317c5b543037436f756e7465724e3030423033416464303030304230355265736574303130305d}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6665303130303030, response := 0x666630315066667c5b543037436f756e7465724e6666423033416464303030304230355265736574303130305d}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6666303130303030, response := 0x6f766572666c6f77}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x303530327a7a3030, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x3035303230333030, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x3035303230413030, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x30353032303030, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161, response := 0x696e76616c6964}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x6161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161, response := 0x696e76616c6964}) (nil Foundation.View.Text.V1.Model::AcceptanceVector))))))))))))))), entryRoot := "PrismTextRequest.TextRequest.dispatch", coreContract := "hologram:guest/core-wasm@1", requestMaximum := (64 : UInt32), responseMaximum := (256 : UInt32), guestAllocationMaximum := (128 : UInt32), capabilitiesEmpty := true, fatArchive := true, primaryLayer := (0 : UInt8), viewLayer := (1 : UInt8), view := (record Foundation.View.Text.V1.Model::TextView {title := "Counter probe", heading := "Counter probe", inputLabel := "Request", submitLabel := "Submit", outputLabel := "Response", inputError := "Invalid request", responseError := "Invalid response"})})
+}
+
+definition{
+  name: dispatch,
+  parameters: [value : Bytes],
+  result: Bytes,
+  body: (Probe::respond value),
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

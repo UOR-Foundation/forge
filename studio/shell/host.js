@@ -27,6 +27,7 @@ import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
 import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
 import * as lexlean from "./live/lexlean.mjs";
+import * as appShape from "./live/app.mjs";
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
@@ -572,6 +573,17 @@ function sendLive(appId) {
   for (const [win, app] of liveWindows) { if (win.closed) liveWindows.delete(win); else if (app === appId) win.postMessage(message, "*"); }
 }
 // Coalesced to one projection per animation frame: a model streams far faster than a screen draws.
+// A stateful app (shell/live/app.mjs): its module is run as it is written, and each frame goes to the
+// same live frame a decision's projection goes to. The library model is fetched on the first such app.
+const appApps = new Set();     // apps whose preview is a running module, not a projection
+const postApp = (appId, message) => { const m = { ...message, theme: themeOf() }; for (const [win, app] of liveWindows) { if (win.closed) liveWindows.delete(win); else if (app === appId) win.postMessage(m, "*"); } };
+let appFrames = null;
+const appFramesReady = () => appFrames || (appFrames = fetch(new URL("live/v2/Model.json", BASE)).then((r) => { if (!r.ok) throw new Error("live/v2/Model.json answered " + r.status); return r.json(); }).then((model) => appShape.appLive({ post: postApp, library: { "Foundation.View.Browser.V1.Model": model } })));
+// The checker for a stateful app (shell/live/v2/check.mjs), with the library source it sends.
+let appLibrary = null;
+const readEngine = async (p) => { const r = await fetch(new URL("live/v2/" + p, BASE)); if (!r.ok) throw new Error("live/v2/" + p + " answered " + r.status); return r.text(); };
+const checkAppModule = (module) => appShape.checkApp(module, appLibrary || (appLibrary = appShape.checkLibrary(readEngine).catch((e) => { appLibrary = null; throw e; })));
+function pushApp(appId, module, trust = "draft") { appApps.add(appId); appFramesReady().then((frames) => frames.push(appId, module, trust)).catch((e) => console.error(e)); }
 function pushLive(appId, raw, trust, edit = false) {
   liveLatest.set(appId, { raw, trust, edit });
   // An edit is one change a person just made: it goes now, not at the next frame, so the frame can paint
@@ -585,17 +597,30 @@ window.addEventListener("message", (e) => {
   const m = e.data;
   if (!m || typeof m.type !== "string" || !m.type.startsWith("live/") || !isLiveFrame(e.source)) return;
   // The frame reads its app from the address (a string); the host keys apps as the store does (a number).
-  if (m.type === "live/hello") { const app = /^[0-9]+$/.test(String(m.app)) ? Number(m.app) : m.app; liveWindows.set(e.source, app); if (liveLatest.has(app)) sendLive(app); else refreshLive(app); return; }
+  if (m.type === "live/hello") { const app = /^[0-9]+$/.test(String(m.app)) ? Number(m.app) : m.app; liveWindows.set(e.source, app); if (appApps.has(app)) appFramesReady().then((frames) => (frames.has(app) ? frames.resend(app) : refreshPreview(app))).catch(() => {}); else if (liveLatest.has(app)) sendLive(app); else refreshPreview(app); return; }
   if (m.type === "live/painted") { if (m.changed) { liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift(); } return; }
   // Everything else acts on an app: the one this frame was shown, never the one the message names.
   const appId = liveWindows.get(e.source);
   if (!appId) return;
+  if (m.type === "live/intent") { if (appApps.has(appId)) appFramesReady().then((frames) => frames.intent(appId, m)).catch(() => {}); return; }
   if (m.type === "live/patch" && Array.isArray(m.ops)) patchSpec(appId, m.ops, { author: "user", key: m.key || null }).catch(() => {});
   else if (m.type === "live/undo" || m.type === "live/redo") stepSpec(appId, m.type === "live/undo" ? "undo" : "redo").catch(() => {});
   else if (m.type === "live/point") { if (livePointed.get(appId)?.key === m.key) livePointed.delete(appId); else livePointed.set(appId, { key: m.key, kind: m.kind, edit: m.edit || {}, text: String(m.text || "").slice(0, 200) }); }
 });
 new MutationObserver(() => { for (const appId of liveLatest.keys()) pushLive(appId, liveLatest.get(appId).raw, liveLatest.get(appId).trust); }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 // The rules as they stand: the checked spec at its kernel phase, else what the model wrote, as a draft.
+// A stateful app is its module: it is run again from the stored source. Resolves whether this app is one.
+async function refreshApp(appId) {
+  const appSource = await get("files", appId + ":" + appShape.SOURCE_PATH);
+  if (typeof appSource !== "string" || !appShape.isAppShape(appSource)) return false;
+  // The badge is the stored phase only while it is about these very bytes.
+  let trust = "draft";
+  try { const known = JSON.parse(await get("files", appId + ":" + appShape.STATE_PATH) || "null"); if (known && known.sourceKappa === await kappa(enc.encode(appSource))) trust = known.phase; } catch (e) {}
+  pushApp(appId, appSource, trust);
+  return true;
+}
+// What the preview shows for an app as it stands: a running module, or a decision's projection.
+async function refreshPreview(appId) { if (!(await refreshApp(appId))) await refreshLive(appId); }
 async function refreshLive(appId) {
   const json = await get("files", appId + ":prism/spec.json");
   if (!json) return;
@@ -720,7 +745,8 @@ async function showLive(appId) {
   publish(appId, { phase: "ready", operation: null, invocationRef: null, startedAt: Date.now(), operationError: null, exit: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: m.state.previewReloadEpoch + 1 });
   return appUrl;
 }
-const hasRules = async (appId) => !!(await get("files", appId + ":prism/spec.json"));
+// An app whose preview is the live frame: one with rules, or one that is a running module.
+const hasRules = async (appId) => !!(await get("files", appId + ":prism/spec.json")) || !!(await get("files", appId + ":" + appShape.SOURCE_PATH));
 // Warm before the first spec: the frame is built (about 90 ms of fetching, encoding and hashing) and
 // loaded once, hidden, while the page is idle, so the worker has it cached and its kernel has verified
 // itself and answered the gate before a model writes a word. The hidden copy goes once it says hello.
@@ -738,7 +764,7 @@ function warmLive() {
   }).catch(() => {});
 }
 (window.requestIdleCallback || ((fn) => setTimeout(fn, 1500)))(warmLive, { timeout: 4000 });
-window.__live = { liveFrame, showLive, pushLive, refreshLive, patchSpec, stepSpec, pointed: livePointed, times: liveTimes, project: live.project };
+window.__live = { liveFrame, showLive, pushLive, pushApp, appFrames: appFramesReady, refreshLive: refreshPreview, patchSpec, stepSpec, pointed: livePointed, times: liveTimes, project: live.project };
 
 handlers.set("distributed-machine:subscribe", async ({ machineId, encodedKey }) => {
   if (machineId === "chat_stream") return chatSubscribe({ machineId, encodedKey });
@@ -761,7 +787,7 @@ handlers.set("distributed-machine:dispatch", async (envelope) => {
     // yields to the frame), and the preview would wait on "server logs" for good (seen on the live site,
     // from the home composer).
     if (await hasRules(appId) || liveShown.has(appId)) {
-      try { await showLive(appId); if (await hasRules(appId)) await refreshLive(appId); }
+      try { await showLive(appId); if (await hasRules(appId)) await refreshPreview(appId); }
       catch (e) { const m = publish(appId, { phase: "errored", operation: null, operationError: { message: String((e && e.message) || e) } }); return receipt(m); }
       const m = publish(appId, { lastSettlement: { operationId: encodedEvent.operationId || messageId, kind: "run", outcome: "succeeded" } });
       return receipt(m);
@@ -991,6 +1017,38 @@ const saveRules = async (appId, state, expected, signal) => saveBoundRules(await
 // After a turn: the spec the model wrote (if any) becomes prism/spec.json; new rules drop the proof
 // (the kernel's edit), are checked (its check), and on a pass the app's rule module is written.
 // Returns the files changed and the card that replaces the spec in the chat.
+// The end of a turn that wrote a stateful app: its module is kept as its source and checked. Resolves
+// null when the turn wrote none, and the turn is then a decision's (rulesAfterTurn).
+async function appAfterTurn(appId, text, options = {}) {
+  const appModule = appShape.moduleFromTurn(text);
+  if (!appModule || !appShape.isAppShape(appModule.text)) return null;
+  assertGenerationActive(options.signal);
+  await coreReady;
+  const source = options.source || await captureProjectSource(await dbReady, appId);
+  const files = new Map(source.files), writes = [];
+  const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
+  const appSource = appModule.text.trim() + "\n";
+  stage(appShape.SOURCE_PATH, appSource);
+  // The phase is the kernel's answer: an edit sends the app back to drafting, a check that passes
+  // moves it to checked. A check that could not be made leaves it drafting and says why.
+  let known = null;
+  try { known = JSON.parse(files.get(appShape.STATE_PATH) || "null"); } catch (e) {}
+  const sourceKappa = await kappa(enc.encode(appSource));
+  let appState;
+  if (known && known.sourceKappa === sourceKappa) appState = known;
+  else {
+    let phase = known && known.phase ? await nextPhase(known.phase, "edit") : "drafting";
+    const verdict = await checkAppModule(appSource).catch((e) => ({ ok: false, issues: [], unchecked: String((e && e.message) || e).slice(0, 200) }));
+    assertGenerationActive(options.signal);
+    if (verdict.ok) phase = await nextPhase(phase, "check");
+    appState = { phase, sourceKappa, issues: verdict.issues || [], ...(verdict.unchecked ? { unchecked: verdict.unchecked } : {}), updated: now() };
+    stage(appShape.STATE_PATH, JSON.stringify(appState, null, 2) + "\n");
+  }
+  const kept = writes.length ? await applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, ...options, source }) : { changed: 0, source };
+  assertGenerationActive(options.signal);
+  return { changed: kept.changed, source: kept.source, card: appShape.card(appState) };
+}
+const afterTurn = async (appId, text, written = [], options = {}) => (await appAfterTurn(appId, text, options)) || rulesAfterTurn(appId, text, written, options);
 async function rulesAfterTurn(appId, text, written = [], options = {}) {
   assertGenerationActive(options.signal);
   await coreReady;
@@ -1076,6 +1134,48 @@ async function proveRules(appId, logicKey, onWait) {
 }
 // "approve" is the user's yes to the guarantees on the card: no model is asked. The answer is a
 // message, and, when Lean was started, the proof to wait for.
+// A stateful app's standing (shell/live/app.mjs, STATE_PATH), only while it is about the stored module.
+async function appStateOf(appId) {
+  const source = await get("files", appId + ":" + appShape.SOURCE_PATH);
+  if (typeof source !== "string" || !appShape.isAppShape(source)) return null;
+  let state = null;
+  try { state = JSON.parse(await get("files", appId + ":" + appShape.STATE_PATH) || "null"); } catch (e) {}
+  return { source, state: state && state.sourceKappa === await kappa(enc.encode(source)) ? state : null };
+}
+const saveAppFiles = async (appId, writes) => applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, source: await captureProjectSource(await dbReady, appId) });
+// Approval of a stateful app: the kernel moves it from checked to proving, and Lean is asked.
+async function approveApp(appId, app) {
+  const { source, state } = app;
+  if (!state) return { text: "This app's module is not checked yet, so there is nothing to approve. Ask me to fix it." };
+  if (state.phase === "proving") return { text: "Lean is already proving this app's properties." };
+  if (state.phase === "proved" || state.phase === "published") return { text: "This app's properties are already proved by Lean." };
+  if (state.phase !== "checked") return { text: "This app's module is not checked yet, so there is nothing to approve. Ask me to fix it." };
+  const count = appShape.theoremsOf(source).length;
+  if (!count) return { text: "This app's module states no properties, so there is nothing for Lean to prove. Ask me to add its promises." };
+  const phase = await nextPhase("checked", "approve");
+  await saveAppFiles(appId, [{ path: appShape.STATE_PATH, content: JSON.stringify({ ...state, phase, approved: now() }, null, 2) + "\n" }]);
+  await refreshApp(appId);
+  return { text: appShape.provingMessage(count), message: appShape.proofMessage, prove: (onWait) => proveApp(appId, state.sourceKappa, source, onWait) };
+}
+// Lean proves the module on the hosted verifier; the kernel moves the phase on its attestation or its
+// refusal. A proof whose module changed meanwhile is dropped: it is about other bytes. The module Lean
+// verified (its axiom sets as Lean observed them) becomes the stored one.
+async function proveApp(appId, sourceKappa, source, onWait) {
+  const library = await (appLibrary || (appLibrary = appShape.checkLibrary(readEngine)));
+  let proved = source;
+  const result = await prism.proveFiles(async (axioms) => { proved = appShape.withAxioms(source, axioms); return appShape.proofFiles(proved, library); }, { onWait }).catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
+  const latest = await appStateOf(appId);
+  if (!latest || !latest.state || latest.state.sourceKappa !== sourceKappa || latest.state.phase !== "proving") return null;
+  const phase = await nextPhase("proving", result.ok ? "attest" : "fail");
+  const kept = result.ok ? proved.trim() + "\n" : latest.source;
+  const theorems = appShape.theoremsOf(kept), promises = appShape.promisesOf(kept);
+  const state = { ...latest.state, phase, sourceKappa: await kappa(enc.encode(kept)), proof: result.ok ? result.record : null, proofError: result.ok ? null : result.error, theorems: result.ok ? theorems : [], promises: result.ok ? promises : [], updated: now() };
+  await saveAppFiles(appId, [...(kept !== latest.source ? [{ path: appShape.SOURCE_PATH, content: kept }] : []), { path: appShape.STATE_PATH, content: JSON.stringify(state, null, 2) + "\n" }]);
+  await put("audit", Date.now() + ":prism:" + appId, { timestamp_millis: Date.now(), principal: "app:" + appId, operation: "prism.app.prove", resource: sourceKappa, outcome: result.ok ? "proved" : "refused" });
+  await refreshApp(appId);
+  return { ...result, theorems, promises };
+}
+const approve = async (appId) => { const app = await appStateOf(appId); return app ? approveApp(appId, app) : approveRules(appId); };
 async function approveRules(appId) {
   const state = await rulesOf(appId);
   if (!state) return { text: "This app has no rules to prove yet. Tell me what it decides and I will draft them." };
@@ -1098,7 +1198,7 @@ async function approveTurn(chatId, appId, messages, userId, ref, intentId) {
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   };
   let started;
-  try { started = await approveRules(appId); } catch (e) { started = { text: `<dyad-output type="error" message="${String((e && e.message) || e).replace(/"/g, "'")}"></dyad-output>` }; }
+  try { started = await approve(appId); } catch (e) { started = { text: `<dyad-output type="error" message="${String((e && e.message) || e).replace(/"/g, "'")}"></dyad-output>` }; }
   await show(started.text);
   if (started.prove) {
     const abort = new AbortController(); m.abort = abort;
@@ -1110,7 +1210,7 @@ async function approveTurn(chatId, appId, messages, userId, ref, intentId) {
       await show(started.text + "\n\nStopped watching. Lean keeps working; the result is kept with the app's rules.");
       proof.catch(() => {});
     } else {
-      await show(started.text + "\n\n" + (result ? prism.proofMessage(started.spec, result) : "The rules changed while Lean worked, so this proof is about other rules and was dropped."));
+      await show(started.text + "\n\n" + (result ? (started.message ? started.message(result) : prism.proofMessage(started.spec, result)) : "The rules changed while Lean worked, so this proof is about other rules and was dropped."));
     }
   }
   publishChat(chatId, { phase: "finalizing", error: null, lastCompletion: { intentId, invocationRef: ref, outcome: "completed", updatedFiles: false, suppressAutoReview: true, targetAppId: appId } });
@@ -1197,7 +1297,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   await show(`${head}\n\n**Live:** ${result.live}\n\nBuilt by the Prism SDK on GitHub Actions in ${minutes} min: Lean export, Rust, WebAssembly, and Lean checked every theorem in the gate. Forge fetched the holo and replayed ${result.vectors.passed} of ${result.vectors.total} acceptance vectors in its compiled guest. Holo \`${String(result.fingerprint).slice(0, 12)}…\` · [repository](https://github.com/${result.repository})${links}`);
   finish();
 }
-window.__prism = { rulesAfterTurn, approveRules, rulesOf, nextPhase, check: prism.checkSpec };
+window.__prism = { rulesAfterTurn: afterTurn, approveRules: approve, rulesOf, appStateOf, nextPhase, check: prism.checkSpec };
 
 async function chatTurn(chatId, intent) {
   const m = chatMachineOf(chatId);
@@ -1245,7 +1345,7 @@ async function chatTurn(chatId, intent) {
     const moduleNow = [...new Map(projectSource.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p));
     const request = [
       { role: "system", content: prism.SPEC_RULES },
-      { role: "user", content: prism.moduleContext(moduleNow ? moduleNow[1] : null) },
+      { role: "user", content: moduleNow && appShape.isAppShape(moduleNow[1]) ? appShape.moduleContext(moduleNow[1]) : prism.moduleContext(moduleNow ? moduleNow[1] : null) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
@@ -1281,8 +1381,10 @@ async function chatTurn(chatId, intent) {
         // The frame opens on the tag, not on the first whole declaration (thousands of characters
         // later), so it has mounted by the time there is something to paint.
         if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); }
-        const part = lexlean.partialFromTurn(full);
-        if (part) pushLive(appId, part.spec, "draft");
+        // The app shape is run; the decision shape is read and projected.
+        const writing = appShape.moduleFromTurn(full);
+        if (writing && appShape.isAppShape(writing.text)) pushApp(appId, writing.text);
+        else { const part = lexlean.partialFromTurn(full); if (part) pushLive(appId, part.spec, "draft"); }
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = shown; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
@@ -1296,6 +1398,19 @@ async function chatTurn(chatId, intent) {
     // words, streamed into this answer, so the user sees a fixed app rather than an error to relay.
     const repaired = async (genBody) => {
       const before = full;
+      // A stateful app is checked by the hosted checker, not read by the decision reader. A refusal gets
+      // one repair turn from the same model, with the checker's words, streamed into this answer.
+      const wrote = appShape.moduleFromTurn(before);
+      if (wrote && appShape.isAppShape(wrote.text)) {
+        const verdict = await checkAppModule(wrote.text).catch(() => null);
+        if (verdict && !verdict.ok) {
+          const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: appShape.repairPrompt(verdict.issues) }] };
+          const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
+          settleText();
+          await onText(before + "\n\n" + text);
+        }
+        return;
+      }
       const next = await lexlean.withRepair(before, async (prompt) => {
         const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: prompt }] };
         const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
@@ -1375,7 +1490,8 @@ async function chatTurn(chatId, intent) {
     const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
     const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
     let changed = applied.changed;
-    const spec = await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
+    // A turn that wrote a stateful app ends as one; any other ends as a decision, bound to the same source and signal.
+    const spec = (await appAfterTurn(appId, full, { signal: abort.signal, source: applied.source, onCommit })) || await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
     if (refusedCode) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.CODE_REFUSED;
     for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
       assertGenerationActive(abort.signal);
@@ -1393,7 +1509,7 @@ async function chatTurn(chatId, intent) {
       if (refused.length) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + refused.join(" ");
     }
     changed += spec.changed;
-    if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshLive(appId); }
+    if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshPreview(appId); }
     else if (speculativeLive && liveShown.has(appId)) { liveShown.delete(appId); showBuilt(appId).catch(() => {}); }
     updatedFiles = updatedFiles || changed > 0;
     const commit = committed.at(-1) || null;

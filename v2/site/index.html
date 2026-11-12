@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prism AI Foundry v2</title>
+<meta name="description" content="Apps that are LexLean specs, run directly in the browser, with what Lean proved shown beside each one.">
+<style>
+  :root { color-scheme: light dark; --ink: #16130f; --soft: #5e574d; --ground: #f6f3ee; --card: #fffdf9; --line: #d8d2c8; --accent: #b4532a; --warn: #8a5a00; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #efeae2; --soft: #a79f93; --ground: #16130f; --card: #1d1914; --line: #3a342c; --accent: #e08a5e; --warn: #e0b060; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--ground); }
+  main { max-width: 68rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  header h1 { font-size: 1.75rem; margin: 0 0 .25rem; }
+  header p, .soft { color: var(--soft); margin: 0; }
+  nav { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1.5rem 0 1rem; }
+  button, input, select, textarea, a.button { font: inherit; min-height: 44px; padding: 0 1rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; }
+  button, a.button { cursor: pointer; } a.button { display: inline-flex; align-items: center; text-decoration: none; }
+  nav button[aria-pressed=true], #app button[type=submit] { border-color: var(--accent); }
+  .columns { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 52rem) { .columns { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; }
+  #app > section { display: grid; gap: 1rem; }
+  #app h1 { font-size: 1.25rem; margin: 0; }
+  #app form { display: grid; gap: .75rem; }
+  #app label { display: grid; gap: .25rem; font-size: .875rem; }
+  #app input, #app select, #app button { width: 100%; }
+  #app p { margin: 0; min-height: 1.5rem; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: .875rem; }
+  caption { text-align: left; color: var(--soft); padding-bottom: .25rem; }
+  th, td { text-align: left; vertical-align: top; padding: .4rem .75rem .4rem 0; border-bottom: 1px solid var(--line); }
+  code { font: .8125rem/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
+  h2 { font-size: 1.125rem; margin: 0 0 .25rem; } h3 { font-size: 1rem; margin: 1.25rem 0 .25rem; }
+  dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .25rem 1rem; font-size: .875rem; margin: .75rem 0 0; }
+  dt { color: var(--soft); } dd { margin: 0; overflow-wrap: anywhere; }
+  .limit { color: var(--warn); }
+  ul { margin: .25rem 0 0; padding-left: 1.25rem; }
+  footer { margin-top: 2.5rem; font-size: .875rem; color: var(--soft); }
+  footer ul { padding-left: 1.25rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Prism AI Foundry v2</h1>
+    <p>Each app here is a LexLean spec. This tab runs the spec itself. Beside it is exactly what Lean proved about it, and what it did not.</p>
+  </header>
+  <nav id="apps" aria-label="Apps"></nav>
+  <div class="columns">
+    <div>
+      <div class="card" id="app"></div>
+      <p class="soft" id="timing" style="margin-top:.5rem"></p>
+    </div>
+    <div class="card">
+      <h2 id="title"></h2>
+      <p class="soft" id="origin"></p>
+      <dl>
+        <dt>Running</dt><dd id="runs"></dd>
+        <dt>Proved by Lean</dt><dd>Attestation <code id="attestation"></code>, from <code>lexlean verify</code> in the pinned SDK image. This page does not check the attestation.</dd>
+        <dt>Tested</dt><dd id="tested"></dd>
+        <dt>Spec</dt><dd><a id="source" href="#">the source Lean verified</a></dd>
+      </dl>
+      <h3>What is proved</h3>
+      <table>
+        <thead><tr><th scope="col">Promise</th><th scope="col">Exactly what Lean proved</th><th scope="col">Proof</th><th scope="col">How far it goes</th></tr></thead>
+        <tbody id="proved"></tbody>
+      </table>
+      <div id="unproved-block">
+        <h3>Not proved</h3>
+        <p class="soft">No proof form available here can close these. They are tested on samples only.</p>
+        <ul id="unproved"></ul>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <p><a class="button" href="../hosted-check/studio.html">Open the studio: write a spec, check it, run it</a></p>
+    <p id="load"></p>
+    <p>What this page does not do yet:</p>
+    <ul>
+      <li>It does not write specs. A model writes them elsewhere; the studio checks and runs what you paste.</li>
+      <li>The studio's check is a check, not a proof, and it sends the spec to the hosted LexLean service, where drafts are unlisted, not private.</li>
+      <li>It does not publish. No app here has been built into a holo from this page.</li>
+      <li>It does not work offline.</li>
+    </ul>
+  </footer>
+</main>
+<script type="module" src="./gallery.mjs"></script>
+</body>
+</html>
