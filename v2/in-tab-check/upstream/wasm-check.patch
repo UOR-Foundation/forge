@@ -1,0 +1,142 @@
+diff --git a/vendor/lexlean/Cargo.toml b/vendor/lexlean/Cargo.toml
+index 74503e0c..a6bfc746 100644
+--- a/vendor/lexlean/Cargo.toml
++++ b/vendor/lexlean/Cargo.toml
+@@ -77,10 +77,6 @@ version = "1.2"
+ version = "4.5"
+ features = ["derive"]
+ 
+-[dependencies.fs4]
+-version = "0.13"
+-features = ["sync"]
+-
+ [dependencies.same-file]
+ version = "1.0"
+ 
+@@ -113,6 +109,10 @@ version = "2"
+ [dev-dependencies.proptest]
+ version = "1.6"
+ 
++[target.'cfg(not(target_family = "wasm"))'.dependencies.fs4]
++version = "0.13"
++features = ["sync"]
++
+ [target."cfg(unix)".dependencies.rustix]
+ version = "1"
+ features = [
+diff --git a/vendor/lexlean/src/api.rs b/vendor/lexlean/src/api.rs
+index 2fac21e5..56d6c51b 100644
+--- a/vendor/lexlean/src/api.rs
++++ b/vendor/lexlean/src/api.rs
+@@ -529,6 +529,7 @@ pub(crate) struct MutationGuard {
+ /// Acquire the project mutation lock at `<build_root>/.lock` (§21.8). The
+ /// build root's components are checked for symlinks first (§25.1).
+ fn acquire_lock(project: &Project) -> Result<MutationGuard, LexLeanError> {
++    #[cfg(not(target_family = "wasm"))]
+     use fs4::fs_std::FileExt;
+     let build_root = project
+         .confined_creatable(&project.config.build_root)
+@@ -549,6 +550,10 @@ fn acquire_lock(project: &Project) -> Result<MutationGuard, LexLeanError> {
+         .write(true)
+         .open(lock_path.as_std_path())
+         .map_err(|io_error| host_failure(format!("{lock_relative}: {io_error}")))?;
++    // A WebAssembly instance owns its whole file system and runs one
++    // command, so there is no second writer to exclude and no host lock to
++    // take; every other host keeps the exclusive lock (§21.8).
++    #[cfg(not(target_family = "wasm"))]
+     file.lock_exclusive()
+         .map_err(|io_error| host_failure(format!("{lock_relative}: {io_error}")))?;
+     Ok(MutationGuard { _file: file })
+diff --git a/vendor/lexlean/src/backend/core.rs b/vendor/lexlean/src/backend/core.rs
+index 63143257..7762c667 100644
+--- a/vendor/lexlean/src/backend/core.rs
++++ b/vendor/lexlean/src/backend/core.rs
+@@ -1481,6 +1481,14 @@ fn on_stack_for<T: Send>(depth: u64, work: impl FnOnce() -> T + Send) -> Result<
+         .unwrap_or(usize::MAX)
+         .saturating_mul(48 << 10)
+         .saturating_add(1 << 20);
++    // As in `link::check_project`: without threads the one linked stack
++    // hosts the work, and an overflow traps the instance.
++    #[cfg(all(target_family = "wasm", not(target_feature = "atomics")))]
++    {
++        let _ = bytes;
++        return Ok(work());
++    }
++    #[cfg(not(all(target_family = "wasm", not(target_feature = "atomics"))))]
+     std::thread::scope(|scope| {
+         let handle = std::thread::Builder::new()
+             .stack_size(bytes)
+diff --git a/vendor/lexlean/src/lib.rs b/vendor/lexlean/src/lib.rs
+index 6ebb25d1..59360533 100644
+--- a/vendor/lexlean/src/lib.rs
++++ b/vendor/lexlean/src/lib.rs
+@@ -230,15 +230,24 @@ fn embedded_digest(keep: impl Fn(&str) -> bool) -> Sha256Digest {
+     let workers = std::thread::available_parallelism()
+         .map_or(1, usize::from)
+         .min(8);
++    let read = || loop {
++        let at = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
++        let Some((path, bytes)) = selected.get(at) else {
++            break;
++        };
++        let _ = slots[at].set(identity_bytes(path, bytes));
++    };
++    // A WebAssembly target without threads reads the files on its one
++    // thread; the rows and so the digest are the same.
++    #[cfg(all(target_family = "wasm", not(target_feature = "atomics")))]
++    {
++        let _ = workers;
++        read();
++    }
++    #[cfg(not(all(target_family = "wasm", not(target_feature = "atomics"))))]
+     std::thread::scope(|scope| {
+         for _ in 0..workers {
+-            scope.spawn(|| loop {
+-                let at = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+-                let Some((path, bytes)) = selected.get(at) else {
+-                    break;
+-                };
+-                let _ = slots[at].set(identity_bytes(path, bytes));
+-            });
++            scope.spawn(&read);
+         }
+     });
+     let rows: Vec<(&str, std::borrow::Cow<'static, [u8]>)> = selected
+diff --git a/vendor/lexlean/src/link.rs b/vendor/lexlean/src/link.rs
+index 50bbbb81..0b90f676 100644
+--- a/vendor/lexlean/src/link.rs
++++ b/vendor/lexlean/src/link.rs
+@@ -364,6 +364,12 @@ pub fn check_project(
+     lock: &Lock,
+     packages: Vec<LexiconPackage>,
+ ) -> Result<CheckedProject, LexLeanError> {
++    // A WebAssembly target without threads cannot host the compile thread.
++    // Its one stack is fixed when the module is linked, so the build sizes
++    // it instead, and an overflow traps the instance.
++    #[cfg(all(target_family = "wasm", not(target_feature = "atomics")))]
++    return check_project_inline(project, selection, lock, packages);
++    #[cfg(not(all(target_family = "wasm", not(target_feature = "atomics"))))]
+     std::thread::scope(|scope| {
+         let handle = std::thread::Builder::new()
+             .name("lexlean-compile".to_owned())
+diff --git a/vendor/lexlean/src/verify/lifeline.rs b/vendor/lexlean/src/verify/lifeline.rs
+index 841038b7..b3ccca93 100644
+--- a/vendor/lexlean/src/verify/lifeline.rs
++++ b/vendor/lexlean/src/verify/lifeline.rs
+@@ -419,6 +419,16 @@ pub(crate) fn group_members(group: i32) -> Option<Vec<Member>> {
+     Some(members)
+ }
+ 
++/// A host with neither process groups nor a process tree starts no child
++/// (`verify` is refused there before one is spawned), so there is never a
++/// leader to end; being asked to end one is reported, never taken for success.
++#[cfg(not(any(unix, windows)))]
++pub(crate) fn end_leader(id: u32) -> GroupEnd {
++    GroupEnd::Failed(format!(
++        "process {id} cannot be ended: this host runs no child processes"
++    ))
++}
++
+ /// End the tree rooted at `id` on windows, and report a `taskkill` that
+ /// failed like a group that could not be ended (the one place a tree is
+ /// ended; see the unix function of the same name).
