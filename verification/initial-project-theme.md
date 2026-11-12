@@ -1,0 +1,11 @@
+# Atomic initial project theme — FA-71
+
+Authority: `FoundrySpecification.initialProjectThemeBoundary`, composed with `projectCreationBoundary` and `themeLibraryBoundary`. Registration/scenarios/failing gate are committed at `e031bba`, generated conformance at `2035a4f`. The registration gate fails with `FA-71 is registered and not built` before implementation; the first command used an incorrect Cargo package name and is not counted as the failing control.
+
+Scaffold creation reads Home selection and the checked custom-theme journal inside its complete project transaction. It stores the validated built-in/custom selection or explicit null together with app, chat, files, objects, refs and version records. Imported projects retain their existing import semantics. Custom-theme deletion clears matching Home and app references atomically while preserving unrelated settings. The first-prompt renderer reads the committed selection instead of reapplying a cached settings snapshot. Public IPC preserves fixed project creation failure codes without private exception contents.
+
+Four focused Node controls cover selection/catalog bounds, detached catalogs, the exact imported first-prompt projection and production/error wiring. All 434 Node controls pass. Actual Chromium executes the built renderer, host, core and IndexedDB: built-in/custom/empty selection, reload, invalid/missing/corrupt selection rollback, late-abort rollback and concurrent deletion across windows. No inference request is made and no page exception occurs.
+
+Six mutations are rejected and restored: omitted inheritance, skipped selection validation, acknowledgement before transaction completion, retained deleted Home reference, erased typed failure and stale renderer selection reapplication. The first five execute the real browser oracle; the last exercises the exact source projection used by Vite. The restored browser passes. Host LexLean diagnostic verification covers two modules with attestation `2f636ed4b69928e79d17fe7a0c883b8a3aa1b8fd81f5b99f4be6d23071c2ce1a`; this is not immutable-SDK acceptance.
+
+Full integrated qualification, hosted exact-head acceptance and independent approval remain separately tracked. This feature does not claim whole-application conversion or factory consumer qualification.

@@ -215,7 +215,7 @@ handlers.set("preview-app-folder-name", async ({ appName }) => ({ folderName: ap
 handlers.set("create-app", async ({ name, initialChatMode }) => {
   await coreReady;
   const prepared = await prepareNewProject({ name, initialChatMode, files: await loadScaffold() }, { core, derive: kappa });
-  const created = await createStoredProject(await dbReady, prepared, nulls);
+  const created = await createStoredProject(await dbReady, prepared, nulls, themesData);
   emit("version-created", { appId: created.app.id, oid: created.oid });
   return { app: withDates(created.app), chatId: created.chatId };
 });

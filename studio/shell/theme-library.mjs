@@ -55,9 +55,19 @@ function selection(value,journal,catalog){
  const key=Number(value.slice(7));if(!id(key))fail('invalidThemeCommand');
  const row=journal.records.find(row=>row.id===key);if(!row)fail('themeMissing');return row;
 }
-export function createThemeLibrary(database,builtins){
+export function readThemeCatalog(builtins){
  const catalog=copy(builtins,'themeCatalogMismatch');
  if(!Array.isArray(catalog)||!catalog.length||new Set(catalog.map(row=>row.id)).size!==catalog.length||catalog.some(row=>!exact(row,'id,name,description,icon,prompt')||Object.values(row).some(v=>typeof v!=='string')||!row.id||row.id.startsWith('custom:')))fail('themeCatalogMismatch');
+ return catalog;
+}
+// FoundrySpecification.initialProjectThemeBoundary: called inside the creation transaction.
+export function initialProjectTheme(settings,raw,catalog){
+ const journal=readThemeLibrary(raw),themeId=settings?.selectedThemeId??'';
+ if(themeId==='')return null;
+ selection(themeId,journal,catalog);return themeId;
+}
+export function createThemeLibrary(database,builtins){
+ const catalog=readThemeCatalog(builtins);
  return async(kind,raw)=>{
   if(kind==='catalog'){if(raw!==undefined)fail('invalidThemeCommand');return copy(catalog,'themeCatalogMismatch');}
   const appCommand=['select','selected','resolve'].includes(kind);
@@ -87,6 +97,7 @@ export function createThemeLibrary(database,builtins){
       const answer=operateThemeLibrary(journal,kind,input);result=answer.result;
       if(write)settings.put(answer.journal,KEY);
       if(kind==='delete'){
+       const home=settings.get('user');home.onsuccess=()=>{try{const value=home.result;if(value?.selectedThemeId==='custom:'+input.id)settings.put({...value,selectedThemeId:''},'user');}catch(error){refuse(error);}};
        const cursor=apps.openCursor();cursor.onsuccess=()=>{try{const entry=cursor.result;if(!entry)return;if(entry.value.themeId==='custom:'+input.id)entry.update({...entry.value,themeId:null});entry.continue();}catch(error){refuse(error);}};
       }
      }

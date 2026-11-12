@@ -1,4 +1,5 @@
 // FoundrySpecification.projectCreationBoundary; canonical bytes come from the core.
+import {readThemeCatalog, initialProjectTheme} from "./theme-library.mjs";
 const MiB = 1024 * 1024;
 const encoder = new TextEncoder(), decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 const failure = code => Object.assign(new Error(code === "projectScaffoldFailed" ? "Project scaffold unavailable" : code === "projectPreparationFailed" ? "Project preparation failed" : "Project storage failed"), { code });
@@ -87,24 +88,24 @@ export function allocateIdentifier(transaction, storeName, accept, refuse) {
   keys.onsuccess = () => { rows = keys.result; ready(); }; mark.onsuccess = () => { high = mark.result; read = true; ready(); };
   keys.onerror = refuse; mark.onerror = refuse;
 }
-export async function createStoredProject(db, prepared, defaults = {}) {
-  let data, appDefaults;
-  try { data = structuredClone(prepared); appDefaults = structuredClone(defaults); }
+export async function createStoredProject(db, prepared, defaults = {}, initialThemes = null) {
+  let data, appDefaults, catalog;
+  try { data = structuredClone(prepared); appDefaults = structuredClone(defaults); catalog = initialThemes === null ? null : readThemeCatalog(initialThemes); }
   catch { throw failure("projectStorageFailed"); }
   return new Promise((resolve, reject) => {
     let t, answer;
     const refuse = () => { if (t) { try { t.abort(); } catch {} } reject(failure("projectStorageFailed")); };
     try {
-      t = db.transaction(["apps", "chats", "files", "objects", "refs", "versions"], "readwrite");
+      t = db.transaction(["apps", "chats", "files", "objects", "refs", "versions", ...(catalog ? ["settings"] : [])], "readwrite");
       t.oncomplete = () => answer ? resolve(answer) : reject(failure("projectStorageFailed"));
       t.onabort = () => reject(failure("projectStorageFailed")); t.onerror = refuse;
       const apps = t.objectStore("apps"), chats = t.objectStore("chats");
-      let allocatedApp, allocatedChat;
+      let allocatedApp, allocatedChat, themeReady = !catalog, themeId;
       const write = () => {
-        if (!allocatedApp || !allocatedChat) return;
+        if (!allocatedApp || !allocatedChat || !themeReady) return;
         try {
           const id = allocatedApp, chatId = allocatedChat, at = new Date().toISOString();
-          const app = { ...appDefaults, id, name: data.name, path: data.name, createdAt: at, updatedAt: at };
+          const app = { ...appDefaults, ...(catalog ? {themeId} : {}), id, name: data.name, path: data.name, createdAt: at, updatedAt: at };
           apps.add(app, id);
           for (const [path, text] of data.files) t.objectStore("files").add(text, `${id}:${path}`);
           for (const [key, bytes] of data.objects) t.objectStore("objects").put(bytes, key);
@@ -114,6 +115,13 @@ export async function createStoredProject(db, prepared, defaults = {}) {
           answer = { app, chatId, oid: data.oid };
         } catch { refuse(); }
       };
+      if (catalog) {
+        const settings = t.objectStore("settings"), home = settings.get("user"), journal = settings.get("foundry:themes:v1");
+        let homeRead = false, journalRead = false;
+        const ready = () => { if (!homeRead || !journalRead) return; try { themeId = initialProjectTheme(home.result, journal.result, catalog); themeReady = true; write(); } catch { refuse(); } };
+        home.onsuccess = () => { homeRead = true; ready(); }; journal.onsuccess = () => { journalRead = true; ready(); };
+        home.onerror = refuse; journal.onerror = refuse;
+      }
       allocateIdentifier(t, "apps", id => { allocatedApp = id; write(); }, refuse);
       allocateIdentifier(t, "chats", id => { allocatedChat = id; write(); }, refuse);
     } catch { refuse(); }

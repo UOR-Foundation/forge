@@ -29,6 +29,21 @@ const PAGE = "w-full overflow-y-auto px-4 py-4 md:py-6 lg:px-6";
 
 const SCREEN_PATCHES = [
   {
+    file: "src/first_prompt/FirstPromptProvider.tsx",
+    from: `    async applyTheme(appId) {
+      if (settings?.selectedThemeId) {
+        await ipc.template.setAppTheme({
+          appId,
+          themeId: settings.selectedThemeId,
+        });
+      }
+    },`,
+    to: `    async applyTheme(appId) {
+      // Foundry commits the initial theme with project creation.
+      await ipc.template.getAppTheme({ appId });
+    },`,
+  },
+  {
     file: "src/pages/settings.tsx",
     from: `    <section
       id={id}
