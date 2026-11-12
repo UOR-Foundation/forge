@@ -221,6 +221,9 @@ jobs:
       - name: One approval is asked at a time, and the chat counts an app's lines
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/approval_queue.test.mjs
+      - name: Foundry's own dialogs, notices and sidebar tools take the app's look from one stylesheet
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/shell_ui.test.mjs
       - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/live_app_prove.test.mjs

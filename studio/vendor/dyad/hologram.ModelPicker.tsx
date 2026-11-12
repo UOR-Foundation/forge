@@ -1,13 +1,14 @@
 // dyad-prism (ours, not Dyad's; see VENDORED.md): the model picker, replacing Dyad's at build time
 // through `resolveId` in vite.shell.config.mts. Two models answer here (shell/host.js): GLM 5.3 Flash in the
-// cloud (Featherless) and BitNet 2B on this device. The menu is those two, each with one word saying where
-// it runs, and nothing else: no provider headers, no submenus, no recent section, no effort levels, no price
-// badges, no trial banner, no Pro upsell. Choosing a model is choosing who answers, which is the only
+// cloud (Featherless) and BitNet 2B on this device. The menu is those two, each on two lines: its name over
+// a few words on what choosing it means, and at the right, in one column, a tag saying where it runs. Nothing
+// else: no provider headers, no submenus, no recent section, no effort levels, no price badges, no trial
+// banner, no Pro upsell. Choosing a model is choosing who answers, which is the only
 // decision this control makes.
 //
 // FoundrySpecification.chatModelPickerScopeBoundary: a mounted chat owns its selection;
 // Home owns the default used by future chats.
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, CloudIcon, LaptopIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import {
@@ -30,6 +31,18 @@ import { modelSelectionScope } from "./hologram.model-selection.mjs";
 const ORDER = ["featherless", "local"];
 // Where each provider's model runs, in one word, shown as a quiet pill beside the name.
 const WHERE: Record<string, string> = { featherless: "Cloud", local: "Local" };
+// What choosing each one means, in a few words, under its name in the menu.
+const MEANS: Record<string, string> = { featherless: "Free, through this site", local: "Runs on this device" };
+// The tag in the menu: the same pill with its mark, one width, so the tags of every row form a column.
+const Tag = ({ provider }: { provider: string }) => {
+  const Mark = provider === "local" ? LaptopIcon : CloudIcon;
+  return (
+    <span className="inline-flex w-[66px] shrink-0 items-center justify-center gap-1 rounded-full border border-border/60 py-0.5 text-[11px] font-normal leading-4 text-muted-foreground">
+      <Mark className="size-3 shrink-0" aria-hidden="true" />
+      {WHERE[provider]}
+    </span>
+  );
+};
 const Pill = ({ where }: { where: string }) => (
   <span className="shrink-0 rounded-full border border-border/50 px-1.5 py-px text-[10px] font-normal leading-4 text-muted-foreground/70">
     {where}
@@ -118,7 +131,7 @@ export function ModelPicker() {
         {where && <Pill where={where} />}
         <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-72" align="start">
+      <DropdownMenuContent className="w-72 p-1.5" align="start">
         {selectionError && (
           <div role="alert" className="px-2 py-1.5 text-sm">
             {selectionError}
@@ -132,11 +145,16 @@ export function ModelPicker() {
             key={provider + ":" + model.apiName}
             disabled={unavailable || selecting}
             onClick={() => choose(provider, model)}
-            className={cn("cursor-pointer gap-2", isSelected(provider, model) && "bg-accent")}
+            aria-current={isSelected(provider, model) ? "true" : undefined}
+            className={cn("cursor-pointer gap-3 rounded-lg px-2.5 py-2", isSelected(provider, model) && "bg-accent")}
           >
-            <span className="min-w-0 flex-1 truncate">{model.displayName}</span>
-            <Pill where={WHERE[provider]} />
-            {isSelected(provider, model) && <CheckIcon className="size-3.5 shrink-0 text-brand" />}
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className={cn("truncate text-[13px] leading-5", isSelected(provider, model) ? "font-medium" : "font-normal")}>
+                {model.displayName}
+              </span>
+              <span className="truncate text-[11px] leading-4 text-muted-foreground">{MEANS[provider]}</span>
+            </span>
+            <Tag provider={provider} />
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

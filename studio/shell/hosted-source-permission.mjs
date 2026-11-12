@@ -59,13 +59,13 @@ function authorizeHostedSourceNow(input, { document = globalThis.document, onlin
       const el = (tag, text) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; return node; };
       dialog = el('dialog'); dialog.setAttribute('aria-label', 'Review hosted source transfer');
       dialog.style.cssText = 'max-width:min(90vw,44rem);max-height:85vh;overflow:auto;padding:24px;border-radius:12px;color-scheme:light dark';
-      dialog.append(el('h2', 'Send app source for preview and checking?'), el('p', 'Destination: ' + disclosure.endpoint));
-      dialog.append(el('p', 'This sends LexLean source and its supporting library to the UOR hosted service to parse preview data and check the module. Source may contain project or conversation details. The service may retain it. No provider API key or browser cookies are sent. This does not authorize proof or publication.'));
-      dialog.append(el('p', disclosure.scope === 'turn' ? `Application ${disclosure.appId}, turn ${disclosure.turnId}, captured source ${disclosure.source}. Approval includes later generated module prefixes and repairs plus supporting library files from this same turn, for at most five minutes. It does not cover another application or turn.` : 'Approval covers only the exact files below for this operation, for at most five minutes.'));
-      dialog.append(el('p', 'Stop aborts browser requests. It cannot recall submitted data or guarantee that remote work stops.'));
+      dialog.append(el('h2', 'Send your app to be checked?'), el('p', 'Your app is checked, and its preview prepared, by a UOR service outside this browser.'));
+      dialog.append(el('p', 'Its LexLean source and the library it uses go to ' + disclosure.endpoint + '. The source may hold details from your project or chat, and the service may keep it. No AI key and no cookies are sent.'));
+      dialog.append(el('p', disclosure.scope === 'turn' ? `You are approving this one build of app ${disclosure.appId} for up to five minutes: the app as it is written, and any fix in the same build. Nothing else is covered: no other app, no other build, no proof and no publishing. Build ${disclosure.turnId}, starting from ${disclosure.source}.` : 'You are approving only the files below, once, for up to five minutes. It does not cover proof or publishing.'));
+      dialog.append(el('p', 'You can stop it, but what was sent cannot be taken back, and work there may continue.'));
       const details = el('details'), pre = el('pre', disclosure.files.map(f => f.path + '\n' + f.content).join('\n\n'));
       pre.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;max-height:18rem;overflow:auto';
-      details.append(el('summary', `Review current source (${disclosure.size} UTF-8 bytes)`), pre); dialog.append(details);
+      details.append(el('summary', `See exactly what is sent (${disclosure.size} bytes)`), pre); dialog.append(details);
       const deny = el('button', "Don't send"), allow = el('button', disclosure.scope === 'turn' ? 'Allow this turn' : 'Send this source');
       deny.type = allow.type = 'button'; deny.autofocus = true;
       deny.addEventListener('click', () => stop('hostedSourcePermissionDenied'));

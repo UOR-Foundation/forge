@@ -54,13 +54,11 @@ function authorizeInferenceNow(input, { document = globalThis.document, online =
     try {
       dialog = element("dialog"); dialog.setAttribute("aria-label", "Review cloud request");
       dialog.style.cssText = "max-width:min(90vw,42rem);max-height:85vh;overflow:auto;padding:1.5rem;border-radius:0.75rem;color-scheme:light dark;font:inherit";
-      dialog.append(element("h2", "Send this request to an AI provider?"));
-      dialog.append(element("p", `${disclosure.provider} · ${disclosure.model}`));
-      dialog.append(element("p", `Destination: ${disclosure.endpoint}`));
-      dialog.append(element("p", disclosure.credentialOwner === "visitor" ? "Credential: your configured API key. Provider charges apply to its account." : "Credential: this site's shared API key. Provider charges apply to the site's account."));
-      dialog.append(element("p", "This sends the request below, including its messages and any project files or conversation history they contain. The provider may retain submitted data under its policies. Approval covers only this request, including bounded retries of these same bytes."));
-      dialog.append(element("p", "Stopping ends this browser's request. It cannot recall submitted data or guarantee that remote work or charges stop."));
-      const details = element("details"), summary = element("summary", `Review exact request (${disclosure.size} UTF-8 bytes)`), pre = element("pre", disclosure.bytes);
+      dialog.append(element("h2", "Send your request to the AI model?"));
+      dialog.append(element("p", "The model that writes your app runs outside this browser, so your request has to be sent to it."));
+      dialog.append(element("p", `It goes to ${disclosure.model} (${disclosure.provider}) at ${disclosure.endpoint}, ${disclosure.credentialOwner === "visitor" ? "with your configured API key, so its cost is on your account" : "with this site's shared API key, so its cost is on the site"}. It carries your messages and any project files or chat history in them.`));
+      dialog.append(element("p", "You are approving this one request and its automatic retries. The provider may keep what it receives. You can stop it, but what was sent cannot be taken back, and work or charges there may continue."));
+      const details = element("details"), summary = element("summary", `See exactly what is sent (${disclosure.size} bytes)`), pre = element("pre", disclosure.bytes);
       pre.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere;max-height:18rem;overflow:auto";
       details.append(summary, pre); dialog.append(details);
       const actions = element("div"), deny = element("button", "Don't send"), allow = element("button", "Send this request");
