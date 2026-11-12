@@ -1,0 +1,11 @@
+# Surviving chat owner recovery — FA-74
+
+Authority: `FoundrySpecification.chatOwnerRecoveryBoundary`, composed with `durableChatQueueBoundary` and the unchanged signed ChatQueue guest. Registration and failing tests precede implementation at `718d857`.
+
+Hosted Studio run 43153909948 on PR #138 failed after closing a consent owner: the survivor had tried an `ifAvailable` execution lock before release, discarded its interest and received no later wake-up. A deterministic lock fixture reproduces the lost interest. The controller now retains one abortable exclusive request per observed chat. Acquiring it rereads durable state and uses the existing guest recovery transition to retain abandoned work paused. Disposal cancels waiting interest and active local work. Real failures remain fixed public failures; disposal does not emit an error.
+
+Three focused controls cover contention, duplicate observation, exact recovered state and payload retention, zero external replay, disposal cancellation and real lock failure. All nine focused/new plus existing queue controls pass. The actual two-window browser now proves the survivor is queued while the original owner still holds the lock, closes the owner and observes paused recovery without another command. It also retains busy submission, cross-window Stop, real late transaction abort and deletion during consent; zero page exceptions.
+
+Five Node mutations are rejected: discarded contention interest, duplicate requests, uncancelled waiting requests, disposal error publication and omitted recovery. The actual browser independently rejects discarded interest with its intended assertion; the restored browser passes. The first uncancelled-waiter mutation timed out because the test awaited idle before checking cancellation; that timeout is not qualification. The test now checks cancellation before awaiting and cleans up held interest in finally; the repeated mutation fails its intended assertion.
+
+Host LexLean diagnostic verifies two modules, attestation `5060c43a216069f7c66f7e9a75500e9f98d4e14a0040654000490e647aa75161`. This is not immutable SDK acceptance. Full suite and hosted qualification remain in progress. The separate navigation-time guest acceptance failure exposed by actual-app replay remains open; this queue correction does not claim to resolve it or complete the whole conversion.

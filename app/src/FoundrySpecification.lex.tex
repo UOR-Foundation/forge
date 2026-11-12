@@ -1315,12 +1315,12 @@ definition{
   result: String,
   body: "A service-worker execution message from the current controller may arrive while the controlled document is initializing its verified guest. The document waits for the initialization operations already active when the request arrives, then looks up the exact archive-digest and guest-hash key again. Only an entry installed after complete local integrity, export and acceptance checks may execute the captured request. Missing or mismatched guests and failed verification retain fixed kernelExecutionFailed or kernelAcceptanceFailed refusals; readiness never substitutes an unverified guest or a service-worker inline fallback. Foreign controller messages are rejected before waiting. Document readiness waiting has a 30000 ms deadline; timeout reports a fixed failure and closes its port even if initialization remains pending. At most eight document initialization operations are active; excess requests refuse before fetching. Successful and failed initialization both remove their pending entry, preserving retry after failure. Existing execution queues, fresh instances, worker retirement, bounded ports and service-worker deadlines remain unchanged. Deterministic delayed initialization and failed integrity controls, foreign/mismatched owners, capacity recovery and a full-page live-preview navigation qualify this startup boundary."
 }
+
 definition{
   name: chatOwnerRecoveryBoundary,
   parameters: [],
   result: String,
   body: "Each live document retains at most one exclusive execution-lock request per observed chat until it acquires the lock or the document is disposed. Contention must not discard recovery interest: a subscriber arriving before a closing owner releases its lock must still recover the abandoned durable head. After acquisition the controller rereads the journal under the short mutation lock and uses the existing signed ChatQueue guest recovery transition. Recovery retains the exact head paused and never replays an interrupted external effect without explicit resumption. Live owners retain exclusive execution; no timeout steals their lock. Document disposal cancels waiting lock requests and running local work, with no new writes or error publication from a cancelled waiter. Real lock/storage failures while the document remains live retain the existing fixed chatQueueUnavailable or storage failure boundary. Browser lock scheduling and document lifetime provide wake-up; no polling loop or repeated inference request substitutes for ownership."
 }
-
 \end{semanticmodule}
 \end{lexlean}

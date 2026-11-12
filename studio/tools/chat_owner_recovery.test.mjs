@@ -51,11 +51,12 @@ test('contended subscribers retain one exclusive interest and recover exact paus
  }finally{f.controller.dispose();f.lock.release();}
 });
 test('disposed waiters cancel lock interest without writes execution or error publication',async()=>{
- const f=await setup();await f.controller.snapshot(1);await turn();
+ const f=await setup();try{await f.controller.snapshot(1);await turn();
  assert.equal(f.lock.waiting,1);const publications=f.published.length;
- f.controller.dispose();await f.controller.idle(1);assert.equal(f.lock.waiting,0);
+ f.controller.dispose();assert.equal(f.lock.waiting,0);await f.controller.idle(1);
  f.lock.release();await turn();assert.equal(f.commits,0);assert.equal(f.runs,0);assert.equal(f.published.length,publications);
  await refuses(()=>f.controller.snapshot(1),'chatQueueUnavailable');
+ }finally{f.controller.dispose();f.lock.release();}
 });
 test('live lock failure remains typed and recovery browser is mandatory',async()=>{
  const publications=[];

@@ -3,7 +3,7 @@ import {chatQueueFailure,stageChatQueue,queueSnapshot} from './chat-queue-store.
 const sameInvocation=(a,b)=>!!a&&!!b&&a.kind===b.kind&&a.entityKey===b.entityKey&&a.operationId===b.operationId;
 const itemId=value=>{if(typeof value!=='string'||!/^queue-[1-9][0-9]*$/.test(value))throw chatQueueFailure('invalidChatQueueCommand');const n=Number(value.slice(6));if(!Number.isInteger(n)||n>0xffffffff)throw chatQueueFailure('invalidChatQueueCommand');return n;};
 export function createChatQueueController({store,guest,boundary,locks,publish,run,notify=()=>{},mintOwner}){
- const pumps=new Map(),running=new Map();let disposed=false;
+ const pumps=new Map(),running=new Map(),lifetime=new AbortController();let disposed=false;
  const requireLocks=()=>{if(disposed||!locks||typeof locks.request!=='function')throw chatQueueFailure('chatQueueUnavailable');};
  const emit=(chatId,journal,extra={})=>publish(chatId,queueSnapshot(journal),{journal,...extra});
  async function mutate(chatId,operation){
@@ -17,10 +17,11 @@ export function createChatQueueController({store,guest,boundary,locks,publish,ru
    if(!staged.replayed)notify({chatId});return {...staged,journal};
   });
  }
+ // FoundrySpecification.chatOwnerRecoveryBoundary: retain interest across owner release.
  function drain(chatId){
   requireLocks();if(pumps.has(chatId))return;
   let recheck=false;
-  const promise=locks.request(`foundry:chat-execution:${chatId}`,{ifAvailable:true},async lock=>{
+  const promise=locks.request(`foundry:chat-execution:${chatId}`,{signal:lifetime.signal},async lock=>{
    if(!lock||disposed)return;const owner=mintOwner();if(!Number.isInteger(owner)||owner<1||owner>0xffffffff)throw chatQueueFailure('chatQueueUnavailable');
    let recovered=false;
    await mutate(chatId,j=>{if(!j.state.active)return null;recovered=true;if(j.state.owner===owner)throw chatQueueFailure('chatQueueUnavailable');return {type:'recover',owner};});
@@ -34,7 +35,7 @@ export function createChatQueueController({store,guest,boundary,locks,publish,ru
     await mutate(chatId,{type:outcome==='errored'?'fail':'complete',owner,item:entry.id,outcome});
     if(outcome==='errored')return;
    }
-  }).catch(error=>{publish(chatId,null,{error:chatQueueFailure(error?.code||'chatQueueUnavailable').message});}).finally(async()=>{
+  }).catch(error=>{if(!disposed)publish(chatId,null,{error:chatQueueFailure(error?.code||'chatQueueUnavailable').message});}).finally(async()=>{
    pumps.delete(chatId);if(disposed||!recheck)return;
    try{const {journal}=await store.read(chatId);if(!journal.state.active&&!journal.state.paused&&journal.state.items.length)drain(chatId);}catch{}
   });pumps.set(chatId,promise);
@@ -67,5 +68,5 @@ export function createChatQueueController({store,guest,boundary,locks,publish,ru
   drain(chatId);
  }
  async function cancelCurrent(chatId){const {journal}=await store.read(chatId),active=journal.entries.find(e=>e.id===journal.state.active);if(active)await dispatch(chatId,{type:'CANCEL',invocationRef:active.intent.invocationRef,pauseQueue:true,observedStopPolicyVersion:journal.state.stopPolicy});}
- return {dispatch,snapshot,refresh,cancelCurrent,async idle(chatId){await pumps.get(chatId);},dispose(){disposed=true;for(const active of running.values())active.controller.abort();},get activeCount(){return running.size;}};
+ return {dispatch,snapshot,refresh,cancelCurrent,async idle(chatId){await pumps.get(chatId);},dispose(){disposed=true;lifetime.abort();for(const active of running.values())active.controller.abort();},get activeCount(){return running.size;}};
 }
