@@ -34,6 +34,7 @@ import { withBuildModules } from "./build-modules.mjs";
 import { captureBuildSource, assertBuildSourceCurrent, requiresRulePublication } from "./build-source.mjs";
 import { applyStoredProjectPatch, assertGenerationActive } from "./generation-patch.mjs";
 import { editStoredProject, captureProjectSource, commitPreparedProject } from "./project-edit.mjs";
+import {modulePresentation} from "./module-presentation.mjs";
 import { loadProjectScaffold, prepareExistingProject, prepareNewProject, createStoredProject, createStoredChat } from "./project-creation.mjs";
 import { storageRequest } from "./storage-request.mjs";
 import { executeWorkWithGuest } from "./work-codec.mjs";
@@ -1128,13 +1129,17 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   try { previousCanonicalPath = `prism/${lexlean.canonicalSource(JSON.parse(files.get("prism/spec.json"))).name}.lex.tex`; } catch {}
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
   // A LexLean module, when the model wrote one, carries the rules: the spec is read from it, keeping the
-  // screen's words (purpose, view, meanings) the spec already had, since the module holds only the logic.
+  // screen's words only when their checked interface still belongs to the new module.
   const lex = lexlean.specFromTurn(text);
+  let presentationReset = false;
   if (lex && lex.error) return { changed: 0, source, card: `**Rules** · not read\n\n- ${lex.error}\n\nAsk me to fix the module.` };
   if (lex) {
-    let words = {};
-    try { const prev = JSON.parse(files.get("prism/spec.json") || "{}"); words = Object.fromEntries(["purpose", "view", "meanings"].filter((k) => prev[k] !== undefined).map((k) => [k, prev[k]])); } catch (e) {}
-    text = "<dyad-spec>" + JSON.stringify({ ...lex.spec, ...words }).replaceAll("<", "\\u003c") + "</dyad-spec>";
+    let previous = null;
+    try { previous = JSON.parse(files.get("prism/spec.json") || "null"); } catch { previous = {}; }
+    const presentation = modulePresentation(previous, lex.spec);
+    if (presentation.code) return { changed: 0, source, card: `**Rules** · not read\n\n- ${presentation.error}\n\nAsk me to fix the module.` };
+    presentationReset = presentation.reset;
+    text = "<dyad-spec>" + JSON.stringify(presentation.spec).replaceAll("<", "\\u003c") + "</dyad-spec>";
   }
   const tag = prism.parseSpecTag(text);
   if (tag && tag.spec) stage("prism/spec.json", JSON.stringify(tag.spec, null, 2) + "\n");
@@ -1168,7 +1173,7 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
     const page = files.get("src/pages/Index.tsx") || "";
     if (!page.includes("@/lib/prism") && !written.some((p) => p && p.startsWith("src/pages/"))) stage("src/pages/Index.tsx", prism.screenSource());
   }
-  const notes = [...(tag && tag.repaired ? ["Forge repaired the JSON syntax the model wrote. Read the rules before you approve them."] : []), ...(checked.notes || [])];
+  const notes = [...(presentationReset ? ["The application interface changed or its previous presentation was invalid; the view and descriptions were reset to the new module."] : []), ...(tag && tag.repaired ? ["Forge repaired the JSON syntax the model wrote. Read the rules before you approve them."] : []), ...(checked.notes || [])];
   const state = { ...(retained ? before : {}), phase, specKappa, logicKappa, spec: checked.spec || null, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: retained ? before.proof : null, updated: now() };
   // A semantic proof survives wording changes; a release still identifies the older bytes.
   if (retained && before.phase === "published" && before.specKappa !== specKappa) state.publicationCurrent = false;

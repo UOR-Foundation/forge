@@ -1301,6 +1301,7 @@ definition{
   result: String,
   body: "New scaffold projects read the Home selectedThemeId and custom theme journal within the same settings/apps/chats/files/objects/refs/versions transaction that creates their initial project and chat. Missing or empty selection means no theme. A nonempty selection must resolve to an exact imported built-in or existing validated custom theme. Invalid selection, corrupt journal and storage failure refuse creation with projectStorageFailed, without partial rows, allocation changes or success notification. Custom theme deletion clears matching Home selection and app selections in its settings/apps transaction, preserving unrelated settings; concurrent creation and deletion therefore cannot leave an orphan theme reference. The first-prompt renderer consumes the committed app theme instead of applying a stale React settings snapshot after creation. Later Home changes do not rewrite an existing app. Imported projects preserve their existing explicit import semantics and do not inherit Home preferences. Generation still resolves the committed theme through the existing captured-prompt and exact-consent boundary. Actual IndexedDB acceptance covers built-in/custom/no selection, corrupt and missing themes, deletion ordering, concurrent windows, late abort rollback and the first-prompt adapter."
 }
+
 definition{
   name: modulePresentationBoundary,
   parameters: [],

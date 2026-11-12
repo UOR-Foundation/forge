@@ -122,6 +122,7 @@ jobs:
           node tools/live_main_integration_browser.mjs
           node tools/source_bound_gallery_browser.mjs
           node tools/initial_project_theme_browser.mjs
+          node tools/module_presentation_browser.mjs
           node tools/renderer_stylesheet_identity_browser.mjs
           node tools/atomic_browser_settings_browser.mjs
           node tools/site_relay_authorization_browser.mjs
