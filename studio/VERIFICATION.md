@@ -79,7 +79,7 @@ turn may stream its later module prefixes and repairs to the disclosed service;
 standalone source operations require exact-file approval. Proof/publication
 permission is outside this capability.
 
-`node --test studio/tools/hosted_source_permission.test.mjs` passes all 15
+`node --test studio/tools/hosted_source_permission.test.mjs` passes all 18
 controls, with no skipped, cancelled or TODO cases. It covers default fail-closed
 behavior, immutable disclosures, deny/Escape/timeout/offline/cancellation, active
 stop, same-turn streaming, no cross-turn approval, exact RPC scope, private
@@ -101,3 +101,41 @@ transmitted bytes, one-turn prefixes, stop, redirects, cookies and offline state
 The local environment refuses Chromium's process-singleton socket with EPERM,
 even with approved escalation, so browser acceptance is not claimed locally.
 The mandatory browser lane must run this check before release acceptance.
+
+
+FA-83 review regressions: the original byte-only preview attempt memo incorrectly
+suppressed an identical-source retry in a fresh approved scope, and cached-frame
+reselection left different pending work alive. Both controls were added first
+and failed with approvals `1 != 2` and frames `3 != 2`. Attempts now carry the
+source and scope together; cached-frame reuse supersedes outstanding work first.
+The complete 18-control suite also checks a same-source replacement while its
+prior session/signal is busy, plus incomplete-source supersession. The unchanged
+same-scope denial still cannot repeatedly prompt or transmit. Final restored
+suite and the exact-count Rust gate pass, with zero skipped controls.
+
+
+## FA-84: proof approval cancellation
+
+`node --test studio/tools/proof_approval_cancellation.test.mjs` executes seven
+non-skipped controls over the production approval/proof functions. Its dedicated
+Rust conformance wrapper requires exactly seven passes with no skipped,
+cancelled or TODO controls. Stateful rollback compares the captured committed
+source and protected lifecycle predecessor; decision rollback compares the
+source-bound protected rules predecessor. A unique approval ID prevents one
+approval from rolling back a replacement reservation.
+
+The original defect was reproduced before repair: cancellation from approval or
+initial transcript persistence left `proving`, submitted zero remote requests,
+and raised `generationCancelled` before chat completion. Immediate cancellation
+from the proof start also missed the late-installed observer and timed out.
+Both now pass. Refresh failure, failed library loading, failed local proof
+rendering, cancellation during local preparation, competing protected state and
+post-submission stop are covered. The hosted prover invokes a synchronous
+submission guard after asynchronous local file preparation, immediately before
+its first source transfer. Removing that guard is a planted defect the test
+rejects. Once submission begins, stopping observation cannot reset the lifecycle
+or cancel remote work; successful proof completion retains its existing CAS.
+
+Local validation: all seven controls pass; the exact-count Rust wrapper, the
+combined 21 approval/rules/stateful controls, and shell parsing pass. No hosted
+proof request was submitted by these fixture-based checks.

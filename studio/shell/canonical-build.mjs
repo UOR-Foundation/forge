@@ -1,8 +1,10 @@
 // FoundrySpecification.canonicalBuildBoundary: byte identity does not establish model coherence.
 import { checkSpec } from "./prism.js";
 import { canonicalSource } from "./live/lexlean.mjs";
+import {applicationShape, shapeFailure} from './application-shape.mjs';
 const fail = () => Object.assign(new Error("Build source does not match its canonical model projections"), { code: "canonicalBuildMismatch" });
 export function assertCanonicalBuild(rows) {
+  if (applicationShape({files:rows}) === 'stateful') throw shapeFailure('statefulBuildUnsupported');
   try {
     const files = new Map(rows);
     if (!files.has("prism/spec.json")) return;

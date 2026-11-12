@@ -8,12 +8,13 @@ const start = host.indexOf('async function appStateOf('), end = host.indexOf('co
 assert.ok(start >= 0 && end > start, 'stateful approval and proof boundaries must remain present');
 const block = host.slice(start, end);
 function harness({phase = 'checked', race, mutate = source => source} = {}) {
-  const snapshot = (revision) => ({reference: revision, files: [['prism/App.lex.tex', 'module'], ['prism/app.json', JSON.stringify({sourceKappa: 'identity', phase})]]});
+  const snapshot = (revision) => ({reference: revision, applicationState:{sourceKappa:'identity',phase,approvalId:revision}, files: [['prism/App.lex.tex', 'module'], ['prism/app.json', JSON.stringify({sourceKappa: 'identity', phase})]]});
   let current = snapshot('original');
   const original = current, log = {writes: 0, proofs: 0, audits: 0, refreshes: 0};
   const environment = {
-    Map, JSON, TextEncoder, enc: new TextEncoder(), core: {}, dbReady: Promise.resolve({}),
+    Map, JSON, TextEncoder, crypto, enc: new TextEncoder(), core: {}, dbReady: Promise.resolve({}),
     captureProjectSource: async () => current,
+    applicationShape: () => 'stateful', boundApplicationState: async source => source.applicationState,
     get: async (_store, key) => new Map(current.files).get(key.replace(/^1:/, '')),
     kappa: async () => 'identity', now: () => 'now',
     appShape: {SOURCE_PATH: 'prism/App.lex.tex', STATE_PATH: 'prism/app.json', isAppShape: () => true, theoremsOf: () => [{}], promisesOf: () => [], provingMessage: () => 'proving', proofMessage: () => '', proofFiles: () => ({}), withAxioms: source => source},
@@ -43,7 +44,7 @@ async function approvalRace(mutate) {
 }
 test('stateful approval refuses a concurrent source change instead of recapturing it', async () => {
   await approvalRace();
-  await assert.rejects(approvalRace(source => source.replace('], app.captured);', '], await captureProjectSource(await dbReady, appId));')), {name: 'AssertionError'});
+  await assert.rejects(approvalRace(source => source.replace('], app.captured,', '], await captureProjectSource(await dbReady, appId),')), {name: 'AssertionError'});
 });
 async function proofRace(mutate) {
   const h = harness({phase: 'proving', race: 'attest', mutate});
@@ -52,7 +53,7 @@ async function proofRace(mutate) {
 }
 test('stateful proof completion refuses a competing commit without writing source or proof', async () => {
   await proofRace();
-  await assert.rejects(proofRace(source => source.replace('], latest.captured);', '], await captureProjectSource(await dbReady, appId));')), {name: 'AssertionError'});
+  await assert.rejects(proofRace(source => { const at = source.indexOf('async function proveApp('); return source.slice(0, at) + source.slice(at).replace('], latest.captured,', '], await captureProjectSource(await dbReady, appId),'); }), {name: 'AssertionError'});
 });
 test('a stateful proof whose source or phase is already stale sends no request', async () => {
   for (const [phase, key, source] of [['checked', 'identity', 'module'], ['proving', 'other', 'module'], ['proving', 'identity', 'other']]) {
@@ -66,10 +67,11 @@ function turnHarness(phase, mutate = source => source) {
   const begin = host.indexOf('async function appAfterTurn('), end = host.indexOf('const afterTurn =', begin);
   assert.ok(begin >= 0 && end > begin);
   const known = {phase, sourceKappa: 'identity', ...(phase === 'drafting' ? {unchecked: 'permission denied'} : {})};
-  const source = {reference: 'captured', files: [['prism/App.lex.tex', 'module\n'], ['prism/app.json', JSON.stringify(known)]]};
+  const source = {reference: 'captured', applicationState:known, files: [['prism/App.lex.tex', 'module\n'], ['prism/app.json', JSON.stringify(known,null,2)+'\n']]};
   const log = {checks: 0, writes: 0};
   const environment = {
     Map, JSON, enc: new TextEncoder(), coreReady: Promise.resolve(), dbReady: Promise.resolve({}), core: {},
+    retiredApplicationPaths:()=>[], boundApplicationState:async source=>source.applicationState, lexlean:{canonicalSource(){}}, rulesSnapshotOf:async()=>({expected:undefined}), forgetApplicationFrames(){},
     appShape: {moduleFromTurn: () => ({text: 'module'}), isAppShape: () => true, SOURCE_PATH: 'prism/App.lex.tex', STATE_PATH: 'prism/app.json', card: state => state},
     assertGenerationActive() {}, kappa: async () => 'identity', now: () => 'now',
     nextPhase: async (_phase, event) => event === 'check' ? 'checked' : 'drafting',
@@ -137,4 +139,11 @@ test('failed preview initialization still closes permission and reaches chat com
   });
   const result = await run();
   assert.equal(closed, 1); assert.equal(result.completed, true); assert.match(result.error, /preview unavailable/);
+  const beginFrames = host.indexOf('let appFrames = null;'), endFrames = host.indexOf('// The checker for a stateful app', beginFrames);
+  let requests = 0;
+  const ready = vm.runInNewContext(host.slice(beginFrames, endFrames) + ';appFramesReady', {
+    URL, BASE:'https://foundry.example/', postApp(){}, appShape:{appLive:()=>({ready:true})},
+    fetch:async()=>{if(++requests===1)throw Error('temporary failure');return{ok:true,json:async()=>({})};},
+  });
+  await assert.rejects(ready(),/temporary failure/);assert.equal((await ready()).ready,true);assert.equal(requests,2);
 });

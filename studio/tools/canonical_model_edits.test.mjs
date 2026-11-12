@@ -7,6 +7,7 @@ import * as prism from "../shell/prism.js";
 import * as live from "../shell/live/project.mjs";
 import { canonicalEditPath, planCanonicalEdit } from "../shell/canonical-edits.mjs";
 import { invokeHost } from "../shell/host-boundary.mjs";
+import {retiredApplicationPaths, isStatefulModule} from '../shell/application-shape.mjs';
 const fixture = JSON.parse(fs.readFileSync(new URL("./fixtures/live/rsvp.json", import.meta.url)));
 const canonical = lexlean.canonicalSource(fixture), modulePath = `prism/${canonical.name}.lex.tex`;
 const source = { reference: "snapshot", files: [["prism/spec.json", JSON.stringify(fixture)], [modulePath, canonical.source], ["src/lib/prism.ts", "runtime"]] };
@@ -50,7 +51,7 @@ test("generated runtime edits refuse only for model-owned projects", async () =>
 test("the actual editor delegates canonical writes to one captured rules transaction", async () => {
   const handlers = new Map(), events = []; let writes = 0, refreshes = 0;
   const start = host.indexOf('handlers.set("edit-app-file",'), end = host.indexOf('handlers.set("delete-app",', start);
-  vm.runInNewContext(host.slice(start, end), { handlers, coreReady: Promise.resolve(), dbReady: Promise.resolve({}), canonicalEditPath, planCanonicalEdit, lexlean, prism, captureProjectSource: async () => source,
+  vm.runInNewContext(host.slice(start, end), { structuredClone, handlers, coreReady: Promise.resolve(), dbReady: Promise.resolve({}), canonicalEditPath, planCanonicalEdit, lexlean, prism, captureProjectSource: async () => source,
     rulesAfterTurn: async (id, text, paths, options) => { writes++; assert.equal(options.source, source); assert.ok(prism.parseSpecTag(text).spec); options.onCommit("new-reference"); return { changed: 3 }; }, refreshLive: async () => refreshes++,
     editStoredProject: () => assert.fail("generic writer bypassed canonical transaction"), emit: (...args) => events.push(args) });
   const handler = handlers.get("edit-app-file");
@@ -62,7 +63,7 @@ test("model renames delete only the previous active module in the atomic batch",
   const start = host.indexOf("async function rulesAfterTurn("), end = host.indexOf("// Lean proves", start);
   let batch, options;
   const run = vm.runInNewContext(host.slice(start, end) + "\nrulesAfterTurn", { assertGenerationActive() {}, coreReady: Promise.resolve(), core: {}, dbReady: Promise.resolve({}), captureProjectSource: async () => source,
-    prism, lexlean, live, enc: new TextEncoder(), kappa: async bytes => live.kappaOfValue([...bytes]), rulesSnapshotOf: async () => ({state:null,expected:undefined}), nextPhase: async () => "checked", now: () => "now",
+    prism, lexlean, live, appShape:{SOURCE_PATH:'prism/App.lex.tex',isAppShape:isStatefulModule},retiredApplicationPaths,forgetApplicationFrames(){}, enc: new TextEncoder(), kappa: async bytes => live.kappaOfValue([...bytes]), rulesSnapshotOf: async () => ({state:null,expected:undefined}), nextPhase: async () => "checked", now: () => "now",
     applyStoredProjectPatch: async (_, id, patch, opts) => { batch = patch; options = opts; return { changed: 4, source }; } });
   await run(1, "<dyad-spec>" + JSON.stringify({...fixture, name:"renamed-seat"}) + "</dyad-spec>");
   assert.deepEqual(JSON.parse(JSON.stringify(batch.deletes)), [{path:modulePath}]); assert.ok(batch.writes.some(w => w.path === "prism/RenamedSeat.lex.tex"));

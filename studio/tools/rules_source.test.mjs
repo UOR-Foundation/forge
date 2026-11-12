@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { test } from "node:test";
-import { saveBoundRules, readBoundRules } from "../shell/rules-source.mjs";
+import { saveBoundRules, readBoundRules, sameRuleReservation } from "../shell/rules-source.mjs";
 const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8").replace(/\r\n/g, "\n");
 const rule = { phase: "checked", specKappa: "blake3:" + "1".repeat(64), spec: { title: "rules" } };
 function operation(name, end, environment) {
-  return vm.runInNewContext(host.slice(host.indexOf(`async function ${name}(`), host.indexOf(end, host.indexOf(`async function ${name}(`))) + `\n${name}`, environment);
+  return vm.runInNewContext(host.slice(host.indexOf(`async function ${name}(`), host.indexOf(end, host.indexOf(`async function ${name}(`))) + `\n${name}`, {sameRuleReservation, ...environment});
 }
 test("approval completion refuses a competing state instead of starting proof", async () => {
   let expected;

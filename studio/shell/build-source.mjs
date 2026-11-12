@@ -1,5 +1,6 @@
 // FoundrySpecification.snapshotBuildBoundary: exact source before effects.
 import { assertCanonicalBuild } from "./canonical-build.mjs";
+import {applicationShape, shapeFailure} from './application-shape.mjs';
 import { captureProjectSource } from "./project-edit.mjs";
 import { prepareSnapshot } from "./snapshot-restore.mjs";
 import { snapshotDependencies } from "./project-lifecycle.mjs";
@@ -25,4 +26,7 @@ export async function assertBuildSourceCurrent(db, appId, source) {
   catch (error) { if (error?.code === "projectEditStateInvalid") throw fail("buildSourceChanged"); throw error; }
   if (!sameBuildSource(source, current)) throw fail("buildSourceChanged");
 }
-export function requiresRulePublication(source) { return source.files.some(([path]) => path === "prism/spec.json"); }
+export function requiresRulePublication(source) {
+  if (applicationShape(source) === 'stateful') throw shapeFailure('statefulBuildUnsupported');
+  return source.files.some(([path]) => path === "prism/spec.json");
+}

@@ -18,4 +18,4 @@ Feature: Hosted source permission
     Given a refused preview attempt and a new turn with identical module bytes
     When the new turn explicitly approves its own hosted scope
     Then parsing retries under the new scope and the current frame is rendered
-    And reselecting an existing frame cancels any different pending source before updating its trust
+    And reselecting an existing frame cancels any different in-flight source before updating its trust

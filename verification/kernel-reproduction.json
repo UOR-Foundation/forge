@@ -1,22 +1,27 @@
 {
   "profile": "foundry/component-reproduction/1",
-  "scope": "Forge kernel archive only; not the complete Foundry application",
-  "source": "a291a72752d727aab1d68bbc1edcd09eae809f0f",
+  "scope": "Forge kernel archive only; not the complete Foundry application or release",
+  "source": "060df8ea31c455b6cb2f4f346d1b0bcb4d9d8abb",
   "sdk": "ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58",
   "runs": [
-    43115365275,
-    43118735269
+    43241205254,
+    43241211040
   ],
   "artifacts": [
-    13899592362,
-    13900963464
+    13956785774,
+    13955583745
   ],
-  "archiveSha256": "fcf77322417e0f212409214070829592df3411bb2ff2b292ffe158ea0a93cbcf",
-  "archiveBytes": 505788,
-  "comparison": "complete byte-for-byte equality",
-  "provenance": "Both Sigstore bundles verified for the exact source digest, repository and build workflow with self-hosted runners denied.",
-  "trustedRoot": {
-    "source": "https://raw.githubusercontent.com/sigstore/root-signing/c9bda74ad2221f938f7d2e0295ca3aad2da710a8/targets/trusted_root.json",
-    "sha256": "6494e21ea73fa7ee769f85f57d5a3e6a08725eae1e38c755fc3517c9e6bc0b66"
-  }
+  "archiveSha256": "48e62277f21f3edf99a1f7a3f406d48f449571c6a2ec80fcc237a45e9b63e7a9",
+  "archiveBytes": 508356,
+  "archiveFingerprint": "2877e27cacbb91dfa503b0bde6ba0d0ee6973c081d49ec2aba7f3ad949e7dc01",
+  "acceptanceVectors": 305,
+  "comparison": "complete byte-for-byte equality from independent runners",
+  "provenance": "Both bundles verified by GitHub CLI 2.103.3 with exact repository, source digest, build workflow, OIDC issuer and hosted-runner policy; signed transparency-log timestamps verified.",
+  "bundles": [
+    "kernel-reproduction.sigstore.json",
+    "kernel-reproduction-b.sigstore.json"
+  ],
+  "normalization": "The same pinned SDK runs lexlean fmt --all and lexlean lock before unchanged just app. The returned canonical source bytes are adopted; only two blank-line changes in FoundrySpecification were produced.",
+  "normalizedSourceArtifact": 13956960516,
+  "normalizedModelSha256": "8e89fc61c6162c3dff00cc82dcd813e7c9116112133e43b0a97c02c11364fae6"
 }

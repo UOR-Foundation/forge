@@ -24,10 +24,10 @@ test("the actual host delegates edits without separate object or file writes", a
   const source = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
   const start = source.indexOf('handlers.set("edit-app-file",'); const end = source.indexOf('handlers.set("delete-app",', start);
   const calls = [], handlers = new Map();
-  vm.runInNewContext(source.slice(start, end), { handlers, canonicalEditPath, coreReady: Promise.resolve(), dbReady: Promise.resolve({}), core: {}, kappa() {}, editStoredProject: async (...args) => { calls.push(args); return "oid"; }, emit: (...args) => calls.push(args) });
+  vm.runInNewContext(source.slice(start, end), { structuredClone, handlers, canonicalEditPath, coreReady: Promise.resolve(), dbReady: Promise.resolve({}), core: {}, kappa() {}, editStoredProject: async (...args) => { calls.push(args); return "oid"; }, emit: (...args) => calls.push(args) });
   const input = { appId: 1, filePath: "x", content: "new" };
   assert.deepEqual(JSON.parse(JSON.stringify(await handlers.get("edit-app-file")(input))), {});
-  assert.equal(calls[0][1], input); assert.equal(calls[1][0], "version-created"); assert.ok(!source.includes("const rawEdit ="));
+  assert.deepEqual(calls[0][1], input); assert.notEqual(calls[0][1], input); assert.equal(calls[1][0], "version-created"); assert.ok(!source.includes("const rawEdit ="));
 });
 test("typed edit failures and parser inventory are canonical", () => {
   const source = fs.readFileSync(new URL("../../app/src/FoundrySpecification.lex.tex", import.meta.url), "utf8");

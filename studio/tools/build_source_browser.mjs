@@ -11,7 +11,7 @@ const sources = new Map([
   ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
   ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
 for (const name of ["build-source", "project-lifecycle", "project-edit", "project-creation", "generation-patch", "snapshot-restore", "storage-request"]) sources.set(`/${name}.mjs`, fs.readFileSync(new URL(`../shell/${name}.mjs`, import.meta.url)));
-for (const name of ["canonical-build.mjs", "prism.js", "prism/spec.mjs", "prism/render.mjs", "prism/template.mjs", "prism/sha256.mjs", "live/lexlean.mjs", "live/obligations.mjs", "live/table.mjs", "prism-code/src/blake3.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
+for (const name of ["application-shape.mjs", "canonical-build.mjs", "prism.js", "prism/spec.mjs", "prism/render.mjs", "prism/template.mjs", "prism/sha256.mjs", "live/lexlean.mjs", "live/obligations.mjs", "live/table.mjs", "prism-code/src/blake3.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
 const server = http.createServer((req, res) => { const bytes = sources.get(req.url); res.setHeader("content-type", bytes ? "text/javascript" : "text/html"); res.end(bytes || "<!doctype html><title>Build source acceptance</title>"); });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 let browser;

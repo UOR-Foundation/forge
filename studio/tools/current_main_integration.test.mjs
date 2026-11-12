@@ -7,20 +7,23 @@ import * as prism from "../shell/prism.js";
 import * as live from "../shell/live/project.mjs";
 import * as lexlean from "../shell/live/lexlean.mjs";
 import { applyOps, createEditor } from "../shell/live/edit.mjs";
+import { sameRuleReservation } from "../shell/rules-source.mjs";
 import { assertGenerationActive } from "../shell/generation-patch.mjs";
+import {applicationShape,retiredApplicationPaths,isStatefulModule} from '../shell/application-shape.mjs';
 const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
 const initial = JSON.parse(fs.readFileSync(new URL("./fixtures/live/rsvp.json", import.meta.url)));
 const key = spec => { const checked = prism.checkSpec(spec).spec; return live.kappaOfValue({ name: checked.name, logic: live.logicOf(checked) }); };
 function fn(name, end, env) {
   const start = host.indexOf(`async function ${name}(`);
   assert.ok(start >= 0 && host.indexOf(end, start) > start);
-  return vm.runInNewContext(host.slice(start, host.indexOf(end, start)) + `\n${name}`, env);
+  return vm.runInNewContext(host.slice(start, host.indexOf(end, start)) + `\n${name}`, {sameRuleReservation, ...env});
 }
 async function revise(spec, before) {
   let saved, batch;
   const source = { files: [["prism/spec.json", JSON.stringify(initial)], ["src/pages/Index.tsx", "import '@/lib/prism'"]] };
   const run = fn("rulesAfterTurn", "// Lean proves", {
     assertGenerationActive, coreReady: Promise.resolve(), core: {}, dbReady: Promise.resolve({}),
+    retiredApplicationPaths, appShape:{SOURCE_PATH:'prism/App.lex.tex',isAppShape:isStatefulModule}, forgetApplicationFrames(){},
     captureProjectSource: async () => source, prism, live, lexlean, rulesSnapshotOf: async () => ({ state: before, expected: before }),
     enc: new TextEncoder(), kappa: async bytes => live.kappaOfValue([...bytes]),
     nextPhase: async (phase, event) => event === "reword" ? phase : event === "check" ? "checked" : "drafting",
@@ -43,6 +46,7 @@ test("checked wording changes retain a matching proof but not a current publicat
   for (const stale of [false, true]) {
     let trust;
     const refresh = fn("refreshLive", "// ---- the one write path", {
+      applicationShape, dbReady:Promise.resolve({}), captureProjectSource:async()=>({files:[['prism/spec.json',JSON.stringify(spec)]]}),
       get: async () => JSON.stringify(stale ? initial : spec, null, 2) + "\n", rulesOf: async () => saved,
       enc: new TextEncoder(), kappa: async bytes => live.kappaOfValue([...bytes]), pushLive: (_, __, value) => { trust = value; },
     });
@@ -103,6 +107,7 @@ test("invalid live edits redraw with source-bound publication trust", async () =
     const json = JSON.stringify(initial), state = { ...proved(), phase: "published", publicationCurrent: false, specKappa: mismatch ? "other" : "current" };
     let trust;
     const refresh = fn("refreshLive", "// ---- the one write path", {
+      applicationShape, dbReady:Promise.resolve({}), captureProjectSource:async()=>({files:[['prism/spec.json',json]]}),
       get: async () => json, rulesOf: async () => state, enc: new TextEncoder(),
       kappa: async () => "current", pushLive: (_, __, value) => { trust = value; },
     });

@@ -23,8 +23,8 @@ try {
   browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage(); await page.goto(`http://127.0.0.1:${server.address().port}/`);
   const report = await page.evaluate(async () => {
-    const { editStoredProject } = await import("/project-edit.mjs");
-    const { prepareNewProject, createStoredProject } = await import("/project-creation.mjs");
+    const { editStoredProject, captureProjectSource, commitPreparedProject } = await import("/project-edit.mjs");
+    const { prepareNewProject, prepareExistingProject, createStoredProject } = await import("/project-creation.mjs");
     const { storageRequest } = await import("/storage.mjs"); const { kappa } = await import("/blake3.mjs");
     const check = (value, message) => { if (!value) throw Error(message); };
     const stores = ["apps", "chats", "files", "objects", "refs", "versions"];
@@ -78,8 +78,25 @@ try {
     check(refused && await snapshot() === before, "failed edit left partial writes");
     const recovery = await editStoredProject(db, { appId, filePath: "a.txt", content: "recovered" }, boundary);
     check(await get("refs", `${appId}:main`) === recovery && await get("files", `${appId}:a.txt`) === "recovered", "recovery failed");
+    // Protected lifecycle is captured with source and changed only by its exact predecessor.
+    // These are transaction fixtures, not evidence of checked/proved application semantics.
+    const stateful = await createStoredProject(db, await prepareNewProject({name:'stateful',files:{'prism/App.lex.tex':'structure{ name: State }','prism/app.json':'{"phase":"proved"}'}},boundary));
+    const statefulId=stateful.app.id, predecessor={phase:'checked',sourceKappa:'blake3:'+'a'.repeat(64)},successor={...predecessor,phase:'proving',approvalId:'one'};
+    await put('refs',`stateful:${statefulId}`,predecessor);
+    const captured=await captureProjectSource(db,statefulId);
+    check(JSON.stringify(captured.applicationState)===JSON.stringify(predecessor),'protected state not captured with source');
+    const prepared=await prepareExistingProject({name:captured.name,files:{...Object.fromEntries(captured.files),'prism/App.lex.tex':'structure{ name: State }\n'}},boundary,captured.reference);
+    await commitPreparedProject(db,statefulId,['prism/App.lex.tex'],captured,prepared,{appUpdate:{expected:predecessor,state:successor}});
+    check(JSON.stringify(await get('refs',`stateful:${statefulId}`))===JSON.stringify(successor),'source and lifecycle did not commit together');
+    const stale=await captureProjectSource(db,statefulId);
+    await put('refs',`stateful:${statefulId}`,{...successor,approvalId:'replacement'});
+    const beforeLifecycle=await snapshot();let lifecycleRefused=false;
+    try{await commitPreparedProject(db,statefulId,[],stale,{oid:stale.reference,files:stale.files,objects:[]},{recordVersion:false,appUpdate:{expected:successor,state:predecessor}});}catch(e){lifecycleRefused=e.code==='projectEditConflict';}
+    check(lifecycleRefused&&await snapshot()===beforeLifecycle,'stale lifecycle overwrote a replacement approval');
+    await editStoredProject(db,{appId:statefulId,filePath:'prism/App.lex.tex',content:'structure{ name: State }\n\n'},boundary);
+    check(await get('refs',`stateful:${statefulId}`)===undefined,'ordinary source mutation retained protected standing');
     db.close();
-    return { exactParent: true, rulesInvalidated: true, raceKindsRefused: 5, concurrentWinner: 1, failedWrite: "rolled-back", recovery: "committed" };
+    return { exactParent: true, rulesInvalidated: true, raceKindsRefused: 5, concurrentWinner: 1, failedWrite: "rolled-back", recovery: "committed", statefulLifecycle:'source-bound-cas' };
   });
-  assert.deepEqual(report, { exactParent: true, rulesInvalidated: true, raceKindsRefused: 5, concurrentWinner: 1, failedWrite: "rolled-back", recovery: "committed" }); console.log(JSON.stringify(report));
+  assert.deepEqual(report, { exactParent: true, rulesInvalidated: true, raceKindsRefused: 5, concurrentWinner: 1, failedWrite: "rolled-back", recovery: "committed", statefulLifecycle:'source-bound-cas' }); console.log(JSON.stringify(report));
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

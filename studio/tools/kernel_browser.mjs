@@ -103,7 +103,7 @@ try {
   assert.equal(documentResult.routing, 32);
   assert.equal(documentResult.queue, 38);
   assert.equal(documentResult.previews, 30);
-  assert.equal(documentResult.embedded, 285);
+  assert.equal(documentResult.embedded, 305);
   console.log(JSON.stringify({ page: documentResult, worker: workerResult }));
 } finally {
   if (browser) await browser.close();

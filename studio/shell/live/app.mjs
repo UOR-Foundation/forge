@@ -10,6 +10,8 @@ import { loadProject, NIL, cons } from "./v2/interp.mjs";
 import { describe, fieldValue } from "./v2/render.mjs";
 import RULES from "./v2/rules.mjs";
 import { check as hostedCheck, loadLibrary, prepare } from "./v2/check.mjs";
+import { isStatefulModule as isAppShape } from '../application-shape.mjs';
+export { isAppShape };
 
 import { HOSTED_SOURCE_ENDPOINT as HOSTED, withHostedSourcePermission } from "../hosted-source-permission.mjs";
 export { createHostedSourceSession } from "../hosted-source-permission.mjs";
@@ -111,11 +113,6 @@ export const PROMPT = "\n\n# When the app keeps state: the app shape\nA decision
 export const moduleContext = (source) => "The app's current LexLean module, in the app shape:\n<prism-lexlean>\n" + String(source).trim() + "\n</prism-lexlean>";
 
 /** Whether a module, or the start of one, is in the app shape rather than the decision shape. */
-export function isAppShape(module) {
-  const text = String(module || "");
-  if (/\bname:\s*judge\b/.test(text)) return false;
-  return /\\importmodule\{Foundation\.View\.Browser\.V1\.Model\}/.test(text) || /structure\{\s*name:\s*State\b/.test(text);
-}
 
 /** The module a chat turn is writing: the text after its last <prism-lexlean>, closed or not. */
 export function moduleFromTurn(text) {

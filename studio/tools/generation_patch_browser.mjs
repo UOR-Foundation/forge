@@ -7,7 +7,7 @@ const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8
 const apply = host.slice(host.indexOf("async function applyDyadTags("), host.indexOf("window.__chat ="));
 const rules = host.slice(host.indexOf("async function rulesAfterTurn("), host.indexOf("// Lean proves"));
 const proof = host.slice(host.indexOf("async function proveRules("), host.indexOf('// "approve"'));
-const hostModule = `import { copyGenerationInput, assertCanonicalGeneration } from "/canonical-generation.mjs";\nimport * as lexlean from "/live/lexlean.mjs";\nexport function hostAdapters(env) { const { coreReady, dbReady, core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, prism, live, rulesOf, rulesSnapshotOf, saveRules, nextPhase, now, enc, put, refreshLive } = env; ${apply}\n${rules}\n${proof}\nreturn { applyDyadTags, rulesAfterTurn, proveRules }; }`;
+const hostModule = `import { retiredApplicationPaths, isStatefulModule } from "/application-shape.mjs";\nconst appShape = {SOURCE_PATH:"prism/App.lex.tex",isAppShape:isStatefulModule};\nimport { copyGenerationInput, assertCanonicalGeneration } from "/canonical-generation.mjs";\nimport * as lexlean from "/live/lexlean.mjs";\nexport function hostAdapters(env) { const { coreReady, dbReady, core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, prism, live, rulesOf, rulesSnapshotOf, saveRules, nextPhase, now, enc, put, refreshLive, forgetApplicationFrames } = env; ${apply}\n${rules}\n${proof}\nreturn { applyDyadTags, rulesAfterTurn, proveRules }; }`;
 const sources = new Map([
   ["/browser-chat-modes.mjs", fs.readFileSync(new URL("../shell/browser-chat-modes.mjs", import.meta.url))],
   ["/chat-mode-catalog.mjs", fs.readFileSync(new URL("../shell/chat-mode-catalog.mjs", import.meta.url))],
@@ -15,7 +15,7 @@ const sources = new Map([
 
   ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
   ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/host-adapters.mjs", hostModule], ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
-for (const name of ["canonical-generation.mjs", "generation-patch.mjs", "project-edit.mjs", "project-creation.mjs", "storage-request.mjs", "rules-source.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
+for (const name of ["application-shape.mjs", "canonical-generation.mjs", "generation-patch.mjs", "project-edit.mjs", "project-creation.mjs", "storage-request.mjs", "rules-source.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
 for (const name of ["live/lexlean.mjs", "prism/render.mjs", "prism/spec.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
 const server = http.createServer((request, response) => { const source = sources.get(request.url); response.setHeader("content-type", source ? "text/javascript" : "text/html"); response.end(source || "<!doctype html><title>Generation patch acceptance</title>"); });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -46,7 +46,7 @@ try {
     check((await get("versions", first.app.id)).length === 2, "batch did not create one version");
     const firstBody = await get("objects", applied.oid); check(kappa(firstBody) === applied.oid, "snapshot identity wrong");
     const second = await seed(), source = await captureProjectSource(db, second.app.id);
-    const adapters = hostAdapters({ coreReady: Promise.resolve(), dbReady: Promise.resolve(db), core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, live: { logicOf: spec => spec, kappaOfValue: spec => JSON.stringify(spec) }, rulesOf: async () => null, rulesSnapshotOf: async () => ({ state: null, expected: undefined }), saveRules: async () => true, nextPhase: async () => "checked", now: () => new Date().toISOString(), enc: new TextEncoder(), prism: { parseSpecTag: () => ({ spec: { example: true } }), checkSpec: () => ({ ok: true, module: "checked module", spec: {}, issues: [], vectors: 1 }), screenSource: () => "screen", card: () => "checked" } });
+    const adapters = hostAdapters({ forgetApplicationFrames(){}, coreReady: Promise.resolve(), dbReady: Promise.resolve(db), core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, live: { logicOf: spec => spec, kappaOfValue: spec => JSON.stringify(spec) }, rulesOf: async () => null, rulesSnapshotOf: async () => ({ state: null, expected: undefined }), saveRules: async () => true, nextPhase: async () => "checked", now: () => new Date().toISOString(), enc: new TextEncoder(), prism: { parseSpecTag: () => ({ spec: { example: true } }), checkSpec: () => ({ ok: true, module: "checked module", spec: {}, issues: [], vectors: 1 }), screenSource: () => "screen", card: () => "checked" } });
     const empty = await adapters.applyDyadTags(second.app.id, tags({}), { source });
     await put("files", `${second.app.id}:b`, "intervening"); const beforeStale = await snapshot();
     let refused = false; try { await adapters.rulesAfterTurn(second.app.id, "spec", [], { source: empty.source }); } catch (e) { refused = e.code === "projectEditConflict"; }

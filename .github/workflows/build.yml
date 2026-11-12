@@ -48,7 +48,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.sha }}-${{ github.ref }}
+  group: build-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -82,7 +82,7 @@ jobs:
           set -euo pipefail
           if [[ -f app/lexlean.toml ]]; then
             project=app
-            command='(cd app && lexlean fmt --all && lexlean lock) && just app'
+            command='just app'
           elif [[ -f prism/prism.toml ]]; then
             project=prism
             command='cd prism && lexlean lock && lexlean fmt --all && lexlean lock && prismpm verify'
@@ -131,16 +131,6 @@ jobs:
           name: prism-sdk-diagnostic-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/prism-build-sdk.log
           if-no-files-found: warn
-          retention-days: 7
-      - name: Export canonical SDK-normalized application sources
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: prism-normalized-source-${{ github.sha }}
-          path: |
-            app/src/
-            app/lexlean.lock
-          if-no-files-found: error
           retention-days: 7
       - name: Collect the holo, its build directory and what this run knows about them
         id: collect
