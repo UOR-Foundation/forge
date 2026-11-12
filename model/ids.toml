@@ -687,3 +687,15 @@ id = "FA-84"
 level = "build"
 suite = "application-shape-authority"
 statement = "Application shape edits and transitions retain one source-bound authority and cannot obtain proof standing from authored files"
+
+[[id]]
+id = "FA-85"
+level = "build"
+suite = "release-readiness"
+statement = "Release readiness reports bind complete exact-head workflow review and ancestry evidence without mutating or manufacturing acceptance"
+
+[[id]]
+id = "FA-86"
+level = "build"
+suite = "kernel-adoption"
+statement = "Kernel adoption verifies independent signed exact-input artifacts and prepares immutable archive pins without weakening release qualification"

@@ -58,6 +58,10 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: studio/vendor/dyad/package-lock.json
+      - name: Install the locked kernel adoption verifier closure
+        run: npm ci --prefix tools/kernel-adoption --ignore-scripts --no-audit --no-fund
+      - name: Verify exact-head readiness and independent kernel adoption
+        run: node --test --test-reporter=tap tools/release_readiness.test.mjs tools/kernel_adoption.test.mjs
       - name: Install locked renderer contracts for boundary verification
         run: npm ci --prefix vendor/dyad --ignore-scripts --no-audit --no-fund
       - name: Reproduce the imported chat schemas from locked sources

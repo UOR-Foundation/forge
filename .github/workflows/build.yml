@@ -48,7 +48,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.sha }}
+  group: build-${{ github.sha }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -97,12 +97,22 @@ jobs:
             echo "project=$project"
             echo "command=$command"
           } >>"$GITHUB_OUTPUT"
+      - name: Materialize the complete bounded kernel workspace
+        if: steps.app.outputs.project == 'app'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node studio/tools/kernel_adoption.mjs --mode capture --source "$GITHUB_SHA" \
+            --workspace "$RUNNER_TEMP/kernel-workspace" --out "$RUNNER_TEMP/kernel-inputs.json"
       - name: Build and verify the holo through the locked SDK
         shell: bash
         env:
           COMMAND: ${{ steps.app.outputs.command }}
+          PROJECT: ${{ steps.app.outputs.project }}
         run: |
           set -euo pipefail
+          # app/ is built from the materialized closure, never the original checkout.
+          if [[ $PROJECT == app ]]; then cd "$RUNNER_TEMP/kernel-workspace"; fi
           image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
           if [[ ! $image =~ ^[a-z0-9.-]+(:[0-9]{1,5})?/[a-z0-9./_-]+@sha256:[0-9a-f]{64}$ ]]; then
             printf '%s\n' 'prismpm.lock does not select an immutable SDK image' >&2
@@ -111,7 +121,7 @@ jobs:
           docker_config=$(mktemp -d)
           trap 'rm -rf "$docker_config"' EXIT
           printf '{}\n' >"$docker_config/config.json"
-          docker run --rm \
+          docker run --rm --platform linux/amd64 \
             --user "$(id -u):$(id -g)" \
             --group-add "$(stat -c '%g' /var/run/docker.sock)" \
             --tmpfs /tmp:rw,exec,nosuid,size=2g \
@@ -124,6 +134,12 @@ jobs:
             --env HOME=/tmp/prismpm-home \
             --env PRISMPM_EPHEMERAL_HOME=1 \
             "$image" sh -c "$COMMAND" 2>&1 | tee "$RUNNER_TEMP/prism-build-sdk.log"
+      - name: Check that SDK construction did not mutate any declared input
+        if: steps.app.outputs.project == 'app'
+        shell: bash
+        run: |
+          node studio/tools/kernel_adoption.mjs --mode check-workspace \
+            --workspace "$RUNNER_TEMP/kernel-workspace" --inputs "$RUNNER_TEMP/kernel-inputs.json"
       - name: Preserve the SDK diagnostic even when construction fails
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -147,6 +163,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
+          if [[ $PROJECT == app ]]; then cd "$RUNNER_TEMP/kernel-workspace"; fi
           holos=("$PROJECT"/.prism/build/*/*.holo)
           if [[ ${#holos[@]} -ne 1 ]]; then
             printf 'expected one holo, found %d\n' "${#holos[@]}" >&2
@@ -160,16 +177,24 @@ jobs:
           mkdir -p "$out/build"
           cp -r "$build_dir"/. "$out/build/"
           fingerprint=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).archive_fingerprint)' "$build_dir/application/holo-identities.json")
+          inputs_digest=''
+          independent=false
+          if [[ $PROJECT == app ]]; then
+            cp "$RUNNER_TEMP/kernel-inputs.json" "$out/build-inputs.json"
+            inputs_digest=$(jq -r .digest "$out/build-inputs.json")
+            independent=true
+          fi
           sha256=$(sha256sum "$holo" | cut -d' ' -f1)
           node -e '
             const [out, data] = process.argv.slice(1);
             const record = JSON.parse(data);
             require("fs").writeFileSync(`${out}/build.json`, `${JSON.stringify(record, null, 2)}\n`);
           ' "$out" "$(jq -cn \
+            --arg inputs_digest "$inputs_digest" --argjson independent "$independent" \
             --arg repository "$REPOSITORY" --arg sha "$SHA" --arg run_id "$RUN_ID" --arg run_url "$RUN_URL" \
             --arg workflow_ref "$WORKFLOW_REF" --arg event "$EVENT" --arg ref "$REF" \
             --arg project "$PROJECT" --arg build "$build_id" --arg holo "$name" --arg fingerprint "$fingerprint" --arg sha256 "$sha256" \
-            '{schema: "prism/remote-build/1", repository: $repository, sha: $sha, run_id: ($run_id | tonumber), run_url: $run_url, workflow_ref: $workflow_ref, event: $event, ref: $ref, project: $project, build: $build, holo: $holo, fingerprint: $fingerprint, holo_sha256: $sha256}')"
+            '{schema: "prism/remote-build/1", inputs_digest: $inputs_digest, independent: $independent, repository: $repository, sha: $sha, run_id: ($run_id | tonumber), run_url: $run_url, workflow_ref: $workflow_ref, event: $event, ref: $ref, project: $project, build: $build, holo: $holo, fingerprint: $fingerprint, holo_sha256: $sha256}')"
           {
             echo "artifact=prism-build-$SHA"
             echo "holo=$name"
@@ -177,11 +202,18 @@ jobs:
             echo "path=$out"
             echo "holo-path=$out/build/$name"
           } >>"$GITHUB_OUTPUT"
+      - name: Bind every kernel artifact byte and complete input identity
+        if: steps.app.outputs.project == 'app'
+        env:
+          OUT: ${{ steps.collect.outputs.path }}
+        run: node studio/tools/kernel_adoption.mjs --mode manifest --out "$OUT"
       - name: Sign the holo's provenance as this repository's workflow
         id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: ${{ steps.collect.outputs.holo-path }}
+          subject-path: |
+            ${{ steps.collect.outputs.holo-path }}
+            ${{ steps.app.outputs.project == 'app' && format('{0}/artifact-manifest.json', steps.collect.outputs.path) || '' }}
           show-summary: false
       - name: Keep the provenance beside the holo
         shell: bash
@@ -196,6 +228,7 @@ jobs:
         with:
           name: ${{ steps.collect.outputs.artifact }}
           path: ${{ steps.collect.outputs.path }}
+          include-hidden-files: true
           if-no-files-found: error
       - name: Say what was built
         shell: bash

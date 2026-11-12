@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "repository": "UOR-Foundation/foundry",
+  "pr": 70,
+  "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "base": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "target_ref": "main",
+  "lanes": [
+    {
+      "id": "studio",
+      "repository": "UOR-Foundation/foundry",
+      "workflow_path": ".github/workflows/studio.yml",
+      "event": "pull_request",
+      "revision": "head",
+      "app_id": 15368,
+      "jobs": [
+        "lane"
+      ]
+    }
+  ],
+  "statuses": [],
+  "review": {
+    "minimum_approvals": 1,
+    "trusted_reviewers": [
+      "reviewer"
+    ],
+    "technical_assessments": [
+      {
+        "review_id": 11,
+        "reviewer": "reviewer",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "base": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "body_sha256": "031eec4f393e1332afb56a0684d01415ba55c97a2f00526fee225a0d36109362",
+        "url": "https://github.com/UOR-Foundation/foundry/pull/70#pullrequestreview-11"
+      }
+    ],
+    "require_technical_assessment": true
+  }
+}
