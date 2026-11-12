@@ -110,3 +110,23 @@ export function check(checker, exportBytes, options = {}) {
   if (result.ok && cursor !== exportBytes.length) result = { ok: false, stage: "input", refusal: `read ${cursor} of ${exportBytes.length} bytes` };
   return result;
 }
+
+// The judgement on one theorem, from an export of that theorem and everything it depends on. Three conditions, the
+// last two of them the host's because the checker judges declarations, not intentions:
+//   1. every declaration of the export is accepted, with only the declared axioms available;
+//   2. the theorem asked about is among the declarations that were checked (an export that leaves it out, or a
+//      caller that admits it unchecked, proves nothing about it);
+//   3. the axioms the export declares are exactly the declared ones. The export is the theorem's dependency closure,
+//      so these are the axioms `#print axioms` reports, and LexLean's policy is equality, not inclusion.
+// What this cannot see: that the theorem's statement in the export is the statement the spec wrote. Only the
+// elaborator that made the export knows that.
+export function judge(checker, exportBytes, { theorem, axioms }) {
+  const result = check(checker, exportBytes, { permitted_axioms: axioms });
+  if (!result.ok) return { verdict: "refused", why: `${result.stage}: ${result.refusal}`, result };
+  if (!result.theorems.includes(theorem)) return { verdict: "refused", why: `the export does not check ${theorem}`, result };
+  const seen = [...result.axioms_in_environment].sort(), declared = [...axioms].sort();
+  if (result.axioms_left_out.length || JSON.stringify(seen) !== JSON.stringify(declared)) {
+    return { verdict: "refused", why: `axioms [${[...seen, ...result.axioms_left_out].join(", ")}], declared [${declared.join(", ")}]`, result };
+  }
+  return { verdict: "kernel-checked", theorem, axioms: seen, declarations: result.checked, result };
+}

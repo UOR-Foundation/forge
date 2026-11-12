@@ -1,0 +1,28 @@
+{
+ "note": "bench.html in the Claude desktop in-app browser, dedicated module worker, 12 runs (each a new worker). Served by serve.mjs with no COOP or COEP header. The browser pane was hidden during the run and the machine was running other sessions' builds, so times are pessimistic. Milliseconds.",
+ "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/5.1231.2 Chrome/156.0.8078.75 Safari/537.36 MSIX",
+ "cores": 24,
+ "runs": 12,
+ "crossOriginIsolated": false,
+ "sharedArrayBuffer": "undefined",
+ "workerReach": { "ownOrigin": "refused: TypeError", "https://example.com/": "refused: TypeError" },
+ "checker": { "bytes": 834536, "gzip": 252067, "brotli": 188775 },
+ "start": {
+  "firstVisit": { "toReady": 124.7, "fetch": { "from": "network", "ms": 76.2, "bytes": 834536, "transferBytes": 252067 } },
+  "returnVisit": {
+   "toReady": { "median": 34.9, "worst": 396.2, "best": 28.5, "n": 11 },
+   "fetchFromCache": { "median": 3.2, "worst": 6.6, "best": 1.9, "n": 11 },
+   "hashCompileWarm": { "median": 9.2, "worst": 14.7, "best": 5.7, "n": 11 }
+  }
+ },
+ "checks": {
+  "payment.clearAdvances": { "verdict": "accepted 390 declarations, 65 theorems, axioms propext", "exportBytes": 584072, "exportGzip": 90922, "firstFetch_ms": 57.1, "cacheRead_ms": { "median": 2.2, "worst": 3.6 }, "hash_ms": { "median": 0.7, "worst": 1.8 }, "check_ms": { "median": 95, "worst": 166.8, "best": 70.2 }, "checkAgainSameWorker_ms": { "median": 49, "worst": 81.6, "best": 34.8 }, "pageRoundTrip_ms": { "median": 96, "worst": 168.3 }, "linearMemoryBytes": 34865152 },
+  "payment.viewKeepsRevision": { "verdict": "accepted 399 declarations, 52 theorems, axioms propext", "exportBytes": 595489, "exportGzip": 91198, "firstFetch_ms": 57, "cacheRead_ms": { "median": 2.5, "worst": 3 }, "hash_ms": { "median": 0.8, "worst": 1.1 }, "check_ms": { "median": 43.9, "worst": 76.2, "best": 27.1 }, "checkAgainSameWorker_ms": { "median": 39.2, "worst": 64.9, "best": 26.6 }, "pageRoundTrip_ms": { "median": 45.1, "worst": 77.3 }, "linearMemoryBytes": 34865152 },
+  "guests.startsEmpty": { "verdict": "accepted 354 declarations, 48 theorems, no axioms", "exportBytes": 534599, "exportGzip": 82729, "firstFetch_ms": 54.1, "cacheRead_ms": { "median": 2.6, "worst": 193.3 }, "hash_ms": { "median": 0.7, "worst": 0.9 }, "check_ms": { "median": 37, "worst": 64.2, "best": 24.7 }, "checkAgainSameWorker_ms": { "median": 38.8, "worst": 57.3, "best": 27.1 }, "pageRoundTrip_ms": { "median": 39.1, "worst": 66 }, "linearMemoryBytes": 34865152 },
+  "guests.staleIgnored": { "verdict": "accepted 1499 declarations, 642 theorems, axioms propext Quot.sound", "exportBytes": 4111287, "exportGzip": 657176, "firstFetch_ms": 444.8, "cacheRead_ms": { "median": 5.6, "worst": 7.4 }, "hash_ms": { "median": 3.8, "worst": 5.9 }, "check_ms": { "median": 357.5, "worst": 634.3, "best": 270.8 }, "checkAgainSameWorker_ms": { "median": 372.3, "worst": 598.5, "best": 265.1 }, "pageRoundTrip_ms": { "median": 361.8, "worst": 640.9 }, "linearMemoryBytes": 42860544 },
+  "payment.whole": { "verdict": "accepted 5303 declarations, 2709 theorems, axioms propext Quot.sound Classical.choice", "exportBytes": 26256233, "exportGzip": 4132833, "firstFetch_ms": 2977.9, "cacheRead_ms": { "median": 21.6, "worst": 27.5 }, "hash_ms": { "median": 27.4, "worst": 34.7 }, "check_ms": { "median": 6616.9, "worst": 8847.8, "best": 4749.9 }, "checkAgainSameWorker_ms": { "median": 6333.8, "worst": 7803.7, "best": 4838 }, "pageRoundTrip_ms": { "median": 6648.4, "worst": 8883.6 }, "libraryAdmitted_ms": { "median": 581, "worst": 774.6, "best": 421.3 }, "linearMemoryBytes": 125435904 },
+  "guests.whole": { "verdict": "accepted 5248 declarations, 2725 theorems, axioms propext Quot.sound Classical.choice", "exportBytes": 26272888, "exportGzip": 4137137, "firstFetch_ms": 2570.5, "cacheRead_ms": { "median": 20.5, "worst": 683 }, "hash_ms": { "median": 25.1, "worst": 33.6 }, "check_ms": { "median": 6253.6, "worst": 8970.7, "best": 4543.2 }, "checkAgainSameWorker_ms": { "median": 6036.5, "worst": 8190.2, "best": 3698.9 }, "pageRoundTrip_ms": { "median": 6277.9, "worst": 9003.8 }, "libraryAdmitted_ms": { "median": 606.8, "worst": 904.1, "best": 357.9 }, "linearMemoryBytes": 125435904 }
+ },
+ "pageHeapBytes": 1392118,
+ "storage": { "quota": 5099115628, "usage": 59190287 }
+}
