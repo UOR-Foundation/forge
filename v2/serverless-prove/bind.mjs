@@ -64,7 +64,8 @@ export function assemble({ library, bundle, spec, theorems, makeInTab = "reflexi
   for (const t of ob.theorems) {
     const inTab = makeInTab === "reflexivity" && t.proof === "reflexivity";
     const given = ex.decls.get(t.lean);
-    if (!inTab && (!given || given.kind !== "thm")) { theoremRows.push({ theorem: t.lean, verdict: VERDICT.pending, why: "no proof in the bundle" }); continue; }
+    // A bundle was admitted for this theorem and does not contain it: the record promised a proof it does not have.
+    if (!inTab && (!given || given.kind !== "thm")) { theoremRows.push({ theorem: t.lean, verdict: VERDICT.refused, why: "the bundle has no theorem of that name" }); continue; }
     declare(`Serverless.bind.${t.lean}`, t.stmt, inTab ? t.refl : { c: t.lean, us: [] }, inTab ? "made in tab" : "bundle");
     theoremRows.push({ theorem: t.lean, binding: `Serverless.bind.${t.lean}`, declared: t.axioms, madeInTab: inTab });
   }
@@ -75,6 +76,23 @@ export function assemble({ library, bundle, spec, theorems, makeInTab = "reflexi
   ob.equations.forEach((e) => collect(e.stmt)); ob.theorems.forEach((t) => collect(t.stmt));
   const unbound = [...mentions].filter((c) => !libraryNames.has(c) && !bound.has(c));
   return { ok: true, ex, admitted, appended: w.text(), records, theoremRows, typeErrors, unbound, refusedByEmitter: ob.refused, obligations: ob };
+}
+
+// After a refusal, names the declarations the kernel refuses, one run each: the reason shown on demand.
+export function diagnose(assembled, bundle, kernel) {
+  const lines = assembled.appended.trim().split("\n");
+  const tables = lines.filter((l) => !l.startsWith('{"thm"')), decls = lines.filter((l) => l.startsWith('{"thm"'));
+  const failing = [];
+  // The bundle's own declarations are checked first: when they fail, nothing the tab added is to blame.
+  const alone = kernel(bundle);
+  if (!alone.ok) return [`the bundle's own declarations (${String(alone.refusal).split("\n").pop().slice(0, 160)})`];
+  decls.forEach((d, i) => {
+    const tail = new TextEncoder().encode(tables.join("\n") + "\n" + d + "\n");
+    const all = new Uint8Array(bundle.length + tail.length);
+    all.set(bundle, 0); all.set(tail, bundle.length);
+    if (!kernel(all).ok) failing.push(assembled.records[i].name);
+  });
+  return failing;
 }
 
 // The verdict for each theorem, from the assembled bytes and one kernel run. `kernel(bytes, options)` returns

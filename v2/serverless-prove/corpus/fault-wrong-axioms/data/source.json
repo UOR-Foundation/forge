@@ -1,0 +1,14 @@
+{
+ "draft": "prism-app/3ffa16644e63997a3e4d37fbc9281607d1c9c27d8a6f6d9543a90fbe0f0d4416",
+ "modules": [
+  "Foundation.Bytes",
+  "Foundation.Codec",
+  "Foundation.Codec.Cbor.V1.Primitive",
+  "Foundation.Utf8",
+  "Foundation.View.Browser.V1.Model",
+  "Foundation.View.Browser.V1.Wire",
+  "Foundation.View.Text.V1.Model",
+  "Payment",
+  "PaymentApproval"
+ ]
+}

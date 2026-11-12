@@ -1,0 +1,159 @@
+\begin{lexlean}{Payment}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\importmodule{PaymentApproval}
+\importmodule{Foundation.View.Browser.V1.Model}
+\title{Browser view model}
+\begin{semanticmodule}
+structure{
+  name: State,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: revision, type: Nat},
+    {name: role, type: Nat},
+    {name: amount, type: String},
+    {name: limit, type: String},
+    {name: status, type: String},
+    {name: history, type: (List Foundation.View.Browser.V1.Model::TableRow)}
+  ]
+}
+
+definition{
+  name: catalogue,
+  parameters: [],
+  result: (List String),
+  body: (cons "Payment approval" (cons "Request" (cons "Role" (cons "Amount" (cons "Limit" (cons "Decide" (cons "Clear" (cons "Decisions" (cons "Decision" (cons "Clerk" (cons "Manager" (nil String))))))))))))
+}
+
+definition{
+  name: initial,
+  parameters: [],
+  result: State,
+  body: (record State {revision := 0, role := 0, amount := "", limit := "", status := "", history := (nil Foundation.View.Browser.V1.Model::TableRow)})
+}
+
+definition{
+  name: choiceOf,
+  parameters: [fields : (List Foundation.View.Browser.V1.Model::FieldValue), node : Nat],
+  result: Nat,
+  body: (match fields
+    | List.nil => 0
+    | List.cons head rest => (if ((project head node) =? node) then (match (project head value)
+      | Foundation.View.Browser.V1.Model::Value.Text words => 0
+      | Foundation.View.Browser.V1.Model::Value.Choice chosen => chosen) else (choiceOf rest node))),
+  recursive_argument: fields
+}
+
+definition{
+  name: textOf,
+  parameters: [fields : (List Foundation.View.Browser.V1.Model::FieldValue), node : Nat],
+  result: String,
+  body: (match fields
+    | List.nil => ""
+    | List.cons head rest => (if ((project head node) =? node) then (match (project head value)
+      | Foundation.View.Browser.V1.Model::Value.Text words => words
+      | Foundation.View.Browser.V1.Model::Value.Choice chosen => "") else (textOf rest node))),
+  recursive_argument: fields
+}
+
+definition{
+  name: roleText,
+  parameters: [role : Nat],
+  result: String,
+  body: (if (role =? 1) then "clerk" else (if (role =? 2) then "manager" else ""))
+}
+
+definition{
+  name: fits,
+  parameters: [words : String],
+  result: Bool,
+  body: ((prim length (prim utf8_encode words : Bytes) : Nat) <=? 20)
+}
+
+definition{
+  name: requestBytes,
+  parameters: [role : Nat, amount : String, limit : String],
+  result: Bytes,
+  body: (prim append (prim utf8_encode (roleText role) : Bytes) (prim append 0x09 (prim append (prim utf8_encode amount : Bytes) (prim append 0x09 (prim utf8_encode limit : Bytes) : Bytes) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: verdict,
+  parameters: [role : Nat, amount : String, limit : String],
+  result: String,
+  body: (match (prim utf8_decode (PaymentApproval::dispatch (requestBytes role amount limit)) : (Option String))
+    | Option.none => "invalid"
+    | Option.some words => words),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: firstRows,
+  parameters: [rows : (List Foundation.View.Browser.V1.Model::TableRow), count : Nat],
+  result: (List Foundation.View.Browser.V1.Model::TableRow),
+  body: (match count
+    | Nat.zero => (nil Foundation.View.Browser.V1.Model::TableRow)
+    | Nat.succ fewer => (match rows
+      | List.nil => (nil Foundation.View.Browser.V1.Model::TableRow)
+      | List.cons head rest => (cons head (firstRows rest fewer)))),
+  recursive_argument: count
+}
+
+definition{
+  name: decided,
+  parameters: [state : State, role : Nat, amount : String, limit : String],
+  result: State,
+  body: (if ((fits amount) && (fits limit)) then (record State {revision := ((project state revision) + 1), role := role, amount := amount, limit := limit, status := (verdict role amount limit), history := (firstRows (cons (record Foundation.View.Browser.V1.Model::TableRow {cells := (cons (roleText role) (cons amount (cons limit (cons (verdict role amount limit) (nil String)))))}) (project state history)) 16)}) else (record State {revision := ((project state revision) + 1), role := role, amount := "", limit := "", status := "invalid", history := (project state history)})),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: cleared,
+  parameters: [state : State],
+  result: State,
+  body: (record State {revision := ((project state revision) + 1), role := 0, amount := "", limit := "", status := "", history := (nil Foundation.View.Browser.V1.Model::TableRow)})
+}
+
+definition{
+  name: step,
+  parameters: [state : State, intent : Foundation.View.Browser.V1.Model::Intent],
+  result: State,
+  body: (if ((project intent revision) =? (project state revision)) then (if ((project intent action) =? 1) then (decided state (choiceOf (project intent fields) 4) (textOf (project intent fields) 5) (textOf (project intent fields) 6)) else (if ((project intent action) =? 2) then (cleared state) else state)) else state),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: chunksOf,
+  parameters: [rows : (List Foundation.View.Browser.V1.Model::TableRow)],
+  result: (List Foundation.View.Browser.V1.Model::TableChunk),
+  body: (match rows
+    | List.nil => (nil Foundation.View.Browser.V1.Model::TableChunk)
+    | List.cons head rest => (cons (record Foundation.View.Browser.V1.Model::TableChunk {rows := (cons head rest)}) (nil Foundation.View.Browser.V1.Model::TableChunk)))
+}
+
+definition{
+  name: view,
+  parameters: [state : State],
+  result: Foundation.View.Browser.V1.Model::Presentation,
+  body: (record Foundation.View.Browser.V1.Model::Presentation {revision := (project state revision), phase := 0, status := 0, live := 1, focus := 0, nodes := (cons (record Foundation.View.Browser.V1.Model::Node {parent := 0, content := (ctor Foundation.View.Browser.V1.Model::Content.Section 0)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 1, content := (ctor Foundation.View.Browser.V1.Model::Content.Heading 1 0)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 1, content := (ctor Foundation.View.Browser.V1.Model::Content.Form 1)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 3, content := (ctor Foundation.View.Browser.V1.Model::Content.Select 2 true true (project state role) (cons (record Foundation.View.Browser.V1.Model::Choice {id := 1, label := 9}) (cons (record Foundation.View.Browser.V1.Model::Choice {id := 2, label := 10}) (nil Foundation.View.Browser.V1.Model::Choice))) 0)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 3, content := (ctor Foundation.View.Browser.V1.Model::Content.Input 3 true true 20 (project state amount) 0)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 3, content := (ctor Foundation.View.Browser.V1.Model::Content.Input 4 true true 20 (project state limit) 0)}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 3, content := (ctor Foundation.View.Browser.V1.Model::Content.Action 5 1 true true (cons 4 (cons 5 (cons 6 (nil Nat)))))}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 3, content := (ctor Foundation.View.Browser.V1.Model::Content.Action 6 2 true false (nil Nat))}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 1, content := (ctor Foundation.View.Browser.V1.Model::Content.Text (project state status))}) (cons (record Foundation.View.Browser.V1.Model::Node {parent := 1, content := (ctor Foundation.View.Browser.V1.Model::Content.Table 7 (cons 2 (cons 3 (cons 4 (cons 8 (nil Nat))))) (chunksOf (project state history)))}) (nil Foundation.View.Browser.V1.Model::Node)))))))))))})
+}
+
+theorem{
+  name: viewKeepsRevision,
+  parameters: [state : State],
+  statement: ((project (view state) revision) = (project state revision)),
+  proof: linear_arithmetic{definitions: [view]},
+  axioms: [propext]
+}
+
+theorem{
+  name: clearAdvances,
+  parameters: [state : State],
+  statement: ((project (cleared state) revision) = ((project state revision) + 1)),
+  proof: linear_arithmetic{definitions: [cleared]},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}
