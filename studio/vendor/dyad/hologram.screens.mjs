@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { privacySource } from "./hologram.privacy.mjs";
 import { LEAN } from "./hologram.lean.mjs";
+import {PREVIEW_AUTO_START_PATCHES} from "./hologram.preview-auto-start.mjs";
 import {CHAT_MODE_PATCHES} from "./hologram.chat-mode-patches.mjs";
 import {INITIAL_THEME_PATCHES} from "./hologram.initial-theme.mjs";
 
@@ -32,6 +33,7 @@ const PAGE = "w-full overflow-y-auto px-4 py-4 md:py-6 lg:px-6";
 const SCREEN_PATCHES = [
   ...INITIAL_THEME_PATCHES,
   ...CHAT_MODE_PATCHES,
+  ...PREVIEW_AUTO_START_PATCHES,
   {
     file: "src/pages/settings.tsx",
     from: `    <section
