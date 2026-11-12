@@ -51,6 +51,7 @@ import { validateProviderKey } from "./provider-key-validation.mjs";
 import { packBytes, unpackBytes, RepresentationError } from "./exact-representation.mjs";
 import { admitWithGuest } from "./composition-codec.mjs";
 import { readBoundRules, readBoundRulesSnapshot, saveBoundRules } from "./rules-source.mjs";
+import {chatExecutionPolicy,chatExecutionPrompt,readOnlyChatText} from "./chat-execution.mjs";
 import {updateChatPreferences} from "./chat-preferences.mjs";
 import { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteStoredChat, updateStoredChat } from "./project-lifecycle.mjs";
 import { invokeHost, unwrapHost } from "./host-boundary.mjs";
@@ -418,7 +419,7 @@ handlers.set("chat:count-tokens", async ({ chatId, input }) => {
   const captured = chat && chat.appId != null ? await captureProjectSource(await dbReady,chat.appId) : null;
   const moduleNow = captured ? [...new Map(captured.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p)) : null;
   const codebaseTokens = tokens(prism.moduleContext(moduleNow ? moduleNow[1] : null));
-  const systemPromptTokens = tokens(prism.SPEC_RULES + "\n\n" + (chat && chat.appId != null ? await themeLibrary("resolve",{appId:chat.appId}) : ""));
+  const systemPromptTokens = tokens(chatExecutionPrompt(chatExecutionPolicy(null,chat?.chatMode),prism.SPEC_RULES) + "\n\n" + (chat && chat.appId != null ? await themeLibrary("resolve",{appId:chat.appId}) : ""));
   const history = chat ? await messagesOf(chatId) : [];
   const messageHistoryTokens = history.reduce((n,m)=>n+tokens(m.content),0);
   const inputTokens = tokens(input);
@@ -1348,6 +1349,7 @@ async function chatTurn(chatId, intent) {
   assertGenerationActive(m.queueSignal);
   const chat = await get("chats", chatId);
   if(!chat)throw chatQueueFailure("chatQueueMissing");
+  const execution = chatExecutionPolicy(intent.requestedChatMode,chat.chatMode);
   const appId = chat.appId;
   const ref = intent.invocationRef;
   const settings = (await get("settings", "user")) || DEFAULT_SETTINGS;
@@ -1363,13 +1365,13 @@ async function chatTurn(chatId, intent) {
   await saveMessages(chatId, messages);
   publishChat(chatId, { phase: "streaming", lastAcceptance: { intentId: intent.intentId, acceptance: "message-accepted", acceptedMessageId: userId } });
   emit("chat:stream:start", { chatId, invocationRef: ref });
-  if (prism.isApproval(intent.prompt)) return approveTurn(chatId, appId, messages, userId, ref, intent.intentId);
-  if (prism.isPublish(intent.prompt)) return publishTurn(chatId, appId, messages, userId, ref, intent.intentId);
+  if (execution.sourceEffects && prism.isApproval(intent.prompt)) return approveTurn(chatId, appId, messages, userId, ref, intent.intentId);
+  if (execution.sourceEffects && prism.isPublish(intent.prompt)) return publishTurn(chatId, appId, messages, userId, ref, intent.intentId);
   // An app's first build turn opens the live frame now, while the model thinks, not when the spec's tag
   // streams in: the frame takes about a tenth of a second to mount, and a spec can name its first field
   // right after the tag. If the turn ends without rules (an app built as code), the built page takes the
   // preview back. Later turns of a code app keep their built preview throughout.
-  const speculativeLive = !(await hasRules(appId)) && messages.filter((x) => x.role === "user").length === 1;
+  const speculativeLive = execution.sourceEffects && !(await hasRules(appId)) && messages.filter((x) => x.role === "user").length === 1;
   if (speculativeLive) showLive(appId).catch(() => liveShown.delete(appId));
   // T3: the assistant placeholder
   const projectSource = await captureProjectSource(await dbReady, appId);
@@ -1390,7 +1392,7 @@ async function chatTurn(chatId, intent) {
     // only the module (in the draft form it writes), never the code, which Forge projects from the module.
     const moduleNow = [...new Map(projectSource.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p));
     const request = [
-      { role: "system", content: prism.SPEC_RULES + "\n\n" + await themeLibrary("resolve",{appId}) },
+      { role: "system", content: chatExecutionPrompt(execution,prism.SPEC_RULES) + "\n\n" + await themeLibrary("resolve",{appId}) },
       { role: "user", content: prism.moduleContext(moduleNow ? moduleNow[1] : null) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
@@ -1413,16 +1415,16 @@ async function chatTurn(chatId, intent) {
     const onText = async (t) => {
       full = t;
       // The chat shows the answer without the module's text (prism.shownText); `full` keeps it for reading.
-      const shown = prism.shownText(full);
+      const shown = execution.sourceEffects ? prism.shownText(full) : readOnlyChatText(prism.withoutThinking(full));
       let lcp = 0; while (lcp < lastSent.length && lcp < shown.length && lastSent[lcp] === shown[lcp]) lcp++;
       if (lcp < lastSent.length) { messages[messages.length - 1].content = shown; emit("chat:response:chunk", { chatId, invocationRef: ref, messages }); }
       else emit("chat:response:chunk", { chatId, invocationRef: ref, streamingMessageId: asstId, streamingPatch: { offset: lcp, content: shown.slice(lcp), ...(lcp > 0 ? { prefixHash: djb2(shown.slice(0, lcp)) } : {}) } });
       lastSent = shown;
       // The rules as far as the model has written them go to the live frame now, not after the turn.
-      if (full.includes("<dyad-spec>")) {
+      if (execution.sourceEffects && full.includes("<dyad-spec>")) {
         const raw = live.partialSpec(full);
         if (raw) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } pushLive(appId, raw, "draft"); }
-      } else if (full.includes("<prism-lexlean>")) {
+      } else if (execution.sourceEffects && full.includes("<prism-lexlean>")) {
         // A canonical LexLean module is the source: whatever declarations are whole are projected now.
         // The frame opens on the tag, not on the first whole declaration (thousands of characters
         // later), so it has mounted by the time there is something to paint.
@@ -1447,6 +1449,7 @@ async function chatTurn(chatId, intent) {
     // A LexLean module that does not read gets one repair turn from the same model, with the reader's
     // words, streamed into this answer, so the user sees a fixed app rather than an error to relay.
     const repaired = async (genBody) => {
+      if (!execution.sourceEffects) return;
       const before = full;
       const next = await lexlean.withRepair(before, async (prompt) => {
         const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: prompt }] };
@@ -1497,7 +1500,7 @@ async function chatTurn(chatId, intent) {
       const capturedSpec = new Map(projectSource.files).get("prism/spec.json");
       const currentMatches = typeof capturedSpec === "string" && current?.specKappa === await kappa(enc.encode(capturedSpec));
       const asks = messages.filter((x) => x.role === "user" && x.content && !prism.isApproval(x.content)).map((x) => x.content);
-      const deviceMessages = currentMatches && current.spec && current.phase !== "drafting"
+      const deviceMessages = !execution.sourceEffects ? request : currentMatches && current.spec && current.phase !== "drafting"
         ? prism.deviceRequest(intent.prompt, capturedSpec)
         : prism.deviceRequest(asks.join("\n"), null);
       const { ids } = gpuIds(inst, deviceMessages, held.model);
@@ -1514,7 +1517,7 @@ async function chatTurn(chatId, intent) {
       window.__prism.lastDevice = res.text || "";
       messages[messages.length - 1].model = "webgpu:" + held.model.fam; // the model that wrote the rules
       rememberSession(deviceMessages, res, text, held.model);
-      await enqueueText(/<dyad-spec>/.test(text) ? text : text + "\n\nThe on-device model did not write rules for this app. Ask again with the inputs and the answers, or choose a paid model in the model picker.");
+      await enqueueText(!execution.sourceEffects || /<dyad-spec>/.test(text) ? text : text + "\n\nThe on-device model did not write rules for this app. Ask again with the inputs and the answers, or choose a paid model in the model picker.");
       const rec = await inst.buildReceipt({ promptText: intent.prompt, ctxIds: [], turnIds: ids, outIds: res.outIds, paramsPatch: { repetitionPenalty: 1, maxTokens: maxNew } });
       provenance = { receipt: await sealAnswer(body, rec, hit.key), fingerprint: `${(rec.body["prov:used"] || {})["holo:model"]}` };
     }
@@ -1522,43 +1525,47 @@ async function chatTurn(chatId, intent) {
     assertGenerationActive(abort.signal);
     const sm = full.match(/<dyad-chat-summary>([\s\S]*?)<\/dyad-chat-summary>/); summary = sm ? sm[1].trim() : undefined;
     if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
-    // Code a model wrote is never applied: the app's code and screen are projections of its module.
-    const wrote = parseDyadTags(full);
-    const refusedCode = wrote.writes.length + wrote.deletes.length + wrote.renames.length + wrote.deps.length;
-    const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
-    const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
-    let changed = applied.changed;
-    const spec = await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
-    const patchRefusals = [];
-    for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
-      assertGenerationActive(abort.signal);
-      let ops; try { ops = JSON.parse(match[1]); } catch {}
-      const list = ops ? (Array.isArray(ops) ? ops : [ops]) : [];
-      const result = ops ? await patchSpec(appId, list, { author: "agent", signal: abort.signal, source: spec.source, onCommit }) : { ok: false, issues: ["The patch is not JSON."] };
-      if (result.ok) { spec.changed += result.changed; spec.source = result.source; spec.card = result.card; continue; }
-      // One op the checker refuses does not cost the others (measured: GLM's meanings, keyed by field, took
-      // its heading, labels and words with it): they are applied one by one, and only the refused are named.
-      const refused = list.length > 1 ? [] : [result.issues[0]];
-      if (list.length > 1) for (const op of list) {
+    if (execution.sourceEffects) {
+      // Code a model wrote is never applied: the app's code and screen are projections of its module.
+      const wrote = parseDyadTags(full);
+      const refusedCode = wrote.writes.length + wrote.deletes.length + wrote.renames.length + wrote.deps.length;
+      const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
+      const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
+      let changed = applied.changed;
+      const spec = await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
+      const patchRefusals = [];
+      for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
         assertGenerationActive(abort.signal);
-        const one = await patchSpec(appId, [op], { author: "agent", signal: abort.signal, source: spec.source, onCommit });
-        if (one.ok) { spec.changed += one.changed; spec.source = one.source; spec.card = one.card; } else { const label=Array.isArray(op?.path)&&op.path.every(p=>typeof p==="string"||Number.isSafeInteger(p))?op.path.join("."):"patch";refused.push(`${label || "patch"}: ${one.issues[0]}`); }
+        let ops; try { ops = JSON.parse(match[1]); } catch {}
+        const list = ops ? (Array.isArray(ops) ? ops : [ops]) : [];
+        const result = ops ? await patchSpec(appId, list, { author: "agent", signal: abort.signal, source: spec.source, onCommit }) : { ok: false, issues: ["The patch is not JSON."] };
+        if (result.ok) { spec.changed += result.changed; spec.source = result.source; spec.card = result.card; continue; }
+        // One op the checker refuses does not cost the others (measured: GLM's meanings, keyed by field, took
+        // its heading, labels and words with it): they are applied one by one, and only the refused are named.
+        const refused = list.length > 1 ? [] : [result.issues[0]];
+        if (list.length > 1) for (const op of list) {
+          assertGenerationActive(abort.signal);
+          const one = await patchSpec(appId, [op], { author: "agent", signal: abort.signal, source: spec.source, onCommit });
+          if (one.ok) { spec.changed += one.changed; spec.source = one.source; spec.card = one.card; } else { const label=Array.isArray(op?.path)&&op.path.every(p=>typeof p==="string"||Number.isSafeInteger(p))?op.path.join("."):"patch";refused.push(`${label || "patch"}: ${one.issues[0]}`); }
+        }
+        patchRefusals.push(...refused);
       }
-      patchRefusals.push(...refused);
+      if (patchRefusals.length) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + patchRefusals.join(" ");
+      if (refusedCode) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.CODE_REFUSED;
+      changed += spec.changed;
+      if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshLive(appId); }
+      else if (speculativeLive && liveShown.has(appId)) { liveShown.delete(appId); showBuilt(appId).catch(() => {}); }
+      updatedFiles = updatedFiles || changed > 0;
+      const commit = committed.at(-1) || null;
+      messages[messages.length - 1] = { ...messages[messages.length - 1], content: prism.withCard(full, spec.card), commitHash: commit, approvalState: "approved", requestId: provenance && provenance.receipt || null };
+    } else {
+      messages[messages.length - 1] = {...messages[messages.length - 1],content:readOnlyChatText(prism.withoutThinking(full)),commitHash:null,approvalState:null,requestId:provenance?.receipt||null};
     }
-    if (patchRefusals.length) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + patchRefusals.join(" ");
-    if (refusedCode) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.CODE_REFUSED;
-    changed += spec.changed;
-    if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshLive(appId); }
-    else if (speculativeLive && liveShown.has(appId)) { liveShown.delete(appId); showBuilt(appId).catch(() => {}); }
-    updatedFiles = updatedFiles || changed > 0;
-    const commit = committed.at(-1) || null;
-    messages[messages.length - 1] = { ...messages[messages.length - 1], content: prism.withCard(full, spec.card), commitHash: commit, approvalState: "approved", requestId: provenance && provenance.receipt || null };
     await saveMessages(chatId, messages);
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   } catch (e) {
     error = abort.signal.aborted ? null : String((e && e.message) || e);
-    messages[messages.length - 1] = { ...messages[messages.length - 1], commitHash: committed.at(-1) || null, content: prism.shownText(full) + (updatedFiles ? "\n\nCommitted project changes were retained." : "") + (abort.signal.aborted ? "\n\n<dyad-output type=\"warning\" message=\"Response cancelled by user\"></dyad-output>" : error ? `\n\n<dyad-output type="error" message="${error.replace(/"/g, "'")}"></dyad-output>` : "") };
+    messages[messages.length - 1] = { ...messages[messages.length - 1], commitHash: committed.at(-1) || null, content: (execution.sourceEffects ? prism.shownText(full) : readOnlyChatText(prism.withoutThinking(full))) + (updatedFiles ? "\n\nCommitted project changes were retained." : "") + (abort.signal.aborted ? "\n\n<dyad-output type=\"warning\" message=\"Response cancelled by user\"></dyad-output>" : error ? `\n\n<dyad-output type="error" message="${error.replace(/"/g, "'")}"></dyad-output>` : "") };
     await saveMessages(chatId, messages);
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   }

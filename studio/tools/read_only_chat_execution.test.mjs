@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {test} from 'node:test';
-import {chatExecutionPolicy,chatExecutionPrompt} from '../shell/chat-execution.mjs';
+import {chatExecutionPolicy,chatExecutionPrompt,readOnlyChatText} from '../shell/chat-execution.mjs';
 test('queued mode wins and read-only modes never gain source effects',()=>{
  for(const mode of ['build','local-agent','ask','plan']){
   const p=chatExecutionPolicy(mode,'build');assert.equal(p.mode,mode);assert.equal(p.sourceEffects,['build','local-agent'].includes(mode));assert.ok(Object.isFrozen(p));
@@ -15,6 +15,7 @@ test('unknown modes fail with a fixed typed error',()=>{
 test('read-only instructions preserve mode and context without build instructions',()=>{
  for(const mode of ['ask','plan']){const p=chatExecutionPolicy(mode,null);const prompt=chatExecutionPrompt(p,'BUILD-INSTRUCTIONS');assert.ok(prompt.includes(mode));assert.ok(prompt.includes('Do not modify'));assert.ok(!prompt.includes('BUILD-INSTRUCTIONS'));}
  assert.equal(chatExecutionPrompt(chatExecutionPolicy('build',null),'BUILD-INSTRUCTIONS'),'BUILD-INSTRUCTIONS');
+ assert.equal(readOnlyChatText('<dyad-write>&x</dyad-write>'),'&lt;dyad-write&gt;&amp;x&lt;/dyad-write&gt;');
 });
 test('host effects and acceptance gates bind to the modeled policy',()=>{
  const read=p=>fs.readFileSync(new URL('../../'+p,import.meta.url),'utf8'),host=read('studio/shell/host.js');
