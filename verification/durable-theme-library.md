@@ -19,3 +19,5 @@ Eight representative planted defects were rejected, then source was restored: om
 The renderer journey exposes an existing floating `Interactive apps` action overlapping the chat auxiliary-menu pointer target at the default viewport. This gate exercises real keyboard access; it does not establish unobstructed pointer access. A separate UI correction is required. Generation is tested with one remaining window after the independent two-window storage checks; this is not cross-window consent ownership qualification.
 
 URL/image theme generation and theme-image storage remain separate unqualified capabilities. This feature does not close factory consumer adoption, production dependency qualification, independent review, or whole-application release obligations.
+
+All 48 mandatory browser journeys pass together on the restored 586-file projected application; complete results are in `theme-library-browser-results.json`. Its closure is `c114a6cbc2cbabdce28def294fc301278d20f48169bc1fbcdd83492cce69ad7c` (51,337,272 bytes). This includes the original editor, permission, compiler, import, queue, recovery and privacy gates alongside the new theme journey.
