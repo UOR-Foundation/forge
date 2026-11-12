@@ -311,6 +311,24 @@ suite = "forge_kernel"
 statement = "The kernel never counts as this week what is older than 7 days"
 
 [[id]]
+id = "FK-22"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never allows model thinking on a first attempt"
+
+[[id]]
+id = "FK-23"
+level = "build"
+suite = "forge_kernel"
+statement = "The budget from Enter to a checked app is never above 30 s"
+
+[[id]]
+id = "FK-24"
+level = "build"
+suite = "forge_kernel"
+statement = "The budget from an edit to the screen is never above two frames, 33 ms"
+
+[[id]]
 id = "LL-01"
 level = "build"
 suite = "live-lexlean"

@@ -79,6 +79,12 @@ test("the answer's length is capped and unknown fields are dropped", () => {
   assert.equal(shape(body({ max_tokens: undefined }), env()).max_tokens, 32768);
 });
 
+test("the thinking switch is forwarded only as the one boolean Featherless documents", () => {
+  assert.deepEqual(shape(body({ chat_template_kwargs: { enable_thinking: false } }), env()).chat_template_kwargs, { enable_thinking: false });
+  assert.deepEqual(shape(body({ chat_template_kwargs: { enable_thinking: true, other: "x" } }), env()).chat_template_kwargs, { enable_thinking: true });
+  for (const kw of [undefined, null, "no", [], {}, { enable_thinking: "false" }, { enable_thinking: 0 }, { template: "x" }]) assert.equal("chat_template_kwargs" in shape(body({ chat_template_kwargs: kw }), env()), false);
+});
+
 test("a visitor over the per-minute limit is refused before Featherless", async () => {
   const calls = upstream();
   const seen = new Map();
