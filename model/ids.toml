@@ -591,3 +591,9 @@ id = "FA-71"
 level = "build"
 suite = "initial-project-theme"
 statement = "New projects inherit the validated selected generation theme in the project creation transaction"
+
+[[id]]
+id = "FA-72"
+level = "build"
+suite = "module-presentation-ownership"
+statement = "Generated modules retain presentation only when the canonical application interface remains compatible"
