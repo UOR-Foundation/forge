@@ -10,7 +10,11 @@
 <meta name="description" content="Describe it. It builds, runs and stays yours, in this browser, on no server.">
 <link rel="icon" href="mark.svg" type="image/svg+xml">
 <link rel="manifest" href="app.webmanifest">
-<link rel="stylesheet" href="assets/index.css">
+<link id="renderer-style" rel="stylesheet" crossorigin>
+<script>
+// Vite identifies a stylesheet by its deployment-prefixed href attribute.
+(function () { const style = document.getElementById("renderer-style"); style.setAttribute("href", new URL("assets/index.css", document.baseURI).pathname); })();
+</script>
 <link rel="stylesheet" href="brand.css">
 <link rel="stylesheet" href="appearance.css">
 <script>

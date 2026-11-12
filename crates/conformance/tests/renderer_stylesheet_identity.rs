@@ -1,7 +1,36 @@
-//! The `renderer-stylesheet-identity` suite: one test per scenario in `features/suites/renderer-stylesheet-identity.feature`.
+//! Execute the renderer stylesheet identity controls.
+use std::path::PathBuf;
+use std::process::Command;
 
-/// `FA-62`: Generated renderer stylesheet identity prevents duplicate blocking CSS retrieval
 #[test]
 fn renderer_stylesheet_identity_fa_62() {
-    panic!("FA-62 is registered and not built: assert what its scenario states");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("repository root")
+        .to_path_buf();
+    let output = Command::new("node")
+        .args(["--test", "--test-reporter=tap"])
+        .arg(root.join("studio/tools/renderer_stylesheet_identity.test.mjs"))
+        .output()
+        .expect("the locked SDK supplies Node");
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "{report}\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    for required in [
+        "# tests 3",
+        "# pass 3",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+    ] {
+        assert!(
+            report.lines().any(|line| line == required),
+            "incomplete oracle: {report}"
+        );
+    }
 }
