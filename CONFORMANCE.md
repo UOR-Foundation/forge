@@ -381,6 +381,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-44` | `build` | Portable builds require revocable source-bound consent before package retrieval or generated-code execution |
 
+## preview-auto-start
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-82` | `build` | Automatic preview startup respects existing app state so remounts cannot repeat declined execution while explicit retry remains available |
+
 ## preview-permissions
 
 | ID | Level | Statement |
