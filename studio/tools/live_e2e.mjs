@@ -228,15 +228,19 @@ log("live frame loads", { loads: liveLoads.length, reloads: Math.max(0, liveLoad
 log("page errors", errors.length ? errors : "none");
 await page.screenshot({ path: path.join(OUT, "3-final.png") });
 fs.writeFileSync(path.join(OUT, "report.json"), JSON.stringify(report, null, 2));
+// The budgets are the kernel's (budget JOURNEY VALUE, FK-12 and FK-13): each measure is asked of the kernel
+// the page runs, in whole milliseconds, and no number is kept here.
+const within = async (journey, value) => (await page.evaluate((line) => window.__forgeKernel.ask(line), `budget ${journey} ${Number.isFinite(value) ? Math.max(0, Math.floor(value)) : "never"}`)) === "within";
+const first = firstPaint ? firstPaint.at - stream.firstNodePush : Infinity;
+const works = [...work, ...(report["patch work (edits)"] || [])];
+const kernelSays = { pixel: await within("pixel", first), update: works.length > 0 && await within("update", Math.max(...works)), checked: await within("checked", check.ms) };
 await browser.close();
 if (server) server.close();
 
 // the budgets
 const bad = [];
-const first = firstPaint ? firstPaint.at - stream.firstNodePush : Infinity;
-if (!(first < 100)) bad.push(`first node to first pixel ${Math.round(first)} ms, budget 100`);
-const works = [...work, ...(report["patch work (edits)"] || [])];
-if (!works.length || Math.max(...works) >= 16) bad.push(`patch work up to ${Math.max(...works)} ms, budget 16`);
+if (!kernelSays.pixel) bad.push(`first node to first pixel ${Math.round(first)} ms: over the kernel's pixel budget`);
+if (!kernelSays.update) bad.push(`patch work up to ${Math.max(...works)} ms: over the kernel's update budget`);
 const frameMs = parseFloat(report["frame interval here"]);
 // A streamed patch lands on the next frame: half of them within one frame interval of arriving.
 if (!(ms[ms.length >> 1] <= frameMs + 2)) bad.push(`streamed patches paint at a median ${ms[ms.length >> 1]} ms, later than the next frame (${frameMs} ms)`);
@@ -245,7 +249,7 @@ if (!(ms[ms.length >> 1] <= frameMs + 2)) bad.push(`streamed patches paint at a 
 const late = (report["action to pixel (edits)"] || []).filter((x) => !(x <= 2 * frameMs));
 if (!lex && (late.length || !(report["action to pixel (edits)"] || []).length)) bad.push(`edits on screen in ${(report["action to pixel (edits)"] || []).join(", ") || "never"} ms; budget two frames (${(2 * frameMs).toFixed(1)} ms)`);
 if (liveLoads.length !== 1) bad.push(`the live frame loaded ${liveLoads.length} times; budget: once, no reloads`);
-if (!(check.ms < 3000)) bad.push(`check result on screen in ${check.ms} ms, budget 3000`);
+if (!kernelSays.checked) bad.push(`check result on screen in ${check.ms} ms: over the kernel's checked budget`);
 if (lex) {
   if (!String(report["canonical source stored"]).includes("byte for byte")) bad.push("the turn's module was not stored as its canonical LexLean source");
   if (check.phase !== "checked") bad.push(`the module's rules ended ${check.phase}, not checked`);

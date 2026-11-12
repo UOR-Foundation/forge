@@ -24,6 +24,7 @@
 # is checked.
 name: build
 
+# reuse-exempt: every push to prism/build/** is an explicit request to build and sign that revision
 on:
   push:
     branches: ['prism/build/**']

@@ -64,6 +64,9 @@ export function shape(body, env) {
     if (typeof v === "number" && Number.isFinite(v)) out[f] = Math.min(Math.max(v, 0), 2);
   }
   if (Array.isArray(body.stop) && body.stop.length <= 4 && body.stop.every((s) => typeof s === "string" && s.length <= 64)) out.stop = body.stop;
+  // Whether the model reasons before it answers: the one switch Featherless documents, and only as a boolean.
+  const kw = body.chat_template_kwargs;
+  if (kw && typeof kw === "object" && !Array.isArray(kw) && typeof kw.enable_thinking === "boolean") out.chat_template_kwargs = { enable_thinking: kw.enable_thinking };
   if (out.stream) out.stream_options = { include_usage: true };
   return out;
 }

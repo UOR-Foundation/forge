@@ -177,8 +177,11 @@ fn openapi() -> String {
 /// its template, this list, `provenance.json` (the closure digest is one of its fields; the worker
 /// precaches it beside this list), `warmup.json` (the site's included key, written at deploy time,
 /// never hashed into the closure), the renderer build under `assets/` and the staged `scaffold/` and
-/// `404.html` (written after the lane by the Pages workflow and content hashed by Vite already), and
-/// model weights, which live in the device store the engine keeps.
+/// `404.html` (written after the lane by the Pages workflow and content hashed by Vite already),
+/// model weights, which live in the device store the engine keeps, and `checker/`, the in-tab
+/// LexLean checker's bytes: each file there is named by its content address, the manifest inside
+/// the closure (`live/v2/in-tab/checker-lean.json`) names the one that may run, and the page and
+/// its worker verify the bytes against that address before use.
 fn manifest(shell: &Path) -> String {
     fn walk(dir: &Path, root: &Path, out: &mut Vec<PathBuf>) {
         let mut entries: Vec<_> = std::fs::read_dir(dir).expect("shell dir").flatten().collect();
@@ -187,7 +190,7 @@ fn manifest(shell: &Path) -> String {
             let path = entry.path();
             if path.is_dir() {
                 let name = path.file_name().unwrap().to_string_lossy().to_string();
-                if path.parent() == Some(root) && (name == "app" || name == "assets" || name == "scaffold") {
+                if path.parent() == Some(root) && (name == "app" || name == "assets" || name == "scaffold" || name == "checker") {
                     continue;
                 }
                 walk(&path, root, out);

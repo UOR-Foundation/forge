@@ -2,14 +2,16 @@
 // view, step) is run as it is written, and each frame it produces is posted to the live frame.
 //
 // lexlean.mjs reads one shape, a decision. This reads the other. Nothing the model writes is code:
-// the module's data form (lexlean/semantic-module/2, from the hosted LexLean service) is interpreted
-// by v2/interp.mjs, and the screen is a PrismPM browser presentation, a closed set of content kinds.
+// the module's data form (lexlean/semantic-module/2, read by LexLean itself: in this tab when its checker
+// is loaded, by the hosted LexLean service until then) is interpreted by v2/interp.mjs, and the screen is
+// a PrismPM browser presentation, a closed set of content kinds.
 //
 // A frame drawn from here is a draft. It says nothing about the spec being checked or proved.
 import { loadProject, NIL, cons } from "./v2/interp.mjs";
 import { describe, fieldValue } from "./v2/render.mjs";
 import RULES from "./v2/rules.mjs";
-import { check as hostedCheck, loadLibrary } from "./v2/check.mjs";
+import { check as hostedCheck, loadLibrary, prepare } from "./v2/check.mjs";
+import { createClient } from "./v2/in-tab/client.mjs";
 
 const HOSTED = "https://mcp.uor.foundation/";
 const PROFILE = "prism-app";
@@ -21,10 +23,74 @@ const NEEDED = ["State", "catalogue", "initial", "view"];
 export const STATE_PATH = "prism/app.json";
 /** What the chat shows for a state. It claims no more than the state holds. */
 export function card(state) {
-  if (state.phase === "checked") return "**App** · checked\n\nThe checker accepts this app's module, and it runs in the preview from it. It is not proved yet, and it cannot be published yet.";
-  if (state.issues && state.issues.length) return "**App** · not checked\n\n" + state.issues.map((i) => "- " + i).join("\n") + "\n\nIt still runs in the preview as far as it can. Ask me to fix the module.";
+  const route = routeLine(state.by);
+  if (state.phase === "proving") return "**App** · Lean is proving\n\nLean is checking this app's properties on the hosted verifier.";
+  if (state.phase === "proved") return "**App** · proved by Lean\n\nLean proved " + (state.theorems || []).length + " theorem" + ((state.theorems || []).length === 1 ? "" : "s") + " about this app. Attestation `" + String(state.proof && state.proof.attestation_id || "").slice(0, 16) + "…`. It cannot be published yet.";
+  if (state.phase === "checked") return "**App** · checked\n\nThe checker accepts this app's module, and it runs in the preview from it. It is not proved yet, and it cannot be published yet." + (route ? "\n\n" + route : "");
+  if (state.issues && state.issues.length) return "**App** · not checked\n\n" + state.issues.map((i) => "- " + i).join("\n") + (route ? "\n\n" + route : "") + "\n\nIt still runs in the preview as far as it can. Ask me to fix the module.";
   return CARD + (state.unchecked ? "\n\nIt could not be checked just now: " + state.unchecked : "");
 }
+/**
+ * Which checker answered, in plain words. `by` is what the answer carried: the route and, when the hosted
+ * service answered, why the checker in this tab did not. A state with no `by` claims no route.
+ */
+export function routeLine(by) {
+  if (!by) return "";
+  if (by.route === "in-tab") return "Checked in this tab.";
+  if (!by.instead) return "Checked by the hosted service.";
+  if (by.instead.code === "ITC_NOT_LOADED") return "Checked by the hosted service while the checker in this tab loads.";
+  return "Checked by the hosted service, because the checker in this tab could not run: " + by.instead.message + " (" + by.instead.code + ")";
+}
+/** The theorems a module states: name, exact statement, proof form. */
+export function theoremsOf(module) {
+  return splitDeclarations(String(module)).declarations.filter((d) => d.kind === "theorem").map((d) => ({
+    name: d.name,
+    statement: (/\n\s*statement:\s*([\s\S]*?),\s*\n\s*proof:/.exec(d.source) || [])[1]?.trim() ?? "",
+    form: (/proof:\s*([a-z_]+)/.exec(d.source) || [])[1] ?? "",
+  }));
+}
+/** The plain sentences a module promises, in order: the string literals of its `promises` definition. */
+export function promisesOf(module) {
+  const d = splitDeclarations(String(module)).declarations.find((x) => x.kind === "definition" && x.name === "promises");
+  if (!d) return [];
+  return [...d.source.slice(d.source.indexOf("body:")).matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1].replace(/\\(.)/g, "$1"));
+}
+/** The module with the axiom sets Lean named ({ theorem: "[a, b]" }) written into those declarations. */
+export function withAxioms(module, axioms) {
+  let text = String(module);
+  for (const [name, set] of Object.entries(axioms || {})) {
+    const d = splitDeclarations(text).declarations.find((x) => x.name === name);
+    if (!d) continue;
+    const fixed = /axioms:\s*\[[^\]]*\]/.test(d.source) ? d.source.replace(/axioms:\s*\[[^\]]*\]/, "axioms: " + set) : d.source.replace(/\s*\}$/, ",\n  axioms: " + set + "\n}");
+    text = text.replace(d.source, fixed);
+  }
+  return text;
+}
+/**
+ * The files a proof of this module is asked on, and which of them must come back verified. The
+ * library module goes with its title's words replaced, as for a check: the hosted lexicon lacks them.
+ * So the attestation is about this draft, whose declarations are the module's and the library's own.
+ */
+export function proofFiles(module, library) {
+  const prepared = prepare(String(module).trim() + "\n", { library });
+  return { files: prepared.files, entrypoints: prepared.files.filter((f) => prepared.origin[f.path] === "author").map((f) => f.path) };
+}
+/** What the chat says while Lean works, and when it ends. */
+export const provingMessage = (count) => "Proving " + count + " propert" + (count === 1 ? "y" : "ies") + " of this app with Lean on the hosted verifier. This can take ten minutes or more. The preview keeps working meanwhile.";
+export function proofMessage(result) {
+  if (!result.ok) {
+    // Lean refusing a theorem (a verification diagnostic, LLV…) is about the app. Anything else, a
+    // verifier that ran out of room or time or did not answer, is about the verifier, and says so.
+    const refused = (result.diagnostics || []).some((d) => /^LLV/.test(String(d.code || "")));
+    const why = String(result.error || "Lean refused the proof").replace(/\.+$/, "");
+    return refused
+      ? "**Not proved.** Lean refused it: " + why + ". The app is back to checked. Ask me to fix the property, or to drop it."
+      : "**Not proved.** The verifier could not run the proof: " + why + ". This says nothing about the app. It is back to checked; reply approve to try again.";
+  }
+  const lines = result.theorems.map((t, i) => "- " + (result.promises[i] ? result.promises[i] + "\n  Lean proved: " : "Lean proved: ") + "`" + t.statement + "`");
+  return "**Proved by Lean.** " + result.theorems.length + " theorem" + (result.theorems.length === 1 ? "" : "s") + " about this app, for every state, in " + result.seconds + " s. Attestation `" + result.record.attestation_id.slice(0, 16) + "…`.\n\n" + lines.join("\n") + "\n\nA sentence can say more than its theorem: the statement is what is proved. The app cannot be published yet.";
+}
+
 /** One line a person or a model can act on. */
 export const issueLine = (d) => (d.line ? "Line " + d.line + ": " : "") + d.message + (d.code ? " (" + d.code + ")" : "");
 /** What a model is asked when the checker refuses its module: its own module, the checker's words, the whole module again. */
@@ -36,11 +102,50 @@ export const checkLibrary = (readText) => loadLibrary(readText);
  * Checks a module on the hosted service. Resolves { ok, issues, ms }; `issues` are lines about the
  * module as written. It checks; it does not prove. Rejects when the service cannot be reached.
  */
-export async function checkApp(module, library, fetchImpl) {
+export async function checkApp(module, library, fetchImpl, extras = []) {
   const t0 = performance.now();
-  const result = await hostedCheck(String(module).trim() + "\n", { library: await library, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
+  const result = await hostedCheck(String(module).trim() + "\n", { library: await library, extras, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
+  return verdictOf(result, t0);
+}
+// Why a tab's checker is refused for good: its bytes, its compiler, its policy or its manifest are not the ones named.
+const FINAL = new Set(["ITC_ADDRESS", "ITC_VERSION", "ITC_IMPORT", "ITC_POLICY", "ITC_MANIFEST", "ITC_ABSENT"]);
+const verdictOf = (result, t0) => {
   const issues = result.ok ? [] : result.diagnostics.filter((d) => d.severity !== "warning").map(issueLine);
   return { ok: !!result.ok, issues: result.ok ? [] : issues.length ? issues.slice(0, 8) : ["The checker refused the module and gave no reason."], ms: Math.round(performance.now() - t0) };
+};
+/**
+ * The studio's checker. A module is checked in this tab when the tab's checker is ready, and by the hosted
+ * service while that one loads or when it cannot run; `only: "in-tab"` never sends a module anywhere and
+ * waits for the tab instead. `check` resolves what `checkApp` does and also `by` (the route, and why the tab
+ * did not answer when it did not), `cached`, and on a pass `data`, each of the author's modules' data form.
+ * `tab()` resolves what the tab's checker is made of (v2/in-tab/client.mjs); with none, only the hosted
+ * service checks. `library()` resolves what the hosted route sends with a module, and is asked for only then.
+ */
+export function appChecker({ library, fetchImpl, tab = null, onState = () => {}, retryMs = 60000, now = () => performance.now() }) {
+  const absent = () => Promise.reject(Object.assign(new Error("this page has no checker of its own"), { code: "ITC_ABSENT" }));
+  let failedAt = 0;
+  const client = createClient({
+    parts: tab || absent, onState: (state, detail) => { if (state === "unavailable") failedAt = now(); onState(state, detail); },
+    hosted: async (spec, { extras = [] } = {}) => hostedCheck(spec, { library: await library(), extras, ...(fetchImpl ? { fetch: fetchImpl } : {}) }),
+    hostedData: (source) => dataForm(source, fetchImpl),
+  });
+  return {
+    /** Loads the tab's checker. Resolves whether it is ready; never rejects. */
+    start: () => client.start().then(() => true, () => false),
+    state: client.state,
+    /** What is known of the tab's checker: when ready, `by` names LexLean's version and the checker's address. */
+    detail: client.detail,
+    async check(module, { extras = [], only = null } = {}) {
+      const t0 = performance.now();
+      const result = await client.check(String(module).trim() + "\n", { extras, only });
+      // A tab whose checker failed for a reason that can pass is tried again, in the background, at most once a
+      // `retryMs`. A refusal is final until the page is loaded again: the same bytes would be refused again.
+      if (client.state() === "unavailable" && !FINAL.has(client.detail()?.code) && now() - failedAt >= retryMs) { failedAt = now(); client.retry().catch(() => {}); }
+      return { ...verdictOf(result, t0), by: result.by, cached: result.cached, ...(result.ok && result.data ? { data: result.data } : {}) };
+    },
+    /** The data form of a module as written: read, not checked. Resolves { data, by }. */
+    data: (source, { only = null } = {}) => client.data(source, { only }),
+  };
 }
 
 /** Where a stateful app's module is kept in its project. */
@@ -102,7 +207,8 @@ export function wholePrefix(module) {
 }
 
 /** The data form of one module, from the hosted service. It parses; it does not check. */
-export async function dataForm(source, fetchImpl = fetch) {
+export async function dataForm(source, fetchImpl) {
+  fetchImpl ||= fetch;
   let id = 0;
   const call = async (name, args) => {
     const res = await fetchImpl(HOSTED, { method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: ++id, method: "tools/call", params: { name, arguments: args } }) });
@@ -148,9 +254,9 @@ export function createApp(data, library, name = "App") {
  * Follows the modules a chat turn streams for each app and posts frames as they become runnable.
  * `post(appId, message)` delivers a `live/presentation` message to that app's frame.
  */
-export function appLive({ post, library, fetchImpl = fetch, now = () => performance.now() }) {
-  const apps = new Map(); // appId -> { source, app, last, wanted, busy, trust, note }
-  const entry = (appId) => { if (!apps.has(appId)) apps.set(appId, { source: null, app: null, last: null, wanted: null, busy: false, trust: "draft", note: null }); return apps.get(appId); };
+export function appLive({ post, library, fetchImpl = fetch, dataOf = (source) => dataForm(source, fetchImpl), now = () => performance.now() }) {
+  const apps = new Map(); // appId -> { source, app, last, wanted, busy, trust, note, given }
+  const entry = (appId) => { if (!apps.has(appId)) apps.set(appId, { source: null, app: null, last: null, wanted: null, busy: false, trust: "draft", note: null, given: null }); return apps.get(appId); };
   const send = (appId) => {
     const a = apps.get(appId);
     if (!a || !a.last) return;
@@ -164,7 +270,7 @@ export function appLive({ post, library, fetchImpl = fetch, now = () => performa
       while (a.wanted !== null && a.wanted !== a.source) {
         const source = a.wanted, t0 = now();
         try {
-          const app = createApp(await dataForm(source, fetchImpl), library);
+          const app = createApp(a.given && a.given.source === source ? a.given.data : await dataOf(source), library);
           const frame = app.frame();
           a.app = app; a.last = { ...frame, ms: Math.round(now() - t0) }; a.note = null;
         } catch (e) {
@@ -178,12 +284,17 @@ export function appLive({ post, library, fetchImpl = fetch, now = () => performa
     } finally { a.busy = false; }
   }
   return {
-    /** The module text so far. Returns whether it is runnable yet. */
-    push(appId, module, trust = "draft") {
+    /**
+     * The module text so far. Returns whether it is runnable yet. `data`, when a check of this very module
+     * passed, is the data form that check read: the frame is drawn from it and nothing is asked for.
+     */
+    push(appId, module, trust = "draft", data = null) {
       const prefix = wholePrefix(module);
       const a = entry(appId);
       a.trust = trust;
       if (!prefix.ready) return false;
+      // Theorems are not run (wholePrefix leaves them out of the source too).
+      if (data && Array.isArray(data.declarations)) a.given = { source: prefix.source, data: { ...data, declarations: data.declarations.filter((d) => d.kind !== "theorem") } };
       // The same module with a new standing (checked, say) is the same frame under a new badge.
       if (prefix.source === a.source && a.last) { send(appId); return true; }
       a.wanted = prefix.source;

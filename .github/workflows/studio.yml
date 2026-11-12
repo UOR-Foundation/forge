@@ -10,9 +10,9 @@ on:
   # shell serves (tools/v2_engine.mjs): a change there must be held to the Engine gate too.
   push:
     branches: [main]
-    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**"]
+    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**", "v2/hosted-check/**", "v2/in-tab-check/**"]
   pull_request:
-    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**"]
+    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**", "v2/hosted-check/**", "v2/in-tab-check/**"]
 
 permissions:
   contents: read
@@ -113,6 +113,14 @@ jobs:
         run: node --test tools/live_app.test.mjs
       - name: A stateful app is checked at the end of its turn, and the card claims no more than the check found
         run: node --test tools/live_app_check.test.mjs
+      - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
+        run: node --test tools/live_app_prove.test.mjs
+      # Needs the built checker at v2/in-tab-check/dist/lexlean-tab-lean.wasm, which is not committed: it is
+      # built from a patched LexLean (UOR-Foundation/LexLean 494 and 495) and Foundry ships no fork. Until the
+      # SDK publishes the checker and a step before this one places it, this step fails, and it is meant to:
+      # the branch that wires the checker in must not reach main before then. See v2/in-tab-check/WIRING.md.
+      - name: A module is checked in the tab first, by the hosted service only while the tab cannot, and the card says which
+        run: node --test tools/live_app_tab.test.mjs
       - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
         run: |
           node tools/live_proof.mjs --check

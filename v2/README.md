@@ -11,6 +11,7 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md). It holds the design, every decisi
 | `probe-payment/` | A payment approval app with a form, inputs and a table on that protocol. Lean verified all 9 modules. |
 | `loop/` | The model loop: instructions for a model, the harness that checks, proves and runs what it writes, and a guest list an independent model wrote, with five theorems Lean proved. |
 | `site/` | The v2 page as deployed under `v2/`: the apps running in the tab, with what Lean proved beside each. `node v2/site/build.mjs <out>` builds it. |
+| `in-tab-check/` | LexLean's own check as WebAssembly in a worker of the tab, and its wiring into the studio (`WIRING.md`). Not shippable until upstream takes two patches: Foundry ships no fork. |
 | `hosted-check/` | Checks a library-based spec from a browser tab on the hosted service; the studio page. Same verdicts as the SDK image on 17 files. |
 | `reuse/` | Four address-based reuse mechanisms as a LexLean spec, 26 theorems, with adapters. |
 | `build-speed/` | Why local builds stalled, the first probe holo, and a proposed GitHub workflow. Its report links to logs and a "before" copy that are not committed. |
