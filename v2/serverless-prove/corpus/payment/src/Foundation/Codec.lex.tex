@@ -1,0 +1,30 @@
+\begin{lexlean}{Foundation.Codec}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\title{Bounded integer codec}
+\begin{semanticmodule}
+structure{
+  name: BoundedCursor,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: bytes, type: Bytes}, {name: offset, type: Nat}, {name: limit, type: Nat}]
+}
+
+definition{
+  name: formatInt64,
+  parameters: [value : Int64],
+  result: String,
+  body: (prim format_decimal value : String),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: parseInt64,
+  parameters: [value : String],
+  result: (Option Int64),
+  body: (prim parse_decimal value : (Option Int64)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}
