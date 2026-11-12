@@ -160,7 +160,7 @@ claim("turn: the module being written projects as a draft", !!lex.partialFromTur
 
 // the model writes LexLean: declarations only, the theorems are derived
 const SPEC_RULES = prism.SPEC_RULES || "";
-const example = /<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(SPEC_RULES);
+const example = /Example: <prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(SPEC_RULES);
 let exampleReads = false;
 try { exampleReads = !!example && lex.readLexLean(example[1]).rules.length > 0 && !/theorem\{/.test(example[1]); } catch (e) {}
 claim("prompt: the model is asked for <prism-lexlean>, and the prompt's example reads", SPEC_RULES.includes("<prism-lexlean>") && !SPEC_RULES.includes("<dyad-spec>{") && exampleReads);
@@ -189,10 +189,20 @@ claim("cap: proving an app over 24 rules is refused, and says why", /24 rules/.t
 
 // What real models got wrong (Haiku and Sonnet on Foundry's prompt, four apps each): the reader names the
 // mistake so the model can fix it, and reads what is unambiguous. Each case is the prompt's own example,
-// changed the way a model changed its module.
-const ex = example ? example[1] : "";
+// changed the way a model changed its module. The prompt shows the draft form; the mistakes were made in
+// the canonical, fully bracketed one, so they are planted there.
+// A model writes the module and nothing else: the prompt never asks for code, the request carries only the
+// prompt and the module (never Dyad's code prompt or the codebase), and code a model writes is not applied.
+claim("only the module: the prompt asks for the module and refuses code", /You never write code, files or dependencies: Forge does not apply them/.test(SPEC_RULES) && !/write its files|write no module/.test(SPEC_RULES));
+claim("only the module: a turn sends the prompt and the module, and applies no code", hostSource.includes('{ role: "system", content: prism.SPEC_RULES }') && !hostSource.includes("buildSystemPrompt(rules) + ") && hostSource.includes("prism.moduleContext(") && hostSource.includes("writes: [], deletes: [], renames: [], deps: []") && hostSource.includes("prism.CODE_REFUSED"));
+const exDraft = example ? example[1] : "";
+const exSpec = example ? lex.readLexLean(exDraft.trim() + "\n") : null;
+const ex = exSpec ? lex.toLexLean(exSpec).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "") : "";
 const refusal = (text) => { try { lex.readLexLean(text.trim() + "\n"); return ""; } catch (e) { return e.message; } };
-const exSpec = example ? lex.readLexLean(ex.trim() + "\n") : null;
+// The draft form the prompt teaches: pairs only where a reader needs them, and the same spec as the canonical form.
+claim("draft: the prompt's example has no pairs to count, and reads as its canonical form", (exDraft.match(/[()]/g) || []).length <= 2 && JSON.stringify(exSpec) === JSON.stringify(lex.readLexLean(ex.trim() + "\n")), `${(exDraft.match(/[()]/g) || []).length} parentheses in the example's module, ${(ex.match(/[()]/g) || []).length} in its canonical form`);
+const vDraft = lex.draftOf(source);
+claim("draft: Verdant in draft form reads back to its canonical module, byte for byte", lex.toLexLean(lex.readLexLean(vDraft)) === source, `${(source.match(/[()]/g) || []).length} parentheses canonical, ${(vDraft.match(/[()]/g) || []).length} in the draft`);
 const sameAsExample = (text) => { try { const s = lex.readLexLean(text.trim() + "\n"); return same(semantic(logicOf(s)), semantic(logicOf(exSpec))) && JSON.stringify(s.properties) === JSON.stringify(exSpec.properties); } catch (e) { return false; } };
 const extra = refusal(ex.replace("<? 3))", "<? 3)))"));
 claim("errors: one \")\" too many is named, with where", /^inBounds: one "\)" too many, after/.test(extra), extra);

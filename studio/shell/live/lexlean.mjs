@@ -126,27 +126,53 @@ function parseExpr(src, where) {
   let i = 0;
   const peek = () => t[i], next = () => t[i++];
   const expect = (x) => { if (next() !== x) throw new LexLeanError(`expected "${x}"`, where); };
-  function primary() {
+  // Precedence, so a model may leave out the pairs the canonical source writes: comparisons bind tighter
+  // than &&, && tighter than ||, and `if … then … else if …` chains. Measured: a reasoning model (GLM 5.3
+  // Flash, on the live site) spent its whole answer budget counting the pairs of fully bracketed chains and
+  // never wrote the module. A fully bracketed module reads to the same tree as before.
+  const STOP = new Set([")", "then", "else", "&&", "||", "=?", "<?", "<=?"]);
+  function atom() {
     const k = next();
-    if (k === "(") { const e = inner(); expect(")"); return e; }
     if (k === undefined) throw new LexLeanError("unexpected end", where);
+    if (k === "(") { const e = expr(); expect(")"); return e; }
     if (/^\d+$/.test(k)) return { num: Number(k) };
-    if (k === ")" || BIN.has(k)) throw new LexLeanError(`unexpected "${k}"`, where);
+    if (STOP.has(k)) throw new LexLeanError(`unexpected "${k}"`, where);
+    if (k === "project") { const rec = next(); const field = next(); return { project: field, of: rec }; }
+    if (k === "not") return { not: atom() };
+    if (k === "if") { const c = expr(); expect("then"); const a = expr(); expect("else"); return { if: c, then: a, else: expr() }; }
+    // An application: a name and its arguments, up to an operator, a keyword or the closing pair.
+    if (peek() !== undefined && !STOP.has(peek())) { const args = []; while (peek() !== undefined && !STOP.has(peek())) args.push(atom()); return { app: k, args }; }
     return { id: k };
   }
-  function inner() {
-    if (peek() === "not") { next(); return { not: primary() }; }
-    if (peek() === "if") { next(); const c = primary(); expect("then"); const a = primary(); expect("else"); return { if: c, then: a, else: primary() }; }
-    if (peek() === "project") { next(); const rec = next(); const field = next(); return { project: field, of: rec }; }
-    let left = primary();
-    if (left.id && peek() !== ")" && !BIN.has(peek())) { const args = []; while (peek() !== ")" && !BIN.has(peek())) args.push(primary()); left = { app: left.id, args }; }
-    while (BIN.has(peek())) { const op = next(); left = { op, left, right: primary() }; }
+  function comparison() {
+    const left = atom();
+    if (peek() === "=?" || peek() === "<?" || peek() === "<=?") { const op = next(); return { op, left, right: atom() }; }
     return left;
   }
-  // A body may leave its outermost pair off (`a && b`): it reads the same, and the canonical source writes it on.
-  const e = inner();
+  function conjunction() { let left = comparison(); while (peek() === "&&") { next(); left = { op: "&&", left, right: comparison() }; } return left; }
+  function expr() { let left = conjunction(); while (peek() === "||") { next(); left = { op: "||", left, right: conjunction() }; } return left; }
+  const e = expr();
   if (i !== t.length) throw new LexLeanError(`unexpected "${t[i]}"`, where);
   return e;
+}
+
+// The draft form a model writes: the same declarations with only the pairs a reader needs (`not (…)`), so
+// there is nothing to count. readLexLean reads it to the same spec; the source kept is the canonical one.
+function flat(e) {
+  if (e.num !== undefined) return String(e.num);
+  if (e.id) return e.id;
+  if (e.project) return `project ${e.of} ${e.project}`;
+  if (e.app) return [e.app, ...e.args.map((a) => (a.app || a.op || a.if || a.not ? `(${flat(a)})` : flat(a)))].join(" ");
+  if (e.not) return `not (${flat(e.not)})`;
+  if (e.if) return `if ${flat(e.if)} then ${flat(e.then)} else ${flat(e.else)}`;
+  const side = (x, op) => (x.op === "||" && op !== "||") || (x.op === "&&" && op !== "&&" && op !== "||") || x.if ? `(${flat(x)})` : flat(x);
+  return `${side(e.left, e.op)} ${e.op} ${side(e.right, e.op)}`;
+}
+/** A canonical module in the draft form the prompt teaches: every body written without counted pairs. */
+export function draftOf(source) {
+  return source.replace(/^(\s*body: )(.+)$/gm, (all, head, body) => {
+    try { return head + flat(parseExpr(body.replace(/,\s*$/, ""), "draft")); } catch (e) { return all; }
+  });
 }
 
 const flatAnd = (e) => (e.op === "&&" ? [...flatAnd(e.left), ...flatAnd(e.right)] : [e]);
