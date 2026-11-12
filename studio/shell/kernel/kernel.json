@@ -1,12 +1,12 @@
 {
  "spec": "hologram-forge/kernel/1",
  "application": "Forge kernel",
- "source": "https://raw.githubusercontent.com/UOR-Foundation/foundry/9ec45a5664b5d892540e9f5e396a0863f13b8e54/studio/shell/kernel/kernel.holo",
- "digest": "blake3:e6d7d213205a80b126f8ec3483ecc5e19acf09f6c5f04b700062deb9ed301b84",
+ "source": "https://raw.githubusercontent.com/UOR-Foundation/foundry/5ae44ea29de92471512640b3203c5470267ea52d/studio/shell/kernel/kernel.holo",
+ "digest": "blake3:2562a0ed58f758c3ab4f16b98dcd8fc6b6cbff17ef68586500dcafea9e41da0c",
  "guest": {
   "path": "kernel/guest.wasm",
-  "sha256": "89bc7948c2ad58c1e49266eb53d66edf6e0f55b6a43caef536567344bba4f78a",
-  "bytes": 22367
+  "sha256": "07b386f8e820f424f563075772ffe0056472d86f7dd14cf34789ef0cf6fa4e8a",
+  "bytes": 23147
  },
  "limits": {
   "request": 32776,
@@ -460,6 +460,86 @@
   ],
   [
    "Z2F0ZSBmb3JnZSAgZmV0Y2ggbm8gbm8gbm8=",
+   "aW52YWxpZA=="
+  ],
+  [
+   "YnVkZ2V0IHByZXZpZXcgMTMwMA==",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IHByZXZpZXcgMjAwMA==",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IGRlY2xhcmF0aW9uIDE5OTk5",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGRlY2xhcmF0aW9uIDk5MDAw",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IHBpeGVsIDY0",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IHBpeGVsIDEwMA==",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IHVwZGF0ZSA5",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IHVwZGF0ZSAxNg==",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IGVkaXQgMzM=",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGVkaXQgMzQ=",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IGNoZWNrZWQgNzA=",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGNoZWNrZWQgMzAwMA==",
+   "b3Zlcg=="
+  ],
+  [
+   "YnVkZ2V0IGJ1aWx0IDI5OTk5",
+   "d2l0aGlu"
+  ],
+  [
+   "YnVkZ2V0IGJ1aWx0IDE2NzAwMA==",
+   "b3Zlcg=="
+  ],
+  [
+   "dGhpbmsgMA==",
+   "ZGVueQ=="
+  ],
+  [
+   "dGhpbmsgMQ==",
+   "YWxsb3c="
+  ],
+  [
+   "dGhpbmsgMg==",
+   "YWxsb3c="
+  ],
+  [
+   "dGhpbms=",
+   "aW52YWxpZA=="
+  ],
+  [
+   "dGhpbmsgeA==",
+   "aW52YWxpZA=="
+  ],
+  [
+   "dGhpbmsgMCAw",
    "aW52YWxpZA=="
   ],
   [
