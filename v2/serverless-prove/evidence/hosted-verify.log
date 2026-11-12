@@ -1,0 +1,9 @@
+draft spec/8f7c4bb1677142950bd1aa4326281f4c41be8b4e2c9e552233effc1a62fb3726
+check ok {"artifacts":[],"command":"check","diagnostics":[],"exit_code":0,"modules":["Main","ProofObject","Reuse","Trust","Verdict"],"semantic_id":"faadd7aa19d161f03f399d6e6dac2c037cd928d728db00ab31489c6cfe6a168f","source_id":"6a95fb14d346db4a47a78a6c24d07a2c910aeed2c61e7fe2d5a85fbc1623fd0a","spec":"lexlean/command-result/1","success":true}
+verify {"task":"task-19","state":"running"}
+2026-11-12T21:01:48.985Z {"state":"running","class":0,"groupsEnded":0,"groupsFailed":0}
+2026-11-12T21:02:04.429Z {"state":"running","class":0,"groupsEnded":0,"groupsFailed":0}
+2026-11-12T21:02:19.884Z {"state":"running","class":0,"groupsEnded":0,"groupsFailed":0}
+2026-11-12T21:02:35.267Z {"state":"running","class":0,"groupsEnded":0,"groupsFailed":0}
+2026-11-12T21:02:50.625Z {"state":"failed","class":1,"groupsEnded":0,"groupsFailed":0}
+{"state":"failed","class":1,"groupsEnded":0,"groupsFailed":0}

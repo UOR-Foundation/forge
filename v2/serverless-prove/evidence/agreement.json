@@ -12,10 +12,14 @@
    },
    "tab": {
     "keyLayer": "not needed: made in the tab",
-    "verdict": "kernel-checked",
+    "verdict": "proved",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 7310,
+    "assembled": "249285135c95d0a81179b83fb062d0c8e3283ef76bcda1719614ece49c2087f1",
     "axioms": [],
     "madeInTab": true,
-    "ms": 2674
+    "ms": 3057
    }
   },
   {
@@ -27,10 +31,14 @@
    },
    "tab": {
     "keyLayer": "not needed: made in the tab",
-    "verdict": "kernel-checked",
+    "verdict": "proved",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 8867,
+    "assembled": "6e24671252397248927e8d8a73fabcab60878c0b33fe6b74c93a1e932d608a1f",
     "axioms": [],
     "madeInTab": true,
-    "ms": 2576
+    "ms": 2880
    }
   },
   {
@@ -45,13 +53,17 @@
    },
    "tab": {
     "keyLayer": "admitted",
-    "verdict": "kernel-checked",
+    "verdict": "proved",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 8071,
+    "assembled": "0f1e7bcf60d5fd6b633c01d6cc824fa8f5464aeb235d33ee1eef2e16ccaa4e9d",
     "axioms": [
      "Quot.sound",
      "propext"
     ],
     "madeInTab": false,
-    "ms": 2659
+    "ms": 3069
    }
   },
   {
@@ -66,13 +78,17 @@
    },
    "tab": {
     "keyLayer": "admitted",
-    "verdict": "kernel-checked",
+    "verdict": "proved",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 9067,
+    "assembled": "0ab57041dd4b0bcfa732c9ac75104be8659eef0aea299f977c69b22eab4269ab",
     "axioms": [
      "Quot.sound",
      "propext"
     ],
     "madeInTab": false,
-    "ms": 2612
+    "ms": 3226
    }
   },
   {
@@ -87,13 +103,17 @@
    },
    "tab": {
     "keyLayer": "admitted",
-    "verdict": "kernel-checked",
+    "verdict": "proved",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 10145,
+    "assembled": "e10e9c73fc0fc49f14942ec1509ee8742ad8b00ad90ff9c2c2839706c0ad0391",
     "axioms": [
      "Quot.sound",
      "propext"
     ],
     "madeInTab": false,
-    "ms": 2531
+    "ms": 3396
    }
   },
   {
@@ -107,12 +127,16 @@
    },
    "tab": {
     "keyLayer": "admitted",
-    "verdict": "kernel-checked",
+    "verdict": "proved",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 7037,
+    "assembled": "5e5456347e66af9fa0720458f11385f43c5ab9f2219dead24fa0f1543076dd98",
     "axioms": [
      "propext"
     ],
     "madeInTab": false,
-    "ms": 2404
+    "ms": 3049
    }
   },
   {
@@ -126,12 +150,16 @@
    },
    "tab": {
     "keyLayer": "admitted",
-    "verdict": "kernel-checked",
+    "verdict": "proved",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 11369,
+    "assembled": "c32d55141f9078186171dafe3eceba8017382c497900451e1db3d2efe75bf4b6",
     "axioms": [
      "propext"
     ],
     "madeInTab": false,
-    "ms": 2320
+    "ms": 2545
    }
   },
   {
@@ -148,9 +176,13 @@
    },
    "bindingOnly": {
     "verdict": "refused",
+    "nanoda": "refused",
+    "lean": "refused: Serverless.bind.PrismTextRequest.Payment.clearAdvances':",
+    "leanMs": 7065,
+    "assembled": "6c49e6fd0cc8df83a8621fb50b809f3cacc7b0775410c59654fc46d7b8d0d60f",
     "why": "kernel: kernel: panicked at /home/humuhumu33/itp/kernel/nanoda_lib/src/tc.rs:988:71:; refused: Serverless.bind.PrismTextRequest.Payment.clearAdvances",
     "madeInTab": false,
-    "ms": 2322
+    "ms": 2825
    }
   },
   {
@@ -163,15 +195,23 @@
    "tab": {
     "keyLayer": "not needed: made in the tab",
     "verdict": "refused",
+    "nanoda": "refused",
+    "lean": "refused: uncaught exception: while replaying declaration 'Serverless.bind.PrismTextRequest.App.startsEmpty':",
+    "leanMs": 9337,
+    "assembled": "710cdad12471f150f90c6aee4736ad7ab657aa41e7db4a2fc728616c158ee744",
     "why": "kernel: kernel: panicked at /home/humuhumu33/itp/kernel/nanoda_lib/src/tc.rs:988:71:; refused: Serverless.bind.PrismTextRequest.App.startsEmpty",
     "madeInTab": true,
-    "ms": 2308
+    "ms": 2620
    },
    "bindingOnly": {
     "verdict": "refused",
+    "nanoda": "refused",
+    "lean": "refused: uncaught exception: while replaying declaration 'Serverless.bind.PrismTextRequest.App.startsEmpty':",
+    "leanMs": 9337,
+    "assembled": "710cdad12471f150f90c6aee4736ad7ab657aa41e7db4a2fc728616c158ee744",
     "why": "kernel: kernel: panicked at /home/humuhumu33/itp/kernel/nanoda_lib/src/tc.rs:988:71:; refused: Serverless.bind.PrismTextRequest.App.startsEmpty",
     "madeInTab": true,
-    "ms": 4361
+    "ms": 2780
    }
   },
   {
@@ -188,9 +228,13 @@
    },
    "bindingOnly": {
     "verdict": "refused",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 11369,
+    "assembled": "c32d55141f9078186171dafe3eceba8017382c497900451e1db3d2efe75bf4b6",
     "why": "axioms [propext], declared []",
     "madeInTab": false,
-    "ms": 2652
+    "ms": 2866
    }
   },
   {
@@ -206,12 +250,16 @@
     "why": "SP_NO_RECORD"
    },
    "bindingOnly": {
-    "verdict": "kernel-checked",
+    "verdict": "proved",
+    "nanoda": "accepted",
+    "lean": "accepted",
+    "leanMs": 11369,
+    "assembled": "c32d55141f9078186171dafe3eceba8017382c497900451e1db3d2efe75bf4b6",
     "axioms": [
      "propext"
     ],
     "madeInTab": false,
-    "ms": 2439
+    "ms": 2617
    }
   },
   {
@@ -224,9 +272,13 @@
    "tab": {
     "keyLayer": "admitted",
     "verdict": "refused",
+    "nanoda": "refused",
+    "lean": "refused: aying declaration 'Serverless.bind.PrismTextRequest.Payment.clearAdvances':",
+    "leanMs": 8740,
+    "assembled": "87611c914075edd8854062aa8d611562f5bab001e9cb7a4c3ee312461df0f631",
     "why": "kernel: kernel: panicked at /home/humuhumu33/itp/kernel/nanoda_lib/src/tc.rs:988:71:; refused: Serverless.bind.PrismTextRequest.Payment.clearAdvances",
     "madeInTab": false,
-    "ms": 2577
+    "ms": 3085
    }
   },
   {
@@ -239,9 +291,13 @@
    "tab": {
     "keyLayer": "admitted",
     "verdict": "refused",
+    "nanoda": "refused",
+    "lean": "refused: exception: while replaying declaration 'PrismTextRequest.Payment.clearAdvances':",
+    "leanMs": 6803,
+    "assembled": "16991bab249449d0a4370fb97e79b735761f3b2e010e7abc14a0efa4a2d15763",
     "why": "kernel: kernel: panicked at /home/humuhumu33/itp/kernel/nanoda_lib/src/tc.rs:988:71:; refused: the bundle's own declarations (assertion failed: self.def_eq(u, v))",
     "madeInTab": false,
-    "ms": 2698
+    "ms": 2441
    }
   },
   {
@@ -254,9 +310,13 @@
    "tab": {
     "keyLayer": "admitted",
     "verdict": "refused",
+    "nanoda": "refused",
+    "lean": "refused: uncaught exception: while replaying declaration 'PrismTextRequest.Payment.clearAdvances':",
+    "leanMs": 7328,
+    "assembled": "0fa4c25f2849a4a58a490616d8253cb0777ae23b46657027ecdd332f5907685f",
     "why": "kernel: kernel: panicked at /home/humuhumu33/itp/kernel/nanoda_lib/src/tc.rs:238:17:; refused: the bundle's own declarations (infer_const: declaration PrismTextRequest.Payment.clearAdvances depends on sorryAx which was not found in the environment)",
     "madeInTab": false,
-    "ms": 2387
+    "ms": 2379
    }
   },
   {
@@ -269,9 +329,13 @@
    "tab": {
     "keyLayer": "admitted",
     "verdict": "refused",
+    "nanoda": "refused",
+    "lean": "refused: pp.breaksEmpty.0' has type",
+    "leanMs": 7512,
+    "assembled": "332606cc6b981e701bf909c2810c7ccb4a8c5bd515e253e7ec18c02caa0e3bdf",
     "why": "kernel: kernel: panicked at /home/humuhumu33/itp/kernel/nanoda_lib/src/tc.rs:988:71:; refused: Serverless.eqn.PrismTextRequest.App.breaksEmpty.0",
     "madeInTab": false,
-    "ms": 2491
+    "ms": 2312
    }
   },
   {
@@ -285,7 +349,7 @@
     "keyLayer": "admitted",
     "verdict": "refused",
     "why": "SP_REDECLARED: the bundle declares Nat.beq again",
-    "ms": 1024.5465999999942
+    "ms": 1121.8561999999947
    }
   },
   {
@@ -299,7 +363,7 @@
     "keyLayer": "admitted",
     "verdict": "refused",
     "why": "SP_PREFIX: the bundle departs from the pinned library at byte 1001",
-    "ms": 0.12999999999738066
+    "ms": 0.10769999999320135
    }
   },
   {
@@ -347,9 +411,13 @@
    "tab": {
     "keyLayer": "admitted",
     "verdict": "refused",
+    "nanoda": "refused",
+    "lean": "refused: uncaught exception: while replaying declaration 'Serverless.eqn.PrismTextRequest.Payment.cleared.0':",
+    "leanMs": 7216,
+    "assembled": "29cbfe10c4210e352a36cfd1c1e0d4ace1f2d67152c73bf238fd5758960a84cf",
     "why": "the bundle has no theorem of that name; refused: Serverless.eqn.PrismTextRequest.Payment.cleared.0",
     "madeInTab": false,
-    "ms": 2559
+    "ms": 2764
    }
   }
  ]

@@ -1,0 +1,86 @@
+\begin{lexlean}{Trust}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{Verdict}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Assumptions,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: collisionFree, type: Bool}, {name: emitterFaithful, type: Bool}, {name: equationsDetermine, type: Bool}, {name: independentKernelAgrees, type: Bool}, {name: engineFaithful, type: Bool}, {name: attesterHonest, type: Bool}]
+}
+
+structure{
+  name: Truth,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: leanAcceptsAssembled, type: Bool}, {name: leanProvesSpecStatement, type: Bool}]
+}
+
+definition{
+  name: attesterMeaning,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: ((not ((((project a attesterHonest) && (project a collisionFree)) && (project e leanAttested)) && ((project e attestedBytes) =? (project e assembledBytes)))) || (project t leanAcceptsAssembled))
+}
+
+definition{
+  name: kernelMeaning,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: ((not (((project a independentKernelAgrees) && (project a engineFaithful)) && (project e kernelAccepted))) || (project t leanAcceptsAssembled))
+}
+
+definition{
+  name: bindingMeaning,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: ((not ((((((((project t leanAcceptsAssembled) && (project a collisionFree)) && (project a emitterFaithful)) && (project a equationsDetermine)) && ((project e checkedStatement) =? (project e specStatement))) && ((project e libraryDerived) =? (project e libraryPinned))) && ((project e typesMatch) && (project e allBound))) && ((project e axiomsObserved) =? (project e axiomsDeclared)))) || (project t leanProvesSpecStatement))
+}
+
+definition{
+  name: coherent,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: (((attesterMeaning a t e) && (kernelMeaning a t e)) && (bindingMeaning a t e))
+}
+
+definition{
+  name: shared,
+  parameters: [a : Assumptions],
+  result: Bool,
+  body: (((project a collisionFree) && (project a emitterFaithful)) && (project a equationsDetermine))
+}
+
+definition{
+  name: breaksProved,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: (((((coherent a t e) && (shared a)) && ((project a attesterHonest) || ((project a independentKernelAgrees) && (project a engineFaithful)))) && ((Verdict::verdictCode e) =? (Verdict::codeProved))) && (not (project t leanProvesSpecStatement)))
+}
+
+theorem{
+  name: provedHoldsIfEitherKernelKeyHolds,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  statement: ((breaksProved a t e) = false),
+  proof: linear_arithmetic{definitions: [Verdict::codeKernelChecked, Verdict::codePending, Verdict::codeProved, Verdict::codeRefused, Verdict::verdictCode, attesterMeaning, bindingMeaning, breaksProved, coherent, kernelMeaning, shared]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksKernelChecked,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: (((((coherent a t e) && (shared a)) && ((project a independentKernelAgrees) && (project a engineFaithful))) && (Verdict::accepted (Verdict::verdictCode e))) && (not (project t leanProvesSpecStatement)))
+}
+
+theorem{
+  name: kernelCheckedRestsOnTheIndependentKernel,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  statement: ((breaksKernelChecked a t e) = false),
+  proof: linear_arithmetic{definitions: [Verdict::accepted, Verdict::codeKernelChecked, Verdict::codePending, Verdict::codeProved, Verdict::codeRefused, Verdict::verdictCode, attesterMeaning, bindingMeaning, breaksKernelChecked, coherent, kernelMeaning, shared]},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

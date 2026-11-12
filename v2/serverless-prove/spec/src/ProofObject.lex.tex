@@ -1,0 +1,159 @@
+\begin{lexlean}{ProofObject}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Key,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: toolchain, type: Nat}, {name: declaration, type: Nat}, {name: closure, type: Nat}]
+}
+
+structure{
+  name: ProofRecord,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: key, type: Key}, {name: theorem, type: Nat}, {name: bundle, type: Nat}]
+}
+
+definition{
+  name: codeAdmitted,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: codeToolchain,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: codeDeclaration,
+  parameters: [],
+  result: Nat,
+  body: 2
+}
+
+definition{
+  name: codeClosure,
+  parameters: [],
+  result: Nat,
+  body: 3
+}
+
+definition{
+  name: codeTheorem,
+  parameters: [],
+  result: Nat,
+  body: 4
+}
+
+definition{
+  name: codeBytes,
+  parameters: [],
+  result: Nat,
+  body: 5
+}
+
+definition{
+  name: admitCode,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  result: Nat,
+  body: (if (not ((project (project entry key) toolchain) =? (project wanted toolchain))) then (codeToolchain) else (if (not ((project (project entry key) declaration) =? (project wanted declaration))) then (codeDeclaration) else (if (not ((project (project entry key) closure) =? (project wanted closure))) then (codeClosure) else (if (not ((project entry theorem) =? theorem)) then (codeTheorem) else (if (not ((project entry bundle) =? derived)) then (codeBytes) else (codeAdmitted))))))
+}
+
+definition{
+  name: breaksToolchain,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  result: Bool,
+  body: (((admitCode wanted theorem entry derived) =? (codeAdmitted)) && (not ((project (project entry key) toolchain) =? (project wanted toolchain))))
+}
+
+theorem{
+  name: anotherToolchainRefused,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  statement: ((breaksToolchain wanted theorem entry derived) = false),
+  proof: linear_arithmetic{definitions: [admitCode, breaksToolchain, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksDeclaration,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  result: Bool,
+  body: (((admitCode wanted theorem entry derived) =? (codeAdmitted)) && (not ((project (project entry key) declaration) =? (project wanted declaration))))
+}
+
+theorem{
+  name: anotherStatementRefused,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  statement: ((breaksDeclaration wanted theorem entry derived) = false),
+  proof: linear_arithmetic{definitions: [admitCode, breaksDeclaration, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksClosure,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  result: Bool,
+  body: (((admitCode wanted theorem entry derived) =? (codeAdmitted)) && (not ((project (project entry key) closure) =? (project wanted closure))))
+}
+
+theorem{
+  name: changedDefinitionsRefused,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  statement: ((breaksClosure wanted theorem entry derived) = false),
+  proof: linear_arithmetic{definitions: [admitCode, breaksClosure, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksTheorem,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  result: Bool,
+  body: (((admitCode wanted theorem entry derived) =? (codeAdmitted)) && (not ((project entry theorem) =? theorem)))
+}
+
+theorem{
+  name: anotherTheoremRefused,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  statement: ((breaksTheorem wanted theorem entry derived) = false),
+  proof: linear_arithmetic{definitions: [admitCode, breaksTheorem, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksBytes,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  result: Bool,
+  body: (((admitCode wanted theorem entry derived) =? (codeAdmitted)) && (not ((project entry bundle) =? derived)))
+}
+
+theorem{
+  name: alteredBytesRefused,
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  statement: ((breaksBytes wanted theorem entry derived) = false),
+  proof: linear_arithmetic{definitions: [admitCode, breaksBytes, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksExact,
+  parameters: [wanted : Key, theorem : Nat, bundle : Nat],
+  result: Bool,
+  body: (not ((admitCode wanted theorem (record ProofRecord {key := wanted, theorem := theorem, bundle := bundle}) bundle) =? (codeAdmitted)))
+}
+
+theorem{
+  name: exactRecordAdmitted,
+  parameters: [wanted : Key, theorem : Nat, bundle : Nat],
+  statement: ((breaksExact wanted theorem bundle) = false),
+  proof: linear_arithmetic{definitions: [admitCode, breaksExact, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

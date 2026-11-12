@@ -6,8 +6,9 @@
 // Spec faults are offered the honest bundle of the original spec. Bundle faults are offered under a record a
 // dishonest store wrote for the right key, so the binding layer meets them alone.
 //   node agree.mjs            writes evidence/agreement.json
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { createHash } from "node:crypto";
 import { load, check } from "../in-tab-prove/kernel.mjs";
 import { assemble, decide, diagnose, VERDICT } from "./bind.mjs";
 import { keyOf, sha256, toolchainPreimage, admit } from "./records.mjs";
@@ -19,6 +20,9 @@ const permitted = ["propext", "Quot.sound", "Classical.choice"];
 const library = read("dist/library.ndjson"), wasm = read("dist/kernel-tab.wasm");
 const bundles = { guests: read("dist/guests.whole.ndjson"), payment: read("dist/payment.whole.ndjson") };
 const checker = await load(wasm);
+// Lean's own kernel on each assembled input, when lean-kernel.sh has run: { <sha256 hex>: { accepted, output, ms } }.
+const leanFile = join(here, "evidence", "lean-kernel.json");
+const leanResults = existsSync(leanFile) ? JSON.parse(readFileSync(leanFile)) : {};
 const toolchain = await sha256(toolchainPreimage({ lean: "4.32.1 f054605aea4b840552cca2e725580bffd1e1b704", library: await sha256(library), checker: await sha256(wasm), emitter: "prism/serverless-prove/emit/1" }));
 
 function specOf(dir) {
@@ -43,11 +47,20 @@ function bindingVerdict(spec, theorem, bundle) {
   const a = assemble({ library, bundle, spec, theorems: [theorem] });
   if (!a.ok) return { verdict: VERDICT.refused, why: `${a.code}: ${a.why}`, ms: performance.now() - t0 };
   const inTabOnly = a.theoremRows[0]?.madeInTab;
-  const r = check(checker, new Uint8Array(Buffer.concat([bundle, Buffer.from(a.appended)])), { admitted: a.admitted, permitted_axioms: permitted });
+  const assembled = new Uint8Array(Buffer.concat([bundle, Buffer.from(a.appended)]));
+  const r = check(checker, assembled, { admitted: a.admitted, permitted_axioms: permitted });
+  // The same bytes go to Lean's own kernel (official/, run by lean-kernel.sh): one input, two judgements.
+  const address = createHash("sha256").update(assembled).digest("hex");
+  const file = join(here, "dist", "assembled", address + ".ndjson");
+  if (!existsSync(file)) { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, assembled); }
+  const lean = leanResults[address];
   const row = decide(a, r, permitted)[0];
   const ms = Math.round(performance.now() - t0);
   const failing = !r.ok && r.stage !== "input" ? diagnose(a, bundle, (bytes) => check(checker, bytes, { admitted: a.admitted, permitted_axioms: permitted })) : undefined;
-  return { verdict: row.verdict, why: failing ? `${row.why?.split("\n")[0]}; refused: ${failing.join(", ")}` : row.why, axioms: row.axioms, madeInTab: !!inTabOnly, ms };
+  // "proved" needs Lean's own kernel to have accepted these very bytes, on top of everything kernel-checked needs.
+  const verdict = row.verdict === VERDICT.kernelChecked && lean?.accepted ? VERDICT.proved : row.verdict;
+  return { verdict, nanoda: r.ok ? "accepted" : "refused", lean: lean ? (lean.accepted ? "accepted" : `refused: ${lean.output.trim().split("\n")[0].slice(0, 120)}`) : "not run",
+    leanMs: lean?.ms, assembled: address, why: failing ? `${row.why?.split("\n")[0]}; refused: ${failing.join(", ")}` : row.why, axioms: row.axioms, madeInTab: !!inTabOnly, ms };
 }
 
 async function tab(spec, theorem, { record, bytes, skipKeys = false } = {}) {
@@ -78,7 +91,7 @@ const push = async (kase, spec, theorem, image, opts) => {
   const t = await tab(spec, theorem, opts);
   const bindingOnly = opts?.alsoBinding ? bindingVerdict(spec, theorem, bundles[opts.alsoBinding]) : undefined;
   rows.push({ case: kase, theorem, image, tab: t, bindingOnly });
-  console.log(kase.padEnd(44), theorem.split(".").pop().padEnd(18), String(image.verdict).padEnd(9), image.code ?? JSON.stringify(image.axioms ?? ""), "|", t.verdict, t.keyLayer, t.why ?? JSON.stringify(t.axioms), bindingOnly ? `| binding alone: ${bindingOnly.verdict} ${bindingOnly.why ?? ""}`.slice(0, 160) : "");
+  console.log(kase.padEnd(44), theorem.split(".").pop().padEnd(18), String(image.verdict).padEnd(9), image.code ?? JSON.stringify(image.axioms ?? ""), "|", t.verdict, t.keyLayer, `lean:${t.lean ?? "-"}`.slice(0, 60), t.why ?? JSON.stringify(t.axioms), bindingOnly ? `| binding alone: ${bindingOnly.verdict} nanoda:${bindingOnly.nanoda} lean:${bindingOnly.lean} ${bindingOnly.why ?? ""}`.slice(0, 200) : "");
 };
 
 for (const [name, dir] of [["guests", "guests"], ["payment", "payment"]]) {

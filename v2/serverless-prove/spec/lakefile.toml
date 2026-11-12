@@ -1,0 +1,6 @@
+name = "ServerlessProve"
+version = "0.1.0"
+defaultTargets = ["ServerlessProve"]
+
+[[lean_lib]]
+name = "ServerlessProve"
