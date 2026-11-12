@@ -221,7 +221,7 @@
 /* The suggestion chips under the composer: frosted glass in every look, so they read over any photo. The
    look's popover colour at 70% under a 16 px blur, a hairline edge and a faint top light; the words near full
    strength. On hover they firm up and lift a pixel; a press settles them. */
-[data-slot="home-suggestions"] > button {
+:is([data-slot="home-surprise"], [data-slot="home-suggestions"] > button) {
   background: color-mix(in srgb, var(--popover) 70%, transparent) !important;
   -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
   border-color: color-mix(in srgb, var(--foreground) 14%, transparent) !important;
@@ -229,14 +229,14 @@
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 7%, transparent);
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
-[data-slot="home-suggestions"] > button:hover:not(:disabled) {
+:is([data-slot="home-surprise"], [data-slot="home-suggestions"] > button):hover:not(:disabled) {
   background: color-mix(in srgb, var(--popover) 88%, transparent) !important;
   border-color: color-mix(in srgb, var(--foreground) 26%, transparent) !important;
   color: var(--foreground) !important; transform: translateY(-1px);
 }
-[data-slot="home-suggestions"] > button:active:not(:disabled) { transform: translateY(0) scale(0.98); }
-[data-slot="home-suggestions"] > button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { [data-slot="home-suggestions"] > button { transition: none; } [data-slot="home-suggestions"] > button:hover, [data-slot="home-suggestions"] > button:active { transform: none; } }
+:is([data-slot="home-surprise"], [data-slot="home-suggestions"] > button):active:not(:disabled) { transform: translateY(0) scale(0.98); }
+:is([data-slot="home-surprise"], [data-slot="home-suggestions"] > button):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { :is([data-slot="home-surprise"], [data-slot="home-suggestions"] > button) { transition: none; } :is([data-slot="home-surprise"], [data-slot="home-suggestions"] > button):hover, :is([data-slot="home-surprise"], [data-slot="home-suggestions"] > button):active { transform: none; } }
 
 /* Voice to text is the renderer's Pro feature: the button and its recording states are not offered here. */
 button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button[aria-label^="Transcribing"] { display: none !important; }
@@ -255,7 +255,7 @@ button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button
    items, menu and select triggers, tabs) answers a 44 px square around its centre, drawn by nothing. Their
    look is the kit's; only the area a finger can hit grows. */
 @media (pointer: coarse) {
-  :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link], #appearance):not(.absolute, .fixed) { position: relative; }
+  :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link]):not(.absolute, .fixed) { position: relative; }
   :is([data-slot=sidebar-trigger], [data-slot=checkbox], [data-slot=switch], [data-slot=button], [data-slot=tooltip-trigger], [data-slot=dropdown-menu-trigger], [data-slot=popover-trigger], [data-slot=select-trigger], [data-slot=tabs-trigger], [data-slot=sidebar-menu-button], [data-slot=sidebar-menu-sub-button], [data-slot=breadcrumb-link], #appearance)::after {
     content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
   }
@@ -267,3 +267,45 @@ button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Home on a phone: one screen, no scrolling, every measure from the golden ratio (phi = 1.618). The type
+   steps by phi from the 16 px body: a 26 px headline over 16 px words. The spaces are the phi series 8, 13,
+   21, 34, 55: 8 between headline and words, 21 to the composer and on to Surprise me. The block sits at the
+   golden section of the screen: the space above it is to the space below as 1 to phi. Surprise me writes an
+   idea into the composer in place of the chips, and the featured apps are on the Apps page. The tab bar is
+   55 px, its stops 34 by 89, its icons 21, 21 px from the sides and 13 above the edge. */
+[data-slot="home-narrow"], [data-slot="home-surprise"] { display: none !important; }
+@media (max-width: 767px) {
+  [data-slot="home-wide"], [data-slot="home-suggestions"], [data-slot="home-featured"] { display: none !important; }
+  [data-slot="home-narrow"] { display: inline !important; }
+  [data-slot="home-page"] { min-height: 100%; padding-bottom: 0 !important; }
+  [data-slot="home-stage"] { flex: 1 1 auto; margin: 0 !important; padding: 0 16px !important; justify-content: flex-start !important; }
+  [data-slot="home-stage"]::before { content: ""; flex: 1 1 0; }
+  [data-slot="home-stage"]::after { content: ""; flex: 1.618 1 0; }
+  [data-slot="home-stage"] h1 { font-size: 26px !important; line-height: 34px !important; letter-spacing: -0.02em; }
+  [data-slot="home-stage"] h1 + p { margin-top: 8px !important; font-size: 16px !important; line-height: 26px !important; }
+  [data-slot="home-stage"] > div > div:first-child { margin-bottom: 21px !important; }
+  [data-slot="home-surprise"] { display: inline-flex !important; height: 34px; margin-top: 21px; padding: 0 13px 0 11px !important; gap: 8px; font-size: 14px !important; }
+  [data-slot="home-surprise"] > svg { width: 16px; height: 16px; }
+  /* Room for the tab bar under every page but the build screen's. */
+  :root:not([data-holo-pane]) #layout-main-content-container { padding-bottom: calc(55px + 21px + env(safe-area-inset-bottom)); }
+  [data-mobile-menu]:hover { background: color-mix(in srgb, var(--foreground) 8%, transparent); }
+}
+[data-slot="mobile-tabs"] {
+  position: fixed; left: 21px; right: 21px; bottom: calc(13px + env(safe-area-inset-bottom)); z-index: 40; height: 55px;
+  display: flex; align-items: center; justify-content: space-around; padding: 0 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--popover) 82%, transparent); color: var(--popover-foreground);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6); backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid color-mix(in srgb, var(--popover-foreground) 12%, transparent);
+  box-shadow: 0 13px 34px -13px color-mix(in srgb, var(--popover) 85%, transparent), inset 0 1px 0 color-mix(in srgb, var(--popover-foreground) 7%, transparent);
+}
+[data-slot="mobile-tabs"] > a {
+  display: inline-flex; align-items: center; justify-content: center; width: 89px; height: 34px; border-radius: 999px;
+  color: color-mix(in srgb, var(--popover-foreground) 62%, transparent); transition: background-color 160ms, color 160ms;
+}
+[data-slot="mobile-tabs"] > a > svg { width: 21px; height: 21px; }
+[data-slot="mobile-tabs"] > a[data-active] { background: color-mix(in srgb, var(--popover-foreground) 10%, transparent); color: var(--popover-foreground); }
+[data-slot="mobile-tabs"] > a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+:root[data-holo-pane] [data-slot="mobile-tabs"] { display: none; }
+@media (min-width: 768px) { [data-slot="mobile-tabs"] { display: none; } }
+@media (prefers-reduced-motion: reduce) { [data-slot="mobile-tabs"] > a { transition: none; } }

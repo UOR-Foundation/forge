@@ -140,7 +140,7 @@ const SCREEN_PATCHES = [
     // The page sits in the sidebar's inset, under a site header, as in dashboard-01.
     file: "src/app/layout.tsx",
     from: `import { AppSidebar } from "@/components/app-sidebar";`,
-    to: `import { AppSidebar, SiteHeader } from "@/components/app-sidebar";\nimport { SidebarInset } from "@/components/ui/sidebar";`,
+    to: `import { AppSidebar, MobileTabBar, SiteHeader } from "@/components/app-sidebar";\nimport { SidebarInset } from "@/components/ui/sidebar";`,
   },
   {
     file: "src/app/layout.tsx",
@@ -167,7 +167,8 @@ const SCREEN_PATCHES = [
                   >
                     {children}
                   </div>
-                </SidebarInset>`,
+                </SidebarInset>
+                <MobileTabBar />`,
   },
   {
     // Its items carry a description under the label; Radix's SelectValue shows the chosen item whole, so the
@@ -244,8 +245,61 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
   // On a phone the page keeps the inset's 16 px gutter instead of 32 px, so the composer has the room.
   {
     file: "src/pages/home.tsx",
-    from: `max-w-3xl w-full m-auto p-8 relative`,
-    to: `max-w-3xl w-full m-auto px-4 py-8 sm:p-8 relative`,
+    from: `max-w-3xl w-full m-auto p-8 relative"`,
+    to: `max-w-3xl w-full m-auto px-4 py-8 sm:p-8 relative" data-slot="home-stage"`,
+  },
+  // On a phone home is one screen (appearance.css): a short headline, the composer, and one "Surprise me"
+  // that writes an idea into it, in place of the chips; the featured apps live on the Apps page there.
+  {
+    file: "src/pages/home.tsx",
+    from: `<div className="flex min-h-full w-full flex-col pb-28">`,
+    to: `<div className="flex min-h-full w-full flex-col pb-28" data-slot="home-page">`,
+  },
+  {
+    file: "src/pages/home.tsx",
+    from: `              What do you want to build?
+            </h1>
+            <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
+              Describe your idea. Dyad will turn it into a working app.
+            </p>`,
+    to: `              <span data-slot="home-wide">What do you want to build?</span>
+              <span data-slot="home-narrow">Build anything</span>
+            </h1>
+            <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
+              <span data-slot="home-wide">Describe your idea. Dyad will turn it into a working app.</span>
+              <span data-slot="home-narrow">Describe it. Dyad makes it real.</span>
+            </p>`,
+  },
+  {
+    file: "src/pages/home.tsx",
+    from: `        <PrivacyBanner />
+      </div>
+      <FeaturedAppShowcase />`,
+    to: `        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          data-slot="home-surprise"
+          disabled={isCheckingProviders}
+          onClick={() => {
+            const ideas = INSPIRATION_PROMPTS.filter((p) => p.prompt !== inputValue);
+            setInputValue(ideas[Math.floor(Math.random() * ideas.length)].prompt);
+          }}
+          className="rounded-full text-muted-foreground"
+        >
+          <Sparkles aria-hidden="true" />
+          Surprise me
+        </Button>
+        <PrivacyBanner />
+      </div>
+      <div data-slot="home-featured">
+        <FeaturedAppShowcase />
+      </div>`,
+  },
+  {
+    file: "src/pages/home.tsx",
+    from: `import { RefreshCw, Zap } from "lucide-react";`,
+    to: `import { RefreshCw, Sparkles, Zap } from "lucide-react";`,
   },
   {
     file: "src/components/chat/HomeChatInput.tsx",
