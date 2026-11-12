@@ -43,7 +43,7 @@ export const SPEC_RULES = `# You write the app's LexLean module, and nothing els
 Every app here is one LexLean module: its inputs, its answers, its rules and its guarantees. Forge projects the app's code and its screen from the module, live, as you write it, and Lean proves the guarantees. You never write code, files or dependencies: Forge does not apply them. To build or change an app, write or rewrite its module; to change only its words, write a patch. If a request decides nothing, say in one sentence what the app could decide, and write that module.
 - Write one <prism-lexlean> block holding the module, its declarations in this order, so the screen assembles as you write: a \`definition\` per choice value and per answer, each a Nat code numbered from 0 within its group (the value \`chime-lily\` of field \`plant\` is \`plantChimeLily\`; the answer \`wind-whisper\` is \`answerWindWhisper\`); the \`Request\` structure, one Nat field per input; \`inBounds\` (each choice below its count, each number at most its maximum, and at least its minimum when that is above 0); one \`rule<N>\` per rule, a conjunction of conditions; \`judge\`, an if-chain in rule order (the first rule that matches decides; the last else is the answer when none does); and one \`breaks<Id>\` per guarantee: \`inBounds\`'s conditions, the guarantee's conditions, then the judge compared with an answer (\`=?\` for never, \`not (... =? ...)\` for always). Write no theorem: Forge derives the proofs. Write the module straight out, as the example shows: think about which rules and guarantees the app needs, not about syntax.
 - A condition compares \`project request <field>\` with a whole number or a choice code using \`=?\`, \`<?\` or \`<=?\`; write > and >= with the sides swapped, and != as \`not (... =? ...)\`. Two number fields may be compared with each other. Join conditions with \`&&\`, and write the judge as \`if rule1 request then answerA else if rule2 request then answerB else answerC\`. Write no other parentheses: there are none to count, and Forge writes the canonical module from yours.
-- The screen's words come from the module (the title from the module's name) and from patches: to set the screen's words or order, or change one part (a word, an answer, one rule), write a patch on the spec read from the module: <dyad-spec-patch>[{"op":"set","path":["rules",2,"then"],"value":"none"}]</dyad-spec-patch>. Ops are set, insert and remove; \`view\` ({"blocks":[...]}, each one of {"kind":"heading","text"}, {"kind":"text","text"}, {"kind":"input","field","label"}, {"kind":"answer","label"}, {"kind":"guarantees"}, {"kind":"rules"}, {"kind":"examples"}), \`purpose\` and \`meanings\` are set this way. When the user points at something on the screen, its paths are given with the request.
+- The screen's words come from the module (the title from the module's name) and from patches: to set the screen's words or order, or change one part (a word, an answer, one rule), write a patch on the spec read from the module: <dyad-spec-patch>[{"op":"set","path":["rules",2,"then"],"value":"none"}]</dyad-spec-patch>. Ops are set, insert and remove; \`view\` ({"blocks":[...]}, each one of {"kind":"heading","text"}, {"kind":"text","text"}, {"kind":"input","field","label"}, {"kind":"answer","label"}, {"kind":"guarantees"}, {"kind":"rules"}, {"kind":"examples"}), \`purpose\` (one sentence) and \`meanings\` ({"<answer>": "what it tells the user"}, one key per answer as the screen names it: \`answerWindWhisper\` is \`wind-whisper\`; fields have no meanings) are set this way. When the user points at something on the screen, its paths are given with the request.
 - To change the rules, write the whole module again in a new <prism-lexlean> block, starting from the current module when one is given.
 Example: <prism-lexlean>
 ${PARKING_LEXLEAN.trim()}
@@ -163,8 +163,43 @@ export function repairJson(text) {
   for (let k = cuts.length - 1; k >= 0; k--) { const got = attempt(out.slice(0, cuts[k].at) + cuts[k].closers); if (got) return got; }
   return null;
 }
-// The card stands in its own paragraphs, whatever the model wrote around the tag.
-export const withCard = (text, card) => (text || "").replace(TAG, card ? "\n\n" + card + "\n\n" : "");
+// What the chat shows of an answer. The module is the app's source, not something to read in the chat:
+// while it streams it shows as one line counting its declarations, and after the turn the card stands in
+// its place (in the last module's place, when a repair wrote it again); a patch shows as nothing, its result
+// is on the card. The answer itself (the model's text) is kept whole for reading the module and patches.
+const MODULE_ENDS = ["</prism-lexlean>", "\\end{prism-lexlean}", "\\end{lexlean}"];
+export function shownText(text, card = null) {
+  // The model's reasoning (shown as <think>…) names the tag in passing: it is shown as it is.
+  const t = text || "", think = /^<think>[\s\S]*?(<\/think>|$)/.exec(t);
+  if (think) return think[0] + (think[1] ? shownText(t.slice(think[0].length), card) : "");
+  let out = "", rest = t;
+  for (;;) {
+    const at = rest.indexOf("<prism-lexlean>");
+    if (at < 0) { out += rest; break; }
+    out += rest.slice(0, at);
+    const body = rest.slice(at);
+    let end = -1;
+    const close = body.indexOf("</prism-lexlean>");
+    if (close >= 0) end = close + 16;
+    else for (const m of MODULE_ENDS.slice(1)) { const k = body.lastIndexOf(m); if (k >= 0) end = Math.max(end, k + m.length); }
+    const block = end >= 0 ? body.slice(0, end) : body;
+    const n = (block.match(/\b(definition|structure)\{/g) || []).length;
+    out += end >= 0 ? `\u0000${n}\u0000` : `\n\n_Writing the app's LexLean module: ${n} declaration${n === 1 ? "" : "s"} so far…_\n\n`;
+    if (end < 0) break;
+    rest = body.slice(end);
+  }
+  const marks = [...out.matchAll(/\u0000(\d+)\u0000/g)];
+  marks.forEach((m, i) => { out = out.replace(m[0], i === marks.length - 1 ? (card ? "\n\n" + card + "\n\n" : `\n\n_The app's LexLean module: ${m[1]} declarations._\n\n`) : ""); });
+  out = out.replace(/<dyad-spec-patch>[\s\S]*?(<\/dyad-spec-patch>|$)/g, "").replace(/\n{3,}/g, "\n\n");
+  // A tag still arriving (`<pri…`) is not shown until it is whole.
+  const tail = /<[a-z-]*$/.exec(out);
+  return tail && ("<prism-lexlean>".startsWith(tail[0]) || "<dyad-spec-patch>".startsWith(tail[0])) ? out.slice(0, tail.index) : out;
+}
+// The card stands in its own paragraphs, whatever the model wrote around the tag or the module.
+export const withCard = (text, card) => {
+  const t = text || "";
+  return /<prism-lexlean>/.test(t) ? shownText(t, card) : t.replace(TAG, card ? "\n\n" + card + "\n\n" : "");
+};
 export const isApproval = (prompt) => /^\s*\/?(yes,?\s*)?approve(d)?(\s+(the\s+)?(rules|guarantees|spec))?\s*[.!]?\s*$/i.test(prompt || "");
 // "publish" builds the proved app with the Prism SDK and puts it live; no model is asked.
 export const isPublish = (prompt) => /^\s*\/?(yes,?\s*)?(publish|ship)(\s+(it|the\s+app|now))?\s*[.!]?\s*$/i.test(prompt || "");
@@ -251,7 +286,10 @@ function lowerAnswers(input) {
   for (const r of Array.isArray(spec.rules) ? spec.rules : []) if (r) r.then = low(r.then);
   for (const p of Array.isArray(spec.properties) ? spec.properties : []) if (p) p.then = low(p.then);
   for (const e of Array.isArray(spec.examples) ? spec.examples : []) if (e) e.response = low(e.response);
-  if (spec.meanings && typeof spec.meanings === "object") spec.meanings = Object.fromEntries(Object.entries(spec.meanings).map(([k, v]) => [low(k), v]));
+  // A meaning keyed by the answer's LexLean name (measured: GLM wrote `answerA` for answer `a`) is that
+  // answer's meaning; only a key that names no answer either way is left for the checker to refuse.
+  const answerWord = (k) => { const m = /^answer([A-Z][\w]*)$/.exec(k); return m ? m[1].replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase() : null; };
+  if (spec.meanings && typeof spec.meanings === "object") spec.meanings = Object.fromEntries(Object.entries(spec.meanings).map(([k, v]) => [Array.isArray(spec.outcomes) && !spec.outcomes.includes(low(k)) && spec.outcomes.includes(answerWord(k)) ? answerWord(k) : low(k), v]));
   // A choice is respelled the same way, in its field, in every condition on that field, and in every
   // example request that names it.
   const choices = new Map();
