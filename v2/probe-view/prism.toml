@@ -1,0 +1,11 @@
+[application]
+name = "probe-view"
+version = "0.1.0"
+description = "A counter that answers a PrismPM browser presentation to a PrismPM intent, inside the text application profile."
+
+[model]
+source = "src"
+watch = ["src/**/*.lex.tex", "language/**/*.toml", "lexlean.toml"]
+
+# Deny by default: an empty set grants the holo nothing. See docs/proposals/279-capability-sets.md.
+[capabilities]

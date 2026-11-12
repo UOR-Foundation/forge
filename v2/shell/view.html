@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Probe view</title>
+<style>
+  :root { color-scheme: light dark; --ink: #16130f; --ground: #f6f3ee; --line: #d8d2c8; --accent: #b4532a; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #efeae2; --ground: #16130f; --line: #3a342c; --accent: #e08a5e; } }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--ground); }
+  main { max-width: 28rem; margin: 0 auto; padding: 2rem 1rem; }
+  #app > section { display: grid; gap: 1rem; padding: 1.5rem; border: 1px solid var(--line); border-radius: 12px; }
+  h1 { font-size: 1.25rem; margin: 0; }
+  #app p { font-size: 3rem; margin: 0; font-variant-numeric: tabular-nums; }
+  form { display: grid; gap: .5rem; }
+  button { font: inherit; min-height: 44px; padding: 0 1rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+  button[type=submit] { border-color: var(--accent); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; font-size: .875rem; margin-top: 2rem; }
+  dt { opacity: .7; } dd { margin: 0; font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+  <div id="app"></div>
+  <dl>
+    <dt>Source</dt><dd id="source"></dd>
+    <dt>Last request</dt><dd id="request"></dd>
+    <dt>Last response</dt><dd id="response"></dd>
+    <dt>Load to first view</dt><dd id="load"></dd>
+    <dt>Action to view</dt><dd id="timing"></dd>
+  </dl>
+</main>
+<script type="module">
+import { loadProject, hexToBytes, NIL } from "./interp.mjs";
+import { createView } from "./render.mjs";
+
+const started = performance.now();
+const $ = (id) => document.getElementById(id);
+const base = new URL("../probe-view/data/", import.meta.url);
+const names = await (await fetch(new URL("modules.json", base))).json();
+const modules = Object.fromEntries(await Promise.all(names.map(async (name) => [name, await (await fetch(new URL(name.replaceAll(".", "/") + ".json", base))).json()])));
+const app = loadProject(modules);
+$("source").textContent = `${names.length} modules, ${app.definitions.length} definitions, interpreted in this tab`;
+
+const W = "Foundation.View.Browser.V1.Wire::";
+const ascii = new TextDecoder(), enc = new TextEncoder();
+const hex = (bytes) => [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+const ok = (result, what) => { if (result.c !== "Result.ok") throw new Error(what + " refused: " + result.a[0].c); return result.a[0]; };
+const catalogue = (() => { const out = []; for (let l = app.call("TextRequest::catalogue"); l.c === "List.cons"; l = l.a[1]) out.push(l.a[0]); return out; })();
+
+let state = "0001", revision = 0n;
+const draw = createView($("app"), (action) => send(action));
+
+// Every byte of the intent and of the frame is written and read by the library's own codec,
+// run by the interpreter. Nothing here encodes or decodes the protocol.
+function send(action) {
+  const t0 = performance.now();
+  const intent = action === null ? new Uint8Array() : ok(app.call(W + "writeViewIntent", { revision, action, fields: NIL }), "intent");
+  const request = new Uint8Array(4 + intent.length); request.set(enc.encode(state)); request.set(intent, 4);
+  const response = ascii.decode(app.call("TextRequest::dispatch", request));
+  $("request").textContent = state + " " + hex(intent);
+  $("response").textContent = response;
+  if (response === "invalid" || response === "overflow") { $("timing").textContent = "refused: " + response; return null; }
+  const frame = hexToBytes(response.slice(4));
+  const read = ok(app.call(W + "readViewPresentation", { bytes: frame }, 0n, 4096n), "frame");
+  if (read.cursor !== BigInt(frame.length)) throw new Error("frame has trailing bytes");
+  state = response.slice(0, 4); revision = read.value.revision;
+  draw(read.value, catalogue);
+  const ms = performance.now() - t0;
+  $("timing").textContent = ms.toFixed(2) + " ms";
+  return ms;
+}
+
+send(null);
+$("load").textContent = (performance.now() - started).toFixed(1) + " ms";
+window.probe = { send, get state() { return state; } };
+</script>
+</body>
+</html>
