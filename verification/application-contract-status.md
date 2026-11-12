@@ -1,6 +1,6 @@
 # Application specification implementation status
 
-Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-81. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
+Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-82. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
 
 | Obligation | Implemented scope and evidence | Remaining acceptance or implementation |
 | --- | --- | --- |
@@ -72,3 +72,7 @@ FA-80 also passes full mobile performance and the canonical live LexLean gate af
 FA-81 binds chat inference and token accounting to the same validated provider/model selection, preserving exact OpenRouter identifiers and refusing unsupported or malformed selections before transcript/network effects. All 475 Node controls, full Rust/Clippy/fmt, focused Chromium and seven unit plus one actual-browser mutations pass; all 61 mandatory browser journeys pass together. See `chat-provider-routing.md`. FA-80 hosted Studio 43167933304 passes at 6b6b0fcd1cde2c78d3735f63eca30160ebebedcc; immutable SDK acceptance remains running.
 
 FA-81 full mobile performance and canonical live LexLean checks pass without budget changes. FA-80 hosted Forge performance 43167933486 also passes at 6b6b0fcd1cde2c78d3735f63eca30160ebebedcc. SDK acceptance and independent approval remain outstanding at this checkpoint.
+
+FA-82 makes automatic preview startup depend on the imported run state's initial eligibility. A diagnostic reproduced a second permission dialog after decline and responsive remount; Ask submission itself succeeded in that replay. The corrected renderer preserves decline across repeated remounts, allows Ask submission and explicit retry, and starts a fresh run session after full reload. All 479 Node controls, full Rust/Clippy/fmt, zero added renderer type errors, eight unit mutations and an actual failed-state retry mutation pass. All 62 mandatory browser journeys pass together; see `preview-auto-start.md`.
+
+Fresh upstream inspection of PrismPM main c37d5a82f7752139b22291c18eef2620627eb162 still describes v0.4.0 as an unaccepted candidate and explicitly refuses its complete Browser application profile with PP2011. The release-factory proposal remains separate from a qualified Foundry consumer SDK. These upstream boundaries are not waived by local host-feature qualification.
