@@ -1,0 +1,32 @@
+{
+  "profile": "foundry/mobile-performance/1",
+  "runs": {
+    "cold": [
+      9756,
+      9636,
+      9404
+    ],
+    "warm": [
+      1912,
+      1820,
+      1600
+    ],
+    "inp": [
+      192,
+      160,
+      168
+    ],
+    "token": [
+      3700,
+      3694,
+      3004
+    ]
+  },
+  "budgets": {
+    "cold": 11500,
+    "warm": 2200,
+    "inp": 450,
+    "token": 5000
+  },
+  "passed": true
+}
