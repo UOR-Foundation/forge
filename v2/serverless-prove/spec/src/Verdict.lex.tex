@@ -7,7 +7,7 @@ structure{
   name: Evidence,
   type_parameters: [],
   parameters: [],
-  fields: [{name: hasProof, type: Bool}, {name: computedKey, type: Nat}, {name: recordKey, type: Nat}, {name: bundleNamed, type: Nat}, {name: bundleDerived, type: Nat}, {name: libraryPinned, type: Nat}, {name: libraryDerived, type: Nat}, {name: specStatement, type: Nat}, {name: checkedStatement, type: Nat}, {name: typesMatch, type: Bool}, {name: allBound, type: Bool}, {name: kernelAccepted, type: Bool}, {name: axiomsObserved, type: Nat}, {name: axiomsDeclared, type: Nat}, {name: leanAttested, type: Bool}, {name: attestedBytes, type: Nat}, {name: assembledBytes, type: Nat}]
+  fields: [{name: hasProof, type: Nat}, {name: computedKey, type: Nat}, {name: recordKey, type: Nat}, {name: bundleNamed, type: Nat}, {name: bundleDerived, type: Nat}, {name: libraryPinned, type: Nat}, {name: libraryDerived, type: Nat}, {name: specStatement, type: Nat}, {name: checkedStatement, type: Nat}, {name: typesMatch, type: Nat}, {name: allBound, type: Nat}, {name: kernelAccepted, type: Nat}, {name: axiomsObserved, type: Nat}, {name: axiomsDeclared, type: Nat}, {name: leanAttested, type: Nat}, {name: attestedBytes, type: Nat}, {name: assembledBytes, type: Nat}]
 }
 
 inductive{
@@ -49,7 +49,7 @@ definition{
   name: verdictCode,
   parameters: [e : Evidence],
   result: Nat,
-  body: (if (not (project e hasProof)) then (codePending) else (if (not ((project e recordKey) =? (project e computedKey))) then (codeRefused) else (if (not ((project e bundleDerived) =? (project e bundleNamed))) then (codeRefused) else (if (not ((project e libraryDerived) =? (project e libraryPinned))) then (codeRefused) else (if (not ((project e checkedStatement) =? (project e specStatement))) then (codeRefused) else (if (not (project e typesMatch)) then (codeRefused) else (if (not (project e allBound)) then (codeRefused) else (if (not (project e kernelAccepted)) then (codeRefused) else (if (not ((project e axiomsObserved) =? (project e axiomsDeclared))) then (codeRefused) else (if ((project e leanAttested) && ((project e attestedBytes) =? (project e assembledBytes))) then (codeProved) else (codeKernelChecked)))))))))))
+  body: (if (not ((project e hasProof) =? 1)) then (codePending) else (if (not ((project e recordKey) =? (project e computedKey))) then (codeRefused) else (if (not ((project e bundleDerived) =? (project e bundleNamed))) then (codeRefused) else (if (not ((project e libraryDerived) =? (project e libraryPinned))) then (codeRefused) else (if (not ((project e checkedStatement) =? (project e specStatement))) then (codeRefused) else (if (not ((project e typesMatch) =? 1)) then (codeRefused) else (if (not ((project e allBound) =? 1)) then (codeRefused) else (if (not ((project e kernelAccepted) =? 1)) then (codeRefused) else (if (not ((project e axiomsObserved) =? (project e axiomsDeclared))) then (codeRefused) else (if (((project e leanAttested) =? 1) && ((project e attestedBytes) =? (project e assembledBytes))) then (codeProved) else (codeKernelChecked)))))))))))
 }
 
 definition{
@@ -113,7 +113,7 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksStatement e) = false),
   proof: linear_arithmetic{definitions: [accepted, breaksStatement, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -128,7 +128,7 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksProvedStatement e) = false),
   proof: linear_arithmetic{definitions: [breaksProvedStatement, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -143,7 +143,7 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksKey e) = false),
   proof: linear_arithmetic{definitions: [accepted, breaksKey, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -158,7 +158,7 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksBytes e) = false),
   proof: linear_arithmetic{definitions: [accepted, breaksBytes, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -173,14 +173,14 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksLibrary e) = false),
   proof: linear_arithmetic{definitions: [accepted, breaksLibrary, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
   name: breaksKernel,
   parameters: [e : Evidence],
   result: Bool,
-  body: ((accepted (verdictCode e)) && (not (((project e kernelAccepted) && (project e typesMatch)) && (project e allBound))))
+  body: ((accepted (verdictCode e)) && (not ((((project e kernelAccepted) =? 1) && ((project e typesMatch) =? 1)) && ((project e allBound) =? 1))))
 }
 
 theorem{
@@ -188,7 +188,7 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksKernel e) = false),
   proof: linear_arithmetic{definitions: [accepted, breaksKernel, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -203,14 +203,14 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksAxioms e) = false),
   proof: linear_arithmetic{definitions: [accepted, breaksAxioms, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
   name: breaksLean,
   parameters: [e : Evidence],
   result: Bool,
-  body: (((verdictCode e) =? (codeProved)) && (not ((project e leanAttested) && ((project e attestedBytes) =? (project e assembledBytes)))))
+  body: (((verdictCode e) =? (codeProved)) && (not (((project e leanAttested) =? 1) && ((project e attestedBytes) =? (project e assembledBytes)))))
 }
 
 theorem{
@@ -218,14 +218,14 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksLean e) = false),
   proof: linear_arithmetic{definitions: [breaksLean, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
   name: breaksPending,
   parameters: [e : Evidence],
   result: Bool,
-  body: ((not (project e hasProof)) && (not ((verdictCode e) =? (codePending))))
+  body: ((not ((project e hasProof) =? 1)) && (not ((verdictCode e) =? (codePending))))
 }
 
 theorem{
@@ -233,7 +233,7 @@ theorem{
   parameters: [e : Evidence],
   statement: ((breaksPending e) = false),
   proof: linear_arithmetic{definitions: [breaksPending, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -253,16 +253,16 @@ theorem{
 
 definition{
   name: breaksWeaker,
-  parameters: [e : Evidence],
+  parameters: [code : Nat],
   result: Bool,
-  body: (((verdictCode e) =? (codeKernelChecked)) && ((wordOf (verdictCode e)) =? (wordProved)))
+  body: ((code =? (codeKernelChecked)) && ((wordOf code) =? (wordProved)))
 }
 
 theorem{
   name: kernelCheckedNeverReadsProved,
-  parameters: [e : Evidence],
-  statement: ((breaksWeaker e) = false),
-  proof: linear_arithmetic{definitions: [breaksWeaker, codeKernelChecked, codePending, codeProved, codeRefused, verdictCode, wordKernelChecked, wordOf, wordProved, wordProving, wordRefused]},
+  parameters: [code : Nat],
+  statement: ((breaksWeaker code) = false),
+  proof: linear_arithmetic{definitions: [breaksWeaker, codeKernelChecked, codePending, codeProved, codeRefused, wordKernelChecked, wordOf, wordProved, wordProving, wordRefused]},
   axioms: [Quot.sound, propext]
 }
 \end{semanticmodule}

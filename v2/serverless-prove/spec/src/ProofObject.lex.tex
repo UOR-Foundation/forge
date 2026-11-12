@@ -78,7 +78,7 @@ theorem{
   parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
   statement: ((breaksToolchain wanted theorem entry derived) = false),
   proof: linear_arithmetic{definitions: [admitCode, breaksToolchain, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -93,7 +93,7 @@ theorem{
   parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
   statement: ((breaksDeclaration wanted theorem entry derived) = false),
   proof: linear_arithmetic{definitions: [admitCode, breaksDeclaration, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -108,7 +108,7 @@ theorem{
   parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
   statement: ((breaksClosure wanted theorem entry derived) = false),
   proof: linear_arithmetic{definitions: [admitCode, breaksClosure, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -123,7 +123,7 @@ theorem{
   parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
   statement: ((breaksTheorem wanted theorem entry derived) = false),
   proof: linear_arithmetic{definitions: [admitCode, breaksTheorem, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
@@ -138,20 +138,20 @@ theorem{
   parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
   statement: ((breaksBytes wanted theorem entry derived) = false),
   proof: linear_arithmetic{definitions: [admitCode, breaksBytes, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
   name: breaksExact,
-  parameters: [wanted : Key, theorem : Nat, bundle : Nat],
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
   result: Bool,
-  body: (not ((admitCode wanted theorem (record ProofRecord {key := wanted, theorem := theorem, bundle := bundle}) bundle) =? (codeAdmitted)))
+  body: ((((((project (project entry key) toolchain) =? (project wanted toolchain)) && ((project (project entry key) declaration) =? (project wanted declaration))) && (((project (project entry key) closure) =? (project wanted closure)) && ((project entry theorem) =? theorem))) && ((project entry bundle) =? derived)) && (not ((admitCode wanted theorem entry derived) =? (codeAdmitted))))
 }
 
 theorem{
   name: exactRecordAdmitted,
-  parameters: [wanted : Key, theorem : Nat, bundle : Nat],
-  statement: ((breaksExact wanted theorem bundle) = false),
+  parameters: [wanted : Key, theorem : Nat, entry : ProofRecord, derived : Nat],
+  statement: ((breaksExact wanted theorem entry derived) = false),
   proof: linear_arithmetic{definitions: [admitCode, breaksExact, codeAdmitted, codeBytes, codeClosure, codeDeclaration, codeTheorem, codeToolchain]},
   axioms: [Quot.sound, propext]
 }

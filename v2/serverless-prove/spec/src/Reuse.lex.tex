@@ -7,70 +7,102 @@ structure{
   name: Stored,
   type_parameters: [],
   parameters: [],
-  fields: [{name: key, type: Nat}, {name: address, type: Nat}, {name: verdict, type: Nat}]
+  fields: [{name: present, type: Nat}, {name: key, type: Nat}, {name: address, type: Nat}, {name: verdict, type: Nat}]
+}
+
+definition{
+  name: useStored,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: recompute,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: choice,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  result: Nat,
+  body: (if ((project entry present) =? 1) then (if ((project entry key) =? key) then (if ((project entry address) =? derived) then (useStored) else (recompute)) else (recompute)) else (recompute))
 }
 
 definition{
   name: reused,
-  parameters: [stored : (Option Stored), key : Nat, derived : Nat, fresh : Nat],
+  parameters: [entry : Stored, key : Nat, derived : Nat, fresh : Nat],
   result: Nat,
-  body: (match stored
-    | Option.none => fresh
-    | Option.some entry => (if (((project entry key) =? key) && ((project entry address) =? derived)) then (project entry verdict) else fresh))
-}
-
-definition{
-  name: deterministic,
-  parameters: [collisionFree : Bool, entry : Stored, key : Nat, derived : Nat, fresh : Nat],
-  result: Bool,
-  body: ((not ((collisionFree && ((project entry key) =? key)) && ((project entry address) =? derived))) || ((project entry verdict) =? fresh))
+  body: (if ((choice entry key derived) =? (useStored)) then (project entry verdict) else fresh)
 }
 
 definition{
   name: breaksRead,
-  parameters: [entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  parameters: [entry : Stored, key : Nat, derived : Nat],
   result: Bool,
-  body: ((not ((project entry address) =? derived)) && (not ((reused (ctor Option.some [Stored] entry) key derived fresh) =? fresh)))
+  body: ((not ((project entry address) =? derived)) && ((choice entry key derived) =? (useStored)))
 }
 
 theorem{
   name: storedResultFailingItsCheckIsNeverBelieved,
-  parameters: [entry : Stored, key : Nat, derived : Nat, fresh : Nat],
-  statement: ((breaksRead entry key derived fresh) = false),
-  proof: linear_arithmetic{definitions: [breaksRead, reused]},
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  statement: ((breaksRead entry key derived) = false),
+  proof: linear_arithmetic{definitions: [breaksRead, choice, recompute, useStored]},
   axioms: [Quot.sound, propext]
 }
 
 definition{
   name: breaksKey,
-  parameters: [entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  parameters: [entry : Stored, key : Nat, derived : Nat],
   result: Bool,
-  body: ((not ((project entry key) =? key)) && (not ((reused (ctor Option.some [Stored] entry) key derived fresh) =? fresh)))
+  body: ((not ((project entry key) =? key)) && ((choice entry key derived) =? (useStored)))
 }
 
 theorem{
   name: storedUnderAnotherKeyIsNeverBelieved,
-  parameters: [entry : Stored, key : Nat, derived : Nat, fresh : Nat],
-  statement: ((breaksKey entry key derived fresh) = false),
-  proof: linear_arithmetic{definitions: [breaksKey, reused]},
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  statement: ((breaksKey entry key derived) = false),
+  proof: linear_arithmetic{definitions: [breaksKey, choice, recompute, useStored]},
   axioms: [Quot.sound, propext]
 }
 
 definition{
-  name: breaksReuse,
-  parameters: [collisionFree : Bool, stored : (Option Stored), key : Nat, derived : Nat, fresh : Nat],
+  name: breaksAbsent,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
   result: Bool,
-  body: (match stored
-    | Option.none => (not ((reused stored key derived fresh) =? fresh))
-    | Option.some entry => ((collisionFree && (deterministic collisionFree entry key derived fresh)) && (not ((reused stored key derived fresh) =? fresh))))
+  body: ((not ((project entry present) =? 1)) && ((choice entry key derived) =? (useStored)))
+}
+
+theorem{
+  name: nothingStoredMeansComputing,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  statement: ((breaksAbsent entry key derived) = false),
+  proof: linear_arithmetic{definitions: [breaksAbsent, choice, recompute, useStored]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: deterministic,
+  parameters: [collisionFree : Nat, entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  result: Bool,
+  body: ((not ((((collisionFree =? 1) && ((project entry present) =? 1)) && ((project entry key) =? key)) && ((project entry address) =? derived))) || ((project entry verdict) =? fresh))
+}
+
+definition{
+  name: breaksReuse,
+  parameters: [collisionFree : Nat, entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  result: Bool,
+  body: ((((collisionFree =? 1) && (deterministic collisionFree entry key derived fresh)) && ((choice entry key derived) =? (useStored))) && (not ((project entry verdict) =? fresh)))
 }
 
 theorem{
   name: reuseNeverChangesTheVerdict,
-  parameters: [collisionFree : Bool, stored : (Option Stored), key : Nat, derived : Nat, fresh : Nat],
-  statement: ((breaksReuse collisionFree stored key derived fresh) = false),
-  proof: linear_arithmetic{definitions: [breaksReuse, deterministic, reused]},
-  axioms: [Quot.sound, propext]
+  parameters: [collisionFree : Nat, entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  statement: ((breaksReuse collisionFree entry key derived fresh) = false),
+  proof: linear_arithmetic{definitions: [breaksReuse, choice, deterministic, recompute, useStored]},
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 \end{semanticmodule}
 \end{lexlean}

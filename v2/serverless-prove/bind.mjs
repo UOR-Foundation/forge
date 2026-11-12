@@ -19,12 +19,13 @@ import { obligations } from "./emit.mjs";
 export const VERDICT = { proved: "proved", kernelChecked: "kernel-checked", refused: "refused", pending: "pending" };
 
 // Builds the bytes the kernel checks and everything the host must confirm about them. No kernel runs here.
-export function assemble({ library, bundle, spec, theorems, makeInTab = "reflexivity" }) {
+// `parsed` ({ lib, ex }) lets a session parse the library and a bundle once; call release() after decide().
+export function assemble({ library, bundle, spec, theorems, makeInTab = "reflexivity", parsed }) {
   const fail = (code, why) => ({ ok: false, code, why });
   if (bundle.length < library.length) return fail("SP_PREFIX", "the bundle is shorter than the library");
   for (let i = 0; i < library.length; i++) if (bundle[i] !== library[i]) return fail("SP_PREFIX", `the bundle departs from the pinned library at byte ${i}`);
-  const lib = parse(library);
-  const ex = parse(bundle);
+  const lib = parsed?.lib ?? parse(library);
+  const ex = parsed?.ex ?? parse(bundle);
   const admitted = lib.order.length;
   const libraryNames = new Set(lib.order);
   const suffix = ex.order.slice(admitted);
@@ -56,7 +57,7 @@ export function assemble({ library, bundle, spec, theorems, makeInTab = "reflexi
   const declare = (name, stmt, value, kind) => {
     const type = w.term(stmt), val = w.term(value), id = w.name(name);
     w.decl({ thm: { all: [id], levelParams: [], name: id, type, value: val } });
-    ex.decls.set(name, { kind: "thm", record: { name: id, type, value: val } });
+    ex.decls.set(name, { kind: "thm", record: { name: id, type, value: val } }); w.added.decls.push(name);
     records.push({ name, kind });
   };
   for (const e of ob.equations) declare(`Serverless.eqn.${e.lean}.${e.clause}`, e.stmt, e.refl, "equation");
@@ -75,7 +76,7 @@ export function assemble({ library, bundle, spec, theorems, makeInTab = "reflexi
   const collect = (t) => { if (!t || typeof t !== "object") return; if (t.c) mentions.add(t.c); Object.values(t).forEach((v) => Array.isArray(v) ? v.forEach(collect) : collect(v)); };
   ob.equations.forEach((e) => collect(e.stmt)); ob.theorems.forEach((t) => collect(t.stmt));
   const unbound = [...mentions].filter((c) => !libraryNames.has(c) && !bound.has(c));
-  return { ok: true, ex, admitted, appended: w.text(), records, theoremRows, typeErrors, unbound, refusedByEmitter: ob.refused, obligations: ob };
+  return { ok: true, ex, admitted, appended: w.text(), release: () => w.rollback(), records, theoremRows, typeErrors, unbound, refusedByEmitter: ob.refused, obligations: ob };
 }
 
 // After a refusal, names the declarations the kernel refuses, one run each: the reason shown on demand.

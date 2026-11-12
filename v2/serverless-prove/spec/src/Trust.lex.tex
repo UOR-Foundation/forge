@@ -8,35 +8,35 @@ structure{
   name: Assumptions,
   type_parameters: [],
   parameters: [],
-  fields: [{name: collisionFree, type: Bool}, {name: emitterFaithful, type: Bool}, {name: equationsDetermine, type: Bool}, {name: independentKernelAgrees, type: Bool}, {name: engineFaithful, type: Bool}, {name: attesterHonest, type: Bool}]
+  fields: [{name: collisionFree, type: Nat}, {name: emitterFaithful, type: Nat}, {name: equationsDetermine, type: Nat}, {name: independentKernelAgrees, type: Nat}, {name: engineFaithful, type: Nat}, {name: attesterHonest, type: Nat}]
 }
 
 structure{
   name: Truth,
   type_parameters: [],
   parameters: [],
-  fields: [{name: leanAcceptsAssembled, type: Bool}, {name: leanProvesSpecStatement, type: Bool}]
+  fields: [{name: leanAcceptsAssembled, type: Nat}, {name: leanProvesSpecStatement, type: Nat}]
 }
 
 definition{
   name: attesterMeaning,
   parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
   result: Bool,
-  body: ((not ((((project a attesterHonest) && (project a collisionFree)) && (project e leanAttested)) && ((project e attestedBytes) =? (project e assembledBytes)))) || (project t leanAcceptsAssembled))
+  body: ((not (((((project a attesterHonest) =? 1) && ((project a collisionFree) =? 1)) && ((project e leanAttested) =? 1)) && ((project e attestedBytes) =? (project e assembledBytes)))) || ((project t leanAcceptsAssembled) =? 1))
 }
 
 definition{
   name: kernelMeaning,
   parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
   result: Bool,
-  body: ((not (((project a independentKernelAgrees) && (project a engineFaithful)) && (project e kernelAccepted))) || (project t leanAcceptsAssembled))
+  body: ((not ((((project a independentKernelAgrees) =? 1) && ((project a engineFaithful) =? 1)) && ((project e kernelAccepted) =? 1))) || ((project t leanAcceptsAssembled) =? 1))
 }
 
 definition{
   name: bindingMeaning,
   parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
   result: Bool,
-  body: ((not ((((((((project t leanAcceptsAssembled) && (project a collisionFree)) && (project a emitterFaithful)) && (project a equationsDetermine)) && ((project e checkedStatement) =? (project e specStatement))) && ((project e libraryDerived) =? (project e libraryPinned))) && ((project e typesMatch) && (project e allBound))) && ((project e axiomsObserved) =? (project e axiomsDeclared)))) || (project t leanProvesSpecStatement))
+  body: ((not (((((((((project t leanAcceptsAssembled) =? 1) && ((project a collisionFree) =? 1)) && ((project a emitterFaithful) =? 1)) && ((project a equationsDetermine) =? 1)) && ((project e checkedStatement) =? (project e specStatement))) && ((project e libraryDerived) =? (project e libraryPinned))) && (((project e typesMatch) =? 1) && ((project e allBound) =? 1))) && ((project e axiomsObserved) =? (project e axiomsDeclared)))) || ((project t leanProvesSpecStatement) =? 1))
 }
 
 definition{
@@ -50,14 +50,14 @@ definition{
   name: shared,
   parameters: [a : Assumptions],
   result: Bool,
-  body: (((project a collisionFree) && (project a emitterFaithful)) && (project a equationsDetermine))
+  body: ((((project a collisionFree) =? 1) && ((project a emitterFaithful) =? 1)) && ((project a equationsDetermine) =? 1))
 }
 
 definition{
   name: breaksProved,
   parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
   result: Bool,
-  body: (((((coherent a t e) && (shared a)) && ((project a attesterHonest) || ((project a independentKernelAgrees) && (project a engineFaithful)))) && ((Verdict::verdictCode e) =? (Verdict::codeProved))) && (not (project t leanProvesSpecStatement)))
+  body: (((((coherent a t e) && (shared a)) && (((project a attesterHonest) =? 1) || (((project a independentKernelAgrees) =? 1) && ((project a engineFaithful) =? 1)))) && ((Verdict::verdictCode e) =? (Verdict::codeProved))) && (not ((project t leanProvesSpecStatement) =? 1)))
 }
 
 theorem{
@@ -65,14 +65,14 @@ theorem{
   parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
   statement: ((breaksProved a t e) = false),
   proof: linear_arithmetic{definitions: [Verdict::codeKernelChecked, Verdict::codePending, Verdict::codeProved, Verdict::codeRefused, Verdict::verdictCode, attesterMeaning, bindingMeaning, breaksProved, coherent, kernelMeaning, shared]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 
 definition{
   name: breaksKernelChecked,
   parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
   result: Bool,
-  body: (((((coherent a t e) && (shared a)) && ((project a independentKernelAgrees) && (project a engineFaithful))) && (Verdict::accepted (Verdict::verdictCode e))) && (not (project t leanProvesSpecStatement)))
+  body: (((((coherent a t e) && (shared a)) && (((project a independentKernelAgrees) =? 1) && ((project a engineFaithful) =? 1))) && (Verdict::accepted (Verdict::verdictCode e))) && (not ((project t leanProvesSpecStatement) =? 1)))
 }
 
 theorem{
@@ -80,7 +80,7 @@ theorem{
   parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
   statement: ((breaksKernelChecked a t e) = false),
   proof: linear_arithmetic{definitions: [Verdict::accepted, Verdict::codeKernelChecked, Verdict::codePending, Verdict::codeProved, Verdict::codeRefused, Verdict::verdictCode, attesterMeaning, bindingMeaning, breaksKernelChecked, coherent, kernelMeaning, shared]},
-  axioms: [Quot.sound, propext]
+  axioms: [Classical.choice, Quot.sound, propext]
 }
 \end{semanticmodule}
 \end{lexlean}

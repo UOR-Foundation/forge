@@ -110,18 +110,30 @@ export function level(ex, id) {
 // Writes new table lines after an export's own. Names, levels and expressions are shared by value with what is
 // already there, so equal terms get equal numbers.
 export class Writer {
+  // The indexes are built once per parsed export and kept on it; rollback() removes everything this writer added,
+  // so one parsed bundle serves every check of a session.
   constructor(ex) {
     this.ex = ex;
     this.lines = [];
-    this.nameIds = new Map(ex.names.map((n, i) => [n, i]).filter(([n]) => n !== undefined));
-    this.nextName = ex.names.length;
-    this.levelIds = new Map();
-    ex.levels.forEach((l, i) => { if (l) this.levelIds.set(levelKey(l), i); });
-    this.nextLevel = ex.levels.length;
-    // nanoda refuses an export that states one term twice, so a term already exported is reused, never repeated.
-    this.exprIds = new Map();
-    ex.exprs.forEach((e, i) => { if (e) { const { ie, ...raw } = e; this.exprIds.set(JSON.stringify(sortKeys(raw)), i); } });
-    this.nextExpr = ex.exprs.length;
+    if (!ex.index) {
+      const exprIds = new Map();
+      // nanoda refuses an export that states one term twice, so a term already exported is reused, never repeated.
+      ex.exprs.forEach((e, i) => { if (e) { const { ie, ...raw } = e; exprIds.set(JSON.stringify(sortKeys(raw)), i); } });
+      const levelIds = new Map();
+      ex.levels.forEach((l, i) => { if (l) levelIds.set(levelKey(l), i); });
+      ex.index = { nameIds: new Map(ex.names.map((n, i) => [n, i]).filter(([n]) => n !== undefined)), levelIds, exprIds };
+    }
+    this.nameIds = ex.index.nameIds; this.levelIds = ex.index.levelIds; this.exprIds = ex.index.exprIds;
+    this.base = { names: ex.names.length, levels: ex.levels.length, exprs: ex.exprs.length };
+    this.nextName = ex.names.length; this.nextLevel = ex.levels.length; this.nextExpr = ex.exprs.length;
+    this.added = { names: [], levels: [], exprs: [], decls: [] };
+  }
+  rollback() {
+    for (const k of this.added.names) this.nameIds.delete(k);
+    for (const k of this.added.levels) this.levelIds.delete(k);
+    for (const k of this.added.exprs) this.exprIds.delete(k);
+    for (const k of this.added.decls) this.ex.decls.delete(k);
+    this.ex.names.length = this.base.names; this.ex.levels.length = this.base.levels; this.ex.exprs.length = this.base.exprs;
   }
   // New entries are also entered into the parsed tables, so canon() reads emitted terms as it reads exported ones.
   name(full) {
@@ -131,7 +143,7 @@ export class Writer {
     const part = dot < 0 ? full : full.slice(dot + 1);
     const id = this.nextName++;
     this.lines.push(/^\d+$/.test(part) ? { in: id, num: { pre, i: Number(part) } } : { in: id, str: { pre, str: part } });
-    this.nameIds.set(full, id);
+    this.nameIds.set(full, id); this.added.names.push(full);
     this.ex.names[id] = full;
     return id;
   }
@@ -142,7 +154,7 @@ export class Writer {
     if (this.levelIds.has(key)) return this.levelIds.get(key);
     const id = this.nextLevel++;
     this.lines.push({ il: id, ...raw });
-    this.levelIds.set(key, id);
+    this.levelIds.set(key, id); this.added.levels.push(key);
     this.ex.levels[id] = raw;
     return id;
   }
@@ -151,7 +163,7 @@ export class Writer {
     if (this.exprIds.has(key)) return this.exprIds.get(key);
     const id = this.nextExpr++;
     this.lines.push({ ie: id, ...raw });
-    this.exprIds.set(key, id);
+    this.exprIds.set(key, id); this.added.exprs.push(key);
     this.ex.exprs[id] = raw;
     return id;
   }
