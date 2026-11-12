@@ -1173,5 +1173,22 @@ definition{
   result: String,
   body: "User settings mutations, including renderer patches, device provider credential updates, selected inference model changes and full replacements, capture their caller input before database readiness. They read, synchronously transform and write the user settings record in one IndexedDB read-write transaction. Transactions serialize across windows, so disjoint patches preserve both changes, and a later full credential removal cannot be overwritten by an earlier stale read. No asynchronous gap separates the transactional read from its write. Only transaction completion acknowledges a mutation; request success followed by abort refuses without a partial result. Reads also settle only at transaction completion and return detached records. Missing settings are distinct from corrupt non-record storage. Input and stored roots must be transferable plain records; stored provider credential validity remains the independently checked credential boundary. Imported renderer schemas, privacy coercion, build mode and defaults retain their existing ownership. Database readiness, creation, request and transaction failures expose fixed typed errors without settings contents or provider credentials. This browser-origin transaction boundary does not provide remote synchronization, merge conflicting writes to the same field, or authenticate hostile same-origin code."
 }
+inductive{
+  name: HostBundleBuildError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidHostBundleInput, fields: []},
+    {name: hostBundleMismatch, fields: []},
+    {name: hostBundleCompilerMismatch, fields: []}
+  ]
+}
+
+definition{
+  name: hostBundleBoundary,
+  parameters: [],
+  result: String,
+  body: "The browser entry loads one minified ES module containing the static host dependency graph, before the unchanged renderer module. The existing renderer-lock esbuild compiler builds this projection; this is an adapter build, not an SDK substitute or a new semantic owner. Every original module URL retains its source-relative identity through a compiler-parsed import.meta.url replacement. Literal dynamic imports retain their original shell-relative targets and are not eagerly bundled. All static input files and dynamic targets stay inside the shell root; symbolic links, escaping paths and non-file inputs refuse. The graph admits at most 256 files and sixteen MiB of source; the output is bounded to eight MiB. A deterministic receipt binds the exact source bytes, generator, authoritative specification, renderer package lock, compiler version and output bytes. Staging generates the bundle and receipt before manifest projection, and independent check mode recompiles without writing and refuses any missing, stale or changed output or receipt. Build input, compiler identity and artifact mismatch failures are typed. The complete existing verified service-worker asset closure includes the bundle and receipt; no partial installation, unverified cache or handwritten host fallback is added. Existing registry, input and output schemas, permissions, storage transactions and execution ownership remain unchanged. Performance and actual full browser acceptance use the generated bundle and unchanged guest budgets; a diagnostic timing does not establish release acceptance."
+}
 \end{semanticmodule}
 \end{lexlean}

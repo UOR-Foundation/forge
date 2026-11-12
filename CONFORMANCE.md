@@ -393,6 +393,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-56` | `build` | Only superseded pull-request Studio runs are cancelled while every main and release run retains its full acceptance boundary |
 
+## verified-host-bundle
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-64` | `build` | The browser host loads one reproducible static bundle with preserved module URL identities |
+
 ## verified-project-import
 
 | ID | Level | Statement |
