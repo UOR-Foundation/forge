@@ -184,13 +184,15 @@ export function shownText(text, card = null) {
     if (close >= 0) end = close + 16;
     else for (const m of MODULE_ENDS.slice(1)) { const k = body.lastIndexOf(m); if (k >= 0) end = Math.max(end, k + m.length); }
     const block = end >= 0 ? body.slice(0, end) : body;
-    const n = (block.match(/\b(definition|structure)\{/g) || []).length;
-    out += end >= 0 ? `\u0000${n}\u0000` : `\n\n_Writing the app's LexLean module: ${n} declaration${n === 1 ? "" : "s"} so far…_\n\n`;
+    // An app written in the app notation is lines, not declarations: Forge writes the module from them.
+    const lines = /^<prism-lexlean>\s*app\s/.test(block) && !block.includes("\\begin{") ? block.replace(/<\/?prism-lexlean>/g, "").split("\n").filter((l) => l.trim()).length : 0;
+    const n = lines || (block.match(/\b(definition|structure)\{/g) || []).length;
+    out += end >= 0 ? `\u0000${lines ? "L" : ""}${n}\u0000` : lines ? `\n\n_Writing the app: ${n} line${n === 1 ? "" : "s"} so far…_\n\n` : `\n\n_Writing the app's LexLean module: ${n} declaration${n === 1 ? "" : "s"} so far…_\n\n`;
     if (end < 0) break;
     rest = body.slice(end);
   }
-  const marks = [...out.matchAll(/\u0000(\d+)\u0000/g)];
-  marks.forEach((m, i) => { out = out.replace(m[0], i === marks.length - 1 ? (card ? "\n\n" + card + "\n\n" : `\n\n_The app's LexLean module: ${m[1]} declarations._\n\n`) : ""); });
+  const marks = [...out.matchAll(/\u0000(L?)(\d+)\u0000/g)];
+  marks.forEach((m, i) => { out = out.replace(m[0], i === marks.length - 1 ? (card ? "\n\n" + card + "\n\n" : m[1] ? `\n\n_The app, written in ${m[2]} line${m[2] === "1" ? "" : "s"}. Forge is writing its LexLean module from them._\n\n` : `\n\n_The app's LexLean module: ${m[2]} declarations._\n\n`) : ""); });
   out = out.replace(/<dyad-spec-patch>[\s\S]*?(<\/dyad-spec-patch>|$)/g, "").replace(/\n{3,}/g, "\n\n");
   // A tag still arriving (`<pri…`) is not shown until it is whole.
   const tail = /<[a-z-]*$/.exec(out);

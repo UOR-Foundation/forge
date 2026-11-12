@@ -1,3 +1,4 @@
+import { oneAtATime } from "./approval-queue.mjs";
 // FoundrySpecification.hostedSourcePermissionBoundary. Permission is never persisted or inferred.
 export const HOSTED_SOURCE_ENDPOINT = 'https://mcp.uor.foundation/';
 const messages = {
@@ -38,7 +39,9 @@ export function describeHostedSource(input) {
   }
   return Object.freeze(disclosure);
 }
-export function authorizeHostedSource(input, { document = globalThis.document, online = onlineDefault, now = Date.now, timeoutMs = 300000 } = {}) {
+// Asked in its turn: a dialog opened over another approval's would cover its buttons (approval-queue.mjs).
+export function authorizeHostedSource(input, options) { return oneAtATime(() => authorizeHostedSourceNow(input, options)); }
+function authorizeHostedSourceNow(input, { document = globalThis.document, online = onlineDefault, now = Date.now, timeoutMs = 300000 } = {}) {
   let disclosure;
   try {
     disclosure = describeHostedSource(input);
