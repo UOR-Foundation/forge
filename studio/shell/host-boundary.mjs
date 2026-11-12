@@ -48,6 +48,7 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if(["invalidChatModelSelection","unsupportedChatProvider"].includes(error?.code)) return refusal(error.code, channel, "validation", "Chat model routing refused");
     if(error?.code === "invalidChatExecutionMode") return refusal(error.code, channel, "validation", "Invalid chat execution mode");
     if (["invalidChatPreferences","chatPreferencesMissing","chatPreferencesStateInvalid","chatPreferencesStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "validation", "Chat preference operation refused");
     if (["projectScaffoldFailed","projectPreparationFailed","projectStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "internal", "Project creation refused");

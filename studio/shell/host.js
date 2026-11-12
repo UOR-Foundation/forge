@@ -1,3 +1,4 @@
+import {chatModelRoute} from './chat-model-route.mjs';
 import {createThemeLibrary} from "./theme-library.mjs";
 import {themesData} from "./builtin-themes.mjs";
 import {changeUserSettings} from "./settings-transactions.mjs";
@@ -413,7 +414,8 @@ handlers.set("search-chats", async (q) => {
 handlers.set("chat:count-tokens", async ({ chatId, input }) => {
   const chat = chatId != null ? await get("chats", chatId) : null;
   const settings = (await get("settings", "user")) || DEFAULT_SETTINGS;
-  const chosen = (chat && chat.modelSelection && chat.modelSelection.provider ? chat.modelSelection : settings.selectedModel) || {};
+  const route = chatModelRoute(chat?.modelSelection,settings.selectedModel);
+  const chosen = {provider:route.provider,name:route.paid?route.model.slice(route.provider.length+1):route.model};
   const models = chosen.provider === "openrouter" ? OPENROUTER_MODELS : chosen.provider === "featherless" ? FEATHERLESS_MODELS : LOCAL_MODELS;
   const contextWindow = (models.find((m) => m.apiName === chosen.name) || models[0] || { contextWindow: 4096 }).contextWindow;
   const tokens = (text) => Math.ceil(String(text || "").length / 4);
@@ -1355,10 +1357,8 @@ async function chatTurn(chatId, intent) {
   const ref = intent.invocationRef;
   const settings = (await get("settings", "user")) || DEFAULT_SETTINGS;
   const V = await viewReady();
-  const chosen = (chat.modelSelection && chat.modelSelection.provider ? chat.modelSelection : settings.selectedModel) || {};
-  // Only Featherless is offered as a cloud model now; a selection left on OpenRouter answers on the device.
-  const paid = chosen.provider === "featherless" && chosen.name;
-  const model = paid ? chosen.provider + "/" + chosen.name.replace(/^(openrouter|featherless)\//, "") : MODEL_ID;
+  const route = chatModelRoute(chat.modelSelection,settings.selectedModel);
+  const {paid,model,provider} = route;
   // T2: the user message, accepted
   const messages = await messagesOf(chatId);
   const userId = messages.length ? Math.max(...messages.map((x) => x.id)) + 1 : 1;
@@ -1406,7 +1406,7 @@ async function chatTurn(chatId, intent) {
     // the paid route is given room for several files (the device's engine keeps its own smaller cap).
     // Featherless's GLM reasons for some 14,000 tokens before it writes, inside the same budget, so it gets
     // the most Featherless allows (32,768); 16,384 left a page cut off mid file.
-    const body = { model, messages: request, max_tokens: !paid ? 2048 : chosen.provider === "featherless" ? 32768 : 16384, temperature: "0.7" };
+    const body = { model, messages: request, max_tokens: !paid ? 2048 : provider === "featherless" ? 32768 : 16384, temperature: "0.7" };
     const hit = await lookup(body);
     const route = await routeOf(hit, body);
     // The View's no-key word names OpenRouter; a Featherless model is told about its own key.
@@ -1593,6 +1593,7 @@ const chatQueue=createChatQueueController({
     const m=chatMachineOf(chatId);m.queueRunning=true;m.queueSignal=signal;const cancel=()=>m.abort?.abort();signal.addEventListener("abort",cancel);
     publishChat(chatId,{phase:"admitting",invocationRef:intent.invocationRef,error:null});
     try{assertGenerationActive(signal);await chatTurn(chatId,intent);return m.state.lastCompletion?.intentId===intent.intentId?m.state.lastCompletion:{outcome:"errored"};}
+    catch(error){if(["invalidChatModelSelection","unsupportedChatProvider"].includes(error?.code))publishChat(chatId,{error:error.code==="unsupportedChatProvider"?"The chat provider is unsupported":"The chat model selection is invalid"});throw error;}
     finally{signal.removeEventListener("abort",cancel);m.queueRunning=false;m.queueSignal=null;m.abort=null;if(m.state.lastCompletion?.intentId!==intent.intentId){publishChat(chatId,{phase:"finalizing",lastCompletion:{intentId:intent.intentId,invocationRef:intent.invocationRef,outcome:signal.aborted?"cancelled":"errored",targetAppId:intent.appId??null,updatedFiles:false,suppressAutoReview:true}});emit("chat:stream:end",{chatId});}}
   },
 });
