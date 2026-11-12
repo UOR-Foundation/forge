@@ -21,3 +21,5 @@ The renderer journey exposes an existing floating `Interactive apps` action over
 URL/image theme generation and theme-image storage remain separate unqualified capabilities. This feature does not close factory consumer adoption, production dependency qualification, independent review, or whole-application release obligations.
 
 All 48 mandatory browser journeys pass together on the restored 586-file projected application; complete results are in `theme-library-browser-results.json`. Its closure is `c114a6cbc2cbabdce28def294fc301278d20f48169bc1fbcdd83492cce69ad7c` (51,337,272 bytes). This includes the original editor, permission, compiler, import, queue, recovery and privacy gates alongside the new theme journey.
+
+The full three-run mobile performance gate passes without changed budgets: cold median 9540 ms / 11500, warm 1784 / 2200, INP 184 / 450 and first token 3537 / 5000. Exact arrays are retained in `theme-library-performance.json`; all seven route budgets pass.
