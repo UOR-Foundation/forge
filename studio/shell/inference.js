@@ -1,5 +1,5 @@
 import {readUserSettings,replaceUserSettings,changeUserSettings} from "./settings-transactions.mjs";
-import {deviceProviderCredential} from './private-provider-credentials.mjs';
+import {deviceProviderCredential,deviceInferenceRoute} from './private-provider-credentials.mjs';
 import { authorizeInference } from "./inference-consent.mjs";
 import { cloudCompletion } from "./inference-effects.mjs";
 // Inference on the page, shared by the landing page (shell.js) and the builder's host (host.js).
@@ -93,7 +93,9 @@ export async function deviceKeyGet() { return deviceProviderCredential(await set
 export async function keyGet() { return deviceKeyGet(); }
 export async function featherlessKeyGet() { return deviceProviderCredential(await settingsGet(), "featherless"); }
 export const providerOf = (model) => (String(model).startsWith("featherless/") ? "featherless" : "openrouter");
-export const keyFor = (model) => (providerOf(model) === "featherless" ? featherlessKeyGet() : keyGet());
+export const SITE_RELAY = "site-relay";
+export const inferenceRoute = async model => deviceInferenceRoute(await settingsGet(),providerOf(model));
+export const keyFor = async model => {const route=await inferenceRoute(model);return route.key || (route.kind==="siteFeatherless"?SITE_RELAY:"");};
 export function keySet(value) { return changeUserSettings(db(),{value},(s,captured)=>({...s,providerSettings:{...(s.providerSettings||{}),openrouter:{...(s.providerSettings?.openrouter||{}),apiKey:{value:captured.value}}}})); }
 // Who answers: local (the Q engine) or paid (an OpenRouter model). Read from and written to the same
 // selectedModel the renderer's settings page and composer use.
@@ -310,17 +312,17 @@ export async function paidGenerate(body, onDelta, signal, onReasoning) {
 }
 async function paidGenerateOnce(body, onDelta, signal, onReasoning) {
   const provider = providerOf(body.model);
-  const key = await keyFor(body.model);
-  if (!key) throw Object.assign(new Error("The provider requires a valid API key"), {code:"inferenceUnauthorized"});
+  const route = await inferenceRoute(body.model), key = route.key;
+  if (!key && route.kind !== "siteFeatherless") throw Object.assign(new Error("The provider requires a valid API key"), {code:"inferenceUnauthorized"});
   const c = await coreReady(); const V = await viewReady();
   let bytes = c.run({ op: "encode-openrouter-request", model: paidId(body.model), request: body, stream: true }).bytes;
   // Featherless speaks plain OpenAI chat completions: the core's request without the three fields only
   // OpenRouter reads (usage.include, reasoning, provider), and the standard usage option in their place.
   if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; bytes = JSON.stringify(j); }
-  const credentialOwner = "visitor";
-  const permission = await authorizeInference({ provider, model: paidId(body.model), bytes, credentialOwner, signal });
+  const credentialOwner = route.credentialOwner;
+  const permission = await authorizeInference({ provider: route.provider, model: paidId(body.model), bytes, credentialOwner, signal });
   let result;
-  try { result = await cloudCompletion({ provider, key, bytes: permission.disclosure.bytes, origin: location.origin, signal: permission.signal, onDelta, onReasoning }); }
+  try { result = await cloudCompletion({ provider: route.provider, key, bytes: permission.disclosure.bytes, origin: location.origin, signal: permission.signal, onDelta, onReasoning }); }
   catch (error) {
     if (error.code === "inferenceUnauthorized") error.message = V.noKeyLabel;
     if (error.code === "inferencePaymentRequired") error.message = V.noCreditLabel;

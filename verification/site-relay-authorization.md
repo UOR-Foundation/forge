@@ -1,0 +1,15 @@
+# FA-65 — Site relay authorization
+
+Authority: `FoundrySpecification.siteRelayBoundary`, `InferenceCredentialRoute`, `privateProviderCredentialBoundary` and `inferenceConsentBoundary` in `app/src/FoundrySpecification.lex.tex`.
+
+The capability was registered with its scenario and a failing Rust gate before implementation. During integration, the incoming marker-based relay selection was found to collide with valid visitor credential bytes. The adapter now captures a tagged route before disclosure. Missing Featherless credentials select the declared site relay; any nonempty valid visitor key, including `site-relay`, selects the direct endpoint. Missing OpenRouter credentials still refuse before disclosure. Malformed credentials cannot select a fallback.
+
+Consent binds the exact request bytes, endpoint and credential owner. A site relay never receives browser credentials, cookies or redirected requests. Changes to stored credentials while approval is pending cannot alter that captured route. Existing cancellation, deadlines, bounded retries and complete-stream validation remain enforced.
+
+Local qualification: six focused controls, the actual rebuilt-shell browser journey, all 401 Node controls, all ten relay-worker controls, Rust workspace tests, Clippy and formatting pass. The host LexLean diagnostic verifies two modules at `50e68bb6ccf5159bdbfcf10dac4cf55a1de0142e6eecab457ebb790b18f13e26`; this diagnostic is not exact-SDK acceptance. The browser observes decline and pending cancellation with zero transport effects, site approval without Authorization, marker-valued visitor credentials sent directly, stable pending disclosure, malformed-credential refusal, missing-OpenRouter refusal and offline refusal, with zero page exceptions.
+
+Planted defects: reintroducing marker-based routing fails both the six-control gate and the actual browser; removing the provider/owner binding fails the disclosure control; bypassing approval fails the actual adapter control. Restored controls and browser pass. Commands: `node --test studio/tools/site_relay_authorization.test.mjs` and `node studio/tools/site_relay_authorization_browser.mjs`.
+
+The integration imports main `fbff87cecd0e99db2dbc93ccdc2830ed6b86607a`, including official template policy `df5d7d32f5cdc3a3cc025d438752e73a40282731` and its proof reuse. That supported template optimization does not claim an unreleased PrismPM factory consumer. The independently reproduced signed 285-vector guest remains unchanged. Incoming app-cover ID FA-28 was migrated to AC-01 because FA-28 already identifies verified project import in this stack.
+
+The full integrated browser sweep, performance gate, exact-SDK CI and independent review remain pending. Its first sweep detected an outdated decorative-image endpoint allowance in the telemetry browser oracle after main changed its image proxy; that difference must be resolved and rerun. No production provider request, relay deployment or credential rotation was performed by these intercepted fixtures.

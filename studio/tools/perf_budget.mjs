@@ -17,6 +17,7 @@ import http from "node:http";
 import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { RELAY } from "../shell/inference-effects.mjs";
 
 const studio = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const shell = path.join(studio, "shell");
@@ -109,6 +110,9 @@ if (process.argv.includes("--browser")) {
     });
     await ctx.route("**/*", route => {
       const url = new URL(route.request().url());
+      if (url.origin === new URL(RELAY).origin) return route.request().method()==="OPTIONS"
+        ? route.fulfill({status:204,headers:{"access-control-allow-origin":"*","access-control-allow-methods":"POST, OPTIONS","access-control-allow-headers":"content-type"}})
+        : route.fulfill({status:200,headers:{"content-type":"text/event-stream","access-control-allow-origin":"*"},body:sse()});
       if (url.origin === "https://api.featherless.ai") return route.fulfill({status:200,headers:{"content-type":"text/event-stream"},body:sse()});
       return url.origin === new URL(BASE).origin ? route.continue() : route.abort();
     });
@@ -169,7 +173,8 @@ function sse() {
   let body = "";
   const parts = []; for (let i = 0; i < 200; i++) parts.push(`T${i} `);
   parts.push("\n<dyad-write path=\"src/pages/Index.tsx\" description=\"page\">\nexport default function Index() {\n  return <h1>Streaks</h1>;\n}\n</dyad-write>\nDone.");
-  for (const p of parts) body += "data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: p }, finish_reason: null }] }) + "\n\n";
+  // The last chunk carries finish_reason "stop": the host refuses a stream that ends without one (inference-effects.mjs).
+  parts.forEach((p, i) => { body += "data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: p }, finish_reason: i === parts.length - 1 ? "stop" : null }] }) + "\n\n"; });
   return body + "data: [DONE]\n\n";
 }
 function serve() {

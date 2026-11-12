@@ -88,7 +88,7 @@ try {
   await context.setOffline(false);
   const expired = await page.evaluate(async base => {
     const { authorizeInference } = await import(base + "inference-consent.mjs");
-    try { await authorizeInference({ provider: "openrouter", model: "model", bytes: "{}", credentialOwner: "site" }, { timeoutMs: 10 }); }
+    try { await authorizeInference({ provider: "openrouter", model: "model", bytes: "{}", credentialOwner: "visitor" }, { timeoutMs: 10 }); }
     catch (error) { return error.code; }
   }, base);
   assert.equal(expired, "inferenceConsentTimedOut");

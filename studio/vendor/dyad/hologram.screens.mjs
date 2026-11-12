@@ -18,6 +18,9 @@ export const SCREENS = {
   "src/pages/apps.tsx": "hologram.screens/AppsPage.tsx",
   // The site header's breadcrumb leads back; a page draws no back link of its own.
   "src/components/ui/back-button.tsx": "hologram.screens/BackButton.tsx",
+  // App covers: the card shows the app's own first screen, its tag and one two row sentence (shell/covers.mjs).
+  "src/components/AppShowcaseCard.tsx": "hologram.screens/AppShowcaseCard.tsx",
+  "src/hooks/useAppThumbnails.ts": "hologram.screens/useAppThumbnails.ts",
 };
 
 // A page's body in the inset, as dashboard-01 spaces it: the site header names the page, so the page keeps
@@ -355,6 +358,18 @@ import { ImportAppDialog } from "@/components/ImportAppDialog";`,
     </>
   );
 }`,
+  },
+  // The home's featured row holds the 2:1 cover cards (hologram.screens/AppShowcaseCard.tsx): wide enough
+  // for the sentence's two rows, and the "See more" tile the cover's own shape.
+  {
+    file: "src/components/FeaturedAppShowcase.tsx",
+    from: `            <div key={app.id} className="w-56 flex-shrink-0">`,
+    to: `            <div key={app.id} className="w-72 flex-shrink-0">`,
+  },
+  {
+    file: "src/components/FeaturedAppShowcase.tsx",
+    from: `              className="flex flex-col items-center justify-center w-56 aspect-[4/3] flex-shrink-0`,
+    to: `              className="flex flex-col items-center justify-center w-72 aspect-[2/1] flex-shrink-0`,
   },
 ];
 

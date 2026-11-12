@@ -148,6 +148,52 @@ def theme_css():
     return HEAD + block(":root", variables(LIGHT, False)) + block(".dark", variables(DARK, True)) + theme_block()
 
 
+# ---- the apps the model writes as code. Their scaffold (shadcn/ui, as the renderer vendors it) reads its
+# colours as `hsl(var(--x))`, so the kit's values are written as the bare `h s% l%` the scaffold expects,
+# under the scaffold's own names. The host adds this sheet to every such app's page, unlayered, after the
+# app's own CSS: the scaffold declares its variables inside `@layer base`, so the kit's win whatever the
+# app writes there, and every app built here wears the kit.
+SCAFFOLD = ["background", "foreground", "card", "card-foreground", "popover", "popover-foreground", "primary", "primary-foreground",
+            "secondary", "secondary-foreground", "muted", "muted-foreground", "accent", "accent-foreground", "destructive",
+            "border", "input", "ring", "brand", "brand-foreground", "success", "success-foreground", "warning", "warning-foreground",
+            "chart-1", "chart-2", "chart-3", "chart-4", "chart-5", "sidebar-foreground", "sidebar-primary", "sidebar-primary-foreground",
+            "sidebar-accent", "sidebar-accent-foreground", "sidebar-border", "sidebar-ring"]
+
+
+def hsl(hex_value):
+    r, g, b = (int(hex_value[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    hi, lo = max(r, g, b), min(r, g, b)
+    light = (hi + lo) / 2
+    if hi == lo:
+        hue = sat = 0.0
+    else:
+        d = hi - lo
+        sat = d / (2 - hi - lo) if light > 0.5 else d / (hi + lo)
+        hue = ((g - b) / d + (6 if g < b else 0)) if hi == r else ((b - r) / d + 2) if hi == g else ((r - g) / d + 4)
+        hue *= 60
+    out = f"{hue:.1f} {sat * 100:.1f}% {light * 100:.1f}%"
+    return out + (f" / {int(hex_value[7:9], 16) / 255:.3f}" if len(hex_value) == 9 else "")
+
+
+def scaffold_vars(colours):
+    v = {k: hsl(colours[k]) for k in SCAFFOLD}
+    v["sidebar-background"] = hsl(colours["sidebar"])
+    v["destructive-foreground"] = hsl(colours["destructive-foreground"] if colours["destructive-foreground"] != colours["destructive"] else WHITE)
+    v["radius"] = RADIUS["lg"]["$value"]
+    v["font-sans"] = FONT["sans"]
+    v["font-display"] = FONT["display"]
+    v["font-mono"] = FONT["mono"]
+    return v
+
+
+def scaffold_css():
+    out = HEAD + block(":root", scaffold_vars(LIGHT)) + block(".dark", scaffold_vars(DARK))
+    out += "body { font-family: var(--font-sans); }\n"
+    out += "h1, h2, .font-display { font-family: var(--font-display); letter-spacing: " + TRACKING["display"] + "; }\n"
+    out += "code, kbd, samp, pre, .font-mono { font-family: var(--font-mono); }\n"
+    return out
+
+
 def write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     io.open(path, "w", encoding="utf-8", newline="\n").write(text)
@@ -169,7 +215,7 @@ def brand_json():
     return json.dumps({"generated": "tools/brand_kit.py", "theme_color": DARK["background"], "background_color": DARK["background"], "paper": LIGHT["background"], "brand": DARK["brand"]}, indent=1) + "\n"
 
 
-GENERATED = {"shell/brand.css": brand_css, "vendor/dyad/hologram.theme.css": theme_css, "shell/brand.json": brand_json}
+GENERATED = {"shell/brand.css": brand_css, "vendor/dyad/hologram.theme.css": theme_css, "shell/brand.json": brand_json, "shell/scaffold-brand.css": scaffold_css}
 HAND = re.compile(r"#[0-9a-fA-F]{3,8}\b|oklch\(|rgba?\(|hsla?\(")
 # The projected pages carry the meta colour brand.json gives them; the check reads their source instead.
 HAND_FREE = ["shell/appearance.css", "shell/appearance.js", "shell/holo.js", "core/src/bin/project_shell.rs", "vendor/dyad/vite.shell.config.mts", "scripts/stamp_shell.py"]

@@ -440,7 +440,7 @@ statement = "Portable builds execute under guest-admitted durable ownership and 
 id = "FA-47"
 level = "build"
 suite = "private-provider-credentials"
-statement = "Cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files"
+statement = "Direct cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files"
 
 [[id]]
 id = "FA-48"
@@ -543,3 +543,15 @@ id = "FA-64"
 level = "build"
 suite = "verified-host-bundle"
 statement = "The browser host loads one reproducible static bundle with preserved module URL identities"
+
+[[id]]
+id = "AC-01"
+level = "build"
+suite = "app-covers"
+statement = "App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules"
+
+[[id]]
+id = "FA-65"
+level = "build"
+suite = "site-relay-authorization"
+statement = "Site-funded inference retains exact request consent and never confuses visitor credentials with relay markers"

@@ -30,7 +30,7 @@ test("stale publication completion does not promote the preview or claim current
     chatMachineOf: () => ({}), now: () => "now", saveMessages: async (_, rows) => shown.push(rows.at(-1).content), emit() {}, publishChat() {},
     rulesOf: async () => proved, get: async () => ({ githubAccessToken: { value: "token" } }),
     buildOnGitHub: async () => ({ ok: true, live: "https://example.test/", fingerprint: "abc", vectors: { total: 1, passed: 1 }, runs: {} }),
-    prism: {}, prismCode: async () => ({}), AbortController, nextPhase: async () => "published",
+    prism: {}, prismCode: async () => ({}), publishCommit: async () => ({ files: [] }), AbortController, nextPhase: async () => "published",
     saveRules: async (_, state, expected) => { assert.equal(expected, proved); assert.equal(state.phase, "published"); return false; },
     put: async (...args) => audit.push(args), machineOf() { assert.fail("stale completion must not change preview"); }, publish() { assert.fail("stale completion must not change preview"); },
   });
@@ -46,7 +46,7 @@ test("publication progress cannot overwrite the stopped operation", async () => 
     chatMachineOf: () => machine, now: () => "now", saveMessages: async (_, rows) => shown.push(rows.at(-1).content), emit() {}, publishChat() {},
     rulesOf: async () => ({ ...rule, phase: "proved" }), get: async () => ({ githubAccessToken: { value: "token" } }),
     buildOnGitHub: ({ step }) => { progress = step; queueMicrotask(() => machine.abort.abort()); return new Promise(() => {}); },
-    prism: {}, prismCode: async () => ({}), AbortController,
+    prism: {}, prismCode: async () => ({}), publishCommit: async () => ({ files: [] }), AbortController,
   });
   await publish(1, 1, messages, 1, {}, "intent");
   assert.match(shown.at(-1), /Stopped browser requests/);

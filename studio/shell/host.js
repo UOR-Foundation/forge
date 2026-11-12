@@ -65,6 +65,7 @@ import { copyGenerationInput, assertCanonicalGeneration } from "./canonical-gene
 import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
+import * as covers from "./covers.mjs";
 
 const BASE = new URL("./", import.meta.url); // the shell's directory, wherever it is served
 const listeners = new Map();
@@ -236,7 +237,7 @@ handlers.set("edit-app-file", async (input) => {
   emit("version-created", { appId: input.appId, oid });
   return {};
 });
-handlers.set("delete-app", async ({ appId }) => { const deletedChats=(await all("chats")).filter(chat=>chat.appId===appId).map(chat=>chat.id); await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); for(const chatId of deletedChats){queueChannel?.postMessage({chatId});await chatQueue.refresh(chatId).catch(()=>{});} });
+handlers.set("delete-app", async ({ appId }) => { const deletedChats=(await all("chats")).filter(chat=>chat.appId===appId).map(chat=>chat.id); await deleteStoredProject(await dbReady, appId); liveEditors.delete(appId); await covers.forget(BASE, appId); for(const chatId of deletedChats){queueChannel?.postMessage({chatId});await chatQueue.refresh(chatId).catch(()=>{});} });
 handlers.set("rename-app", async (input) => {
   await coreReady;
   await renameStoredProject(await dbReady, input, { core, derive: kappa, onCommit: oid => emit("version-created", { appId: input.appId, oid }) });
@@ -426,8 +427,59 @@ function publish(appId, patch) {
   m.revision += 1;
   m.state = { ...m.state, ...patch, revision: m.revision, capabilities: caps(patch.phase || m.state.phase) };
   emit("distributed-machine:snapshot", { protocolVersion: 1, machineId: "app_run", encodedKey: { appId }, actorInstanceId: "web-app_run-" + appId, revision: m.revision, encodedState: m.state });
+  if (m.state.phase === "ready" && m.state.url && m.state.url.appUrl) scheduleCover(appId, m.state.url.appUrl);
   return m;
 }
+// ---- app covers (covers.mjs). Every preview carries the capture responder; when an app's preview is
+// ready and its version has no cover yet, the preview is loaded once more, hidden, at cover size, and its
+// picture is stored with the version it shows. The card's words are asked of the visitor's own model
+// once per app, and stored only when they meet the rules in covers.mjs.
+let coverLibraryReady = null;
+const coverLibrary = () => (coverLibraryReady ??= fetch(new URL("assets/html-to-image.js", BASE)).then((r) => (r.ok ? r.text() : null)).catch(() => null));
+async function withCoverResponder(html) {
+  const library = await coverLibrary();
+  return library ? covers.withResponder(html, library) : html;
+}
+const coverTimers = new Map();
+let coverQueue = Promise.resolve();
+// A turn writes in batches and the preview is announced ready after each; the picture waits for the last.
+function scheduleCover(appId, appUrl) {
+  // Only a preview this page built carries the responder; a published app's page on GitHub Pages does not.
+  if (!String(appUrl).startsWith(BASE.href)) return;
+  clearTimeout(coverTimers.get(appId));
+  coverTimers.set(appId, setTimeout(() => {
+    coverTimers.delete(appId);
+    coverQueue = coverQueue.then(() => coverApp(appId, appUrl)).catch((e) => console.warn("cover", appId, e && e.message));
+  }, 4000));
+}
+async function coverApp(appId, appUrl) {
+  if (!(await get("apps", appId))) return;
+  const version = ((await get("refs", appId + ":main")) || "") + " " + appUrl;
+  if ((await covers.coverVersion(BASE, appId)) === version) return;
+  const shot = await covers.capture(appUrl);
+  if (!shot) return;
+  await covers.saveCover(BASE, appId, await covers.encodeCover(shot.png), version);
+  if (!(await covers.hasCard(BASE, appId)) && !turnRunning()) await describeApp(appId, shot.text);
+}
+// One short request through this origin's own endpoint, so it is routed, sealed and paid as any turn is.
+async function describeApp(appId, pageText) {
+  const app = await get("apps", appId);
+  const settings = (await get("settings", "user")) || DEFAULT_SETTINGS;
+  const chosen = settings.selectedModel || {};
+  const paid = chosen.provider === "featherless" && chosen.name;
+  const model = paid ? chosen.provider + "/" + chosen.name.replace(/^(openrouter|featherless)\//, "") : MODEL_ID;
+  let issues = [];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(new URL("v1/chat/completions", BASE), { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model, messages: covers.cardMessages(app.name, pageText, issues), max_tokens: paid ? 8192 : 256, temperature: "0.3" }) });
+    if (!res.ok) return;
+    const answer = (await res.json()).choices?.[0]?.message?.content;
+    const read = covers.readCard(answer);
+    if (read.card) { await covers.saveCard(BASE, appId, read.card); return; }
+    issues = read.issues;
+  }
+}
+
 const esbuild = () => loadBrowserCompiler(BASE);
 // Generated-code previews disclose network destinations before compilation. The grant is
 // installed only after the captured source and prior permission record still match.
@@ -457,6 +509,25 @@ mountPreviewPermissions({
     for (const frame of document.querySelectorAll("iframe")) if (frame.src.startsWith(prefix)) frame.src = "about:blank";
   },
 });
+
+// The Hologram brand kit on every app the model writes as code: the kit's tokens in the scaffold's own
+// variable names (shell/scaffold-brand.css, generated by tools/brand_kit.py) and its web fonts as data
+// URLs, since a preview loads nothing from this origin. Added unlayered after the app's CSS, so the
+// kit wins over the scaffold's stock theme, which sits in `@layer base`.
+const BRAND_FONTS = [["Geist", "Geist-Regular", 400], ["Geist", "Geist-Medium", 500], ["Geist", "Geist-SemiBold", 600], ["Archivo", "Archivo-SemiBold", 600]];
+let brandHeadReady = null;
+function brandHead() {
+  return (brandHeadReady ??= (async () => {
+    const r = await fetch(new URL("scaffold-brand.css", BASE));
+    if (!r.ok) throw new Error("scaffold-brand.css answered " + r.status);
+    let faces = "";
+    for (const [family, file, weight] of BRAND_FONTS) {
+      const f = await fetch(new URL("fonts/" + file + ".woff2", BASE));
+      if (f.ok) faces += `@font-face { font-family: "${family}"; src: url("data:font/woff2;base64,${b64(new Uint8Array(await f.arrayBuffer()))}") format("woff2"); font-weight: ${weight}; font-display: swap; }\n`;
+    }
+    return `<style>${faces}${(await r.text()).replace(/<\/style/gi, "<\\/style")}</style>`;
+  })().catch((error) => { brandHeadReady = null; throw error; }));
+}
 
 async function verifiedBuildSource(appId) {
   return captureBuildSource(await dbReady, appId, {
@@ -514,11 +585,12 @@ async function buildPreview(appId) {
 <script type="importmap">${JSON.stringify({ imports })}<\/script>
 <script>tailwind = { config: ${tailwindConfig} };<\/script>
 <script src="https://cdn.tailwindcss.com"><\/script>
-<style>${css}</style></head><body><div id="root"></div>
+<style>${css}</style>${await brandHead()}</head><body><div id="root"></div>
 <script type="module">${js}<\/script></body></html>`;
+  const shown = await withCoverResponder(html);
   await assertBuildSourceCurrent(await dbReady, appId, source);
   const cache = await caches.open("previews");
-  await cache.put(appUrl.pathname + "index.html", new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } }));
+  await cache.put(appUrl.pathname + "index.html", new Response(shown, { headers: { "content-type": "text/html; charset=utf-8" } }));
   try { await grantPreview(previewId(appUrl.pathname), approvedEndpoints, permission, previousPermission); }
   catch (error) { await cache.delete(appUrl.pathname + "index.html"); throw error; }
   return { appUrl: appUrl.href, bytes: js.length };
@@ -534,7 +606,7 @@ function liveFrame() {
     const text = async (p) => { const r = await fetch(new URL(p, BASE)); if (!r.ok) throw new Error(p + " answered " + r.status); return r.text(); };
     const fonts = {};
     for (const p of FONTS) { const r = await fetch(new URL(p, BASE)); if (r.ok) fonts[p] = b64(new Uint8Array(await r.arrayBuffer())); }
-    const html = frameHtml({ brandCss: await text("brand.css"), componentsCss: await text("live/components.css"), componentsJs: await text("live/components.js"), interpreter: prism.INTERPRETER, fonts });
+    const html = await withCoverResponder(frameHtml({ brandCss: await text("brand.css"), componentsCss: await text("live/components.css"), componentsJs: await text("live/components.js"), interpreter: prism.INTERPRETER, fonts }));
     await coreReady;
     const { path } = core.run({ op: "preview", kappa: await kappa(enc.encode(html)) });
     const url = new URL(path.slice(1), BASE);
@@ -1141,6 +1213,17 @@ handlers.set("prism:status", async ({ appId }) => (await rulesOf(appId)) || null
 // the kernel move the rules to published, and the preview shows the live app. The turn stays open and
 // counts the build, like the approve turn; Stop stops watching, not the build on GitHub.
 const prismCode = () => import("./prism-code/src/index.mjs");
+// The commit, and beside it the app's own card (shell/live/card-files.mjs): the page the template builds then
+// draws the app with the preview's components, from the same spec, and answers through the verified guest.
+// templateCommit itself stays prism-code's, byte for byte (tools/prism_template.mjs); the card files are the
+// app's, which the template's page reads and pins nothing about.
+async function publishCommit(args) {
+  const commit = await prism.templateCommit(args);
+  const { cardFiles } = await import("./live/card-files.mjs");
+  const load = async (p) => { const r = await fetch(new URL(p, BASE)); if (!r.ok) throw new Error(p + " answered " + r.status); return r.text(); };
+  const { files } = await cardFiles(args.spec, { load });
+  return { ...commit, files: [...commit.files, ...files] };
+}
 async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   const m = chatMachineOf(chatId);
   messages.push({ id: userId + 1, role: "assistant", content: "", approvalState: "approved", commitHash: null, createdAt: now() });
@@ -1176,7 +1259,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
     const permission=await authorizeGitHubPublication(request,{signal:abort.signal});
     return bindPublicationSource(permission,rules,()=>rulesOf(appId));
   };
-  const build = buildOnGitHub({ token, spec, source:rules.specKappa, authorize, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: prism.templateCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
+  const build = buildOnGitHub({ token, spec, source:rules.specKappa, authorize, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: publishCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
     .catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
   const result = await Promise.race([build, stopped]);
   observing = false;
@@ -1519,7 +1602,7 @@ async function buildPortable(appId, captured) {
   // the stylesheet it writes is taken as static CSS. The published page then needs no network and no
   // compiler to style itself.
   const inline = (s) => s.replace(/<\/script/g, "<\\/script");
-  const body = `<style>${css}</style></head><body><div id="root"></div>\n<script type="module">${inline(js)}<\/script></body></html>`;
+  const body = `<style>${css}</style>${await brandHead()}</head><body><div id="root"></div>\n<script type="module">${inline(js)}<\/script></body></html>`;
   const head = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">\n<script>var __HOLO_BASE__ = location.pathname.replace(/index\\.html$/, "");`;
   // Every class like token of the bundle, the project's CSS and its HTML, listed once in a hidden
   // element, so the compiler's first scan already sees every candidate whether or not the page has

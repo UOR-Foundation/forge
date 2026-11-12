@@ -256,4 +256,43 @@ export default function HomePage() {`,
   },
 ];
 
-export const LEAN = [...settlePatches, ...chipPatches, ...routePatches, ...panelPatches, ...shikiPatches, ...i18nPatches, ...monacoPatches, ...routerPatches, ...chatPatches];
+// A screen that asks on mount for a capability the browser host does not have gets a typed refusal
+// (unsupportedChannel, FA-15) and draws its own empty state; a toast for it greeted every visitor on Home
+// with four red errors (prompts, themes, custom themes, pending user input). Background queries for such a capability are quiet;
+// an action the visitor takes (a mutation) still says it is unavailable.
+const quietPatches = [
+  {
+    file: "src/renderer.tsx",
+    from: `    onError: (error, query) => {
+      if (query.meta?.showErrorToast) {`,
+    to: `    onError: (error, query) => {
+      if (query.meta?.showErrorToast && (error as { code?: string } | null)?.code !== "unsupportedChannel") {`,
+  },
+  // The same for the pending user-input requests the renderer hydrates at start: the browser host has none.
+  {
+    file: "src/user_input/read_model.ts",
+    from: `      void hydrate().catch((error) => showErrorToast(error));`,
+    to: `      void hydrate().catch((error) => { if ((error as { code?: string } | null)?.code !== "unsupportedChannel") showErrorToast(error); });`,
+  },
+  // A typed error's class name is a protocol identifier the host and renderer share, not a word for the
+  // visitor: toasts and messages built with \`\${error}\` printed "DyadError: ...". The error reads as its message.
+  {
+    file: "src/errors/dyad_error.ts",
+    from: `    this.name = "DyadError";
+    this.kind = kind;
+    this.cause = options?.cause;
+  }
+}`,
+    to: `    this.name = "DyadError";
+    this.kind = kind;
+    this.cause = options?.cause;
+  }
+
+  toString(): string {
+    return this.message;
+  }
+}`,
+  },
+];
+
+export const LEAN = [...quietPatches, ...settlePatches, ...chipPatches, ...routePatches, ...panelPatches, ...shikiPatches, ...i18nPatches, ...monacoPatches, ...routerPatches, ...chatPatches];

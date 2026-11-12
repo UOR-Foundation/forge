@@ -208,6 +208,7 @@ function prismDecide(spec, values) {
 
 // The same two functions, as the live frame runs them (shell/live/frame.js): one interpreter wherever an
 // answer is shown.
+export { prismAnswer, prismDecide };
 export const INTERPRETER_PARTS = Object.freeze([prismAnswer.toString(), prismDecide.toString()]);
 export const INTERPRETER = INTERPRETER_PARTS.join("\n") + "\n";
 

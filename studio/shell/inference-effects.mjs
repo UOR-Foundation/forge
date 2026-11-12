@@ -14,10 +14,14 @@ const messages = {
 };
 const fault = code => Object.assign(new Error(messages[code]), { code });
 const codes = new Set(["invalidInferenceRequest", "inferenceCancelled", "inferenceTimedOut", "inferenceNetworkFailed", "inferenceUnauthorized", "inferencePaymentRequired", "inferenceRateLimited", "inferenceProviderFailed", "malformedInferenceResponse", "inferenceResponseTooLarge", "inferenceConsumerFailed"]);
-export const inferenceEndpoints = Object.freeze({ openrouter: "https://openrouter.ai/api/v1/chat/completions", featherless: "https://api.featherless.ai/v1/chat/completions" });
+// The site's Featherless relay (studio/relay/featherless): it holds the site's key, so a visitor without a
+// key of their own sends no credential at all. Their own key, when they have one, goes to Featherless itself.
+export const RELAY = "https://prism-featherless.trinity-03d.workers.dev/v1/chat/completions";
+export const inferenceEndpoints = Object.freeze({ openrouter: "https://openrouter.ai/api/v1/chat/completions", featherless: "https://api.featherless.ai/v1/chat/completions", featherlessSite: RELAY });
 export async function cloudCompletion({ provider, key, bytes, origin, signal, onDelta, onReasoning }, { fetch = globalThis.fetch, timeoutMs = 600000, retryMs = 5000 } = {}) {
   if (!Object.hasOwn(inferenceEndpoints, provider) || typeof bytes !== "string" || new TextEncoder().encode(bytes).length > 2 * 1024 * 1024 || !Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 600000 || !Number.isSafeInteger(retryMs) || retryMs < 0 || retryMs > 5000) throw fault("invalidInferenceRequest");
-  if (typeof key !== "string" || !key.trim()) throw fault("inferenceUnauthorized");
+  const relayed = provider === "featherlessSite";
+  if (relayed ? key !== "" : (typeof key !== "string" || !key.trim())) throw fault(relayed ? "invalidInferenceRequest" : "inferenceUnauthorized");
   if (signal?.aborted) throw fault("inferenceCancelled");
   const controller = new AbortController();
   let active = true, timer, abort, interrupted, reader, pauseTimer;
@@ -43,7 +47,7 @@ export async function cloudCompletion({ provider, key, bytes, origin, signal, on
     reader.releaseLock(); reader = null;
   };
   const operation = async () => {
-    const headers = { Authorization: "Bearer " + key, "content-type": "application/json" };
+    const headers = relayed ? { "content-type": "application/json" } : { Authorization: "Bearer " + key, "content-type": "application/json" };
     if (provider === "openrouter") { headers["HTTP-Referer"] = origin; headers["X-Title"] = "hologram-forge"; }
     let response;
     for (let attempt = 0; ; attempt++) {
@@ -52,7 +56,7 @@ export async function cloudCompletion({ provider, key, bytes, origin, signal, on
       if (response.status === 401 || response.status === 403) throw fault("inferenceUnauthorized");
       if (response.status === 402) throw fault("inferencePaymentRequired");
       if (response.status !== 429) throw fault("inferenceProviderFailed");
-      if (provider !== "featherless" || attempt >= 60) throw fault("inferenceRateLimited");
+      if ((provider !== "featherless" && !relayed) || attempt >= 60) throw fault("inferenceRateLimited");
       const decoder = new TextDecoder("utf-8", { fatal: true }); let errorText = "";
       try { await readBytes(response, 65536, bytes => { errorText += decoder.decode(bytes, { stream: true }); }); errorText += decoder.decode(); }
       catch (error) { if (codes.has(error?.code)) throw error; throw fault("malformedInferenceResponse"); }

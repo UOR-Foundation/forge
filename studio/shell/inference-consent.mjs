@@ -13,6 +13,7 @@ export function describeInference(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw fault("invalidInferenceConsent");
   const { provider, model, bytes, credentialOwner } = input;
   if (!Object.hasOwn(inferenceEndpoints, provider) || typeof model !== "string" || !model || model.length > 256 || typeof bytes !== "string" || !["visitor", "site"].includes(credentialOwner)) throw fault("invalidInferenceConsent");
+  if((provider === "featherlessSite") !== (credentialOwner === "site")) throw fault("invalidInferenceConsent");
   const size = new TextEncoder().encode(bytes).length;
   if (!size || size > 2 * 1024 * 1024) throw fault("invalidInferenceConsent");
   try { const body = JSON.parse(bytes); if (!body || typeof body !== "object" || Array.isArray(body)) throw Error(); }

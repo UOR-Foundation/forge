@@ -18,6 +18,12 @@ The three honesty levels (R2):
 `cargo xtask audit-limits` fails if any code path returns an error the
 model does not sanction.
 
+## app-covers
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `AC-01` | `build` | App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules |
+
 ## application-authority
 
 | ID | Level | Statement |
@@ -307,7 +313,7 @@ model does not sanction.
 
 | ID | Level | Statement |
 | --- | --- | --- |
-| `FA-47` | `build` | Cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files |
+| `FA-47` | `build` | Direct cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files |
 
 ## proposal-admission
 
@@ -356,6 +362,12 @@ model does not sanction.
 | ID | Level | Statement |
 | --- | --- | --- |
 | `FA-48` | `build` | Typed semantic proposals rank explicit concept relations and close dependencies while Prism independently admits ambiguity constraints and effects |
+
+## site-relay-authorization
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-65` | `build` | Site-funded inference retains exact request consent and never confuses visitor credentials with relay markers |
 
 ## snapshot-bound-builds
 

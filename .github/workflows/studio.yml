@@ -37,11 +37,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       - name: Cache the lane work directory (PrismPM at the pinned commit, its built LexLean, the Lean toolchain)
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cache/hologram-forge-lane
@@ -51,7 +51,7 @@ jobs:
         run: python3 tools/studio_concurrency_projection.py --check
       - name: The authored model is what the author script writes
         run: python3 tools/author.py --check
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
           cache: npm
@@ -117,6 +117,7 @@ jobs:
           node tools/durable_prompt_library_browser.mjs
           node tools/renderer_stylesheet_identity_browser.mjs
           node tools/atomic_browser_settings_browser.mjs
+          node tools/site_relay_authorization_browser.mjs
           node tools/browser_window_coordination_browser.mjs
           node tools/message_linked_restoration_browser.mjs
           node tools/chat_queue_browser.mjs
@@ -127,10 +128,13 @@ jobs:
           node tools/inference_consent_browser.mjs
           node tools/exact_representation_browser.mjs
           node tools/provider_key_browser.mjs
+          node tools/covers_browser.mjs
       - name: Recompile the exact host projection and compare its receipt
         run: |
           node tools/host_bundle.mjs --check
           node tools/host_bundle_runtime.mjs
+      - name: The site's Featherless relay takes only the site's offered, bounded chat requests, and keeps its key private
+        run: node --test relay/featherless/worker.test.mjs
       - name: Every shell script parses the way the browser parses it
         run: node tools/shell_parse.mjs
       - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone
@@ -161,5 +165,7 @@ jobs:
           export PATH="$HOME/.elan/bin:$PATH"
           cd proof && lake build && lake env lean PrismLive/Axioms.lean | tee axioms.txt
           test "$(grep -c 'depends on axioms: \[propext, Quot.sound\]' axioms.txt)" = 2
+      - name: A published app's card draws what its live preview draws
+        run: node tools/published_preview.mjs --check
       - name: Nothing in this repository names Forge's old home
         run: node tools/self_contained.mjs

@@ -7,3 +7,9 @@ export function deviceProviderCredential(settings,provider){
  if(typeof value!=='string'||value.length>8192||!/^[\x21-\x7e]+$/.test(value))throw fail('invalidStoredProviderCredential');
  return value;
 }
+
+export function deviceInferenceRoute(settings,provider){
+ const key=deviceProviderCredential(settings,provider);
+ if(provider==='featherless'&&!key)return Object.freeze({kind:'siteFeatherless',provider:'featherlessSite',key:'',credentialOwner:'site'});
+ return Object.freeze({kind:provider==='openrouter'?'visitorOpenRouter':'visitorFeatherless',provider,key,credentialOwner:'visitor'});
+}
