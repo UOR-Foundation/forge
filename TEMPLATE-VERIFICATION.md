@@ -7,7 +7,7 @@ template contract checker in `app/`.
 | `just` recipe | Enforces | ID classes |
 | --- | --- | --- |
 | `just fmt-check` | the diff is reviewable | --- |
-| `just model` | R1, R4, R5 and the bootstrap trust root, in one `xtask validate` | `CM-01` |
+| `just model` | R1, R4, R5, the bootstrap trust root and reuse by address, in one `xtask validate` | `CM-01` |
 | `just template-check` | immutable SDK selection and template drift, checked by the SDK | --- |
 | `just lint` | Clippy at `-D warnings`, every target, every optional feature | --- |
 | `just test` | the workspace suite, including the R3 meta-gate | `CM-02`, `CM-03` |
@@ -31,6 +31,7 @@ or test is added without the other two.
 | `contract_tc_01` | `Conformant` drops the `bootstrap` conjunct, or `dispatch` answers on `true` instead of `conformant` | both rejected |
 | `prismpm verify` | an acceptance vector set without the exact guest-allocation boundary | rejected (PP2009) |
 | `audit-bootstrap` | a floating/copied action, mutable SDK tag, changed universal file, narrowed boundary, shallow/credential-retaining checkout, copied project renderer, omitted standards lock, acceptance bypass, deploy-job signing privilege, incomplete release lifecycle, or a bootstrap that drops a native architecture from main or tags, cancels or replaces a main run, or skips runs by path, condition or matrix exclusion | all rejected |
+| `audit-reuse` | a push or pull-request trigger with no path filter, no `hashFiles` address and no stated exemption: `try-codespace.yml` without its `paths-ignore` on push, and on pull request; `pages.yml` with its keys no longer hashing files; `build.yml` with an empty exemption | all rejected |
 
 ### Forge kernel capability gate, FK-05 to FK-09
 
@@ -323,6 +324,32 @@ shrank once the script set its width (CLS 0.009 on Luhn check, fixed by
 setting the first width in the hashed stylesheet), and `app.mjs` crossed the
 unminified-JavaScript allowance (2,458 bytes against 2,048, fixed by moving
 the spec into `site/spec.mjs`, loaded on first open, and shortening comments).
+
+## Work runs only on what changed
+
+Rule: time and compute go to the change; everything else is referenced by
+its content address. `audit-reuse` (`xtask/src/reuse.rs`, part of `xtask
+validate`) holds every workflow that a push or pull request starts to one of
+three declarations: a path filter under every such trigger; an address, a
+cache key computed with `hashFiles(...)` and restored through `actions/cache`;
+or `# reuse-exempt: <reason>` for a workflow whose every run is an explicit
+request to redo the work. It checks that the declaration exists, not that a
+key names every input; that argument is written beside each key.
+
+Applied with it: `pages.yml` addresses the Prism page and Forge's site and
+republishes them unchanged when their inputs are; `try-page.yml` and
+`try-codespace.yml` skip `studio/` and `v2/`, which they do not read, on main
+as well as on pull requests; `build.yml` states its exemption.
+`bootstrap.yml` is universal policy and already addresses its proof on pull
+requests; reusing it on main is proposed to the template.
+
+Planted in the pinned SDK image (`cd3b47d7…`): the push trigger of
+`try-codespace.yml` without its `paths-ignore` made `xtask validate` fail with
+"try-codespace.yml runs on every push without a path filter, an address (a
+hashFiles cache key) or a stated `# reuse-exempt:` reason". Restored byte for
+byte, it passed. `redone_work_plants_are_rejected` rejects four plants and
+`every_workflow_declares_its_reuse` passes for every workflow; all 21 `xtask`
+tests passed and formatting was clean.
 
 ## A newer frame may add a file
 

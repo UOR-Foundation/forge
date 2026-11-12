@@ -153,6 +153,8 @@ A change is done when it can prove itself.
 4. Run `just vv` until it is green.
 5. Open a pull request that says why the change matters.
 
+Spend time and compute only on what changed. Work whose inputs did not change is referenced by its content address and reused, never redone: a new workflow either filters by path, keys its output by `hashFiles(...)`, or states why it must run every time. `just vv` checks this (`audit-reuse`).
+
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Documentation
