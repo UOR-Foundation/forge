@@ -58,3 +58,5 @@ Changes to reused files are listed here, one line each, so upstream can be track
 - `hologram.screens/useAppThumbnails.ts` reads the source-checked atomic gallery boundary instead of unbound CacheStorage records and revokes obsolete object URLs.
 
 - `hologram.screens.mjs` projects first-prompt theme setup to read the theme already committed by project creation, rather than reapply stale renderer settings. The exact imported passage is checked before replacement; `FoundrySpecification.initialProjectThemeBoundary` owns this browser-specific transaction behavior (FA-71).
+
+- `hologram.ModelPicker.tsx` uses `hologram.model-selection.mjs` to resolve the configured router base. Existing chats, including empty ones, persist their own selection through the imported hook; Home changes the default. Missing chat identity and in-flight writes disable selection, and failed writes show a fixed retry message. Authority: `FoundrySpecification.chatModelPickerScopeBoundary`.

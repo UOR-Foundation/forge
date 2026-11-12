@@ -28,7 +28,7 @@ test("malformed chat identity and paths cannot fall through into defaults", () =
 });
 test("actual picker uses the canonical scope and imported mutations with real browser acceptance", () => {
   const read = (p) => fs.readFileSync(new URL("../../../" + p, import.meta.url), "utf8");
-  const picker = read("studio/vendor/dyad/hologram.ModelPicker.tsx");
+  const picker = read("studio/vendor/dyad/hologram.ModelPicker.tsx").replace(/\s+/g, " ");
   for (const text of [
     "modelSelectionScope(",
     "router.options.basepath",
