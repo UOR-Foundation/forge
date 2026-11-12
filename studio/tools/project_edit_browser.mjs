@@ -4,6 +4,7 @@ import fs from "node:fs";
 import http from "node:http";
 import { chromium } from "../vendor/dyad/node_modules/playwright-core/index.mjs";
 const sources = new Map([
+  ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
   ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],
   ["/project-edit.mjs", fs.readFileSync(new URL("../shell/project-edit.mjs", import.meta.url))],
   ["/project-creation.mjs", fs.readFileSync(new URL("../shell/project-creation.mjs", import.meta.url))],

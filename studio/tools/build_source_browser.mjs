@@ -4,6 +4,7 @@ import fs from "node:fs";
 import http from "node:http";
 import { chromium } from "../vendor/dyad/node_modules/playwright-core/index.mjs";
 const sources = new Map([
+  ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
   ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
 for (const name of ["build-source", "project-lifecycle", "project-edit", "project-creation", "generation-patch", "snapshot-restore", "storage-request"]) sources.set(`/${name}.mjs`, fs.readFileSync(new URL(`../shell/${name}.mjs`, import.meta.url)));
 for (const name of ["canonical-build.mjs", "prism.js", "prism/spec.mjs", "prism/render.mjs", "prism/template.mjs", "prism/sha256.mjs", "live/lexlean.mjs", "live/obligations.mjs", "live/table.mjs", "prism-code/src/blake3.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
