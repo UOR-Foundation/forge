@@ -284,6 +284,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-11` | `build` | Cloud inference bounds requests and streamed responses and refuses cancellation, malformed data and provider failures explicitly |
 
+## initial-project-theme
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-71` | `build` | New projects inherit the validated selected generation theme in the project creation transaction |
+
 ## live-lexlean
 
 | ID | Level | Statement |
