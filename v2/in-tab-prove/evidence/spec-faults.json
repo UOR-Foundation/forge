@@ -1,0 +1,9 @@
+{
+"false-statement": {"exit_code": 1, "diagnostics": [{"code": "LLV7002", "message": "Lean rejected `PrismTextRequest.Payment` (error): omega could not prove the goal:\na possible counterexample may satisfy the constraints\n  a \u2265 0\nwhere\n a := \u2191state.revision"}]}
+,
+"broken-proof": {"exit_code": 1, "diagnostics": [{"code": "LLV7002", "message": "Lean rejected `PrismTextRequest.Payment` (error): omega could not prove the goal:\na possible counterexample may satisfy the constraints\n  b \u2265 0\n  a \u2265 0\n  a - b \u2265 0\nwhere\n a := \u2191state.revision\n b := \u2191(cleared state).revision"}]}
+,
+"wrong-axioms": {"exit_code": 1, "diagnostics": [{"code": "LLV7005", "message": "`PrismTextRequest.Payment.clearAdvances` violates its none axiom policy: observed [propext]"}]}
+,
+"false-reflexivity": {"exit_code": 1, "diagnostics": [{"code": "LLV7002", "message": "Lean rejected `PrismTextRequest.App` (error): Tactic `rfl` failed: The left-hand side\n  initial.revision\nis not definitionally equal to the right-hand side\n  1\n\u22a2 initial.revision = 1"}]}
+}
