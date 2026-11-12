@@ -1,7 +1,7 @@
 Feature: Verified kernel owner readiness
   @FA-73 @build
   Scenario: Preview waits for its initializing document guest
-    Given a controlled document whose exact guest verification is pending
+    Given a controlled document whose exact guest verification is still running
     When the service worker requests execution for the matching identity
     Then no unverified execution or premature refusal occurs
     And completion executes only after all local verification succeeds
