@@ -756,9 +756,12 @@ handlers.set("distributed-machine:dispatch", async (envelope) => {
   if (type === "START" || type === "RESTART" || type === "MANUAL_RELOAD") {
     const op = type === "START" ? "run" : type === "RESTART" ? (encodedEvent.operation === "rebuild" ? "rebuild" : "restart") : "reload";
     // An app with rules is projected, not built: the live frame already shows it, so a start, restart
-    // or reload keeps the frame (no epoch bump, no reload) and resends the rules.
-    if (await hasRules(appId)) {
-      try { await showLive(appId); await refreshLive(appId); }
+    // or reload keeps the frame (no epoch bump, no reload) and resends the rules. So does an app whose
+    // first turn opened the live frame before it had rules: built, its start would never settle (the build
+    // yields to the frame), and the preview would wait on "server logs" for good (seen on the live site,
+    // from the home composer).
+    if (await hasRules(appId) || liveShown.has(appId)) {
+      try { await showLive(appId); if (await hasRules(appId)) await refreshLive(appId); }
       catch (e) { const m = publish(appId, { phase: "errored", operation: null, operationError: { message: String((e && e.message) || e) } }); return receipt(m); }
       const m = publish(appId, { lastSettlement: { operationId: encodedEvent.operationId || messageId, kind: "run", outcome: "succeeded" } });
       return receipt(m);
@@ -768,8 +771,9 @@ handlers.set("distributed-machine:dispatch", async (envelope) => {
       try {
         const { appUrl } = await buildPreview(appId);
         // A build that finishes after the app's rules took the preview (a model began writing a spec
-        // while it ran) is about a page the app no longer shows: the live frame stays.
-        if (liveShown.has(appId)) return;
+        // while it ran) is about a page the app no longer shows: the live frame stays, and the start it
+        // answered still settles, or the renderer keeps waiting on it.
+        if (liveShown.has(appId)) { await showLive(appId).catch(() => {}); publish(appId, { phase: "ready", operation: null, lastSettlement: { operationId: encodedEvent.operationId || messageId, kind: "run", outcome: "succeeded" } }); return; }
         const cur = machineOf(appId);
         publish(appId, { phase: "ready", operation: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: cur.state.previewReloadEpoch + 1, lastSettlement: { operationId: encodedEvent.operationId || messageId, kind: "run", outcome: "succeeded" } });
       } catch (e) {
