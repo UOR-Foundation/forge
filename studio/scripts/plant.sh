@@ -32,6 +32,7 @@
 #   ./scripts/plant.sh repair    # never ask the model to repair a module that does not read: the LexLean gate must refuse
 #   ./scripts/plant.sh parens    # count no parentheses before parsing: the LexLean gate must refuse the vague error
 #   ./scripts/plant.sh look      # let the build screen fall back to the home look: the Build look check must refuse
+#   ./scripts/plant.sh published # make the published card light the rule after the one that decides: the Published gate must refuse
 # `hole` runs the Contract gate, which bundles the vendored contracts with the renderer's own esbuild,
 # so run it where those dependencies were installed for this platform -- otherwise esbuild refuses to
 # start and the gate looks like it fired when it never ran.
@@ -209,6 +210,12 @@ EOF
     perl -pi -e 's/readJson\(BUILD_KEY\) \|\| \{ palette: "dark", immersive: false \}/readJson(BUILD_KEY) || home/' shell/appearance.js
     grep -q 'readJson(BUILD_KEY) || home;' shell/appearance.js || { echo "anchor not found"; exit 1; }
     expect_fail node tools/build_look.mjs ;;
+  published)
+    # The page lights the wrong rule: the preview, drawn by React from the view, would not light it.
+    cp shell/live/card-runtime.mjs /tmp/plant-card-runtime.mjs
+    sed -i 's/n.index === lit ? "on" : "off"/n.index === lit + 1 ? "on" : "off"/' shell/live/card-runtime.mjs
+    expect_fail node tools/published_preview.mjs --check
+    cp /tmp/plant-card-runtime.mjs shell/live/card-runtime.mjs ;;
   tap)
     # A hit area a finger misses, typed into the stylesheet where the kernel cannot see it.
     cp shell/appearance.css /tmp/plant-appearance.css
@@ -223,7 +230,7 @@ EOF
     grep -q 'then 600 else' ../app/src/ForgeKernel.lex.tex || { echo "anchor not found"; exit 1; }
     expect_fail bash -c 'cd .. && prismpm --project app verify'
     cp /tmp/plant-kernel.lex.tex ../app/src/ForgeKernel.lex.tex ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|lexlean|lexread|repair|parens|proof|look|unapplied|heavy|tap|inpbudget" >&2; exit 2 ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|lexlean|lexread|repair|parens|proof|look|unapplied|heavy|tap|inpbudget|published" >&2; exit 2 ;;
 esac
 restore
 echo "restored"

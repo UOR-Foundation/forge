@@ -45,7 +45,19 @@
   * { @apply border-border outline-ring/50; }
   body { @apply bg-background text-foreground font-sans antialiased; }
   ::selection { background: var(--brand); color: var(--brand-foreground); }
+  /* A finger needs 48 px: the published page's size-class gate refuses less on a coarse pointer, and the
+     preview draws what the page draws. */
+  @media (pointer: coarse) {
+    [data-slot="button"], [data-slot="toggle-group-item"], [data-slot="input"], [data-slot="native-select"] { min-height: 48px; }
+    [data-slot="button"], [data-slot="toggle-group-item"] { min-width: 48px; }
+  }
 }
 
-.dark [class*="shadow"] { box-shadow: none; }
+/* In a layer, so the published card's reset of the page's own rules (card.css) leaves it in force. */
+@layer utilities {
+  .dark [class*="shadow"] { box-shadow: none; }
+  /* Display type takes the kit's display tracking, as Forge's brand.css sets it: here too, so the published
+     card, whose page carries the kit's sheet without that rule, sets it the same. Over tracking-tight. */
+  .font-display[class] { letter-spacing: var(--tracking-display); }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

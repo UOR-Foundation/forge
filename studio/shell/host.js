@@ -1107,6 +1107,17 @@ handlers.set("prism:status", async ({ appId }) => (await rulesOf(appId)) || null
 // the kernel move the rules to published, and the preview shows the live app. The turn stays open and
 // counts the build, like the approve turn; Stop stops watching, not the build on GitHub.
 const prismCode = () => import("./prism-code/src/index.mjs");
+// The commit, and beside it the app's own card (shell/live/card-files.mjs): the page the template builds then
+// draws the app with the preview's components, from the same spec, and answers through the verified guest.
+// templateCommit itself stays prism-code's, byte for byte (tools/prism_template.mjs); the card files are the
+// app's, which the template's page reads and pins nothing about.
+async function publishCommit(args) {
+  const commit = await prism.templateCommit(args);
+  const { cardFiles } = await import("./live/card-files.mjs");
+  const load = async (p) => { const r = await fetch(new URL(p, BASE)); if (!r.ok) throw new Error(p + " answered " + r.status); return r.text(); };
+  const { files } = await cardFiles(args.spec, { load });
+  return { ...commit, files: [...commit.files, ...files] };
+}
 async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   const m = chatMachineOf(chatId);
   messages.push({ id: userId + 1, role: "assistant", content: "", approvalState: "approved", commitHash: null, createdAt: now() });
@@ -1138,7 +1149,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   };
   const stopped = new Promise((res) => abort.signal.addEventListener("abort", () => res("stopped")));
   const t0 = Date.now();
-  const build = buildOnGitHub({ token, spec, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: prism.templateCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
+  const build = buildOnGitHub({ token, spec, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: publishCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
     .catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
   const result = await Promise.race([build, stopped]);
   observing = false;

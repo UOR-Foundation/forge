@@ -111,5 +111,7 @@ jobs:
           export PATH="$HOME/.elan/bin:$PATH"
           cd proof && lake build && lake env lean PrismLive/Axioms.lean | tee axioms.txt
           test "$(grep -c 'depends on axioms: \[propext, Quot.sound\]' axioms.txt)" = 2
+      - name: A published app's card draws what its live preview draws
+        run: node tools/published_preview.mjs --check
       - name: Nothing in this repository names Forge's old home
         run: node tools/self_contained.mjs
