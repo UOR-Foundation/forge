@@ -8,7 +8,7 @@
 import { SpecError, validateSpec, unreachableRules, counterexample, describeConditions, requestLimits, decodeRequest, respond } from "./prism/spec.mjs";
 import { names, renderModel, renderProofs, acceptanceVectors, renderSpecDocument } from "./prism/render.mjs";
 import { TEMPLATE_EXAMPLE, appJson, conformanceText, featureText, idsToml, lexleanLockText, rustTestText, suiteOf } from "./prism/template.mjs";
-import { toLexLean } from "./live/lexlean.mjs";
+import { toLexLean, draftOf } from "./live/lexlean.mjs";
 import { checkObligations } from "./live/obligations.mjs";
 import { tableKernel } from "./live/table.mjs";
 
@@ -38,17 +38,23 @@ const PARKING = {
   otherwise: "standard",
   properties: [{ kind: "never", when: [{ field: "hours", op: "=", value: 0 }], then: "premium" }],
 };
-const PARKING_LEXLEAN = toLexLean(PARKING).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
-export const SPEC_RULES = `# Proved rules
-When the app decides an answer from a few inputs (a price tier, an eligibility, a grade, a risk level), write its rules as one LexLean module, so Lean can prove them, and Forge draws the app's screen from it, live, as you write.
-- Before the files, write one <prism-lexlean> block holding the module, its declarations in this order, so the screen assembles as you write: a \`definition\` per choice value and per answer, each a Nat code numbered from 0 within its group (the value \`chime-lily\` of field \`plant\` is \`plantChimeLily\`; the answer \`wind-whisper\` is \`answerWindWhisper\`); the \`Request\` structure, one Nat field per input; \`inBounds\` (each choice below its count, each number at most its maximum, and at least its minimum when that is above 0); one \`rule<N>\` per rule, a conjunction of conditions; \`judge\`, an if-chain in rule order (the first rule that matches decides; the last else is the answer when none does); and one \`breaks<Id>\` per guarantee: \`inBounds\`'s conditions, the guarantee's conditions, then the judge compared with an answer (\`=?\` for never, \`not (... =? ...)\` for always). Write no theorem: Forge derives the proofs.
-- A condition compares \`(project request <field>)\` with a whole number or a choice code using \`=?\`, \`<?\` or \`<=?\`; write > and >= with the sides swapped, and != as \`not (... =? ...)\`. Two number fields may be compared with each other.
-- Write no files for an app with rules: no page, no component, never src/lib/prism.ts, prism/spec.json or the .lex.tex file.
+const PARKING_LEXLEAN = draftOf(toLexLean(PARKING)).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
+export const SPEC_RULES = `# You write the app's LexLean module, and nothing else
+Every app here is one LexLean module: its inputs, its answers, its rules and its guarantees. Forge projects the app's code and its screen from the module, live, as you write it, and Lean proves the guarantees. You never write code, files or dependencies: Forge does not apply them. To build or change an app, write or rewrite its module; to change only its words, write a patch. If a request decides nothing, say in one sentence what the app could decide, and write that module.
+- Write one <prism-lexlean> block holding the module, its declarations in this order, so the screen assembles as you write: a \`definition\` per choice value and per answer, each a Nat code numbered from 0 within its group (the value \`chime-lily\` of field \`plant\` is \`plantChimeLily\`; the answer \`wind-whisper\` is \`answerWindWhisper\`); the \`Request\` structure, one Nat field per input; \`inBounds\` (each choice below its count, each number at most its maximum, and at least its minimum when that is above 0); one \`rule<N>\` per rule, a conjunction of conditions; \`judge\`, an if-chain in rule order (the first rule that matches decides; the last else is the answer when none does); and one \`breaks<Id>\` per guarantee: \`inBounds\`'s conditions, the guarantee's conditions, then the judge compared with an answer (\`=?\` for never, \`not (... =? ...)\` for always). Write no theorem: Forge derives the proofs. Write the module straight out, as the example shows: think about which rules and guarantees the app needs, not about syntax.
+- A condition compares \`project request <field>\` with a whole number or a choice code using \`=?\`, \`<?\` or \`<=?\`; write > and >= with the sides swapped, and != as \`not (... =? ...)\`. Two number fields may be compared with each other. Join conditions with \`&&\`, and write the judge as \`if rule1 request then answerA else if rule2 request then answerB else answerC\`. Write no other parentheses: there are none to count, and Forge writes the canonical module from yours.
 - The screen's words come from the module (the title from the module's name) and from patches: to set the screen's words or order, or change one part (a word, an answer, one rule), write a patch on the spec read from the module: <dyad-spec-patch>[{"op":"set","path":["rules",2,"then"],"value":"none"}]</dyad-spec-patch>. Ops are set, insert and remove; \`view\` ({"blocks":[...]}, each one of {"kind":"heading","text"}, {"kind":"text","text"}, {"kind":"input","field","label"}, {"kind":"answer","label"}, {"kind":"guarantees"}, {"kind":"rules"}, {"kind":"examples"}), \`purpose\` and \`meanings\` are set this way. When the user points at something on the screen, its paths are given with the request.
-- To change the rules wholesale, write a whole new <prism-lexlean> block. When the app decides nothing (a landing page, a gallery), write no module and write its files.
+- To change the rules, write the whole module again in a new <prism-lexlean> block, starting from the current module when one is given.
 Example: <prism-lexlean>
 ${PARKING_LEXLEAN.trim()}
 </prism-lexlean>`;
+
+/** What a model is shown of the app: its current module, in the draft form it writes, or that there is none. */
+export function moduleContext(source) {
+  if (!source) return "This app has no LexLean module yet. Write it from my request.";
+  return "The app's current LexLean module:\n<prism-lexlean>\n" + draftOf(source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "")).trim() + "\n</prism-lexlean>";
+}
+export const CODE_REFUSED = "**Code not applied.** The app's code and screen are drawn from its LexLean module; files a model writes are not used.";
 
 // ---- the device. The on-device model holds about 3,000 tokens and writes at most 900, so it is asked
 // for the one thing it can write well, the rules, and Forge draws the screen from them (screenSource).

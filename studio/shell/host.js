@@ -1213,11 +1213,13 @@ async function chatTurn(chatId, intent) {
   const onCommit = (oid) => { committed.push(oid); updatedFiles = true; emit("version-created", { appId, oid }); };
   try {
     const app = await get("apps", appId);
-    const rules = new Map(projectSource.files).get("AI_RULES.md");
     const history = messages.slice(0, -2).filter((x) => x.content).map((x) => ({ role: x.role, content: x.content }));
+    // A model writes and edits the app's LexLean module and nothing else: it is told only that, and shown
+    // only the module (in the draft form it writes), never the code, which Forge projects from the module.
+    const moduleNow = [...new Map(projectSource.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p));
     const request = [
-      { role: "system", content: buildSystemPrompt(rules) + "\n\n" + prism.SPEC_RULES },
-      { role: "user", content: "This is my codebase. " + (await codebaseOf(appId, projectSource)) },
+      { role: "system", content: prism.SPEC_RULES },
+      { role: "user", content: prism.moduleContext(moduleNow ? moduleNow[1] : null) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
@@ -1339,10 +1341,14 @@ async function chatTurn(chatId, intent) {
     assertGenerationActive(abort.signal);
     const sm = full.match(/<dyad-chat-summary>([\s\S]*?)<\/dyad-chat-summary>/); summary = sm ? sm[1].trim() : undefined;
     if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
-    const tags = parseDyadTags(full);
+    // Code a model wrote is never applied: the app's code and screen are projections of its module.
+    const wrote = parseDyadTags(full);
+    const refusedCode = wrote.writes.length + wrote.deletes.length + wrote.renames.length + wrote.deps.length;
+    const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
     const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
     let changed = applied.changed;
-    const spec = await rulesAfterTurn(appId, full, tags.writes.map((w) => w.path), { signal: abort.signal, source: applied.source, onCommit });
+    const spec = await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
+    if (refusedCode) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.CODE_REFUSED;
     for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
       assertGenerationActive(abort.signal);
       let ops; try { ops = JSON.parse(match[1]); } catch {}
