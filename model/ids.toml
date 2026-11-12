@@ -627,3 +627,9 @@ id = "FA-77"
 level = "build"
 suite = "atomic-chat-preferences"
 statement = "Chat title mode and model preferences commit atomically through their imported schema without losing concurrent transcript updates"
+
+[[id]]
+id = "FA-78"
+level = "build"
+suite = "read-only-chat-execution"
+statement = "Ask and Plan turns preserve source proof and preview state while retaining consented inference and transcript completion"

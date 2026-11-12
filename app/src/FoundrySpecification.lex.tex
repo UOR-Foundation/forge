@@ -1355,5 +1355,16 @@ definition{
   result: String,
   body: "The imported update-chat contract captures and validates chatId, optional title, optional nullable chatMode and optional modelSelection before awaiting database readiness. Its schema is reproduced from the locked renderer sources; no handwritten model or mode schema substitutes for it. Positive safe chat identity and an existing owning app are required. Supplied fields, including empty title and explicit null mode, merge with the latest chat inside one apps/chats readwrite transaction. Unspecified fields and concurrent transcript or preference edits survive. Success follows transaction completion only. Invalid input, missing/deleted chat or app, malformed stored identity and database/late-abort failures return fixed typed refusals without exception payloads, partial writes or resurrection. Reload reads the committed preferences; subsequent generation and token accounting use the committed chat model selection ahead of global defaults. Preference storage grants no inference, source mutation or publication permission. Read-only execution semantics for Ask/Plan and full local-agent capabilities remain separately governed; storing a mode is not evidence that every mode's execution semantics are complete."
 }
+inductive{
+  name: ChatExecutionError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [constructor{name: invalidChatExecutionMode, fields: []}]
+}
+definition{
+  name: readOnlyChatExecutionBoundary,
+  type: String,
+  value: "The imported queued requested mode takes precedence over stored mode; absent or null mode falls back to stored mode then Build. Only imported active modes are admitted; invalid modes fail with invalidChatExecutionMode before inference or project effects. Ask and Plan are read-only with respect to application source, proof state, versions, preview and publication. Approval or publish wording is ordinary conversational input in these modes. Responses including executable module, patch, dependency or publication tags are transcript content only: no streaming preview, repair generation, project apply, rules checking, patching or preview refresh occurs. Existing explicit inference consent, cancellation, receipts and durable transcript settlement remain required. The system prompt names Ask or Plan and its no-mutation contract; local inference receives the same read-only instruction instead of a rules-generation request. Build and local-agent retain existing execution behavior; this boundary does not claim full native agent tools or a plan approval/storage workflow. Mode capture is immutable for a queued turn."
+}
 \end{semanticmodule}
 \end{lexlean}

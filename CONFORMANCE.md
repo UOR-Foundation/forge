@@ -399,6 +399,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-05` | `build` | Publication requires exact canonical archive identity and complete nonempty runtime acceptance |
 
+## read-only-chat-execution
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-78` | `build` | Ask and Plan turns preserve source proof and preview state while retaining consented inference and transcript completion |
+
 ## renderer-stylesheet-identity
 
 | ID | Level | Statement |

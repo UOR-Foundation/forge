@@ -129,6 +129,7 @@ jobs:
           node tools/renderer_stylesheet_identity_browser.mjs
           node tools/atomic_browser_settings_browser.mjs
           node tools/atomic_chat_preferences_browser.mjs
+          node tools/read_only_chat_execution_browser.mjs
           node tools/site_relay_authorization_browser.mjs
           node tools/browser_window_coordination_browser.mjs
           node tools/message_linked_restoration_browser.mjs
