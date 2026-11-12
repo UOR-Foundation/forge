@@ -80,7 +80,12 @@ const liveLoads = [];
 // A real load of the live frame runs its script, which says hello; Playwright's framenavigated also fires
 // for same-document navigations (the renderer re-asserting the same address), which keep the page.
 await page.exposeFunction("__liveLoaded", (url) => liveLoads.push({ t: Date.now(), url }));
-await page.evaluate(() => addEventListener("message", (e) => { if (e.data && e.data.type === "live/hello") window.__liveLoaded(String(e.data.app)); }));
+await page.evaluate(appId => addEventListener("message", (e) => {
+  const frame=document.querySelector('[data-testid="preview-iframe-element"]');
+  if(e.source===frame?.contentWindow&&e.data?.type==="live/hello"&&String(e.data.app)===String(appId))window.__liveLoaded(String(e.data.app));
+}),appId);
+// A same-origin message from another window is not a preview load.
+await page.evaluate(appId=>window.postMessage({type:"live/hello",app:String(appId)},"*"),appId);
 
 await page.evaluate(id => window.__live.showLive(id), appId);
 await page.waitForSelector('[data-testid="preview-iframe-element"]', { timeout: 20000 });
