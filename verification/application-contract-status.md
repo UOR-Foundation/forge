@@ -1,6 +1,6 @@
 # Application specification implementation status
 
-Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-78. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
+Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-79. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
 
 | Obligation | Implemented scope and evidence | Remaining acceptance or implementation |
 | --- | --- | --- |
@@ -60,3 +60,5 @@ FA-75 recovers lost verified document owners during bounded service-worker kerne
 FA-77 registers and implements atomic chat preference persistence under the imported renderer schema. Focused unit/actual-browser mutation controls pass; all 57 mandatory browser journeys pass together. Stored mode selection does not implement Ask/Plan execution semantics. Further identified work includes chat-screen preview-refusal/submission races and legacy OpenRouter model routing. See `atomic-chat-preferences.md`; the conversion remains incomplete.
 
 FA-78 enforces read-only Ask/Plan execution independently of preference persistence. All 463 Node controls and 58 mandatory browser journeys pass, with ten unit and three actual-browser mutations qualified. Source/proof/version/preview invariance and a positive Build mutation are checked. Native local-agent tools and plan approval/storage workflows remain open. The later FA-76 hosted Studio run 43160715684 failed the mobile sidebar pointer-obstruction assertion; investigation remains open, while its Forge performance run 43160715704 passes.
+
+FA-79 fixes mounted-route model picker ownership and empty-chat persistence. All 467 Node controls, full Rust/Clippy/fmt, differential renderer types (zero added errors), 59 mandatory browsers, seven unit mutations, a rebuilt-renderer mutation and full mobile performance pass. Failed saves visibly preserve committed choice. FA-77 hosted Studio 43161658858 and Forge performance 43161659012 pass; immutable SDK acceptance remains running at that checkpoint. FA-78 hosted performance 43162782869 passes; its two obsolete canonical source assertions are corrected and mutation-qualified at a01c0a7.

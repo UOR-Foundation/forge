@@ -13,3 +13,5 @@ All 467 Node controls pass. Locked formatter and lint report no errors; the actu
 Legacy provider routing, model quality, mode-selector exposure, the separately observed sidebar pointer obstruction and whole-conversion completion remain outside this scoped claim. The sidebar diagnostic passed six local replays without reproducing the hosted obstruction; no sidebar fix is claimed.
 
 All 59 mandatory browser journeys pass together; `model-picker-scope-integrated-browser-results.json` retains their exact results. Full Rust workspace, Clippy/fmt, shell parsing and byte corpus pass. Restored closure: 591 files, 51,381,880 bytes, `ce44c9eea9f4278d9d7b4de059201d3d87ad6f3a4562a492e807df88f076d370`. Full mobile performance is running separately.
+
+Full mobile performance passes unchanged budgets: cold median 9,720 ms, warm 1,632 ms, INP 176 ms, Enter-to-token 3,130 ms. All three runs are retained in `model-picker-scope-performance.json`. Hosted immutable SDK, Studio and every-app performance qualification remains outstanding for the latest head.
