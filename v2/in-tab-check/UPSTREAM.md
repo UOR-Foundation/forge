@@ -1,6 +1,6 @@
 # Upstream requests
 
-Each is written to be a pull request description. None has been filed. Measurements are in `REPORT.md`.
+Each is written to be a pull request description. Request 1 is filed as https://github.com/UOR-Foundation/LexLean/issues/494; the others are not filed. Measurements are in `REPORT.md`.
 
 ## 1. LexLean: build and run `check` on `wasm32-wasip1`
 
