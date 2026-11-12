@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "request": {
+    "repository": "UOR-Foundation/foundry",
+    "pr": 70,
+    "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "base": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "collected_at": "2026-11-12T09:00:00Z",
+  "repository": {
+    "full_name": "UOR-Foundation/foundry",
+    "default_branch": "main"
+  },
+  "before": {
+    "pr": {
+      "number": 70,
+      "state": "open",
+      "merged": false,
+      "draft": false,
+      "user": {
+        "login": "author"
+      },
+      "html_url": "https://github.com/UOR-Foundation/foundry/pull/70",
+      "head": {
+        "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ref": "feature",
+        "repo": {
+          "full_name": "UOR-Foundation/foundry"
+        }
+      },
+      "base": {
+        "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "ref": "main",
+        "repo": {
+          "full_name": "UOR-Foundation/foundry"
+        }
+      },
+      "merge_commit_sha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    "target_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "upstream_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "after": {
+    "pr": {
+      "number": 70,
+      "state": "open",
+      "merged": false,
+      "draft": false,
+      "user": {
+        "login": "author"
+      },
+      "html_url": "https://github.com/UOR-Foundation/foundry/pull/70",
+      "head": {
+        "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ref": "feature",
+        "repo": {
+          "full_name": "UOR-Foundation/foundry"
+        }
+      },
+      "base": {
+        "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "ref": "main",
+        "repo": {
+          "full_name": "UOR-Foundation/foundry"
+        }
+      },
+      "merge_commit_sha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    "target_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "upstream_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "merge_commit": {
+    "sha": "cccccccccccccccccccccccccccccccccccccccc",
+    "parents": [
+      {
+        "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  },
+  "ancestry": {
+    "head_to_upstream": {
+      "status": "behind",
+      "base_commit": {
+        "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "merge_base_commit": {
+        "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "html_url": "https://github.com/UOR-Foundation/foundry/compare/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "base_to_head": {
+      "status": "ahead",
+      "base_commit": {
+        "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "merge_base_commit": {
+        "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    }
+  },
+  "runs": [
+    {
+      "id": 21,
+      "run_attempt": 1,
+      "workflow_id": 31,
+      "path": ".github/workflows/studio.yml",
+      "event": "pull_request",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "completed",
+      "conclusion": "success",
+      "repository": {
+        "full_name": "UOR-Foundation/foundry"
+      },
+      "head_repository": {
+        "full_name": "UOR-Foundation/foundry"
+      },
+      "pull_requests": [
+        {
+          "number": 70,
+          "head": {
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "repo": {
+              "name": "UOR-Foundation/foundry"
+            }
+          },
+          "base": {
+            "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ref": "main",
+            "repo": {
+              "name": "UOR-Foundation/foundry"
+            }
+          }
+        }
+      ],
+      "check_suite_id": 41,
+      "html_url": "https://github.com/UOR-Foundation/foundry/actions/runs/21",
+      "jobs": [
+        {
+          "id": 51,
+          "name": "lane",
+          "run_id": 21,
+          "run_attempt": 1,
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "status": "completed",
+          "conclusion": "success",
+          "check_run_url": "https://api.github.com/repos/UOR-Foundation/foundry/check-runs/61",
+          "html_url": "https://github.com/UOR-Foundation/foundry/actions/runs/21/job/51",
+          "steps": [
+            {
+              "name": "test",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": 61,
+      "name": "lane",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "completed",
+      "conclusion": "success",
+      "check_suite": {
+        "id": 41
+      },
+      "app": {
+        "id": 15368,
+        "slug": "github-actions"
+      },
+      "html_url": "https://github.com/UOR-Foundation/foundry/actions/runs/21/job/51"
+    }
+  ],
+  "statuses": [],
+  "reviews": [
+    {
+      "id": 11,
+      "user": {
+        "login": "reviewer"
+      },
+      "state": "APPROVED",
+      "commit_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "submitted_at": "2026-11-12T08:00:00Z",
+      "body": "Reviewed exact source and base; negative controls passed.",
+      "html_url": "https://github.com/UOR-Foundation/foundry/pull/70#pullrequestreview-11"
+    }
+  ],
+  "threads": [],
+  "stack": [],
+  "sources": [],
+  "errors": [],
+  "complete": {
+    "identity": true,
+    "checks": true,
+    "statuses": true,
+    "runs": true,
+    "jobs": true,
+    "reviews": true,
+    "threads": true,
+    "ancestry": true,
+    "stack": true,
+    "rules": true
+  },
+  "rules": {
+    "branch": "main",
+    "protected": false,
+    "effective": [],
+    "protection": null
+  },
+  "reviews_after": [
+    {
+      "id": 11,
+      "user": {
+        "login": "reviewer"
+      },
+      "state": "APPROVED",
+      "commit_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "submitted_at": "2026-11-12T08:00:00Z",
+      "body": "Reviewed exact source and base; negative controls passed.",
+      "html_url": "https://github.com/UOR-Foundation/foundry/pull/70#pullrequestreview-11"
+    }
+  ],
+  "threads_after": [],
+  "rules_after": {
+    "branch": "main",
+    "protected": false,
+    "effective": [],
+    "protection": null
+  },
+  "reviewer_permissions": {
+    "reviewer": {
+      "available": true,
+      "evidence": {
+        "permission": "write",
+        "user": {
+          "login": "reviewer"
+        }
+      }
+    }
+  }
+}

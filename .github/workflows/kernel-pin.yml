@@ -1,138 +1,108 @@
-# Pins the Forge kernel the shell runs to the kernel app/ now builds, so nobody pins it by hand.
-# Project content, not universal policy.
-#
-# Forge runs the kernel guest that studio/KERNEL_REV pins: the holo's archive fingerprint, and the URL of the
-# commit that archives it in studio/shell/kernel/kernel.holo. Pinning by hand meant a local SDK build of some
-# 15 minutes, two commits (the holo, then the URL naming that commit), and a conflict in the committed
-# binaries whenever two branches changed the kernel. Here the same pin is made in CI from the locked SDK:
-# when app/ changes on main, or when started for a branch. The holo is built and proved by `just app`
-# exactly as pages.yml builds it; the Kernel gate (tools/kernel.mjs --check) and the kernel's boundary tests
-# must pass before anything is pushed; nothing is pushed when the pin is already current.
-#
-# Commits pushed with this workflow's token start no other workflow, so on main it starts the deploy itself.
+# Coordinate build.yml, then prepare the existing two-commit archive/pin update.
+# Preparation is not a release. Publication is an explicit owner dispatch only.
 name: kernel pin
 
+# reuse-exempt: signed replicas are recovered by complete input/source identity; independent runs never restore build outputs
 on:
   push:
     branches: [main]
-    paths:
-      - "app/**"
-      - "prismpm.lock"
+    paths: ["*", "app/**", ".cargo/**", ".github/workflows/build.yml", "studio/tools/kernel_adoption.mjs"]
   workflow_dispatch:
     inputs:
-      ref:
-        description: The branch to pin the kernel on.
-        required: true
-        default: main
+      mode:
+        description: Plan only, build and prepare an adoption bundle, or explicitly publish the verified pin.
+        type: choice
+        options: [plan, prepare, publish]
+        default: plan
 
 permissions:
   contents: read
 
 concurrency:
-  group: kernel-pin-${{ inputs.ref || github.ref_name }}
-  cancel-in-progress: true
+  group: kernel-pin-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  pin:
-    name: pin the kernel the shell runs to the one app/ builds
-    if: github.repository != 'UOR-Foundation/template'
+  plan:
+    name: inspect exact kernel inputs without mutation
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'plan'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Describe the exact event source and captured main target
+        run: node studio/tools/kernel_adoption.mjs --source "$GITHUB_SHA" --target main
+  pin:
+    name: reproduce the exact kernel and prepare its verified adoption
+    # Never execute supplied branch code with write access or substitute another checkout.
+    if: github.repository == 'UOR-Foundation/foundry' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.mode != 'plan')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
     permissions:
       contents: write
       actions: write
     env:
-      REF: ${{ inputs.ref || github.ref_name }}
+      MODE: ${{ inputs.mode || 'prepare' }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Check out the branch to pin
+      - name: Check out the exact event revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ env.REF }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
-      - name: Build and verify the holo through the locked SDK
+      - name: Install the locked production archive verifier
+        run: npm ci --prefix studio/tools/kernel-adoption --ignore-scripts --no-audit --no-fund
+      - name: Capture source and target without mutation
         shell: bash
         run: |
           set -euo pipefail
-          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
-          if [[ ! $image =~ ^[a-z0-9.-]+(:[0-9]{1,5})?/[a-z0-9./_-]+@sha256:[0-9a-f]{64}$ ]]; then
-            printf '%s\n' 'prismpm.lock does not select an immutable SDK image' >&2
-            exit 64
+          node studio/tools/kernel_adoption.mjs --source "$GITHUB_SHA" --target main
+      - name: Recover or request two exact-source signed constructions, then prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--source "$GITHUB_SHA" --target main --state "$RUNNER_TEMP/kernel-adoption")
+          node studio/tools/kernel_adoption.mjs --mode build "${args[@]}"
+          node studio/tools/kernel_adoption.mjs --mode prepare "${args[@]}"
+          prepared=$(jq -r .worktree "$RUNNER_TEMP/kernel-adoption/prepared.json")
+          if [[ $prepared != null ]]; then
+            (cd "$prepared" && node --test studio/tools/kernel_boundary.test.mjs)
           fi
-          docker_config=$(mktemp -d)
-          trap 'rm -rf "$docker_config"' EXIT
-          printf '{}\n' >"$docker_config/config.json"
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            --group-add "$(stat -c '%g' /var/run/docker.sock)" \
-            --tmpfs /tmp:rw,exec,nosuid,size=2g \
-            --volume "$PWD:$PWD" \
-            --volume /var/run/docker.sock:/var/run/docker.sock \
-            --volume "$docker_config:/tmp/prismpm-home/.docker:ro" \
-            --workdir "$PWD" \
-            --env DOCKER_CONFIG=/tmp/prismpm-home/.docker \
-            --env BUILDX_CONFIG=/tmp/prismpm-buildx \
-            --env HOME=/tmp/prismpm-home \
-            --env PRISMPM_EPHEMERAL_HOME=1 \
-            "$image" just app
-      - name: Find the holo, and whether the pin is already current
-        id: holo
-        shell: bash
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          holos=(app/.prism/build/*/*.holo)
-          if [[ ${#holos[@]} -ne 1 ]]; then
-            printf 'expected one holo, found %d\n' "${#holos[@]}" >&2
-            exit 64
+          head=$(jq -r .head "$RUNNER_TEMP/kernel-adoption/prepared.json")
+          if [[ $head != "$GITHUB_SHA" ]]; then
+            branch=$(jq -r .branch "$RUNNER_TEMP/kernel-adoption/prepared.json")
+            git bundle create "$RUNNER_TEMP/kernel-adoption/adoption.bundle" "$branch" "^$GITHUB_SHA"
           fi
-          fingerprint=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).archive_fingerprint)' "$(dirname "${holos[0]}")/application/holo-identities.json")
-          pinned=$(sed -n 2p studio/KERNEL_REV)
-          {
-            echo "path=${holos[0]}"
-            echo "fingerprint=$fingerprint"
-            if [[ $pinned == "blake3:$fingerprint" ]]; then echo "current=true"; else echo "current=false"; fi
-          } >>"$GITHUB_OUTPUT"
-          printf 'built blake3:%s, pinned %s\n' "$fingerprint" "$pinned"
-      - name: Archive the holo, then name the commit that archives it
-        if: steps.holo.outputs.current != 'true'
-        shell: bash
-        env:
-          HOLO: ${{ steps.holo.outputs.path }}
-          FINGERPRINT: ${{ steps.holo.outputs.fingerprint }}
-          SOURCE: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          pin() { printf 'https://raw.githubusercontent.com/%s/%s/studio/shell/kernel/kernel.holo\nblake3:%s\n' "$GITHUB_REPOSITORY" "$1" "$FINGERPRINT" >studio/KERNEL_REV; }
-          cp "$HOLO" studio/shell/kernel/kernel.holo
-          pin "$(git rev-parse HEAD)"
-          (cd studio && node tools/kernel.mjs)
-          git add studio/shell/kernel studio/KERNEL_REV
-          git commit -m "Archive the kernel holo app/ builds (blake3:${FINGERPRINT:0:8})" -m "Built and proved by the locked SDK in the kernel pin workflow, from ${SOURCE}."
-          pin "$(git rev-parse HEAD)"
-          (cd studio && node tools/kernel.mjs)
-          git add studio/shell/kernel studio/KERNEL_REV
-          git commit -m "KERNEL_REV names the commit that archives the kernel holo"
-      - name: The Kernel gate and the kernel's boundary tests, on the new pin
-        if: steps.holo.outputs.current != 'true'
+      - name: Publish only on explicit owner dispatch, comparing the remote first
+        if: github.event_name == 'workflow_dispatch' && env.MODE == 'publish'
         shell: bash
         run: |
           set -euo pipefail
-          (cd studio && node tools/kernel.mjs --check)
-          node --test studio/tools/kernel_boundary.test.mjs
-      - name: Push the pin
-        if: steps.holo.outputs.current != 'true'
-        # The checkout keeps no credentials; the token is handed to this one push and to nothing else.
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$REF"
-      - name: Deploy the site with the new pin
-        if: steps.holo.outputs.current != 'true' && env.REF == 'main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --ref main
+          # Auth is supplied to this push only. No credential helper or persistent token.
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
+          node studio/tools/kernel_adoption.mjs --mode publish --source "$GITHUB_SHA" \
+            --target main --state "$RUNNER_TEMP/kernel-adoption"
+      - name: Preserve the reviewable preparation and exact evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: kernel-adoption-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/kernel-adoption/plan.json
+            ${{ runner.temp }}/kernel-adoption/receipt.json
+            ${{ runner.temp }}/kernel-adoption/prepared.json
+            ${{ runner.temp }}/kernel-adoption/published.json
+            ${{ runner.temp }}/kernel-adoption/dispatch.json
+            ${{ runner.temp }}/kernel-adoption/adoption.bundle
+          if-no-files-found: warn

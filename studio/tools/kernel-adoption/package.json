@@ -1,0 +1,7 @@
+{
+  "name": "foundry-kernel-adoption-verifier",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": { "prism-code": "0.7.2" }
+}

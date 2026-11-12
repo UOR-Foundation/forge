@@ -1,6 +1,6 @@
-# Application specification implementation status
+# Application specification implementation history
 
-Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-82. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
+Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. This inventory is the historical FA-01 through FA-82 snapshot, not current release status. The delivered main scope through FA-84, its post-merge qualification, and the three remaining proposals are reconciled in [`release-acceptance-residuals.md`](release-acceptance-residuals.md). The entire model conversion remains incomplete. Earlier revision-specific results and holds are retained here, in `application-contract-history.md`, and in each feature's verification file; they must be rechecked before being treated as current blockers.
 
 | Obligation | Implemented scope and evidence | Remaining acceptance or implementation |
 | --- | --- | --- |
@@ -20,11 +20,11 @@ Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implement
 | ownership | Guest state machines bind durable build/chat/preview execution, cancellation, revisions, resumable reservations and source-bound completion. | Full authenticated principal/checkpoint semantics across all external workflows. |
 | factory | Exact template policy `df5d7d32f5cdc3a3cc025d438752e73a40282731` provides supported proof reuse; PR Studio cancellation only retires superseded runs. | Qualified consumer factory interface in the immutable SDK; complete obligation/input/oracle closure and receipt invalidation qualification. Proof reuse is not factory adoption. |
 
-## Current component identity
+## Historical component identity
 
 `kernel-reproduction.json` records exact-source builds 43115365275 and 43118735269 from `a291a72752d727aab1d68bbc1edcd09eae809f0f`: 505,788-byte archives, SHA256 `fcf77322417e0f212409214070829592df3411bb2ff2b292ffe158ea0a93cbcf`, complete byte equality and independently verified workflow signatures. The guest embeds 285 vectors; two large composition boundary cases execute separately. This is component qualification, not whole-product acceptance. Later host features do not substitute a new guest.
 
-## Latest feature disposition
+## Historical feature disposition
 
 | Feature | PR and evidence | Disposition |
 | --- | --- | --- |
@@ -49,7 +49,7 @@ Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implement
 
 Author completeness reviews are not independent approval. Earlier green revisions do not establish acceptance for newer heads. Each named verification file binds the claim to its source and retained failures.
 
-## Remaining diagnostics and release boundaries
+## Historical diagnostics and broader release boundaries
 
 A fresh actual-browser diagnostic reproduced a permission dialog reopening after preview decline and responsive remount; FA-82 corrects that path and verifies Ask submission and explicit retry. Ask itself succeeded in that diagnostic, so other historical submission timeouts are not declared explained. The separately observed mobile sidebar pointer obstruction remains unexplained after six local diagnostic replays passed. Every-application replay retains earlier timing failures and unchanged budgets.
 

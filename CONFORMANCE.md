@@ -335,6 +335,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-71` | `build` | New projects inherit the validated selected generation theme in the project creation transaction |
 
+## kernel-adoption
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-86` | `build` | Kernel adoption verifies independent signed exact-input artifacts and prepares immutable archive pins without weakening release qualification |
+
 ## kernel-owner-handoff
 
 | ID | Level | Statement |
@@ -443,6 +449,12 @@ model does not sanction.
 | ID | Level | Statement |
 | --- | --- | --- |
 | `FA-78` | `build` | Ask and Plan turns preserve source proof and preview state while retaining consented inference and transcript completion |
+
+## release-readiness
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-85` | `build` | Release readiness reports bind complete exact-head workflow review and ancestry evidence without mutating or manufacturing acceptance |
 
 ## renderer-stylesheet-identity
 

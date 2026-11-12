@@ -1457,5 +1457,54 @@ definition{
   result: String,
   body: "Stateful app parsing and checking require explicit browser approval before source leaves for https://mcp.uor.foundation/. A standalone operation discloses its immutable exact files. A streaming generation session discloses its application, unique turn, captured source identity, current exact files, and permission for subsequent generated module prefixes, repairs and supporting LexLean library modules in that same turn. This preserves incremental previews without treating inference or network-free frame permission as hosted-source consent. It does not permit another turn, application, destination, proof, publication or arbitrary network operation. Approval remains only in document memory, is unavailable offline, and expires within five minutes including active work. The host asserts current source and turn ownership before each request and after completion; only its own successful compare-and-swap commit may advance its expected local source. Denial, Escape, stop, generation cancellation and expiry are typed private refusals. A session remembers refusal without repeatedly prompting. A modal focuses denial and renders source as text; its active stop control explains that abort cannot recall transmitted data or stop remote work. Each parse/check operation further binds its exact file set and permits only one draft write plus matching draft checks or data reads. Requests omit cookies and credentials, reject redirects, use a bounded cancellation-aware deadline, and validate private fixed response failures. Malformed or refused service responses do not become checks or proofs. Replaced, forgotten or cancelled preview work cannot publish late frames. Preview attempts are identified by requested source and permission scope together: a refused attempt suppresses repeat prompts only in that scope, while a fresh scope may retry identical source. Reselecting a previously rendered module cancels and supersedes pending different-source work before reusing its frame, so stale content cannot acquire the selected module's trust. Incomplete replacement source also supersedes pending work without relabeling the last rendered frame. This is a hosted parsing/checking permission boundary, not proof verification, retention enforcement, same-origin caller authentication or overall release acceptance."
 }
+
+inductive{
+  name: ReleaseReadinessError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: readinessInputInvalid, fields: []},
+    {name: readinessEvidenceUnavailable, fields: []},
+    {name: readinessIdentityChanged, fields: []},
+    {name: readinessPolicyInvalid, fields: []},
+    {name: readinessLaneMissing, fields: []},
+    {name: readinessEvidenceAmbiguous, fields: []},
+    {name: readinessJobUnqualified, fields: []},
+    {name: readinessReviewRequired, fields: []},
+    {name: readinessThreadsUnresolved, fields: []},
+    {name: readinessAncestryUnknown, fields: []}
+  ]
+}
+
+definition{
+  name: releaseReadinessBoundary,
+  parameters: [],
+  result: String,
+  body: "A read-only release readiness collector captures the requested repository, full pull-request head and base commits, explicit live target branch reference and its independently resolved tip, and merge identity before collecting evidence, then rereads identity after collection. It resolves complete paginated workflow runs, jobs, checks, statuses, reviews, review threads and open pull-request stack evidence. Its explicit policy names upstream repository, workflow path, event, source or merge revision and required job identities. A complete successful required job is necessary; skipped, cancelled, missing, stale, fork-substituted, duplicate or ambiguous evidence cannot qualify a lane. A merge revision must have the expected head and base parents. API workflow, job and check source identity and merge parents can qualify source metadata under the captured policy; they do not prove the tested checkout identity or current-base execution. A policy requiring current-base merge execution refuses with readinessEvidenceUnavailable without independently bound checkout evidence. Offline replay is explicitly non-live and cannot substitute for fresh collection. Source-metadata machine qualification remains separate from owner and merge qualification. When the captured policy requires independent review, its explicit attestation binds an existing exact API review and the reviewed head and live base. Otherwise the report preserves available review evidence without imposing a new approval prerequisite. Machine qualification and auditable technical assessment records are distinct from independent GitHub approval and the authorized owner or maintainer merge decision. Green checks, workflow names, comments and the collector itself cannot manufacture approval. Missing, unavailable or unresolved review-thread evidence fails closed. Ancestry and stack dispositions report exact ancestry, recorded integrated merge or divergence only from checked commit relationships; they do not mark semantic equivalence, close contributions or grant merge permission. Pagination truncation, malformed policy, unavailable evidence, target advancement and conflicting identity produce fixed typed refusals. Reports retain only required public evidence and never credentials. The collector does not approve, merge, publish, mutate repository state or substitute readiness observations for complete exact-SDK, browser, performance and live release qualification. GitHub and reviewer statements remain imported observations, not kernel proofs."
+}
+
+inductive{
+  name: KernelAdoptionError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: adoptionInputInvalid, fields: []},
+    {name: adoptionArtifactInvalid, fields: []},
+    {name: adoptionProvenanceInvalid, fields: []},
+    {name: adoptionIndependenceInvalid, fields: []},
+    {name: adoptionAcceptanceFailed, fields: []},
+    {name: adoptionEvidenceStale, fields: []},
+    {name: adoptionTargetChanged, fields: []},
+    {name: adoptionPushUncertain, fields: []},
+    {name: adoptionToolFailed, fields: []}
+  ]
+}
+
+definition{
+  name: kernelAdoptionBoundary,
+  parameters: [],
+  result: String,
+  body: "Kernel adoption plans without local or remote mutation by default. Explicit build mode recovers only matching signed artifacts or requests two separate immutable build references for the same full source commit through the existing build workflow. A build checkout and workflow source identity must agree. Verification binds the exact source commit and git-tree identity, the bounded materialized bytes of the declared build inputs and immutable SDK, exact repository, workflow, source, hosted-runner signer, OIDC issuer, successful independent run and artifact identities, downloaded artifact digests and complete manifests. Two distinct executions must reproduce the complete holo bytes; matching metadata, a shared execution, inherited evidence or partial guest equality is insufficient. The existing prism-code verifier independently validates the archive, requires a nonempty committed acceptance vector set and replays every vector. A declared input digest enables exact-input comparison; it does not establish a hermetic SDK or container execution. Explicit preparation writes an isolated branch and worktree only after verification, retaining both signed bundles and the existing component-reproduction receipt profile. Archive and pin are separate commits so the immutable pin URL names the commit containing the exact archive. Repeated preparation is a no-op only after rechecking receipt, inputs, pin URL and artifact bytes. Explicit publication first proves that the prepared final commit descends from the captured expected target, then atomically publishes only if the remote reference still has that exact expected commit. An explicit old-object-identity lease supplies compare-and-swap after the independent ancestry proof; no history rewrite, non-fast-forward content or generic force path is permitted. Publication rechecks an uncertain outcome before another attempt; changed targets or unresolved outcomes refuse instead of overwriting or duplicating work. Malformed input, invalid artifact or provenance, non-independent executions, failed replay, stale evidence, changed target, uncertain push and tool failure have fixed typed refusals that omit private credentials. Component reproduction is separate from final full exact-SDK acceptance, Studio/browser/performance gates and independent live deployment verification; preparation or publication never establishes release qualification."
+}
 \end{semanticmodule}
 \end{lexlean}
