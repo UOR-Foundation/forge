@@ -151,7 +151,14 @@ if (process.argv.includes("--browser")) {
     for (let decision = 0; decision < 8; decision++) {
       await page.waitForFunction(() => /T0 /.test(document.body.innerText) || !!document.querySelector("dialog[open]"), null, {timeout:120000});
       if (await page.evaluate(() => /T0 /.test(document.body.innerText))) break;
-      await page.locator("dialog[open]").last().getByRole("button", {name:/^(Don't allow|Send this request)$/}).click({timeout:120000});
+      try {
+        await page.locator("dialog[open]").last().getByRole("button", {name:/^(Don't allow|Send this request)$/}).click({timeout:500});
+      } catch (error) {
+        // A second modal can arrive after Playwright resolves the first button.
+        // Retry a fresh locator; never force a click through the new modal.
+        if (error.name !== "TimeoutError") throw error;
+        console.log(JSON.stringify({run,stage:"consent-reordered",decision}));
+      }
     }
     await page.waitForFunction(() => /T0 /.test(document.body.innerText), null, { timeout: 120000, polling: "raf" });
     token.push(Math.round((await page.evaluate(() => performance.now())) - t0));
