@@ -360,3 +360,18 @@ Status of this app, in the words this project uses: checked by `lexlean check`; 
 All tests: `node --test v2/shell/test.mjs v2/shell/test-payment.mjs v2/loop/test-guests.mjs`, 29 of 29.
 
 Repository gate on this branch, run in the pinned SDK image: `cargo fmt --check`, `xtask validate` (model, limits, deferral, bootstrap audits), `prismpm template check` and `prismpm lock check` all pass. Not run locally: clippy, the workspace tests, `cargo deny` and the app build, which is the step that times out on this machine.
+
+## The counter's own guest agrees with the interpreter, on every state (2026-11-12)
+
+The build-speed work produced the first probe holo: `Counter probe.holo`, sha256 `c9a7389e…`, 21,079 bytes, built from a copy of `probe-app` with its theorems moved into a separate module (the responses and all 14 acceptance vectors are unchanged). Checked here independently: `prism-code vectors` reports 14 of 14 with identities verified.
+
+[compare/compare.mjs](compare/compare.mjs) then ran that holo's compiled guest against the interpreter on the data form of the same sources:
+
+- The guest replays its own vectors: 14 of 14. The interpreter gives the recorded response for each: 14 of 14. The source's declared vectors equal the holo's.
+- Sweep ([compare/sweep-counter.mjs](compare/sweep-counter.mjs)): every one of the 65,536 states (count and stride, one byte each) with increment, with reset, and with set-stride at four arguments, plus unknown event tags and one-byte mutations of the vectors. 395,625 requests, 395,625 agree, none differ.
+- For increment and reset this is not a sample: it is the whole input space of the wire format. For set-stride it covers 4 of 256 arguments in every state.
+- Per request in Node: guest 0.081 ms, interpreter 0.086 ms.
+
+So for the counter, "the interpreter was tested against vectors written by hand" is replaced by "the interpreter agrees with the compiled guest on every state for two of its three events". Together with the Payment Approval comparison, the interpreter has now been held to two shipped guests.
+
+Still not compared: `probe-view` and `probe-payment`, which run PrismPM's CBOR codec and have no holo yet. The holo itself is in the build-speed work, which is not part of this branch, so this comparison cannot be rerun from this branch alone until that work lands.

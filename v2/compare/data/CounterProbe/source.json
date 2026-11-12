@@ -1,0 +1,12 @@
+{
+ "draft": "prism-app/2cb71c3181374e0586e604a366998b9f536af256a4190b5da1058a10b3ca9940",
+ "profile": "prism-app",
+ "files": [
+  "src/Foundation/Bytes.lex.tex",
+  "src/Foundation/Utf8.lex.tex",
+  "src/Foundation/View/Text/V1/Model.lex.tex",
+  "src/Probe.lex.tex",
+  "src/ProbeProofs.lex.tex",
+  "src/TextRequest.lex.tex"
+ ]
+}
