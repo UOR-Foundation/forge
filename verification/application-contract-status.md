@@ -66,3 +66,5 @@ FA-79 fixes mounted-route model picker ownership and empty-chat persistence. All
 FA-80 exposes canonical Build/Ask/Plan controls with scoped persistence, a single keyboard owner, atomic default capture and immutable queued execution. All 471 Node controls, full Rust/Clippy/fmt and focused responsive Chromium pass. Seven unit mutations and an actual host mutation are qualified. All 60 mandatory browsers pass together; exact-head hosted acceptance remains in progress; see `browser-chat-mode-controls.md`. Author completeness review 5869987594 is scoped and is not independent approval.
 
 FA-79 hosted Studio 43165254913 and Forge performance 43165254778 pass at 075fd0f0ea9b544298c3e7a981ff3127665acd7c. Rechecking PrismPM #586 still finds it open/unmerged at e8eb0ad15e8323a62915cf84e87c3c8180d7bcb5; no qualified consumer-factory SDK upgrade is established by that proposal.
+
+FA-80 also passes full mobile performance and the canonical live LexLean gate after environment recovery. Results are recorded in `chat-mode-controls-performance.json`; no budget is changed.
