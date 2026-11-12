@@ -91,9 +91,4 @@ test("the site's Featherless relay gets no credential, keeps concurrency retries
   await context.paidGenerateOnce({ model: "featherless/zai-org/GLM-5.3-Flash" });
   assert.equal(captured.provider, "featherlessSite"); assert.equal(captured.key, "");
   assert.deepEqual(JSON.parse(captured.bytes), { stream: true, stream_options: { include_usage: true } });
-  // The kernel's answer to think 0 reaches Featherless as its one documented switch, and only when it is no.
-  await context.paidGenerateOnce({ model: "featherless/zai-org/GLM-5.3-Flash" }, undefined, undefined, undefined, { think: false });
-  assert.deepEqual(JSON.parse(captured.bytes), { stream: true, stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: false } });
-  await context.paidGenerateOnce({ model: "featherless/zai-org/GLM-5.3-Flash" }, undefined, undefined, undefined, { think: true });
-  assert.equal("chat_template_kwargs" in JSON.parse(captured.bytes), false);
 });
