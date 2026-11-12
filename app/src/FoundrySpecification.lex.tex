@@ -1155,5 +1155,22 @@ definition{
   result: String,
   body: "The generated browser entry gives the initial renderer stylesheet the same deployment-prefixed pathname that the locked Vite renderer uses for its stylesheet dependency identity. Before renderer module execution, the declared renderer asset is resolved against the document base and assigned once as the stylesheet pathname without changing the resource, origin, base directory or stylesheet semantics. Anonymous cross-origin mode matches the renderer's generated stylesheet loader. The home route reuses that existing stylesheet rather than adding a second render-blocking request for the same bytes. Root and nested deployments preserve the exact resolved asset path. This projection does not change asset bytes, cache verification, service-worker activation, renderer admission, offline readiness or any signed guest performance budget. Acceptance observes actual stylesheet requests and the rendered home and settings screens; deleting identity normalization must cause the duplicate-request gate to refuse."
 }
+inductive{
+  name: BrowserSettingsError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidSettingsCommand, fields: []},
+    {name: invalidStoredSettings, fields: []},
+    {name: settingsStorageFailed, fields: []}
+  ]
+}
+
+definition{
+  name: browserSettingsTransactionBoundary,
+  parameters: [],
+  result: String,
+  body: "User settings mutations, including renderer patches, device provider credential updates, selected inference model changes and full replacements, capture their caller input before database readiness. They read, synchronously transform and write the user settings record in one IndexedDB read-write transaction. Transactions serialize across windows, so disjoint patches preserve both changes, and a later full credential removal cannot be overwritten by an earlier stale read. No asynchronous gap separates the transactional read from its write. Only transaction completion acknowledges a mutation; request success followed by abort refuses without a partial result. Reads also settle only at transaction completion and return detached records. Missing settings are distinct from corrupt non-record storage. Input and stored roots must be transferable plain records; stored provider credential validity remains the independently checked credential boundary. Imported renderer schemas, privacy coercion, build mode and defaults retain their existing ownership. Database readiness, creation, request and transaction failures expose fixed typed errors without settings contents or provider credentials. This browser-origin transaction boundary does not provide remote synchronization, merge conflicting writes to the same field, or authenticate hostile same-origin code."
+}
 \end{semanticmodule}
 \end{lexlean}

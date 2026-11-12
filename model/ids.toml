@@ -531,3 +531,9 @@ id = "FA-62"
 level = "build"
 suite = "renderer-stylesheet-identity"
 statement = "Generated renderer stylesheet identity prevents duplicate blocking CSS retrieval"
+
+[[id]]
+id = "FA-63"
+level = "build"
+suite = "atomic-browser-settings"
+statement = "Browser settings updates serialize their read and write and acknowledge only transaction completion"

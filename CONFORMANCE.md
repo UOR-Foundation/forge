@@ -30,6 +30,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-59` | `build` | Current-main experience rules and renderer improvements coexist with complete application protocols and verified private offline closure |
 
+## atomic-browser-settings
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-63` | `build` | Browser settings updates serialize their read and write and acknowledge only transaction completion |
+
 ## atomic-generation-patch
 
 | ID | Level | Statement |
