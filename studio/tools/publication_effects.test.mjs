@@ -69,7 +69,7 @@ test("cancelling the actual build before commit prevents further remote writes",
     if (String(url).endsWith("/git/ref/heads/main")) return response({ object: { sha: "head" } });
     return response({});
   };
-  await fails(buildOnGitHub({ token: "token", spec: { name: "app", purpose: "test" }, fetch, signal: controller.signal,
+  await fails(buildOnGitHub({ source:"blake3:"+"a".repeat(64), authorize:async()=>({check:async()=>{},close(){}}), token: "token", spec: { name: "app", purpose: "test" }, fetch, signal: controller.signal,
     step: word => { if (word === "Writing the app") controller.abort(); },
     templateCommit: () => assert.fail("commit after cancellation"), open: () => assert.fail("live verification after cancellation") }), "cancelled");
   assert.equal(calls.length, 4);

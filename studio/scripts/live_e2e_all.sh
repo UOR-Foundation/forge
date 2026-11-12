@@ -10,7 +10,7 @@ for spec in tools/fixtures/live/rsvp.json tools/fixtures/specs/parking-fee.json 
   name=$(basename "$spec"); ok=""
   for attempt in 1 2 3; do
     if node tools/live_e2e.mjs "$TARGET" "$spec" "$OUT/$name-$attempt" > "$OUT/$name-$attempt.log" 2>&1; then ok=1; break; fi
-    echo "$name, attempt $attempt:"; sed -n '/refused:/,$p' "$OUT/$name-$attempt.log"
+    echo "$name, attempt $attempt:"; tail -n 40 "$OUT/$name-$attempt.log"
   done
   if [ -n "$ok" ]; then echo "ok   $name (attempt $attempt): $(grep -E '^first node' "$OUT/$name-$attempt.log" | cut -c30-)"
   else echo "FAIL $name missed its budgets three times"; failed=1; fi

@@ -1,3 +1,4 @@
+import {browserChatMode} from "../shell/browser-chat-modes.mjs";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import fs from "node:fs";
@@ -48,9 +49,9 @@ test("actual host creation delegates atomically and import cannot overwrite IDs"
   const source = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
   const start = source.indexOf('handlers.set("create-app",'); const end = source.indexOf('handlers.set("read-app-file",', start);
   const handlers = new Map(), calls = [];
-  vm.runInNewContext(source.slice(start, end), { handlers, coreReady: Promise.resolve(), core, kappa, loadScaffold: async () => ({ x: "y" }), dbReady: Promise.resolve({}), prepareNewProject: async input => { calls.push(input); return {}; }, createStoredProject: async () => ({ app: { id: 7 }, chatId: 8, oid: "test" }), nulls: {}, withDates: x => x, emit: (...a) => calls.push(a) });
+  vm.runInNewContext(source.slice(start, end), { handlers, browserChatMode, get: async()=>({defaultChatMode:"ask"}), coreReady: Promise.resolve(), core, kappa, loadScaffold: async () => ({ x: "y" }), dbReady: Promise.resolve({}), prepareNewProject: async input => { calls.push(input); return {}; }, createStoredProject: async () => ({ app: { id: 7 }, chatId: 8, oid: "test" }), nulls: {}, themesData: [], withDates: x => x, emit: (...a) => calls.push(a) });
   assert.deepEqual(JSON.parse(JSON.stringify(await handlers.get("create-app")({ name: "Example" }))), { app: { id: 7 }, chatId: 8 });
-  assert.equal(calls[0].name, "Example"); assert.ok(source.includes('store === "apps" || store === "chats"'));
+  assert.equal(calls[0].name, "Example"); assert.equal(calls[0].initialChatMode, "ask"); assert.ok(source.includes('store === "apps" || store === "chats"'));
   assert.ok(source.includes('.add(value, key)')); assert.ok(!source.includes('const rawCreate ='));
   assert.ok(source.includes('createStoredChat(await dbReady, appId'));
 });

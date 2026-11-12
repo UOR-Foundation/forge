@@ -63,10 +63,11 @@ export function parse(text, { lenient = false } = {}) {
       else if (options.length < 2 || options.length > 8) issues.push({ line: at, message: "a choice has between 2 and 8 options" });
       else if (name(m[1], at)) app.fields.push({ kind: "choice", name: m[1], label: m[2], options });
     } else if ((m = new RegExp(`^table\\s+(\\S+)\\s+${quoted}\\s*:\\s*(.+)$`).exec(line))) {
-      const columns = m[3].split(",").map((c) => c.trim()).filter(Boolean);
+      const columns = m[3].split(",").map((c) => c.trim());
       const unknown = columns.find((c) => !app.fields.some((f) => f.name === c));
       if (unknown) issues.push({ line: at, message: `"${unknown}" is not a text or a choice declared above this table` });
-      else if (new Set(columns).size !== columns.length || columns.length > 6) issues.push({ line: at, message: "a table has up to 6 columns, each field once" });
+      else if (columns.some(c => !c) || new Set(columns).size !== columns.length || columns.length > 6) issues.push({ line: at, message: "a table has between 1 and 6 columns, each field once" });
+      else if (app.tables.some(t => t.name + "Count" === m[1] || m[1] + "Count" === t.name)) issues.push({ line: at, message: "the table name collides with a generated table count: choose another name" });
       else if (name(m[1], at)) app.tables.push({ name: m[1], caption: m[2], columns });
     } else if ((m = new RegExp(`^count\\s+(\\S+)\\s+${quoted}$`).exec(line))) {
       if (!app.tables.some((t) => t.name === m[1])) issues.push({ line: at, message: `"${m[1]}" is not a table declared above this count` });

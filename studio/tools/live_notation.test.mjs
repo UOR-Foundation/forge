@@ -13,6 +13,10 @@ import crypto from "node:crypto";
 import { expand, parse, isNotation, PROMPT } from "../shell/live/notation.mjs";
 import { moduleFromTurn, isAppShape, splitDeclarations, wholePrefix, theoremsOf, promisesOf, moduleContext, notationRepairPrompt, notationCard, checkApp, checkLibrary, dataForm, createApp, PROMPT as APP_PROMPT } from "../shell/live/app.mjs";
 
+import { describeHostedSource } from "../shell/hosted-source-permission.mjs";
+// Only the opt-in hosted fixture uses this explicit authorization.
+const permissionOptions = { authorize: async input => ({ disclosure: describeHostedSource(input), expires: Date.now() + 10000, signal: new AbortController().signal, close() {} }), online: () => true };
+
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), "utf8");
 const hosted = process.env.LIVE_APP_HOSTED === "1";
 // Each fixture, with the SHA-256 of the module it stands for. The four model-* files are what GLM 5.3 Flash
@@ -76,6 +80,10 @@ test("lines that do not read are refused, each with its line and the reason", ()
   refuse('app A\ntext a "A"\n', /no table/);
   refuse('app A\ntext a "A"\ntable t "T": a\naction "Add": add to t\nmake it nice\n', /is not one of/);
   refuse('app A\ntext a "A \\" B"\ntable t "T": a\naction "Add": add to t\n', /is not one of/);
+  refuse('app A\ntext a "A"\ntable rows "Rows": a\ntable rowsCount "More": a\naction "Add": add to rows\naction "More": add to rowsCount\n', /generated table count/);
+  refuse('app A\ntext a "A"\ntable rowsCount "More": a\ntable rows "Rows": a\naction "More": add to rowsCount\naction "Add": add to rows\n', /generated table count/);
+  refuse('app A\ntext a "A"\ntable rows "Rows": ,\naction "Add": add to rows\n', /between 1 and 6 columns/);
+  refuse('app A\ntext a "A"\ntable rows "Rows": a,\naction "Add": add to rows\n', /between 1 and 6 columns/);
   // No label can leave its string: a quote or a backslash never reaches the module.
   assert.equal(parse('app A "quoted"\n').issues.length > 0, true);
 });
@@ -131,9 +139,9 @@ test("hosted: every module passes the checker and runs: a row is added, a bad on
   const checkLib = checkLibrary((p) => Promise.resolve(read("../shell/live/v2/" + p)));
   for (const name of Object.keys(FIXTURES)) {
     const { module } = expand(lines(name));
-    const verdict = await checkApp(module, checkLib);
+    const verdict = await checkApp(module, checkLib, undefined, permissionOptions);
     assert.deepEqual({ ok: verdict.ok, issues: verdict.issues }, { ok: true, issues: [] }, name);
-    const app = createApp(await dataForm(module), library);
+    const app = createApp(await dataForm(module, undefined, permissionOptions), library);
     const numbered = app.frame().nodes.map((n, i) => ({ ...n, node: i + 1 }));
     const fields = numbered.filter((n) => n.kind === "Input" || n.kind === "Select");
     const actions = numbered.filter((n) => n.kind === "Action");

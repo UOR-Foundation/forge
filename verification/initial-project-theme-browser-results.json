@@ -1,0 +1,11 @@
+{
+  "profile": "foundry/initial-project-theme-acceptance/1",
+  "builtin": true,
+  "custom": true,
+  "empty": true,
+  "invalidRollback": true,
+  "lateAbort": true,
+  "concurrentDeletion": true,
+  "reload": true,
+  "pageErrors": []
+}

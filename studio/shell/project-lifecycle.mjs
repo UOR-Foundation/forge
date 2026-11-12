@@ -59,7 +59,7 @@ export async function deleteStoredProject(db, appId) {
           };
           mark("apps", appId);
           t.objectStore("apps").delete(appId); t.objectStore("versions").delete(appId);
-          refs.delete(`${appId}:main`); refs.delete(`prism:${appId}`);
+          refs.delete(`${appId}:main`); refs.delete(`prism:${appId}`); refs.delete(`stateful:${appId}`); refs.delete(`events:${appId}`); refs.delete(`interaction:${appId}`); refs.delete(`work:${appId}`); refs.delete(`preview:${appId}`); refs.delete(`gallery:${appId}`);
           const files = t.objectStore("files").openCursor(IDBKeyRange.bound(`${appId}:`, `${appId};`, false, true));
           files.onsuccess = () => { try { if (files.result) { files.result.delete(); files.result.continue(); } } catch { refuse(); } };
           let maximumChat = 0;
@@ -70,7 +70,7 @@ export async function deleteStoredProject(db, appId) {
               if (!cursor) { mark("chats", maximumChat); return; }
               if (!Number.isSafeInteger(cursor.key) || cursor.key < 1) throw Error();
               maximumChat = Math.max(maximumChat, cursor.key);
-              if (cursor.value.appId === appId) cursor.delete();
+              if (cursor.value.appId === appId) { refs.delete(`chat-queue:${cursor.key}`); cursor.delete(); }
               cursor.continue();
             } catch { refuse(); }
           };
@@ -91,7 +91,7 @@ export async function deleteStoredChat(db, chatId) {
       q.onsuccess = () => {
         try {
           if (q.result !== undefined && (!Number.isSafeInteger(q.result) || q.result < 0)) throw Error();
-          refs.put(Math.max(q.result || 0, chatId), "allocation:chats"); t.objectStore("chats").delete(chatId);
+          refs.put(Math.max(q.result || 0, chatId), "allocation:chats"); t.objectStore("chats").delete(chatId); refs.delete(`chat-queue:${chatId}`);
         } catch { refuse(); }
       };
     } catch { refuse(); }

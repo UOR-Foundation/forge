@@ -1,0 +1,11 @@
+# FA-55 — Message-linked restoration
+
+Authority: `FoundrySpecification.messageRestorationBoundary`, composed with `durableVersionPreviewBoundary` and the VersionPreview guest. The registered ID, scenario and missing-test failure preceded implementation.
+
+Message restoration verifies a project-owned source identity before changing source or chat history. A fork retains earlier messages and chat settings, excludes live delivery identifiers and quota ownership, and leaves the original chat intact. A version restore with a chat boundary truncates that chat. Fork-only closes a historical preview to its original live source without creating a source version. Source, preview journal, chat update, operation receipt and monotonic fork allocation commit in one IndexedDB transaction. Exact operation receipts retain created/affected chat IDs. Active or pending queues require explicit Stop/clear before restoration; this adapter does not silently cancel or discard queued user work.
+
+Local evidence: 332 Node controls, workspace Rust tests, Clippy, formatting and script parsing pass. Six new controls cover source precedence, copied metadata, input capture, fork/truncate distinction, queue refusal, actual adapter transaction ordering, stale history, deletion, source/journal/chat atomicity and late abort. Eight planted defects in source precedence, message boundary, quota copying, queue refusal, chat CAS, queue CAS, abort acknowledgement and fork receipt binding are rejected, then restored controls pass. The transaction fixture is an ordering oracle, not browser IndexedDB evidence.
+
+The two-module specification diagnostic verifies with receipt `6fab11dd0292c69a6cf1049dad7124f873fc93003a80421cf5734f9f216a2ebf`. This host-tool diagnostic does not substitute for the locked SDK.
+
+Draft acceptance: the mandatory actual-host browser journey covers source+chat fork, chat-only fork, exact replay, truncation and actual late abort. The signed 245-case preview guest now passes this journey against the actual host, core and IndexedDB: source fork, chat-only fork, exact replay, truncation and late-abort rollback, with zero page exceptions. Exact-SDK CI and completeness review remain required. Production dependency/factory/quality/release holds remain unchanged.

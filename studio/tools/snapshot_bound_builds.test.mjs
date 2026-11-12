@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { test } from "node:test";
+import { spawnSync } from "node:child_process";
 import { verifyCapturedSource, sameBuildSource, requiresRulePublication } from "../shell/build-source.mjs";
 const source = { name: "Example", reference: "blake3:" + "a".repeat(64), files: [["b", "\ufeff\u00e9"], ["a", "exact\r\n"]], dependencies: [] };
 const snapshot = () => ({ name: source.name, oid: source.reference, files: structuredClone(source.files) });
@@ -47,4 +48,38 @@ test("both builders consume captured files and check source before promotion", (
   }
   assert.ok(host.includes("buildPortable(appId, captured)")); assert.ok(host.includes("assertBuildSourceCurrent(await dbReady, appId, captured)"));
   assert.ok(fs.readFileSync(new URL("./shell_parse.mjs", import.meta.url), "utf8").includes('"build-source.mjs": "mjs"'));
+});
+
+
+test("build-source browser fixture links the complete production module closure and rejects missing bytes or exports", () => {
+  // Let Node's ES-module linker parse actual modules; a text import scan of prism.js
+  // would mistake the generated React source inside its template string for imports.
+  const link = String.raw`
+    import fs from 'node:fs'; import vm from 'node:vm';
+    const fixtureURL = new URL(process.argv[1]);
+    const fixture = fs.readFileSync(fixtureURL, 'utf8');
+    const begin = fixture.indexOf('const sources = new Map('), end = fixture.indexOf('const server =', begin);
+    if(begin < 0 || end <= begin) throw Error('missing fixture inventory');
+    const sources = vm.runInNewContext(fixture.slice(begin,end).replaceAll('import.meta.url','fixtureURL'), {fs,URL,Map,fixtureURL});
+    if(process.argv[2]) sources.delete(process.argv[2]);
+    if(process.argv[3]) sources.set(process.argv[3], 'export const wrongExport = true;');
+    const entries = [...fixture.matchAll(/\bimport\(["'](\/[^"']+)["']\)/g)].map(match=>match[1]);
+    if(entries.length !== 6) throw Error('review changed browser entry imports');
+    const context = vm.createContext({TextEncoder,TextDecoder,URL,console}), modules = new Map();
+    const moduleOf = name => {
+      if(!sources.has(name)) throw Error('fixture does not serve '+name);
+      if(!modules.has(name)) modules.set(name,new vm.SourceTextModule(String(sources.get(name)),{context,identifier:name}));
+      return modules.get(name);
+    };
+    const root = new vm.SourceTextModule(entries.map(name=>'import '+JSON.stringify(name)+';').join('\n'),{context,identifier:'/fixture.mjs'});
+    await root.link((specifier,parent)=>moduleOf(new URL(specifier,'https://fixture.example'+parent.identifier).pathname));
+    await root.evaluate();
+    console.log('linked '+modules.size+' exact fixture modules');
+  `;
+  const run = (missing = '', wrongExport = '') => spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', link, new URL('./build_source_browser.mjs', import.meta.url).href, missing, wrongExport], {encoding:'utf8',timeout:30000});
+  const good = run();assert.equal(good.status,0,good.stdout+'\n'+good.stderr);assert.match(good.stdout,/linked [1-9][0-9]* exact fixture modules/);
+  for(const missing of ['/live/app.mjs','/live/v2/check.mjs','/hosted-source-permission.mjs']) {
+    const bad = run(missing);assert.notEqual(bad.status,0);assert.ok(bad.stderr.includes('fixture does not serve '+missing),bad.stderr);
+  }
+  const wrong = run('', '/live/app.mjs');assert.notEqual(wrong.status,0);assert.match(wrong.stderr,/does not provide an export named 'PROMPT'/);
 });

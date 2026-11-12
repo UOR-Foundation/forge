@@ -121,10 +121,25 @@ if manifest_path.exists():
     absent = [f["path"] for f in manifest["files"] if not (root / "shell" / f["path"]).is_file()]
     if absent:
         sys.exit(f"shell/manifest.json lists files the shell does not have, so the worker could not install: {absent}")
-    # The same failure on the site: the Pages artifact leaves dotfiles out, so a listed dotfile 404s there.
-    unserved = [f["path"] for f in manifest["files"] if any(s.startswith(".") for s in f["path"].split("/"))]
-    if unserved:
-        sys.exit(f"shell/manifest.json lists files the Pages artifact leaves out, so the worker could not install on the site: {unserved}")
+    # A complete closure retains dotfiles. Every Pages upload must explicitly carry them.
+    hidden = [f["path"] for f in manifest["files"] if any(s.startswith(".") for s in f["path"].split("/"))]
+    if hidden:
+        import re
+        for workflow in ("pages.yml", "try-page.yml"):
+            source = (root.parent / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
+            steps = re.split(r"(?m)^      - ", source)
+            uploads = [step for step in steps if re.search(r"(?m)^\s*(?:uses: )?actions/upload-pages-artifact@", step) or re.search(r"(?m)^\s*uses: actions/upload-pages-artifact@", step)]
+            if workflow == "pages.yml":
+                transfers = [step for step in steps if "uses: actions/upload-artifact@" in step and re.search(r"(?m)^\s*name:\s*forge-site\s*$", step)]
+                if len(transfers) != 1:
+                    sys.exit("pages.yml must retain one explicit forge-site intermediate artifact")
+                uploads += transfers
+            if not uploads:
+                sys.exit(f"{workflow} has no explicit Pages upload for the shell closure")
+            for step in uploads:
+                values = re.findall(r"(?m)^\s*include-hidden-files:\s*([^\n#]+)", step)
+                if [value.strip() for value in values] != ["true"]:
+                    sys.exit(f"{workflow} Pages upload must explicitly include every hidden closure file: {hidden}")
     bad = [f["path"] for f in manifest["files"] if hashlib.sha256((root / "shell" / f["path"]).read_bytes()).hexdigest() != f["sha256"]]
     if bad:
         sys.exit(f"shell/manifest.json digests differ from hashlib on: {bad}")

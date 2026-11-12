@@ -1,0 +1,256 @@
+\begin{lexlean}{InteractionProtocol}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{InteractionModel}
+\importmodule{CompositionProtocol}
+\importmodule{WorkProtocol}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: InteractionFrameRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: InteractionModel::InteractionFrame}, {name: rest, type: Nat}]
+}
+
+structure{
+  name: InteractionFramesRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List InteractionModel::InteractionFrame)},
+    {name: rest, type: Nat},
+    {name: valid, type: Bool}
+  ]
+}
+
+definition{
+  name: readInteractionFrame,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option InteractionFrameRead),
+  body: (match (CompositionProtocol::readScalar words offset)
+    | Option.none => (ctor Option.none [InteractionFrameRead])
+    | Option.some screen => (match (CompositionProtocol::readScalar words (project screen rest))
+      | Option.none => (ctor Option.none [InteractionFrameRead])
+      | Option.some palette => (match (CompositionProtocol::readScalar words (project palette rest))
+        | Option.none => (ctor Option.none [InteractionFrameRead])
+        | Option.some tone => (match (CompositionProtocol::readScalar words (project tone rest))
+          | Option.none => (ctor Option.none [InteractionFrameRead])
+          | Option.some motion => (ctor Option.some [InteractionFrameRead] (record InteractionFrameRead {value := (record InteractionModel::InteractionFrame {screen := (project screen value), palette := (project palette value), tone := (project tone value), motion := (project motion value)}), rest := (project motion rest)}))))))
+}
+
+definition{
+  name: readInteractionFrames,
+  parameters: [
+    words : (List Nat),
+    offset : Nat,
+    count : Nat,
+    acc : (List InteractionModel::InteractionFrame)
+  ],
+  result: InteractionFramesRead,
+  body: (match count
+    | Nat.zero => (record InteractionFramesRead {value := acc, rest := offset, valid := true})
+    | Nat.succ less => (match (readInteractionFrame words offset)
+      | Option.none => (record InteractionFramesRead {value := acc, rest := offset, valid := false})
+      | Option.some item => (readInteractionFrames words (project item rest) less (prim append acc (cons (project item value) (nil InteractionModel::InteractionFrame)) : (List InteractionModel::InteractionFrame))))),
+  recursive_argument: count
+}
+
+definition{
+  name: listInteractionFrames,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option InteractionFramesRead),
+  body: (match (CompositionProtocol::readScalar words offset)
+    | Option.none => (ctor Option.none [InteractionFramesRead])
+    | Option.some count => (if ((project count value) <=? 32) then (let result : InteractionFramesRead := (readInteractionFrames words (project count rest) (project count value) (nil InteractionModel::InteractionFrame)); (if (project result valid) then (ctor Option.some [InteractionFramesRead] result) else (ctor Option.none [InteractionFramesRead]))) else (ctor Option.none [InteractionFramesRead])))
+}
+
+structure{
+  name: InteractionEdgeRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: InteractionModel::InteractionEdge}, {name: rest, type: Nat}]
+}
+
+structure{
+  name: InteractionEdgesRead,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: value, type: (List InteractionModel::InteractionEdge)},
+    {name: rest, type: Nat},
+    {name: valid, type: Bool}
+  ]
+}
+
+definition{
+  name: readInteractionEdge,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option InteractionEdgeRead),
+  body: (match (CompositionProtocol::readScalar words offset)
+    | Option.none => (ctor Option.none [InteractionEdgeRead])
+    | Option.some origin => (match (CompositionProtocol::readScalar words (project origin rest))
+      | Option.none => (ctor Option.none [InteractionEdgeRead])
+      | Option.some event => (match (CompositionProtocol::readScalar words (project event rest))
+        | Option.none => (ctor Option.none [InteractionEdgeRead])
+        | Option.some destination => (ctor Option.some [InteractionEdgeRead] (record InteractionEdgeRead {value := (record InteractionModel::InteractionEdge {origin := (project origin value), event := (project event value), destination := (project destination value)}), rest := (project destination rest)})))))
+}
+
+definition{
+  name: readInteractionEdges,
+  parameters: [
+    words : (List Nat),
+    offset : Nat,
+    count : Nat,
+    acc : (List InteractionModel::InteractionEdge)
+  ],
+  result: InteractionEdgesRead,
+  body: (match count
+    | Nat.zero => (record InteractionEdgesRead {value := acc, rest := offset, valid := true})
+    | Nat.succ less => (match (readInteractionEdge words offset)
+      | Option.none => (record InteractionEdgesRead {value := acc, rest := offset, valid := false})
+      | Option.some item => (readInteractionEdges words (project item rest) less (prim append acc (cons (project item value) (nil InteractionModel::InteractionEdge)) : (List InteractionModel::InteractionEdge))))),
+  recursive_argument: count
+}
+
+definition{
+  name: listInteractionEdges,
+  parameters: [words : (List Nat), offset : Nat],
+  result: (Option InteractionEdgesRead),
+  body: (match (CompositionProtocol::readScalar words offset)
+    | Option.none => (ctor Option.none [InteractionEdgesRead])
+    | Option.some count => (if ((project count value) <=? 128) then (let result : InteractionEdgesRead := (readInteractionEdges words (project count rest) (project count value) (nil InteractionModel::InteractionEdge)); (if (project result valid) then (ctor Option.some [InteractionEdgesRead] result) else (ctor Option.none [InteractionEdgesRead]))) else (ctor Option.none [InteractionEdgesRead])))
+}
+
+definition{
+  name: encodeInteractionResult,
+  parameters: [
+    result : (Result InteractionModel::InteractionOutput InteractionModel::InteractionError)
+  ],
+  result: Bytes,
+  body: (match result
+    | Result.error error => (match error
+      | InteractionModel::InteractionError.invalidInteractionModel => 0x696e76616c6964496e746572616374696f6e4d6f64656c
+      | InteractionModel::InteractionError.invalidInteractionState => 0x696e76616c6964496e746572616374696f6e5374617465
+      | InteractionModel::InteractionError.unknownInteractionEvent => 0x756e6b6e6f776e496e746572616374696f6e4576656e74)
+    | Result.ok output => (prim append (prim append (prim append (prim append (prim append 0x6f6b20 (WorkProtocol::hexWord (project output state)) : Bytes) (WorkProtocol::hexWord (project output screen)) : Bytes) (WorkProtocol::hexWord (project output palette)) : Bytes) (WorkProtocol::hexWord (project output tone)) : Bytes) (WorkProtocol::hexWord (project output motion)) : Bytes))
+}
+
+definition{
+  name: dispatchInteractionWords,
+  parameters: [words : (List Nat)],
+  result: Bytes,
+  body: (match (CompositionProtocol::readScalar words 0)
+    | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+    | Option.some version => (match (CompositionProtocol::readScalar words (project version rest))
+      | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+      | Option.some initial => (match (CompositionProtocol::readScalar words (project initial rest))
+        | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+        | Option.some screens => (match (listInteractionFrames words (project screens rest))
+          | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+          | Option.some frames => (match (listInteractionEdges words (project frames rest))
+            | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+            | Option.some edges => (match (CompositionProtocol::readScalar words (project edges rest))
+              | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+              | Option.some state => (match (CompositionProtocol::readScalar words (project state rest))
+                | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+                | Option.some event => (match (CompositionProtocol::readScalar words (project event rest))
+                  | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+                  | Option.some audio => (match (CompositionProtocol::readScalar words (project audio rest))
+                    | Option.none => 0x6d616c666f726d6564496e746572616374696f6e
+                    | Option.some reduced => (if (((project reduced rest) =? (prim length words : Nat)) && (((project audio value) <=? 1) && ((project reduced value) <=? 1))) then (encodeInteractionResult (InteractionModel::interactionStep (record InteractionModel::InteractionProfile {version := (project version value), initial := (project initial value), screens := (project screens value), frames := (project frames value), edges := (project edges value)}) (project state value) (project event value) ((project audio value) =? 1) ((project reduced value) =? 1))) else 0x6d616c666f726d6564496e746572616374696f6e))))))))))
+}
+
+definition{
+  name: dispatchInteraction,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (if (8192 <? (prim length bytes : Nat)) then 0x696e746572616374696f6e546f6f4c61726765 else (let decoded : CompositionProtocol::DecodedWords := (CompositionProtocol::decodeWords bytes 0 1024 (nil Nat)); (if (project decoded valid) then (dispatchInteractionWords (project decoded value)) else 0x6d616c666f726d6564496e746572616374696f6e))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: interactionWireBoundary,
+  parameters: [],
+  result: String,
+  body: "Interaction wire v1 begins with interact and one ASCII space followed by lowercase hex-encoded little-endian uint32 words. The words are profile version, initial state, declared screen count, frame count, four words per frame (screen palette tone motion), edge count, three words per edge (origin event destination), current state, event, canonical audio-consent flag and reduced-motion flag. At most 32 frames and 128 edges are parsed within 8192 ASCII payload bytes and 1024 words. Truncated, noncanonical, oversized or trailing input refuses. The generated model determines admission and coordinated state/output. Success returns ok-space and five uint32 hex words (state screen palette tone motion); exact typed refusals retain their names. The codec supplies no semantic fallback. Caller state persistence, audio consent UI, rendering and production qualification remain separately required."
+}
+
+inductive{
+  name: InteractionWireError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: malformedInteraction, fields: []},
+    {name: interactionTooLarge, fields: []},
+    {name: interactionRuntimeFailed, fields: []},
+    {name: invalidInteractionResponse, fields: []}
+  ]
+}
+
+theorem{
+  name: interactionWords_galleryNext,
+  parameters: [],
+  statement: ((dispatchInteractionWords (cons 1 (cons 0 (cons 2 (cons 2 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 2 (cons 0 (cons 1 (cons 1 (cons 1 (cons 2 (cons 0 (cons 0 (cons 1 (cons 0 (cons 0 (nil Nat))))))))))))))))))))))))) = 0x6f6b2030313030303030303031303030303030303130303030303030303030303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: interactionWords_gardenSilent,
+  parameters: [],
+  statement: ((dispatchInteractionWords (cons 1 (cons 0 (cons 2 (cons 2 (cons 0 (cons 2 (cons 220 (cons 10 (cons 1 (cons 3 (cons 440 (cons 20 (cons 2 (cons 0 (cons 1 (cons 1 (cons 1 (cons 2 (cons 0 (cons 0 (cons 1 (cons 0 (cons 0 (nil Nat))))))))))))))))))))))))) = 0x6f6b2030313030303030303031303030303030303330303030303030303030303030303134303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: interactionWords_gardenAudio,
+  parameters: [],
+  statement: ((dispatchInteractionWords (cons 1 (cons 0 (cons 2 (cons 2 (cons 0 (cons 2 (cons 220 (cons 10 (cons 1 (cons 3 (cons 440 (cons 20 (cons 2 (cons 0 (cons 1 (cons 1 (cons 1 (cons 2 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (nil Nat))))))))))))))))))))))))) = 0x6f6b2030313030303030303031303030303030303330303030303062383031303030303134303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: interactionWords_gardenReduced,
+  parameters: [],
+  statement: ((dispatchInteractionWords (cons 1 (cons 0 (cons 2 (cons 2 (cons 0 (cons 2 (cons 220 (cons 10 (cons 1 (cons 3 (cons 440 (cons 20 (cons 2 (cons 0 (cons 1 (cons 1 (cons 1 (cons 2 (cons 0 (cons 0 (cons 1 (cons 1 (cons 1 (nil Nat))))))))))))))))))))))))) = 0x6f6b2030313030303030303031303030303030303330303030303062383031303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: interactionWords_wrongVersion,
+  parameters: [],
+  statement: ((dispatchInteractionWords (cons 2 (cons 0 (cons 2 (cons 2 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 2 (cons 0 (cons 1 (cons 1 (cons 1 (cons 2 (cons 0 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))))))))))) = 0x696e76616c6964496e746572616374696f6e4d6f64656c),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: interactionWire_trailing,
+  parameters: [],
+  statement: ((dispatchInteraction 0x303130303030303030303030303030303032303030303030303230303030303030303030303030303030303030303030303030303030303030303030303030303031303030303030303130303030303030303030303030303030303030303030303230303030303030303030303030303031303030303030303130303030303030313030303030303032303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030) = 0x6d616c666f726d6564496e746572616374696f6e),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+
+theorem{
+  name: interactionWords_duplicateRoute,
+  parameters: [],
+  statement: ((dispatchInteractionWords (cons 1 (cons 0 (cons 2 (cons 2 (cons 0 (cons 0 (cons 0 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 2 (cons 0 (cons 1 (cons 1 (cons 0 (cons 1 (cons 1 (cons 0 (cons 0 (cons 0 (cons 0 (nil Nat))))))))))))))))))))))))) = 0x696e76616c6964496e746572616374696f6e4d6f64656c),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: interactionWire_empty,
+  parameters: [],
+  statement: ((dispatchInteraction 0x) = 0x6d616c666f726d6564496e746572616374696f6e),
+  proof: reflexivity{},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+
+\end{lexlean}

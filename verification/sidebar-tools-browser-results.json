@@ -1,0 +1,299 @@
+{
+  "profile": "foundry/sidebar-tools-browser-qualification/1",
+  "gates": [
+    {
+      "gate": "tools/privacy_browser.mjs",
+      "seconds": 5.01,
+      "code": 0,
+      "output": "{\"fresh\":\"no-telemetry\",\"legacyOptIn\":\"no-telemetry\",\"persistentIdentifiers\":0,\"sdk\":\"actual-installed-package\",\"negativeControl\":\"detected-before-transmission\"}\n"
+    },
+    {
+      "gate": "tools/privacy_shell_browser.mjs",
+      "seconds": 3.0,
+      "code": 0,
+      "output": "{\"renderer\":\"actual-built-shell\",\"legacyConsent\":\"refused\",\"settings\":\"privacy-disclosed\",\"enableControl\":\"absent\",\"typedEnableRefusal\":\"browserTelemetryUnavailable\",\"unexpectedExternalRequests\":0,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/editor_browser.mjs",
+      "seconds": 7.57,
+      "code": 0,
+      "output": "{\"renderer\":\"actual-built-shell\",\"offlineSettings\":true,\"offlineEditor\":true,\"offlineJsonWorker\":true,\"missingAsset\":404,\"unexpectedExternalRequests\":0,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/editor_load_lifecycle_browser.mjs",
+      "seconds": 2.29,
+      "code": 0,
+      "output": "{\"scenario\":\"cancel\",\"cancelled\":\"cancelation\",\"cachedCancelled\":\"cancelation\",\"same\":true,\"background\":\"rgb(19, 19, 22)\",\"pageExceptions\":0,\"externalRequests\":0}\n{\"scenario\":\"themeFailure\",\"code\":\"editorThemeFailed\",\"message\":\"The browser editor could not be configured\",\"background\":\"rgb(19, 19, 22)\",\"pageExceptions\":0,\"externalRequests\":0}\n{\"scenario\":\"loadFailure\",\"code\":\"editorLoadFailed\",\"message\":\"The browser editor could not load\",\"pageExceptions\":0,\"externalRequests\":0}\n"
+    },
+    {
+      "gate": "tools/compiler_browser.mjs",
+      "seconds": 4.82,
+      "code": 0,
+      "output": "{\"compiler\":\"0.25.5\",\"offlineTransform\":42,\"offlineBundle\":42,\"invalidSource\":\"refused\",\"failedImport\":\"recovered\",\"wasmWorker\":true,\"repeatedKernelRequests\":80,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/snapshot_restore_browser.mjs",
+      "seconds": 0.87,
+      "code": 0,
+      "output": "{\"missingBasis\":\"unchanged\",\"transactionFailure\":\"rolledBack\",\"successfulRestore\":\"exact\",\"otherProject\":\"unchanged\",\"emptyProject\":\"restored\"}\n"
+    },
+    {
+      "gate": "tools/storage_request_browser.mjs",
+      "seconds": 0.71,
+      "code": 0,
+      "output": "{\"afterRequestAbort\":\"refused-and-rolled-back\",\"synchronousFailure\":\"rolled-back\",\"recovery\":\"committed-and-reopened\",\"deletion\":\"committed\",\"closedDatabase\":\"refused\"}\n"
+    },
+    {
+      "gate": "tools/project_creation_browser.mjs",
+      "seconds": 0.8,
+      "code": 0,
+      "output": "{\"concurrentProjects\":5,\"uniqueChats\":13,\"closure\":\"complete\",\"failedWrite\":\"rolled-back\",\"missingApp\":\"refused\",\"importCollision\":\"refused-without-overwrite\",\"recovery\":\"complete\"}\n"
+    },
+    {
+      "gate": "tools/verified_project_import_browser.mjs",
+      "seconds": 0.92,
+      "code": 0,
+      "output": "{\"closure\":\"verified\",\"authority\":\"discarded\",\"collision\":\"child-snapshot\",\"rejectedImports\":3,\"lateFailure\":\"rolled-back\",\"recovery\":\"complete\"}\n"
+    },
+    {
+      "gate": "tools/verified_shell_cache_browser.mjs",
+      "seconds": 2.76,
+      "code": 0,
+      "output": "{\"verifiedInstall\":\"activated\",\"corruptUpdate\":\"refused\",\"previousVersion\":\"retained\",\"rootAndRendererRefresh\":\"coherent online and offline after refusal and recovery\",\"offlineRendererAndScaffold\":\"exact\",\"missingAsset\":404,\"recovery\":\"activated\",\"staleCaches\":0,\"forwardedCookies\":0}\n"
+    },
+    {
+      "gate": "tools/project_edit_browser.mjs",
+      "seconds": 0.79,
+      "code": 0,
+      "output": "{\"exactParent\":true,\"rulesInvalidated\":true,\"raceKindsRefused\":5,\"concurrentWinner\":1,\"failedWrite\":\"rolled-back\",\"recovery\":\"committed\"}\n"
+    },
+    {
+      "gate": "tools/project_lifecycle_browser.mjs",
+      "seconds": 1.05,
+      "code": 0,
+      "output": "{\"rename\":\"atomic\",\"checkout\":\"exact\",\"revert\":\"current-parent\",\"races\":4,\"failures\":\"rolled-back\",\"dependencies\":\"snapshot-bound\",\"deletion\":\"complete\",\"identifiers\":\"monotonic\"}\n"
+    },
+    {
+      "gate": "tools/build_source_browser.mjs",
+      "seconds": 0.76,
+      "code": 0,
+      "output": "{\"exactCapture\":true,\"unsealedSource\":\"refused\",\"changedSource\":\"refused\",\"tamperedBasis\":\"refused\",\"dependencies\":\"bound\",\"coreRefusal\":\"preserved\",\"deletion\":\"refused\"}\n"
+    },
+    {
+      "gate": "tools/build_modules_browser.mjs",
+      "seconds": 0.87,
+      "code": 0,
+      "output": "{\"exactModule\":true,\"independentHash\":true,\"redirectRequests\":0,\"forwardedCookies\":0,\"requests\":5,\"abortedBodies\":2,\"failures\":\"typed\"}\n"
+    },
+    {
+      "gate": "tools/generation_patch_browser.mjs",
+      "seconds": 0.86,
+      "code": 0,
+      "output": "{\"completeBatch\":true,\"directDependencies\":\"snapshot-bound\",\"noOpSource\":\"preserved\",\"preparationCancel\":\"unchanged\",\"activeCancel\":\"rolled-back\",\"committedWork\":\"retained\",\"rewordRace\":\"atomic-before-and-after\"}\n"
+    },
+    {
+      "gate": "tools/canonical_model_edits_browser.mjs",
+      "seconds": 2.3,
+      "code": 0,
+      "output": "{\"actualEditor\":true,\"genericSave\":true,\"moduleToSpec\":true,\"generatedRuntime\":true,\"proofInvalidated\":true,\"refusedEditsUnchanged\":3,\"atomicRename\":true,\"literalDelimiter\":true,\"concurrentWinner\":1,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/canonical_generation_ownership_browser.mjs",
+      "seconds": 2.31,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"refusals\":12,\"ordinaryAtomic\":true,\"cancelled\":true,\"canonicalEdit\":true,\"nonmodel\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/canonical_build_closure_browser.mjs",
+      "seconds": 3.19,
+      "code": 0,
+      "output": "{\"restored\":3,\"actualImports\":3,\"buildRefusals\":12,\"unchanged\":true,\"repaired\":3,\"validCanonical\":true,\"ordinary\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/preview_permissions_browser.mjs",
+      "seconds": 4.89,
+      "code": 0,
+      "output": "{\"actualPreview\":true,\"deniedNoGrant\":true,\"approvedDestinations\":2,\"reloadRevocation\":true,\"frameUnloaded\":true,\"staleApprovalRefused\":true,\"offlineRefused\":true,\"sourceRaceRefused\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/durable_event_delivery_browser.mjs",
+      "seconds": 2.87,
+      "code": 0,
+      "output": "{\"guestAdmission\":true,\"concurrentWinner\":1,\"reloadPending\":true,\"wrongConsumerRefused\":true,\"staleSourcePreservesPending\":true,\"acknowledged\":true,\"duplicateAck\":true,\"newGeneration\":true,\"forcedConflict\":true,\"storageRollback\":true,\"deletion\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/stateful_application_journeys_browser.mjs",
+      "seconds": 3.64,
+      "code": 0,
+      "output": "{\"guestDomains\":true,\"unrelatedEdit\":true,\"staleModel\":true,\"explicitReset\":true,\"canonicalReadOnly\":true,\"concurrentWinner\":1,\"rollback\":true,\"audioPeakHz\":440,\"unconsentedSamplesSilent\":true,\"deletion\":true,\"keyboardGallery\":true,\"reloadRecovery\":true,\"reducedMotion\":true,\"explicitAudio\":true,\"firstPixelMs\":845,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/command_ownership_registry_browser.mjs",
+      "seconds": 1.4,
+      "code": 0,
+      "output": "{\"commands\":334,\"handlers\":106,\"inputs\":310,\"outputs\":306,\"undeclaredRefused\":true,\"missingRefused\":true,\"implicitOwnerRefused\":true,\"unavailableRefused\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/portable_build_permission_browser.mjs",
+      "seconds": 11.32,
+      "code": 0,
+      "output": "{\"actualCompiler\":true,\"actualWorker\":true,\"deniedNoNetwork\":true,\"sourceRaceRefused\":true,\"offlineRefused\":true,\"portableOutputExecuted\":true,\"incompleteStylingRefused\":true,\"sourceBoundStyling\":true,\"stopAborted\":true,\"storedRevocation\":true,\"expiredWorkerRefusal\":true,\"reloadCleanup\":true,\"grantsRemoved\":true,\"framesRemoved\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/github_publication_permission_browser.mjs",
+      "seconds": 1.74,
+      "code": 0,
+      "output": "{\"nativeDisclosure\":true,\"deniedNoWrites\":true,\"approvedRepository\":true,\"callerSnapshot\":true,\"noMarkupExecution\":true,\"noTokenDisclosure\":true,\"staleBeforeWrite\":true,\"recheckedEveryWrite\":true,\"cancelledNoWrites\":true,\"offlineNoWrites\":true,\"redirectsRefused\":true,\"ambientCredentialsOmitted\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/durable_build_work_browser.mjs",
+      "seconds": 11.78,
+      "code": 0,
+      "output": "{\"guestReservation\":true,\"denialRetainsWork\":true,\"competingTabRefused\":true,\"completedCheckpoint\":true,\"reloadedReuse\":true,\"corruptionRefused\":true,\"closedTabRecovered\":true,\"freshPermission\":true,\"storageConflict\":true,\"lateAbortRollback\":true,\"deletion\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/private_provider_credentials_browser.mjs",
+      "seconds": 1.75,
+      "code": 0,
+      "output": "{\"noPublicFallback\":true,\"missingKeyRefused\":true,\"deviceProviders\":true,\"presenceOnly\":true,\"malformedRefused\":true,\"removalRespected\":true,\"publicCredentialReads\":0,\"cloudRequests\":0,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/semantic_routing_browser.mjs",
+      "seconds": 1.7,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"typedJudgments\":12,\"largestRanking\":32,\"snapshotBeforeAwait\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/semantic_application_discovery_browser.mjs",
+      "seconds": 2.85,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"admittedProfiles\":3,\"refusedIntents\":5,\"staleReviewNoWrite\":true,\"nativeReviewInvalidation\":true,\"atomicCreation\":true,\"reloadState\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/version_preview_browser.mjs",
+      "seconds": 1.66,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"previewCases\":24,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/durable_version_preview_browser.mjs",
+      "seconds": 3.37,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"actualGuest\":true,\"actualCore\":true,\"exclusiveWindows\":true,\"select\":true,\"returnOriginal\":true,\"editGuard\":true,\"lateAbort\":true,\"closedOwnerRecovery\":true,\"restoreChild\":true,\"changedSourceRefused\":true,\"corruptAcceptanceRefused\":true,\"acceptVerifiedCurrent\":true,\"checkpointChild\":true,\"checkpointAbort\":true,\"deletion\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/verified_working_tree_browser.mjs",
+      "seconds": 1.84,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"actualCore\":true,\"actualIndexedDB\":true,\"sealedClean\":true,\"changedSource\":true,\"emptyFile\":true,\"lineCounts\":true,\"exactText\":true,\"corruptBasisRefusals\":2,\"recovery\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/durable_prompt_library_browser.mjs",
+      "seconds": 2.89,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"importedContracts\":true,\"concurrentSlugConflict\":true,\"monotonicIds\":true,\"reload\":true,\"exactDates\":true,\"lateAbort\":true,\"corruptionRefused\":true,\"delete\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/durable_theme_library_browser.mjs",
+      "seconds": 8.93,
+      "code": 0,
+      "output": "browser diagnostic: Failed to load resource: the server responded with a status of 404 (Not Found)\ntheme browser: library\nbrowser diagnostic: Failed to load resource: the server responded with a status of 404 (Not Found)\ntheme browser: renderer created\ntheme browser: renderer edited\ntheme browser: project created 1\nbrowser diagnostic: Failed to load resource: the server responded with a status of 404 (Not Found)\nbrowser diagnostic: [app-run] Failed to start app: Error: Preview permission declined\n    at Cze.applyPublicSettlement (http://127.0.0.1:45501/foundry/assets/index.js:685:20990)\n    at http://127.0.0.1:45501/foundry/assets/index.js:685:28125\ntheme browser: generation submitted\ntheme browser: library\nbrowser diagnostic: Failed to load resource: the server responded with a status of 404 (Not Found)\n{\"actualHost\":true,\"importedContracts\":true,\"concurrentIds\":true,\"reload\":true,\"exactDates\":true,\"lateAbort\":true,\"atomicSelectionDeletion\":true,\"corruptionRefused\":true,\"capturedPrompt\":true,\"rendererCrud\":true,\"rendererKeyboardSelection\":true,\"exactDisclosedProviderBytes\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/sidebar_tool_access_browser.mjs",
+      "seconds": 20.1,
+      "code": 0,
+      "output": "sidebar tool Preview permissions\nbrowser diagnostic: Failed to load resource: the server responded with a status of 404 (Not Found)\nsidebar tool Interactive apps\nsidebar tool Discover an app\nbrowser diagnostic: Failed to load resource: the server responded with a status of 404 (Not Found)\nbrowser diagnostic: [app-run] Failed to start app: Error: Preview permission declined\n    at Cze.applyPublicSettlement (http://127.0.0.1:40501/foundry/assets/index.js:685:20990)\n    at http://127.0.0.1:40501/foundry/assets/index.js:685:28125\nsidebar tool Preview permissions\nsidebar tool Interactive apps\nsidebar tool Discover an app\nsidebar viewport 390\nsidebar tool Preview permissions\nbrowser diagnostic: [app-run] Failed to start app: Error: Preview permission declined\n    at Cze.applyPublicSettlement (http://127.0.0.1:40501/foundry/assets/index.js:685:20990)\n    at http://127.0.0.1:40501/foundry/assets/index.js:685:28125\nsidebar tool Interactive apps\nsidebar tool Discover an app\nsidebar viewport 768\nsidebar tool Preview permissions\nbrowser diagnostic: [app-run] Failed to start app: Error: Preview permission declined\n    at Cze.applyPublicSettlement (http://127.0.0.1:40501/foundry/assets/index.js:685:20990)\n    at http://127.0.0.1:40501/foundry/assets/index.js:685:28125\nsidebar tool Interactive apps\nsidebar tool Discover an app\nsidebar viewport 1280\nsidebar tool Preview permissions\nsidebar tool Interactive apps\nsidebar tool Discover an app\nsidebar viewport 390\nsidebar tool Preview permissions\nbrowser diagnostic: [app-run] Failed to start app: Error: Preview permission declined\n    at Cze.applyPublicSettlement (http://127.0.0.1:40501/foundry/assets/index.js:685:20990)\n    at http://127.0.0.1:40501/foundry/assets/index.js:685:28125\nsidebar tool Interactive apps\nsidebar tool Discover an app\n{\"actualRenderer\":true,\"desktopPointer\":true,\"mobilePointer\":true,\"responsiveLifetimes\":4,\"originalDialogs\":18,\"duplicateEntries\":0,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/renderer_stylesheet_identity_browser.mjs",
+      "seconds": 1.99,
+      "code": 0,
+      "output": "{\"actualRenderer\":true,\"home\":true,\"settings\":true,\"stylesheetRequests\":1,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/atomic_browser_settings_browser.mjs",
+      "seconds": 3.06,
+      "code": 0,
+      "output": "{\"sameWindowContention\":true,\"crossWindowContention\":true,\"credentialRemoval\":true,\"lateAbort\":true,\"reload\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/site_relay_authorization_browser.mjs",
+      "seconds": 1.91,
+      "code": 0,
+      "output": "{\"taggedRoutes\":2,\"exactApproval\":true,\"pendingRouteStable\":true,\"deniedAndCancelledEffects\":0,\"relayAuthorizationAbsent\":true,\"markerCredentialDirect\":true,\"malformedRefused\":true,\"missingOpenRouterRefused\":true,\"offlineRefused\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/browser_window_coordination_browser.mjs",
+      "seconds": 2.94,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"actualIndexedDB\":true,\"twoWindows\":true,\"duplicateSessionReplaced\":true,\"ownershipConflict\":true,\"localActorPreserved\":true,\"peerDispatch\":true,\"missedInvalidations\":true,\"actualLateAbort\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/message_linked_restoration_browser.mjs",
+      "seconds": 3.51,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"actualGuest\":true,\"actualCore\":true,\"actualIndexedDB\":true,\"appId\":1,\"chatId\":1,\"createdChats\":2,\"sourceFork\":true,\"chatOnlyFork\":true,\"exactReplay\":true,\"truncate\":true,\"actualLateAbort\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/chat_queue_browser.mjs",
+      "seconds": 1.63,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"queueCases\":33,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/durable_chat_queue_browser.mjs",
+      "seconds": 4.96,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"actualGuest\":true,\"tabs\":2,\"persistedPrompts\":3,\"edit\":true,\"reorder\":true,\"remove\":true,\"staleRevisionRefused\":true,\"reload\":true,\"staleActorRefused\":true,\"clear\":true,\"delete\":true,\"activeBusySubmit\":true,\"crossTabStop\":true,\"ownerCloseRecovery\":true,\"activeDeletion\":true,\"actualLateAbort\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/canonical_version_history_browser.mjs",
+      "seconds": 2.53,
+      "code": 0,
+      "output": "{\"actualHost\":true,\"actualCore\":true,\"actualIndexedDB\":true,\"appId\":1,\"versionId\":\"25324a5f82524d647eb689ae321f288ab9711fbbc2247b7b42718390c731dace\",\"canonical\":\"blake3:25324a5f82524d647eb689ae321f288ab9711fbbc2247b7b42718390c731dace\",\"versions\":3,\"refused\":4,\"concurrentMetadata\":true,\"lateAbort\":true,\"corruptObjectRefused\":true,\"reload\":true,\"deletedHistoryRefused\":true,\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/rules_source_browser.mjs",
+      "seconds": 0.72,
+      "code": 0,
+      "output": "{\"staleRead\":\"hidden\",\"sourceRace\":\"refused\",\"stateRace\":\"refused\",\"restoreRace\":\"refused\",\"currentTransition\":\"accepted\",\"callerMutation\":\"isolated\"}\n"
+    },
+    {
+      "gate": "tools/inference_effects_browser.mjs",
+      "seconds": 0.92,
+      "code": 0,
+      "output": "{\"text\":\"browser \ud83c\udf31\",\"deadline\":\"refused\",\"cancellation\":\"refused\",\"abortedConnections\":2}\n"
+    },
+    {
+      "gate": "tools/inference_consent_browser.mjs",
+      "seconds": 2.12,
+      "code": 0,
+      "output": "{\"actualPaidAdapter\":true,\"providers\":2,\"exactDisclosedBodies\":true,\"deniedSubmissions\":0,\"repeatedApproval\":true,\"pendingCancel\":true,\"activeStop\":true,\"redirects\":\"refused\",\"offline\":\"refused\",\"timeout\":\"refused\",\"pageExceptions\":0}\n"
+    },
+    {
+      "gate": "tools/exact_representation_browser.mjs",
+      "seconds": 1.04,
+      "code": 0,
+      "output": "{\"bytesPerCase\":2097152,\"independentlyReconstructed\":2,\"missingBasis\":\"refused\",\"wrongBasis\":\"refused\",\"cancellation\":\"refused\"}\n"
+    },
+    {
+      "gate": "tools/provider_key_browser.mjs",
+      "seconds": 0.88,
+      "code": 0,
+      "output": "{\"success\":{\"ok\":true},\"redirect\":\"refused\",\"deadline\":\"refused\",\"cancellation\":\"refused\",\"closedConnections\":2,\"redirectTargetsReached\":0}\n"
+    },
+    {
+      "gate": "tools/covers_browser.mjs",
+      "seconds": 5.08,
+      "code": 0,
+      "output": "{\"app\":{\"type\":\"image/webp\",\"width\":1600,\"height\":800,\"toastHidden\":true,\"textSeen\":true},\"blank\":\"no cover\",\"bare\":\"no cover\",\"forged\":\"ignored\"}\n"
+    },
+    {
+      "gate": "tools/kernel_browser.mjs",
+      "seconds": 1.52,
+      "code": 0,
+      "output": "{\"page\":{\"previews\":30,\"queue\":38,\"routing\":32,\"vectors\":26,\"work\":30,\"events\":30,\"interactions\":21,\"embedded\":285,\"digest\":\"blake3:ad62cb5b2336915485ea4e1f737a18711e577d484b338c7ddccfcd65e5a1ab43\"},\"worker\":{\"previews\":30,\"queue\":38,\"routing\":32,\"vectors\":26,\"work\":30,\"events\":30,\"interactions\":21,\"embedded\":285,\"digest\":\"blake3:ad62cb5b2336915485ea4e1f737a18711e577d484b338c7ddccfcd65e5a1ab43\"}}\n"
+    }
+  ]
+}

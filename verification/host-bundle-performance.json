@@ -1,0 +1,39 @@
+{
+  "scope": "local-throttled-browser",
+  "runs": {
+    "cold": [
+      9664,
+      9424,
+      9344
+    ],
+    "warm": [
+      1876,
+      1820,
+      1284
+    ],
+    "inp": [
+      176,
+      184,
+      184
+    ],
+    "token": [
+      3630,
+      3220,
+      3851
+    ]
+  },
+  "medians": {
+    "cold": 9424,
+    "warm": 1820,
+    "inp": 184,
+    "token": 3630
+  },
+  "guestBudgetsMs": {
+    "cold": 11500,
+    "warm": 2200,
+    "inp": 450,
+    "token": 5000
+  },
+  "allSevenRendererRouteBudgetsPassed": true,
+  "hostBundleSha256": "6487208a6602fd51448cccec1b964671cc9d8735690df616cc7a847995d6b213"
+}

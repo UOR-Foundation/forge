@@ -175,23 +175,6 @@ export async function encodeCover(png) {
 
 const keyOf = (base, appId, part) => new URL(`${CACHE}/${encodeURIComponent(appId)}.${part}`, base).href;
 
-export async function saveCover(base, appId, blob, version) {
-  const cache = await caches.open(CACHE);
-  await cache.put(keyOf(base, appId, "webp"), new Response(blob, { headers: { "content-type": "image/webp", "x-hologram-version": String(version || "") } }));
-  dispatchEvent(new CustomEvent(EVENT, { detail: { appId } }));
-}
-export async function saveCard(base, appId, card) {
-  const cache = await caches.open(CACHE);
-  await cache.put(keyOf(base, appId, "json"), new Response(JSON.stringify(card), { headers: { "content-type": "application/json" } }));
-  dispatchEvent(new CustomEvent(EVENT, { detail: { appId } }));
-}
-export async function coverVersion(base, appId) {
-  const hit = await (await caches.open(CACHE)).match(keyOf(base, appId, "webp"));
-  return hit ? hit.headers.get("x-hologram-version") : null;
-}
-export async function hasCard(base, appId) {
-  return !!(await (await caches.open(CACHE)).match(keyOf(base, appId, "json")));
-}
 export async function forget(base, appId) {
   const cache = await caches.open(CACHE);
   await cache.delete(keyOf(base, appId, "webp"));

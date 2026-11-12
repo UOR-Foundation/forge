@@ -1,22 +1,29 @@
 {
   "profile": "foundry/component-reproduction/1",
-  "scope": "Forge kernel archive only; not the complete Foundry application",
-  "source": "686c09b89757fa3a924dd71bd17e53dd43509a73",
+  "scope": "Forge kernel archive only; not the complete Foundry application or release",
+  "source": "1ce5b07bcb43c97ac3b04bc90988a2f6ca1af90f",
   "sdk": "ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58",
   "runs": [
-    43033504480,
-    43035286261
+    43253866653,
+    43253876685
   ],
   "artifacts": [
-    13862847178,
-    13863681130
+    13962102973,
+    13962201772
   ],
-  "archiveSha256": "c1da2933403ff457fded52a6a21a3d9c4d5164783b2881bd63a0d5570f3ab9da",
-  "archiveBytes": 385046,
-  "comparison": "complete byte-for-byte equality",
-  "provenance": "Both Sigstore bundles verified for the exact source digest, repository and build workflow with self-hosted runners denied.",
-  "trustedRoot": {
-    "source": "https://raw.githubusercontent.com/sigstore/root-signing/c9bda74ad2221f938f7d2e0295ca3aad2da710a8/targets/trusted_root.json",
-    "sha256": "6494e21ea73fa7ee769f85f57d5a3e6a08725eae1e38c755fc3517c9e6bc0b66"
-  }
+  "archiveSha256": "20a3747bd84725469df2e930b529ec28603caffc351403249778ed3db6aca33b",
+  "archiveBytes": 508356,
+  "archiveFingerprint": "c5da9ebae1f6820f456f24bc955c4f0cf807a4a040b17c3c3fc50cffececca9a",
+  "acceptanceVectors": 305,
+  "comparison": "complete byte-for-byte equality from independent runners",
+  "provenance": "Both bundles verified by GitHub CLI 2.103.3 with exact repository, source digest, build workflow, OIDC issuer and hosted-runner policy; signed transparency-log timestamps verified.",
+  "bundles": [
+    "kernel-reproduction.sigstore.json",
+    "kernel-reproduction-b.sigstore.json"
+  ],
+  "modelSha256": "9b58506a9ba5d42b7b1bc22166a0dab41ca452950e241f879b6b979b85a6f514",
+  "artifactZipSha256": [
+    "39148e5791ff4b557263373e1445b0030c2409c67763c3680f74df9706f58226",
+    "4f4b6cb5adff4164c36ba0833703f29598fe2c1dcc9e310f2b6c1961a6424224"
+  ]
 }

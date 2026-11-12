@@ -268,6 +268,8 @@ button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button
   *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
+/* FoundrySpecification.sidebarToolAccessBoundary: native top-layer disclosures remain operable over renderer drawers. */
+dialog:modal { pointer-events: auto; }
 /* Home on a phone: one screen, no scrolling, every measure from the golden ratio (phi = 1.618). The type
    steps by phi from the 16 px body: a 26 px headline over 16 px words. The spaces are the phi series 8, 13,
    21, 34, 55: 8 between headline and words, 21 to the composer and on to Surprise me. The block sits at the
