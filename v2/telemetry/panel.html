@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; frame-src 'self'; form-action 'none'">
+<title>Build telemetry</title>
+<style>
+  :root { --bg: #fafafa; --panel: #ffffff; --fg: #1b1b1f; --muted: #6b6b75; --line: #e3e3e8; --over: #b42318; --within: #067647; --accent: #3b5bdb; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0f0f12; --panel: #17171c; --fg: #ececf1; --muted: #9b9ba6; --line: #2c2c33; --over: #f97066; --within: #47cd89; --accent: #91a7ff; } }
+  :root[data-theme="dark"] { --bg: #0f0f12; --panel: #17171c; --fg: #ececf1; --muted: #9b9ba6; --line: #2c2c33; --over: #f97066; --within: #47cd89; --accent: #91a7ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 28px 0 8px; }
+  .muted { color: var(--muted); }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; align-items: center; }
+  button, select { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; min-height: 36px; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.danger { color: var(--over); }
+  button:disabled { opacity: .5; cursor: default; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-weight: 600; color: var(--muted); font-size: 12px; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  .over { color: var(--over); font-weight: 600; }
+  .within { color: var(--within); }
+  .card { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 12px 14px; margin-bottom: 8px; }
+  .card .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  iframe { width: 100%; height: 220px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  #status { min-height: 1.5em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Build telemetry</h1>
+  <p class="muted">Kept in this browser only. Nothing here is sent anywhere: this page may not open a connection (its policy says <code>connect-src 'none'</code>), and the Telemetry model allows a record to be stored, shown, or saved by you, and nothing else.</p>
+  <div class="bar">
+    <button class="primary" id="replay">Replay a build turn</button>
+    <label class="muted">Model time <select id="speed"><option value="100" selected>100x faster</option><option value="10">10x faster</option><option value="1">real time (about 3 min)</option></select></label>
+    <button id="seed">Add the 11 hand-measured turns</button>
+  </div>
+  <div class="bar">
+    <button id="snapshot">Save for Prometheus (.prom)</button>
+    <button id="history">Save history (OpenMetrics)</button>
+    <button id="rules">Save alert rules</button>
+    <button class="danger" id="erase">Erase everything</button>
+  </div>
+  <p id="status" class="muted"></p>
+  <div id="frame"></div>
+
+  <h2>Suggestions</h2>
+  <div id="suggestions" class="muted">None yet.</div>
+
+  <h2>KPIs against the kernel's budgets</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>KPI</th><th>Last</th><th>Mean</th><th>Worst</th><th>Budget</th><th>Last verdict</th><th>Turns over</th></tr></thead>
+    <tbody id="kpis"></tbody>
+  </table></div>
+
+  <h2>Reads and checks</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Model</th><th>Attempts</th><th>Read at the first try</th><th>After one repair</th><th>Refused</th></tr></thead>
+    <tbody id="models"></tbody>
+  </table></div>
+
+  <h2>The probe</h2>
+  <p id="probe" class="muted"></p>
+</main>
+<script type="module" src="./panel.mjs"></script>
+</body>
+</html>

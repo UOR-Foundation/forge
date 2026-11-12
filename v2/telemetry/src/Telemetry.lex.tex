@@ -1,0 +1,429 @@
+\begin{lexlean}{Telemetry}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+definition{name: kindEnter, parameters: [], result: Nat, body: 0}
+
+definition{name: kindToken, parameters: [], result: Nat, body: 1}
+
+definition{name: kindFrame, parameters: [], result: Nat, body: 2}
+
+definition{name: kindDeclaration, parameters: [], result: Nat, body: 3}
+
+definition{name: kindPixel, parameters: [], result: Nat, body: 4}
+
+definition{name: kindUpdate, parameters: [], result: Nat, body: 5}
+
+definition{name: kindEdit, parameters: [], result: Nat, body: 6}
+
+definition{name: kindEditScreen, parameters: [], result: Nat, body: 7}
+
+definition{name: kindComplete, parameters: [], result: Nat, body: 8}
+
+definition{name: kindChecked, parameters: [], result: Nat, body: 9}
+
+definition{name: kindReload, parameters: [], result: Nat, body: 10}
+
+definition{name: kindRead, parameters: [], result: Nat, body: 11}
+
+definition{name: kindRefused, parameters: [], result: Nat, body: 12}
+
+definition{name: kindReused, parameters: [], result: Nat, body: 13}
+
+definition{name: kindRechecked, parameters: [], result: Nat, body: 14}
+
+definition{name: kpiPreview, parameters: [], result: Nat, body: 0}
+
+definition{name: kpiDeclaration, parameters: [], result: Nat, body: 1}
+
+definition{name: kpiPixel, parameters: [], result: Nat, body: 2}
+
+definition{name: kpiUpdate, parameters: [], result: Nat, body: 3}
+
+definition{name: kpiEdit, parameters: [], result: Nat, body: 4}
+
+definition{name: kpiChecked, parameters: [], result: Nat, body: 5}
+
+definition{name: kpiBuilt, parameters: [], result: Nat, body: 6}
+
+definition{name: kpiReloads, parameters: [], result: Nat, body: 7}
+
+definition{name: kpiThink, parameters: [], result: Nat, body: 8}
+
+definition{name: kpiLead, parameters: [], result: Nat, body: 9}
+
+definition{name: kpiWrite, parameters: [], result: Nat, body: 10}
+
+definition{name: kpiFirstTry, parameters: [], result: Nat, body: 11}
+
+definition{name: kpiRepaired, parameters: [], result: Nat, body: 12}
+
+definition{name: kpiRefused, parameters: [], result: Nat, body: 13}
+
+definition{name: kpiReused, parameters: [], result: Nat, body: 14}
+
+definition{name: kpiRechecked, parameters: [], result: Nat, body: 15}
+
+definition{name: kpiCount, parameters: [], result: Nat, body: 16}
+
+definition{name: leverNone, parameters: [], result: Nat, body: 0}
+
+definition{name: leverWarmFrame, parameters: [], result: Nat, body: 1}
+
+definition{name: leverReasoning, parameters: [], result: Nat, body: 2}
+
+definition{name: leverDeclarationsFirst, parameters: [], result: Nat, body: 3}
+
+definition{name: leverProjectEarly, parameters: [], result: Nat, body: 4}
+
+definition{name: leverCoalesce, parameters: [], result: Nat, body: 5}
+
+definition{name: leverEditPath, parameters: [], result: Nat, body: 6}
+
+definition{name: leverReuseChecks, parameters: [], result: Nat, body: 7}
+
+definition{name: leverShorterModule, parameters: [], result: Nat, body: 8}
+
+definition{name: leverReloadTrigger, parameters: [], result: Nat, body: 9}
+
+definition{name: effectStore, parameters: [], result: Nat, body: 0}
+
+definition{name: effectShow, parameters: [], result: Nat, body: 1}
+
+definition{name: effectSave, parameters: [], result: Nat, body: 2}
+
+definition{name: effectFetch, parameters: [], result: Nat, body: 3}
+
+definition{name: effectInfer, parameters: [], result: Nat, body: 4}
+
+definition{name: effectServe, parameters: [], result: Nat, body: 5}
+
+definition{name: effectFrame, parameters: [], result: Nat, body: 6}
+
+definition{name: loopOffer, parameters: [], result: Nat, body: 0}
+
+definition{name: loopApprove, parameters: [], result: Nat, body: 1}
+
+definition{name: loopDismiss, parameters: [], result: Nat, body: 2}
+
+definition{name: keepLimit, parameters: [], result: Nat, body: 512}
+
+definition{name: reloadBudget, parameters: [], result: Nat, body: 0}
+
+definition{name: switchSamples, parameters: [], result: Nat, body: 5}
+
+structure{
+  name: Event,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: kind, type: Nat},
+    {name: at, type: Nat},
+    {name: value, type: Nat},
+    {name: model, type: Nat}
+  ]
+}
+
+structure{
+  name: Observation,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: kpi, type: Nat},
+    {name: turns, type: Nat},
+    {name: over, type: Nat},
+    {name: worst, type: Nat},
+    {name: total, type: Nat},
+    {name: last, type: Nat}
+  ]
+}
+
+structure{
+  name: Stages,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: think, type: Nat},
+    {name: lead, type: Nat},
+    {name: write, type: Nat},
+    {name: check, type: Nat}
+  ]
+}
+
+structure{
+  name: ModelStat,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: model, type: Nat}, {name: reads, type: Nat}, {name: firstTry, type: Nat}]
+}
+
+structure{
+  name: Loop,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: applied, type: Nat}, {name: pending, type: Nat}, {name: baseline, type: Nat}]
+}
+
+definition{
+  name: firstAt,
+  parameters: [events : (List Event), kind : Nat, after : Nat],
+  result: (Option Nat),
+  body: (match events
+    | List.nil => (ctor Option.none [Nat])
+    | List.cons head rest => (if (((project head kind) =? kind) && (after <=? (project head at))) then (ctor Option.some [Nat] (project head at)) else (firstAt rest kind after))),
+  recursive_argument: events
+}
+
+definition{
+  name: span,
+  parameters: [events : (List Event), start : Nat, finish : Nat],
+  result: (Option Nat),
+  body: (match (firstAt events start 0)
+    | Option.none => (ctor Option.none [Nat])
+    | Option.some t => (match (firstAt events finish t)
+      | Option.none => (ctor Option.none [Nat])
+      | Option.some u => (ctor Option.some [Nat] (prim subtract u t : Nat))))
+}
+
+definition{
+  name: countKind,
+  parameters: [events : (List Event), kind : Nat],
+  result: Nat,
+  body: (match events
+    | List.nil => 0
+    | List.cons head rest => (if ((project head kind) =? kind) then ((countKind rest kind) + 1) else (countKind rest kind))),
+  recursive_argument: events
+}
+
+definition{
+  name: countValue,
+  parameters: [events : (List Event), kind : Nat, value : Nat],
+  result: Nat,
+  body: (match events
+    | List.nil => 0
+    | List.cons head rest => (if (((project head kind) =? kind) && ((project head value) =? value)) then ((countValue rest kind value) + 1) else (countValue rest kind value))),
+  recursive_argument: events
+}
+
+definition{
+  name: maxValue,
+  parameters: [events : (List Event), kind : Nat],
+  result: Nat,
+  body: (match events
+    | List.nil => 0
+    | List.cons head rest => (if (((project head kind) =? kind) && ((maxValue rest kind) <? (project head value))) then (project head value) else (maxValue rest kind))),
+  recursive_argument: events
+}
+
+definition{
+  name: editWorst,
+  parameters: [events : (List Event), pending : (Option Nat), worst : Nat],
+  result: Nat,
+  body: (match events
+    | List.nil => worst
+    | List.cons head rest => (if ((project head kind) =? (kindEdit)) then (editWorst rest (ctor Option.some [Nat] (project head at)) worst) else (if ((project head kind) =? (kindEditScreen)) then (match pending
+      | Option.none => (editWorst rest (ctor Option.none [Nat]) worst)
+      | Option.some t => (editWorst rest (ctor Option.none [Nat]) (if (worst <? (prim subtract (project head at) t : Nat)) then (prim subtract (project head at) t : Nat) else worst))) else (editWorst rest pending worst)))),
+  recursive_argument: events
+}
+
+definition{
+  name: present,
+  parameters: [events : (List Event), kind : Nat, value : Nat],
+  result: (Option Nat),
+  body: (if ((countKind events kind) =? 0) then (ctor Option.none [Nat]) else (ctor Option.some [Nat] value))
+}
+
+definition{
+  name: kpiOf,
+  parameters: [events : (List Event), code : Nat],
+  result: (Option Nat),
+  body: (if (code =? (kpiPreview)) then (span events (kindEnter) (kindFrame)) else (if (code =? (kpiDeclaration)) then (span events (kindEnter) (kindDeclaration)) else (if (code =? (kpiPixel)) then (span events (kindDeclaration) (kindPixel)) else (if (code =? (kpiUpdate)) then (present events (kindUpdate) (maxValue events (kindUpdate))) else (if (code =? (kpiEdit)) then (present events (kindEditScreen) (editWorst events (ctor Option.none [Nat]) 0)) else (if (code =? (kpiChecked)) then (span events (kindComplete) (kindChecked)) else (if (code =? (kpiBuilt)) then (span events (kindEnter) (kindChecked)) else (if (code =? (kpiReloads)) then (present events (kindEnter) (countKind events (kindReload))) else (if (code =? (kpiThink)) then (span events (kindEnter) (kindToken)) else (if (code =? (kpiLead)) then (span events (kindToken) (kindDeclaration)) else (if (code =? (kpiWrite)) then (span events (kindDeclaration) (kindComplete)) else (if (code =? (kpiFirstTry)) then (present events (kindEnter) (countValue events (kindRead) 1)) else (if (code =? (kpiRepaired)) then (present events (kindEnter) (countValue events (kindRead) 2)) else (if (code =? (kpiRefused)) then (present events (kindEnter) (countKind events (kindRefused))) else (if (code =? (kpiReused)) then (present events (kindEnter) (countKind events (kindReused))) else (if (code =? (kpiRechecked)) then (present events (kindEnter) (countKind events (kindRechecked))) else (ctor Option.none [Nat])))))))))))))))))
+}
+
+definition{name: budgeted, parameters: [code : Nat], result: Bool, body: (code <=? (kpiReloads))}
+
+definition{
+  name: budgetMicros,
+  parameters: [budget : Nat],
+  result: Nat,
+  body: (prim multiply (budget + 1) 1000 : Nat)
+}
+
+definition{
+  name: overCode,
+  parameters: [code : Nat, value : Nat, budget : Nat],
+  result: Nat,
+  body: (if (code =? (kpiReloads)) then (if (budget <? value) then 1 else 0) else (if ((budgetMicros budget) <=? value) then 1 else 0))
+}
+
+definition{
+  name: countOver,
+  parameters: [values : (List Nat), code : Nat, budget : Nat],
+  result: Nat,
+  body: (match values
+    | List.nil => 0
+    | List.cons head rest => ((countOver rest code budget) + (overCode code head budget))),
+  recursive_argument: values
+}
+
+definition{
+  name: worstOf,
+  parameters: [values : (List Nat)],
+  result: Nat,
+  body: (match values
+    | List.nil => 0
+    | List.cons head rest => (if ((worstOf rest) <? head) then head else (worstOf rest))),
+  recursive_argument: values
+}
+
+definition{
+  name: totalOf,
+  parameters: [values : (List Nat)],
+  result: Nat,
+  body: (match values | List.nil => 0 | List.cons head rest => (head + (totalOf rest))),
+  recursive_argument: values
+}
+
+definition{
+  name: lastOf,
+  parameters: [values : (List Nat)],
+  result: Nat,
+  body: (match values
+    | List.nil => 0
+    | List.cons head rest => (match rest
+      | List.nil => head
+      | List.cons next more => (lastOf rest))),
+  recursive_argument: values
+}
+
+definition{
+  name: observe,
+  parameters: [code : Nat, values : (List Nat), budget : Nat],
+  result: Observation,
+  body: (record Observation {kpi := code, turns := (prim length values : Nat), over := (if (budgeted code) then (countOver values code budget) else 0), worst := (worstOf values), total := (totalOf values), last := (lastOf values)})
+}
+
+definition{
+  name: persistent,
+  parameters: [observation : Observation],
+  result: Bool,
+  body: ((1 <=? (project observation over)) && ((project observation turns) <? ((project observation over) + (project observation over))))
+}
+
+definition{
+  name: largestStage,
+  parameters: [stages : Stages],
+  result: Nat,
+  body: (if ((((project stages lead) <=? (project stages think)) && ((project stages write) <=? (project stages think))) && ((project stages check) <=? (project stages think))) then (leverReasoning) else (if (((project stages write) <=? (project stages lead)) && ((project stages check) <=? (project stages lead))) then (leverDeclarationsFirst) else (if ((project stages check) <=? (project stages write)) then (leverShorterModule) else (leverReuseChecks))))
+}
+
+definition{
+  name: lever,
+  parameters: [observation : Observation, stages : Stages],
+  result: Nat,
+  body: (if (persistent observation) then (if ((project observation kpi) =? (kpiPreview)) then (leverWarmFrame) else (if ((project observation kpi) =? (kpiDeclaration)) then (if ((project stages lead) <? (project stages think)) then (leverReasoning) else (leverDeclarationsFirst)) else (if ((project observation kpi) =? (kpiPixel)) then (leverProjectEarly) else (if ((project observation kpi) =? (kpiUpdate)) then (leverCoalesce) else (if ((project observation kpi) =? (kpiEdit)) then (leverEditPath) else (if ((project observation kpi) =? (kpiChecked)) then (leverReuseChecks) else (if ((project observation kpi) =? (kpiBuilt)) then (largestStage stages) else (if ((project observation kpi) =? (kpiReloads)) then (leverReloadTrigger) else (leverNone))))))))) else (leverNone))
+}
+
+definition{
+  name: severity,
+  parameters: [observation : Observation],
+  result: Nat,
+  body: (prim quotient (prim multiply (project observation over) 1000 : Nat) (project observation turns) 0 : Nat)
+}
+
+definition{
+  name: firstTryPermille,
+  parameters: [stat : ModelStat],
+  result: Nat,
+  body: (prim quotient (prim multiply (project stat firstTry) 1000 : Nat) (project stat reads) 0 : Nat)
+}
+
+definition{
+  name: switchTo,
+  parameters: [current : ModelStat, other : ModelStat, built : Observation],
+  result: Nat,
+  body: (if (((((persistent built) && (not ((project other model) =? (project current model)))) && ((switchSamples) <=? (project other reads))) && ((switchSamples) <=? (project current reads))) && ((firstTryPermille current) <? (firstTryPermille other))) then ((project other model) + 1) else 0)
+}
+
+definition{
+  name: bestSwitch,
+  parameters: [
+    current : ModelStat,
+    others : (List ModelStat),
+    built : Observation,
+    best : Nat,
+    bestRate : Nat
+  ],
+  result: Nat,
+  body: (match others
+    | List.nil => best
+    | List.cons head rest => (if ((0 <? (switchTo current head built)) && (bestRate <? (firstTryPermille head))) then (bestSwitch current rest built (switchTo current head built) (firstTryPermille head)) else (bestSwitch current rest built best bestRate))),
+  recursive_argument: others
+}
+
+definition{
+  name: loopApplied,
+  parameters: [loop : Loop, event : Nat],
+  result: Nat,
+  body: (if ((event =? (loopApprove)) && (not ((project loop pending) =? 0))) then (project loop pending) else (project loop applied))
+}
+
+definition{
+  name: loopPending,
+  parameters: [loop : Loop, event : Nat, offered : Nat],
+  result: Nat,
+  body: (if (event =? (loopOffer)) then (if (offered =? 0) then (project loop pending) else offered) else (if ((event =? (loopApprove)) || (event =? (loopDismiss))) then 0 else (project loop pending)))
+}
+
+definition{
+  name: loopBaseline,
+  parameters: [loop : Loop, event : Nat, offered : Nat, mean : Nat],
+  result: Nat,
+  body: (if ((event =? (loopOffer)) && (not (offered =? 0))) then mean else (project loop baseline))
+}
+
+definition{
+  name: loopStep,
+  parameters: [loop : Loop, event : Nat, offered : Nat, mean : Nat],
+  result: Loop,
+  body: (record Loop {applied := (loopApplied loop event), pending := (loopPending loop event offered), baseline := (loopBaseline loop event offered mean)})
+}
+
+definition{
+  name: assess,
+  parameters: [before : Nat, after : Nat],
+  result: Nat,
+  body: (if ((prim multiply after 100 : Nat) <? (prim multiply before 95 : Nat)) then 1 else (if ((prim multiply before 105 : Nat) <? (prim multiply after 100 : Nat)) then 2 else 0))
+}
+
+definition{
+  name: flowAllows,
+  parameters: [effect : Nat, userAct : Nat, onDevice : Nat],
+  result: Nat,
+  body: (if (effect =? (effectStore)) then 1 else (if (effect =? (effectShow)) then 1 else (if (effect =? (effectSave)) then (if (userAct =? 1) then 1 else 0) else (if (effect =? (effectInfer)) then (if (onDevice =? 1) then 1 else 0) else 0))))
+}
+
+definition{
+  name: kept,
+  parameters: [count : Nat],
+  result: Nat,
+  body: (if ((keepLimit) <? count) then (keepLimit) else count)
+}
+
+definition{
+  name: evicted,
+  parameters: [count : Nat],
+  result: Nat,
+  body: (prim subtract count (keepLimit) : Nat)
+}
+
+definition{
+  name: bucketMicros,
+  parameters: [budget : Nat, index : Nat],
+  result: Nat,
+  body: (if (index =? 0) then (prim multiply (budget + 1) 250 : Nat) else (if (index =? 1) then (prim multiply (budget + 1) 500 : Nat) else (if (index =? 2) then (prim multiply (budget + 1) 1000 : Nat) else (if (index =? 3) then (prim multiply (budget + 1) 2000 : Nat) else (if (index =? 4) then (prim multiply (budget + 1) 4000 : Nat) else 0)))))
+}
+\end{semanticmodule}
+\end{lexlean}

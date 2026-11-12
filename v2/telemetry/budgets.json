@@ -1,0 +1,14 @@
+{
+ "source": "app/src/ForgeKernel.lex.tex budgetOf",
+ "commit": "1967cca6682e4b0484555380e04135f0b11e270f",
+ "unit": "ms, within when value <= budget",
+ "budgets": {
+  "preview": 1999,
+  "declaration": 19999,
+  "pixel": 99,
+  "update": 15,
+  "edit": 33,
+  "checked": 2999,
+  "built": 29999
+ }
+}

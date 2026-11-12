@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; style-src 'self' 'unsafe-inline'; form-action 'none'">
+<title>Replay frame</title>
+<style>
+  :root { color-scheme: light dark; --fg: #1b1b1f; --muted: #6b6b75; --line: #e3e3e8; --bg: #ffffff; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #ececf1; --muted: #9b9ba6; --line: #2c2c33; --bg: #141418; } }
+  body { margin: 0; padding: 16px; font: 14px/1.45 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+  .node { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .k { color: var(--muted); font-size: 12px; margin-right: 6px; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<h1 id="title">Waiting for the first declaration</h1>
+<div id="nodes"></div>
+<script type="module" src="./frame.mjs"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+name = "PrismTelemetry"
+version = "0.1.0"
+defaultTargets = ["PrismTelemetry"]
+
+[[lean_lib]]
+name = "PrismTelemetry"
