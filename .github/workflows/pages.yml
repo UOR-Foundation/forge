@@ -348,6 +348,9 @@ jobs:
       - name: Upload the site
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
         with:
+          # v4 and later leave dotfiles out unless asked: the shell's closure lists .nojekyll, and the
+          # worker refuses to install a closure with a file missing, so without this no preview is served.
+          include-hidden-files: true
           path: out
       - name: Deploy
         id: deployment
