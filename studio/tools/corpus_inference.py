@@ -129,6 +129,11 @@ if manifest_path.exists():
             source = (root.parent / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
             steps = re.split(r"(?m)^      - ", source)
             uploads = [step for step in steps if re.search(r"(?m)^\s*(?:uses: )?actions/upload-pages-artifact@", step) or re.search(r"(?m)^\s*uses: actions/upload-pages-artifact@", step)]
+            if workflow == "pages.yml":
+                transfers = [step for step in steps if "uses: actions/upload-artifact@" in step and re.search(r"(?m)^\s*name:\s*forge-site\s*$", step)]
+                if len(transfers) != 1:
+                    sys.exit("pages.yml must retain one explicit forge-site intermediate artifact")
+                uploads += transfers
             if not uploads:
                 sys.exit(f"{workflow} has no explicit Pages upload for the shell closure")
             for step in uploads:
