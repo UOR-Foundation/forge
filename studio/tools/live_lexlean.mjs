@@ -1,3 +1,4 @@
+import {chatExecutionPolicy,chatExecutionPrompt,readOnlyChatText} from "../shell/chat-execution.mjs";
 // The LexLean gate: an app's canonical LexLean module is its source, and the live preview projects from
 // it. The module reads back to the bytes it was written from; what it reads decides as the rules do on
 // every request; a module still being written projects without taking anything away; and the local
@@ -194,7 +195,7 @@ claim("cap: proving an app over 24 rules is refused, and says why", /24 rules/.t
 // A model writes the module and nothing else: the prompt never asks for code, the request carries only the
 // prompt and the module (never Dyad's code prompt or the codebase), and code a model writes is not applied.
 claim("only the module: the prompt asks for the module and refuses code", /You never write code, files or dependencies: Forge does not apply them/.test(SPEC_RULES) && !/write its files|write no module/.test(SPEC_RULES));
-claim("only the module: a turn sends the prompt and the module, and applies no code", hostSource.includes('content: prism.SPEC_RULES +') && hostSource.includes('await themeLibrary("resolve",{appId})') && !hostSource.includes("buildSystemPrompt(rules) + ") && hostSource.includes("prism.moduleContext(") && hostSource.includes("writes: [], deletes: [], renames: [], deps: []") && hostSource.includes("prism.CODE_REFUSED"));
+claim("only the module: a turn sends the prompt and the module, and applies no code", hostSource.includes('content: chatExecutionPrompt(execution,prism.SPEC_RULES) +') && chatExecutionPrompt(chatExecutionPolicy('build',null),SPEC_RULES) === SPEC_RULES && !chatExecutionPrompt(chatExecutionPolicy('ask',null),SPEC_RULES).includes(SPEC_RULES) && hostSource.includes('await themeLibrary("resolve",{appId})') && !hostSource.includes("buildSystemPrompt(rules) + ") && hostSource.includes("prism.moduleContext(") && hostSource.includes("writes: [], deletes: [], renames: [], deps: []") && hostSource.includes("prism.CODE_REFUSED"));
 
 // The chat never shows the module's text (on the live site it showed GLM's whole module): while the module
 // streams, one line counts its declarations; after the turn the card stands in its place; the reasoning is
@@ -206,7 +207,7 @@ claim("only the module: a turn sends the prompt and the module, and applies no c
   const done = prism.withCard(answer, "**Rules** · checked");
   const think = prism.shownText("<think>I will write one <prism-lexlean> block");
   claim("chat: the module streams as a count of its declarations, and the card takes its place", /Writing the app's LexLean module: \d+ declarations so far/.test(half) && !/definition\{|\\begin\{lexlean\}/.test(half + done) && done.includes("**Rules** · checked") && done.includes("It decides the fee.") && !done.includes("dyad-spec-patch") && think === "<think>I will write one <prism-lexlean> block" && prism.shownText("Here.\n<pri") === "Here.\n", half.trim().split("\n").pop());
-  claim("chat: the host streams and saves only what is shown", hostSource.includes("const shown = prism.shownText(full);") && hostSource.includes("messages[messages.length - 1].content = shown;") && hostSource.includes("content: prism.shownText(full) + (updatedFiles"));
+  claim("chat: the host streams and saves only what is shown", hostSource.includes("const shown = execution.sourceEffects ? prism.shownText(full) : readOnlyChatText(prism.withoutThinking(full));") && readOnlyChatText("<dyad-write>&") === "&lt;dyad-write&gt;&amp;" && hostSource.includes("messages[messages.length - 1].content = shown;") && hostSource.includes("content: (execution.sourceEffects ? prism.shownText(full) : readOnlyChatText(prism.withoutThinking(full))) + (updatedFiles"));
   // A meaning keyed by the answer's LexLean name is that answer's meaning; an agent's patch with one refused
   // op still applies the rest, and names what it refused.
   const graded = prism.checkSpec({ ...lex.specFromTurn(mod).spec, meanings: { answerFree: "No charge" } });
