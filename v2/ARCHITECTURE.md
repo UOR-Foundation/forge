@@ -375,3 +375,37 @@ The build-speed work produced the first probe holo: `Counter probe.holo`, sha256
 So for the counter, "the interpreter was tested against vectors written by hand" is replaced by "the interpreter agrees with the compiled guest on every state for two of its three events". Together with the Payment Approval comparison, the interpreter has now been held to two shipped guests.
 
 Still not compared: `probe-view` and `probe-payment`, which run PrismPM's CBOR codec and have no holo yet. The holo itself is in the build-speed work, which is not part of this branch, so this comparison cannot be rerun from this branch alone until that work lands.
+
+## The live site against this plan (2026-11-12)
+
+Checked: https://uor-foundation.github.io/foundry/ after pull request 133 merged.
+
+What the live site served: the existing studio at the root (its entry script is 1.93 MB), the kernel's Prism page under `app/`, and the second chat under `ui/`. Every v2 address answered 404. Merging `v2/` put the work in the repository and nowhere a person could open it.
+
+Gaps between the live site and the plan in [PROMPT.md](PROMPT.md), and what was done about each:
+
+| Plan | Live site | Now |
+| --- | --- | --- |
+| The browser runs the spec | Nothing of v2 was served | Closed here: [site/](site) is built by `site/build.mjs` and deployed under `v2/` by the Pages workflow. Open `v2/index.html`. |
+| One thin shell, no framework, first-load code at most 60 KB gzip | 603 KB gzip for the home screen | Closed for the v2 page: 9.4 KB gzip of code for the gallery, 12.1 KB for the studio, 24 KB gzip of spec data. A test holds the 60 KB budget. |
+| Proof speeds never blurred; the UI says what produced each badge | Not applicable | Closed here: beside each running app the page shows the attestation, the exact statement Lean proved for each promise, the proof form and axioms, where a theorem proves less than its sentence, and what is not proved at all. The page states that it does not check the attestation itself. |
+| A sentence must not claim more than its theorem | Found in the model loop | Closed in presentation, not in proof: the page shows sentence and statement side by side and flags the three that fall short. A test fails if a "changes nothing" promise loses its flag. Proving them needs proof forms LexLean does not offer here. |
+| The tab checks a spec with no local toolchain | Not possible | Closed here: [hosted-check/](hosted-check) is now in the repository and served as the studio. From the built site, press to verdict took 648 ms and press to first frame 876 ms (one run). |
+| The evidence is in the repository | `v2/hosted-check` and `v2/build-speed` were untracked | Closed here: both are committed. `build-speed` carries the first probe holo, its sources, the report and the proposed workflow; its logs and the unchanged "before" copy are left out. |
+| A model writes the spec in the product | Not present | Open. No model is reachable without a key the person supplies. The loop was run with an independent model outside the page. |
+| Publish composes a holo from the page | Not present | Open. Holos are built by the SDK; the measured route is GitHub Actions (7 min 39 s cold, by the build-speed report). |
+| Works offline after first load | Not for v2 | Open. Forge's worker owns the origin and answers v2 paths from the network. |
+| The old studio is removed | Still the homepage | Open, and deliberately: it is the owner's decision, and the v2 page covers two apps, not the product. |
+| The spec-only law and the budgets live in the kernel | Not modeled | Open. The budget is held by a test in `site/test.mjs`, not by a kernel requirement. |
+| Foundry's own state and journeys are a spec | The v2 page's own behavior is handwritten JavaScript | Open. About 100 lines in `site/gallery.mjs` are not projected from a spec. |
+
+One constraint found while doing this: Forge's service worker answers any navigation whose path has no dot with its own shell. So every link on the v2 site names a file, and a test refuses a link that does not.
+
+Tested:
+- `node --test v2/site/test.mjs`, 7 of 7: every app runs from the built files and its first frame is admitted by the protocol's own rule; every promise shown stands beside a theorem the served spec states; a weaker theorem carries its limit; the studio finds every library source; every link names a served file; the code stays inside 60 KB gzip; nothing but the listed files reaches the site.
+- Planted defects: dropping the limit on one weaker theorem failed one test; linking to a folder failed another. Restored, green.
+- The workflow step was rehearsed on a copy holding only the paths its sparse checkout fetches: tests pass, build succeeds.
+- In the browser, served under `/foundry/v2/` as Pages serves it: the guest list with real typing and Enter (box empties, rows Grace then Ada, 0.9 ms); the payment app over 200 actions (median 1.0 ms, worst 9.8 ms); the studio's Check and run against the hosted service.
+- All suites together: `node --test v2/shell/test.mjs v2/shell/test-payment.mjs v2/loop/test-guests.mjs v2/reuse/test.mjs v2/hosted-check/test.mjs v2/site/test.mjs`.
+
+Not tested: the deployed page itself, which exists only after this change merges and the Pages workflow runs; Safari and Firefox; a phone.

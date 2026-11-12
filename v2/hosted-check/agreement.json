@@ -1,0 +1,344 @@
+[
+ {
+  "id": "broken/bad-qualifier",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLT4001"
+  ],
+  "hostedCodes": [
+   "LLT4001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 1130.5717,
+   "check": 683.2519
+  }
+ },
+ {
+  "id": "broken/constructor-arity",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLT4001"
+  ],
+  "hostedCodes": [
+   "LLT4001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 587.0164000000002,
+   "check": 240.67909999999983
+  }
+ },
+ {
+  "id": "broken/malformed-syntax",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLP2001"
+  ],
+  "hostedCodes": [
+   "LLP2001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 316.84879999999976,
+   "check": 203.08050000000003
+  }
+ },
+ {
+  "id": "broken/missing-field",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLT4001"
+  ],
+  "hostedCodes": [
+   "LLT4001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 257.33370000000014,
+   "check": 372.3663999999999
+  }
+ },
+ {
+  "id": "broken/non-terminating",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLT4001"
+  ],
+  "hostedCodes": [
+   "LLT4001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 243.16439999999966,
+   "check": 250.14679999999953
+  }
+ },
+ {
+  "id": "broken/reserved-name",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLT4001"
+  ],
+  "hostedCodes": [
+   "LLT4001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 303.78470000000016,
+   "check": 314.15750000000025
+  }
+ },
+ {
+  "id": "broken/title-hosted-word",
+  "image": true,
+  "hosted": true,
+  "verdictAgrees": true,
+  "imageCodes": [],
+  "hostedCodes": [],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 392.16070000000036,
+   "check": 325.15140000000065,
+   "data": 279.0762999999997
+  }
+ },
+ {
+  "id": "broken/title-lowercase",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLL1004"
+  ],
+  "hostedCodes": [
+   "LLL1004"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 303.83469999999943,
+   "check": 213.35030000000006
+  }
+ },
+ {
+  "id": "broken/title-not-in-lexicon",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLL1004"
+  ],
+  "hostedCodes": [
+   "LLL1004"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 238.34320000000025,
+   "check": 209.04899999999998
+  }
+ },
+ {
+  "id": "broken/title-phrase-then-unknown",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLL1004"
+  ],
+  "hostedCodes": [
+   "LLL1004"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 199.23390000000018,
+   "check": 278.6887999999999
+  }
+ },
+ {
+  "id": "broken/title-two-phrases",
+  "image": true,
+  "hosted": true,
+  "verdictAgrees": true,
+  "imageCodes": [],
+  "hostedCodes": [],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 241.34919999999966,
+   "check": 225.14009999999962,
+   "data": 258.7995000000001
+  }
+ },
+ {
+  "id": "broken/unknown-name",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLT4001"
+  ],
+  "hostedCodes": [
+   "LLT4001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 259.0406000000012,
+   "check": 227.0113999999994
+  }
+ },
+ {
+  "id": "broken/wrong-type",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLT4001"
+  ],
+  "hostedCodes": [
+   "LLT4001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 237.72450000000026,
+   "check": 251.89959999999883
+  }
+ },
+ {
+  "id": "guests-1",
+  "image": true,
+  "hosted": true,
+  "verdictAgrees": true,
+  "imageCodes": [],
+  "hostedCodes": [],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 204.21130000000085,
+   "check": 210.34540000000015,
+   "data": 239.91859999999906
+  }
+ },
+ {
+  "id": "guests-2",
+  "image": true,
+  "hosted": true,
+  "verdictAgrees": true,
+  "imageCodes": [],
+  "hostedCodes": [],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 192.82880000000114,
+   "check": 200.52150000000074,
+   "data": 224.7505999999994
+  }
+ },
+ {
+  "id": "guests-3",
+  "image": false,
+  "hosted": false,
+  "verdictAgrees": true,
+  "imageCodes": [
+   "LLT4001"
+  ],
+  "hostedCodes": [
+   "LLT4001"
+  ],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 268.40999999999985,
+   "check": 411.77330000000075
+  }
+ },
+ {
+  "id": "payment",
+  "image": true,
+  "hosted": true,
+  "verdictAgrees": true,
+  "imageCodes": [],
+  "hostedCodes": [],
+  "identical": true,
+  "differences": {
+   "imageOnly": [],
+   "hostedOnly": []
+  },
+  "ms": {
+   "write": 297.260400000001,
+   "check": 279.1309000000001,
+   "data": 558.0578000000005
+  }
+ }
+]

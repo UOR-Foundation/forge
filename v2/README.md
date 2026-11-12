@@ -10,12 +10,16 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md). It holds the design, every decisi
 | `shell/` | The in-tab interpreter (`interp.mjs`), the presentation renderer (`render.mjs`), two pages and the tests. |
 | `probe-payment/` | A payment approval app with a form, inputs and a table on that protocol. Lean verified all 9 modules. |
 | `loop/` | The model loop: instructions for a model, the harness that checks, proves and runs what it writes, and a guest list an independent model wrote, with five theorems Lean proved. |
+| `site/` | The v2 page as deployed under `v2/`: the apps running in the tab, with what Lean proved beside each. `node v2/site/build.mjs <out>` builds it. |
+| `hosted-check/` | Checks a library-based spec from a browser tab on the hosted service; the studio page. Same verdicts as the SDK image on 17 files. |
+| `reuse/` | Four address-based reuse mechanisms as a LexLean spec, 26 theorems, with adapters. |
+| `build-speed/` | Why local builds stalled, the first probe holo, and a proposed GitHub workflow. Its report links to logs and a "before" copy that are not committed. |
 | `compare/` | Holds the interpreter to a compiled guest. On PrismPM's Payment Approval holo: 19 of 19 vectors and 10,685 of 10,685 swept requests agree. |
 
 Run:
 
 ```bash
-node --test v2/shell/test.mjs v2/shell/test-payment.mjs v2/loop/test-guests.mjs
+node --test v2/shell/test.mjs v2/shell/test-payment.mjs v2/loop/test-guests.mjs v2/reuse/test.mjs v2/hosted-check/test.mjs v2/site/test.mjs
 ```
 
 ```bash

@@ -1,0 +1,204 @@
+{
+ "image": "ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58",
+ "version": "lexlean 0.3.0\nlanguage 1.0\ncompiler-semantics 8554008034f6e9284382619a7aa71e0f0071ad404ea9d821068294d2d8804851\nlean-toolchain leanprover/lean4:v4.32.1",
+ "library": [
+  "same Foundation/Bytes.lex.tex",
+  "same Foundation/Codec/Cbor/V1/Primitive.lex.tex",
+  "same Foundation/Codec.lex.tex",
+  "same Foundation/Utf8.lex.tex",
+  "same Foundation/View/Browser/V1/Model.lex.tex",
+  "same Foundation/View/Browser/V1/Wire.lex.tex",
+  "same Foundation/View/Text/V1/Model.lex.tex",
+  "same prism.arch"
+ ],
+ "cases": {
+  "broken/bad-qualifier": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLT4001",
+     "message": "phase link: forward or unavailable module reference `Foundation.View.Browser.V2.Model`",
+     "path": "src/App.lex.tex",
+     "line": 8,
+     "column": 1,
+     "endLine": 92,
+     "endColumn": 1
+    }
+   ]
+  },
+  "broken/constructor-arity": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLT4001",
+     "message": "phase link: constructor `Content.Heading` expects 2 argument(s), received 1",
+     "path": "src/App.lex.tex",
+     "line": 8,
+     "column": 1,
+     "endLine": 92,
+     "endColumn": 1
+    }
+   ]
+  },
+  "broken/malformed-syntax": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLP2001",
+     "message": "phase link: semantic notation: expected `)`",
+     "path": "src/App.lex.tex",
+     "line": 23,
+     "column": 1,
+     "endLine": 23,
+     "endColumn": 2
+    }
+   ]
+  },
+  "broken/missing-field": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLT4001",
+     "message": "phase link: fields are not the exact ordered set: expected [\"revision\", \"guests\"], observed [\"revision\"]",
+     "path": "src/App.lex.tex",
+     "line": 8,
+     "column": 1,
+     "endLine": 92,
+     "endColumn": 1
+    }
+   ]
+  },
+  "broken/non-terminating": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLT4001",
+     "message": "phase link: recursive call `firstRows` is not on a structurally smaller value",
+     "path": "src/App.lex.tex",
+     "line": 8,
+     "column": 1,
+     "endLine": 92,
+     "endColumn": 1
+    }
+   ]
+  },
+  "broken/reserved-name": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLT4001",
+     "message": "phase link: declaration name `decide` is reserved: it is spelled like the built-in Lean name `decide` and would capture it in generated Lean",
+     "path": "src/App.lex.tex",
+     "line": 8,
+     "column": 1,
+     "endLine": 92,
+     "endColumn": 1
+    }
+   ]
+  },
+  "broken/title-hosted-word": {
+   "ok": true,
+   "diagnostics": []
+  },
+  "broken/title-lowercase": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLL1004",
+     "message": "`browser` is not a phrase concept",
+     "path": "src/App.lex.tex",
+     "line": 6,
+     "column": 8,
+     "endLine": 6,
+     "endColumn": 15
+    }
+   ]
+  },
+  "broken/title-not-in-lexicon": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLL1004",
+     "message": "`Guest` is not a phrase concept",
+     "path": "src/App.lex.tex",
+     "line": 6,
+     "column": 8,
+     "endLine": 6,
+     "endColumn": 13
+    }
+   ]
+  },
+  "broken/title-phrase-then-unknown": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLL1004",
+     "message": "`Guest` is not a phrase concept",
+     "path": "src/App.lex.tex",
+     "line": 6,
+     "column": 27,
+     "endLine": 6,
+     "endColumn": 32
+    }
+   ]
+  },
+  "broken/title-two-phrases": {
+   "ok": true,
+   "diagnostics": []
+  },
+  "broken/unknown-name": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLT4001",
+     "message": "phase link: forward or missing function `clearedd`",
+     "path": "src/App.lex.tex",
+     "line": 8,
+     "column": 1,
+     "endLine": 92,
+     "endColumn": 1
+    }
+   ]
+  },
+  "broken/wrong-type": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLT4001",
+     "message": "phase link: definition `accepted` body has type Bool, expected Nat",
+     "path": "src/App.lex.tex",
+     "line": 8,
+     "column": 1,
+     "endLine": 92,
+     "endColumn": 1
+    }
+   ]
+  },
+  "guests-1": {
+   "ok": true,
+   "diagnostics": []
+  },
+  "guests-2": {
+   "ok": true,
+   "diagnostics": []
+  },
+  "guests-3": {
+   "ok": false,
+   "diagnostics": [
+    {
+     "code": "LLT4001",
+     "message": "phase link: linear_arithmetic definitions are not sorted and unique",
+     "path": "src/App.lex.tex",
+     "line": 8,
+     "column": 1,
+     "endLine": 167,
+     "endColumn": 1
+    }
+   ]
+  },
+  "payment": {
+   "ok": true,
+   "diagnostics": []
+  }
+ }
+}

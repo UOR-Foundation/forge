@@ -4,6 +4,8 @@
 #                                                that `just app` builds and verifies through the locked SDK
 #   https://uor-foundation.github.io/foundry/reuse/v2/reuse/opfs.html  the address-based reuse store,
 #                                                exercised over the browser's own OPFS (v2/reuse)
+#   https://uor-foundation.github.io/foundry/v2/index.html  Foundry v2: apps that are LexLean specs, run in
+#                                                the tab, with what Lean proved beside each (v2/site)
 # Project content, not universal policy: a repository may extend or replace it.
 #
 # It runs on every push to main, beside `bootstrap`, not after it: `just app`
@@ -353,7 +355,12 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             v2/reuse
-            v2/shell/interp.mjs
+            v2/shell
+            v2/site
+            v2/hosted-check
+            v2/probe-payment/data
+            v2/probe-payment/src
+            v2/loop/answers
             studio/shell/prism-code/src/blake3.mjs
           sparse-checkout-cone-mode: false
       - name: The address-based reuse page, under reuse/
@@ -368,6 +375,17 @@ jobs:
           done
           test -s out/reuse/v2/reuse/opfs.html
           test -s out/reuse/v2/reuse/data/modules.json
+      - name: The Foundry v2 page, under v2/
+        # v2/site/build.mjs copies the files the page serves, byte for byte, and reads the proof table
+        # from the specs. Its tests run first: a promise shown without its theorem, a link Forge's
+        # worker would swallow, or code past the first-load budget stops the deploy.
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test src/v2/site/test.mjs
+          node src/v2/site/build.mjs out/v2
+          test -s out/v2/index.html
+          test -s out/v2/site/apps.json
       - name: Configure Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
       - name: Upload the site

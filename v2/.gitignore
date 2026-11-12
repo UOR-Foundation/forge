@@ -9,3 +9,6 @@ probe-*/prismpm.lock
 # Scratch projects and logs of the model loop.
 loop/work/
 loop/*.log
+build-speed/**/prismpm.lock
+build-speed/logs/
+build-speed/bench/laws-src/

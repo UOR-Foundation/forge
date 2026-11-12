@@ -1,0 +1,74 @@
+Name:      Counter probe
+Revision:  2026-10-23
+Format:    HOLO physical version 4, flags 0
+Size:      21079 B
+Digest:    sha256:c9a7389e55702843b00953cf4eca3d6d757d42fa201773dfc8701da5e8c5f588
+           blake3:e64674a02ba650462732e08d0a6e60be8fa7e3b2fce59e91bac64740618a6a78
+Footer:    e7170adcb9420e46b75c001cbffc9e2a168cab6cef17b443401a4920f8b89117 (BLAKE3 of the body)
+
+Sections:
+  INDEX  KIND  ROLE                   OFFSET  LENGTH  SHA256                                                            BLAKE3
+  0      15    app-manifest           202     356     5def94b1fc7c06acf11fa462cc861f6711dc9b7453ad7dcdf204817fac795849  644c2826523acec1beb1f99a0e4cc70ecd87bfdf46160b9df68bce00a5a2aa54
+  1      8     source-manifest        558     610     3d21c4158d101d147bec8e21197ad6eb6588a1979f34b62c1731b701002a2ebb  7c0fdafc5f8127a949765f5dc7d690a4c7017174070189fc98111a4f1285cdca
+  2      14    application-directory  1168    1077    409c6f1570780db1433406cfd7434c7b20085630e43a5719c4bcedff9d94ec3f  84062b883062dee05b78504a47bf942fa32095280478a1cd4557488b0c56ccbf
+  3      14    model-provenance       2245    2196    7b78c50e132528dcca8e833938a987328102d6fe79eb82a6886bb99a3e588e49  54ba7b00f94f8132223366a652d1ff23fc490433fdad64af27c1a9f1f3e77c7b
+  4      16    guest                  4441    6071    2697bab28e3dd5636cd2c504632cc3c3afc80667132b6a3ed4230c120310810f  c2d6aa98d90190e7bfd34155cbfee7c5ea5552bc6275beb7bb36af7d95d91884
+  5      16    model-document         10512   4219    748cad0fa281ee7083dcd6021c9bcf159bf8f31ab422d155bc74b02cc57af3fc  a336552de32f94943bbf408682952254f790a63e05e64d0d7aa21e6a24bdbe6e
+  6      16    capability-set         14731   175     c85722a1f3f28f6a326e2af9734960401879b60fa3876633028a8118c6f34411  650500808dbf458a84ab6db39ae83dc81cfd118e3de08fe472eb97a8202ef924
+  7      16    view                   14906   6141    c07febe978945783c387177463862a3aaa86c629f1e84bd172ffedcedffe9db8  720fb86a6cec17a90793cee7e66386f64a706bb567e22ec1bcaad1589eb079e8
+
+Content:
+  INDEX  ROLE            LENGTH  SHA256                                                            LABEL
+  4      guest           6000    acd9f6f01be23aeec6347c2b94e31a62af16e411adf8ba3f641049e6c69c27b8  blake3:17ba299a72da64ea1f9d7d3f5019191f1491faef973d24b38c7a56094ff5d7fe
+  5      model-document  4148    f7f20006f9d2ffe8fdbc96b11b51bdc18d73654800614ff6b8d3612160b9717e  blake3:bacb1f9e77211f87fd52cbaa4971934606d3b2dde5043f002625a7680c9d4f64
+  6      capability-set  104     888ef9fab26cf92f0a20a1d0fdf7e5dd494f7eb7ec23dfb26a039a7233cb4a02  blake3:cf46eb3028b50fde0444a1a648f5ce7cba94013f541c86537df54adf5d203e1c
+  7      view            6070    873dce5826b03e1407e914de6bfe73313113a281c02b64ce908b5ebf616c0f6d  blake3:fba342442d664e1083670c44edeeaddacc2a6045735774aa67b04438035f47b1
+
+Manifest:
+  URI:             https://hologram.foundation/realization/app-manifest
+  Capability set:  blake3:cf46eb3028b50fde0444a1a648f5ce7cba94013f541c86537df54adf5d203e1c
+  Guest:           blake3:17ba299a72da64ea1f9d7d3f5019191f1491faef973d24b38c7a56094ff5d7fe
+  View:            blake3:fba342442d664e1083670c44edeeaddacc2a6045735774aa67b04438035f47b1
+  Entry:           holo_run
+  Contract:        hologram:guest/core-wasm@1
+  View entry:      index.html
+  Surface:         portable
+
+Model:
+  Schema:       prismpm/model-document/2
+  Name:         Counter probe
+  Crate:        prism-text-request 0.1.0
+  Description:  A counter whose state, effects and view cross one bytes-in, bytes-out function.
+  Profile:      prismpm/text-application/1
+  Function:     none
+  Vectors:      14
+  Limits:       request 64 B, response 256 B, guest allocation 128 B
+  Digest:       sha256:f7f20006f9d2ffe8fdbc96b11b51bdc18d73654800614ff6b8d3612160b9717e
+                blake3:bacb1f9e77211f87fd52cbaa4971934606d3b2dde5043f002625a7680c9d4f64
+
+Provenance:
+  Schema:       prismpm/model-provenance/1
+  Application:  blake3:644c2826523acec1beb1f99a0e4cc70ecd87bfdf46160b9df68bce00a5a2aa54
+  Model ID:     f7f20006f9d2ffe8fdbc96b11b51bdc18d73654800614ff6b8d3612160b9717e
+  Compiler:     5262e5b4c8b5668ae7066ad686757a6bb7f80c941d515fb9d586894fbc7de69a
+  Stdlib:       21ef1a9345144bbacf307bd5dc10cec05d9141b66a9b19b587ba9a6da9cd0757
+  LexLean:      cee0fbade479891479e0b748aaa8b60e0a1aaf07
+
+World:
+  Contract:        hologram:guest/core-wasm@1
+  WIT:             hologram:guest@1.0.0 world core-wasm, worlds/core-wasm.wit
+  WIT digest:      sha256:a566c87a359cadf98f652747f1b3574aa307ff5f652a190c6d99c350db9cf369
+                   blake3:0774a8ecbfa945a427712ee7d7ad406195b2d07492ceae15cca0067276c9ced8
+  Imports:         none
+  Exports:         holo_alloc, holo_run, memory
+  Guest:           conforms to the world
+  Purity:          pure: no clock, random, socket or filesystem import
+  Capability set:  blake3:cf46eb3028b50fde0444a1a648f5ce7cba94013f541c86537df54adf5d203e1c (requests nothing)
+
+Attestations:
+  none
+
+Verification:
+  Footer:            ok
+  Labels:            ok
+  Cross-references:  ok

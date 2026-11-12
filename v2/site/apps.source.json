@@ -1,0 +1,45 @@
+{
+  "note": "What the v2 page shows about each app. Facts that only a run can give (attestation, what was tested) are recorded here by hand from v2/ARCHITECTURE.md; everything else is read from the spec by build.mjs.",
+  "apps": [
+    {
+      "id": "guests",
+      "title": "Guest list",
+      "origin": "Written by an independent model from one sentence and v2/loop/RULES.txt.",
+      "sentence": "A guest list. The person types a name of at most 40 bytes and presses Add, and the name joins a table with one column, newest first, keeping at most 16. A Clear button empties the list. An empty name is ignored.",
+      "entry": "App",
+      "source": "loop/answers/guests-3.verified.lex.tex",
+      "modules": { "App": "loop/answers/guests-3.json" },
+      "attestation": "8b8794d3da52312a7ec0ce85dab361b486d92c982428fcbb5ec9ba317042291c",
+      "tested": "node --test v2/loop/test-guests.mjs, 9 of 9",
+      "limits": {
+        "emptyIgnored": "The theorem proves the revision does not move. That the whole state is unchanged is tested on samples, not proved.",
+        "longIgnored": "The theorem proves the revision does not move. That the whole state is unchanged is tested on samples, not proved.",
+        "staleIgnored": "The theorem proves the revision does not move. That the whole state is unchanged is tested on samples, not proved."
+      },
+      "unproved": [
+        "The list never holds more than 16 names.",
+        "A new name comes first and the others keep their order.",
+        "A name is added exactly as typed."
+      ]
+    },
+    {
+      "id": "payment",
+      "title": "Payment approval",
+      "origin": "Written by hand on PrismPM's view protocol. The decision is PrismPM's own Payment Approval example, called, not rewritten.",
+      "entry": "Payment",
+      "source": "probe-payment/src/Payment.lex.tex",
+      "modules": { "Payment": "probe-payment/data/Payment.json", "PaymentApproval": "probe-payment/data/PaymentApproval.json" },
+      "attestation": "47e971f850de8a0c2ee6f613140445c02ef48f676723d8ea2f9acdcb6fef8284",
+      "tested": "node --test v2/shell/test-payment.mjs, 6 of 6",
+      "sentences": {
+        "viewKeepsRevision": "Every screen carries the revision of the state it shows.",
+        "clearAdvances": "Clearing always moves the revision forward by one."
+      },
+      "limits": {},
+      "unproved": [
+        "The table never holds more than 16 decisions.",
+        "A press from an out-of-date screen changes nothing."
+      ]
+    }
+  ]
+}

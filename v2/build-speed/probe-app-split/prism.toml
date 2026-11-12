@@ -1,0 +1,11 @@
+[application]
+name = "probe-app"
+version = "0.1.0"
+description = "A text application: a UTF-8 request in, a response out, six acceptance vectors (language 1.2)."
+
+[model]
+source = "src"
+watch = ["src/**/*.lex.tex", "language/**/*.toml", "lexlean.toml"]
+
+# Deny by default: an empty set grants the holo nothing. See docs/proposals/279-capability-sets.md.
+[capabilities]
