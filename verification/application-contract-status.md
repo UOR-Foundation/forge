@@ -70,3 +70,5 @@ FA-79 hosted Studio 43165254913 and Forge performance 43165254778 pass at 075fd0
 FA-80 also passes full mobile performance and the canonical live LexLean gate after environment recovery. Results are recorded in `chat-mode-controls-performance.json`; no budget is changed.
 
 FA-81 binds chat inference and token accounting to the same validated provider/model selection, preserving exact OpenRouter identifiers and refusing unsupported or malformed selections before transcript/network effects. All 475 Node controls, full Rust/Clippy/fmt, focused Chromium and seven unit plus one actual-browser mutations pass; all 61 mandatory browser journeys pass together. See `chat-provider-routing.md`. FA-80 hosted Studio 43167933304 passes at 6b6b0fcd1cde2c78d3735f63eca30160ebebedcc; immutable SDK acceptance remains running.
+
+FA-81 full mobile performance and canonical live LexLean checks pass without budget changes. FA-80 hosted Forge performance 43167933486 also passes at 6b6b0fcd1cde2c78d3735f63eca30160ebebedcc. SDK acceptance and independent approval remain outstanding at this checkpoint.
