@@ -373,6 +373,7 @@ jobs:
       - name: Check out the deployed revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -384,7 +385,7 @@ jobs:
       - name: Every Prism app previews live within its budgets
         run: |
           export PLAYWRIGHT_MODULE="$(npm root --global)/playwright/index.mjs"
-          scripts/live_e2e_all.sh "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" "$RUNNER_TEMP/live-e2e"
+          bash scripts/live_e2e_all.sh "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" "$RUNNER_TEMP/live-e2e"
       - name: Keep what the check saw
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
