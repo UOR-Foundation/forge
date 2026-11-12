@@ -31,6 +31,19 @@ export const commandRegistryData = {
       "quality": "Finite vocabulary and explicit profile review; independent quality and release obligations remain."
     },
     {
+      "id": "chat-preferences",
+      "version": 1,
+      "owner": "FoundrySpecification.chatPreferencesBoundary",
+      "effects": [
+        "storage"
+      ],
+      "targets": [
+        "browser"
+      ],
+      "assurance": "boundary-inventory",
+      "quality": "Atomic imported preferences; mode execution, inference permission and whole-product quality remain separately qualified."
+    },
+    {
       "id": "chat-queue",
       "version": 1,
       "owner": "ChatQueue.boundary",
@@ -3370,9 +3383,9 @@ export const commandRegistryData = {
     },
     {
       "channel": "update-chat",
-      "feature": "lifecycle",
+      "feature": "chat-preferences",
       "version": 1,
-      "owner": "FoundrySpecification.projectLifecycleBoundary",
+      "owner": "FoundrySpecification.chatPreferencesBoundary",
       "adapter": "studio/shell/host.js",
       "availability": "adapter",
       "input": "imported-renderer",

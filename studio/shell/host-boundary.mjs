@@ -48,6 +48,7 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if (["invalidChatPreferences","chatPreferencesMissing","chatPreferencesStateInvalid","chatPreferencesStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "validation", "Chat preference operation refused");
     if (["projectScaffoldFailed","projectPreparationFailed","projectStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "internal", "Project creation refused");
     if (["invalidThemeCommand","themeLibraryInvalid","themeMissing","themeAppMissing","themeLibraryLimit","themeStorageFailed","themeCatalogMismatch"].includes(error?.code)) return refusal(error.code, channel, "validation", "Theme library operation refused");
     if (["invalidSettingsCommand","invalidStoredSettings","settingsStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "validation", "Browser settings operation refused");

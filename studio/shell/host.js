@@ -51,6 +51,7 @@ import { validateProviderKey } from "./provider-key-validation.mjs";
 import { packBytes, unpackBytes, RepresentationError } from "./exact-representation.mjs";
 import { admitWithGuest } from "./composition-codec.mjs";
 import { readBoundRules, readBoundRulesSnapshot, saveBoundRules } from "./rules-source.mjs";
+import {updateChatPreferences} from "./chat-preferences.mjs";
 import { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteStoredChat, updateStoredChat } from "./project-lifecycle.mjs";
 import { invokeHost, unwrapHost } from "./host-boundary.mjs";
 import * as inference from "./inference.js";
@@ -390,7 +391,7 @@ handlers.set("get-chat", async (id) => { const c = await get("chats", id); if (!
 const chatRow = (c) => ({ id: c.id, appId: c.appId, title: c.title, createdAt: new Date(c.createdAt || Date.now()), chatMode: c.chatMode || "build", isFavorite: !!c.isFavorite });
 handlers.set("get-chat-metadata", async (id) => { const c = await get("chats", id); return c ? chatRow(c) : null; });
 handlers.set("create-chat", async (appId) => createStoredChat(await dbReady, appId, now()));
-handlers.set("update-chat", async ({ chatId, title }) => { if (title) await updateStoredChat(await dbReady, chatId, { title }); });
+handlers.set("update-chat", input => updateChatPreferences(dbReady,input));
 handlers.set("delete-chat", async (id) => { await deleteStoredChat(await dbReady, id); queueChannel?.postMessage({chatId:id}); await chatQueue.refresh(id).catch(()=>{}); });
 // The sidebar's search: a chat matches by title or by the text of one of its messages, and the line
 // that matched is what the renderer shows under it.
