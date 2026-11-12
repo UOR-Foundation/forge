@@ -1211,3 +1211,32 @@ definition{
 }
 \end{semanticmodule}
 \end{lexlean}
+
+inductive{
+  name: EditorLoadPhase,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: idle, fields: []},
+    {name: pending, fields: []},
+    {name: ready, fields: []},
+    {name: refused, fields: []}
+  ]
+}
+
+inductive{
+  name: EditorLoadError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: editorLoadFailed, fields: []},
+    {name: editorThemeFailed, fields: []}
+  ]
+}
+
+definition{
+  name: editorLoadLifecycleBoundary,
+  parameters: [],
+  result: String,
+  body: "The imported editor remains lazy. Each init returns one owned cancelable result that settles only after the locked Monaco loader and theme configuration settle. Cancellation retains the imported loader cancellation discriminator and affects only that caller. No detached theme promise may reject after cancellation, loading failure or configuration failure. Successful configuration installs both existing themes and the existing language options once; readiness is recorded only after every configuration call succeeds. Concurrent and replacement callers share successful theme readiness without sharing cancellation ownership. A cancelled first mount cannot prevent a later mount from configuring the editor. A failed configuration cannot mark readiness and a later request may retry. Loading and configuration failures have fixed private-data-free editorLoadFailed and editorThemeFailed codes; original provider and script text is not exposed. The adapter preserves the underlying loader's resource and retry semantics, without promising a network retry the imported loader does not implement. Acceptance evaluates the actual build projection and exercises the locked loader in a real browser, including cancellation before first load, remount, concurrent ownership, load failure, configuration failure and absence of unhandled rejections. The offline editor and language-worker journey remains mandatory."
+}

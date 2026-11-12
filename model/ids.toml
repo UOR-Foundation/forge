@@ -555,3 +555,9 @@ id = "FA-65"
 level = "build"
 suite = "site-relay-authorization"
 statement = "Site-funded inference retains exact request consent and never confuses visitor credentials with relay markers"
+
+[[id]]
+id = "FA-66"
+level = "build"
+suite = "editor-load-lifecycle"
+statement = "Editor initialization preserves cancellation ownership and reports load failures without detached rejections"

@@ -192,6 +192,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-54` | `build` | Version preview ownership binds guest transitions to atomic source restoration and exclusive recoverable browser sessions |
 
+## editor-load-lifecycle
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-66` | `build` | Editor initialization preserves cancellation ownership and reports load failures without detached rejections |
+
 ## event-admission
 
 | ID | Level | Statement |
