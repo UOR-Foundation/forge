@@ -525,3 +525,9 @@ id = "FA-61"
 level = "build"
 suite = "durable-prompt-library"
 statement = "Prompt library creation updates deletion and listing persist atomically with bounded validated records and unique slugs"
+
+[[id]]
+id = "FA-62"
+level = "build"
+suite = "renderer-stylesheet-identity"
+statement = "Generated renderer stylesheet identity prevents duplicate blocking CSS retrieval"

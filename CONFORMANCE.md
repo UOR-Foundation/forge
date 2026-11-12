@@ -327,6 +327,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-05` | `build` | Publication requires exact canonical archive identity and complete nonempty runtime acceptance |
 
+## renderer-stylesheet-identity
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-62` | `build` | Generated renderer stylesheet identity prevents duplicate blocking CSS retrieval |
+
 ## rules-source-binding
 
 | ID | Level | Statement |
