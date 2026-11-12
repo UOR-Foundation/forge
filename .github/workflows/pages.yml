@@ -430,6 +430,7 @@ jobs:
           test -s out/reuse/v2/reuse/opfs.html
           test -s out/reuse/v2/reuse/data/modules.json
       - name: The Foundry v2 page, under v2/
+        if: steps.current.outputs.publish == 'true'
         # v2/site/build.mjs copies the files the page serves, byte for byte, and reads the proof table
         # from the specs. Its tests run first: a promise shown without its theorem, a link Forge's
         # worker would swallow, or code past the first-load budget stops the deploy.
