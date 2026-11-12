@@ -1239,5 +1239,27 @@ definition{
   result: String,
   body: "The imported editor remains lazy. Each init returns one owned cancelable result that settles only after the locked Monaco loader and theme configuration settle. Cancellation retains the imported loader cancellation discriminator and affects only that caller. No detached theme promise may reject after cancellation, loading failure or configuration failure. Successful configuration installs both existing themes and the existing language options once; readiness is recorded only after every configuration call succeeds. Concurrent and replacement callers share successful theme readiness without sharing cancellation ownership. A cancelled first mount cannot prevent a later mount from configuring the editor. A failed configuration cannot mark readiness and a later request may retry. Loading and configuration failures have fixed private-data-free editorLoadFailed and editorThemeFailed codes; original provider and script text is not exposed. The locked @monaco-editor/loader 1.5.0 cancelable wrapper is transformed only at its exact ES or CommonJS source SHA256: its single then owns both success and rejection instead of creating a detached success-only promise. Changed inputs refuse with editorLoaderProjectionMismatch and a renderer build that never applies the projection refuses. The original installed package is not modified; its license remains attached to the fixture. The adapter preserves the underlying loader's resource and retry semantics, without promising a network retry the imported loader does not implement. Acceptance evaluates the actual build projection and exercises the locked loader in a real browser, including cancellation before first load, remount, concurrent ownership, load failure, configuration failure and absence of unhandled rejections. The offline editor and language-worker journey remains mandatory."
 }
+inductive{
+  name: ThemeLibraryError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: invalidThemeCommand, fields: []},
+    {name: themeLibraryInvalid, fields: []},
+    {name: themeMissing, fields: []},
+    {name: themeAppMissing, fields: []},
+    {name: themeLibraryLimit, fields: []},
+    {name: themeStorageFailed, fields: []},
+    {name: themeCatalogMismatch, fields: []}
+  ]
+}
+
+definition{
+  name: themeLibraryBoundary,
+  parameters: [],
+  result: String,
+  body: "The built-in generation-theme catalog is imported from the pinned renderer shared/themes.ts and reproduced through its locked compiler, source digests, package lock and original license. This imported catalog does not become a new local semantic authority. Custom themes are durable records with monotonic positive safe-integer IDs, exact name, nullable description, prompt and real createdAt/updatedAt Dates. Names are nonempty and at most 256 UTF8 bytes, prompts nonempty and at most 65536 bytes, descriptions at most 4096 bytes; a versioned settings journal holds at most 1000 records and 4 MiB. Command inputs are copied and validated before database readiness. Updates preserve omitted fields and creation identity, and updatedAt cannot move backwards. Corrupt rows or journals never become an empty successful library. Selection accepts only a known built-in ID, canonical custom:<positive decimal ID>, or null for no theme, and requires an existing app. Selection and retrieval read the app and catalog in one transaction. Deleting a custom theme clears every app selection of that theme in the same settings/apps transaction. All acknowledgements, including reads, wait for transaction completion; late abort cannot report success or retain a partial selection. Concurrent windows serialize on the database transaction rather than independently overwriting journals. Generation resolves a detached prompt from the selected theme and includes those exact bytes in the disclosed provider request; subsequent edits cannot change a pending approved request. Theme instructions do not authorize provider, network, publication or storage effects. The existing built-in and custom renderer contracts and Date fidelity are preserved. Missing apps/themes, malformed commands, corruption, capacity, storage and source-catalog mismatch have fixed typed failures without private contents. Acceptance covers actual renderer creation/edit/deletion and selection, reload, two-window concurrency, generation disclosure, corruption and late-abort rollback. This boundary does not claim URL/image theme generation or theme-image storage, which require their own qualified effect boundaries."
+}
+
 \end{semanticmodule}
 \end{lexlean}

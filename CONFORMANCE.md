@@ -186,6 +186,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-61` | `build` | Prompt library creation updates deletion and listing persist atomically with bounded validated records and unique slugs |
 
+## durable-theme-library
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-67` | `build` | Custom generation themes and app selection persist atomically with exact imported renderer contracts |
+
 ## durable-version-preview
 
 | ID | Level | Statement |
