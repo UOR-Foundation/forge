@@ -160,7 +160,7 @@ claim("turn: the module being written projects as a draft", !!lex.partialFromTur
 
 // the model writes LexLean: declarations only, the theorems are derived
 const SPEC_RULES = prism.SPEC_RULES || "";
-const example = /<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(SPEC_RULES);
+const example = /Example: <prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(SPEC_RULES);
 let exampleReads = false;
 try { exampleReads = !!example && lex.readLexLean(example[1]).rules.length > 0 && !/theorem\{/.test(example[1]); } catch (e) {}
 claim("prompt: the model is asked for <prism-lexlean>, and the prompt's example reads", SPEC_RULES.includes("<prism-lexlean>") && !SPEC_RULES.includes("<dyad-spec>{") && exampleReads);
@@ -189,10 +189,45 @@ claim("cap: proving an app over 24 rules is refused, and says why", /24 rules/.t
 
 // What real models got wrong (Haiku and Sonnet on Foundry's prompt, four apps each): the reader names the
 // mistake so the model can fix it, and reads what is unambiguous. Each case is the prompt's own example,
-// changed the way a model changed its module.
-const ex = example ? example[1] : "";
+// changed the way a model changed its module. The prompt shows the draft form; the mistakes were made in
+// the canonical, fully bracketed one, so they are planted there.
+// A model writes the module and nothing else: the prompt never asks for code, the request carries only the
+// prompt and the module (never Dyad's code prompt or the codebase), and code a model writes is not applied.
+claim("only the module: the prompt asks for the module and refuses code", /You never write code, files or dependencies: Forge does not apply them/.test(SPEC_RULES) && !/write its files|write no module/.test(SPEC_RULES));
+claim("only the module: a turn sends the prompt and the module, and applies no code", hostSource.includes('{ role: "system", content: prism.SPEC_RULES }') && !hostSource.includes("buildSystemPrompt(rules) + ") && hostSource.includes("prism.moduleContext(") && hostSource.includes("writes: [], deletes: [], renames: [], deps: []") && hostSource.includes("prism.CODE_REFUSED"));
+
+// The chat never shows the module's text (on the live site it showed GLM's whole module): while the module
+// streams, one line counts its declarations; after the turn the card stands in its place; the reasoning is
+// left as it is. The host streams and saves only what is shown.
+{
+  const mod = "<prism-lexlean>\n" + (/Example: <prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(SPEC_RULES) || ["", ""])[1].trim() + "\n</prism-lexlean>";
+  const answer = "Here it is.\n" + mod + "\n<dyad-spec-patch>[]</dyad-spec-patch>\nIt decides the fee.";
+  const half = prism.shownText(answer.slice(0, answer.indexOf("name: rule2")));
+  const done = prism.withCard(answer, "**Rules** · checked");
+  const think = prism.shownText("<think>I will write one <prism-lexlean> block");
+  claim("chat: the module streams as a count of its declarations, and the card takes its place", /Writing the app's LexLean module: \d+ declarations so far/.test(half) && !/definition\{|\\begin\{lexlean\}/.test(half + done) && done.includes("**Rules** · checked") && done.includes("It decides the fee.") && !done.includes("dyad-spec-patch") && think === "<think>I will write one <prism-lexlean> block" && prism.shownText("Here.\n<pri") === "Here.\n", half.trim().split("\n").pop());
+  claim("chat: the host streams and saves only what is shown", hostSource.includes("const shown = prism.shownText(full);") && hostSource.includes("messages[messages.length - 1].content = shown;") && hostSource.includes("content: prism.shownText(full) + (updatedFiles"));
+  // A meaning keyed by the answer's LexLean name is that answer's meaning; an agent's patch with one refused
+  // op still applies the rest, and names what it refused.
+  const graded = prism.checkSpec({ ...lex.specFromTurn(mod).spec, meanings: { answerFree: "No charge" } });
+  claim("patch: a meaning keyed `answer<Word>` is the answer's meaning", graded.ok && graded.spec.meanings.free === "No charge", graded.ok ? JSON.stringify(graded.spec.meanings) : graded.issues[0]);
+  claim("patch: an agent's patch with one refused op applies the others and names the refused", hostSource.includes("for (const op of list) {") && hostSource.includes('refused.push(`${(op.path || []).join(".") || "patch"}: ${one.issues[0]}`)'));
+}
+const exDraft = example ? example[1] : "";
+// GLM on the live site ended its module at \end{lexlean} and never closed the block: a whole module reads.
+const unclosed = lex.specFromTurn("Here is the module.\n<prism-lexlean>\n" + (example ? example[1].trim() : "") + "\n");
+const halfOpen = lex.specFromTurn("<prism-lexlean>\n" + (example ? example[1].trim().split("\\end{semanticmodule}")[0] : ""));
+claim("turn: a block left open reads once its module is whole, and not before", !!unclosed && !unclosed.error && unclosed.name === "ParkingFee" && halfOpen === null);
+// Its repair closed with \end{prism-lexlean} and no \end{lexlean}: the closing markers carry nothing.
+const misclosed = lex.specFromTurn("<prism-lexlean>\n" + (example ? example[1].trim().replace("\\end{lexlean}", "\\end{prism-lexlean}") : ""));
+claim("turn: a module whose closing markers are wrong reads once \\end{semanticmodule} is written", !!misclosed && !misclosed.error && misclosed.name === "ParkingFee");
+const exSpec = example ? lex.readLexLean(exDraft.trim() + "\n") : null;
+const ex = exSpec ? lex.toLexLean(exSpec).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "") : "";
 const refusal = (text) => { try { lex.readLexLean(text.trim() + "\n"); return ""; } catch (e) { return e.message; } };
-const exSpec = example ? lex.readLexLean(ex.trim() + "\n") : null;
+// The draft form the prompt teaches: pairs only where a reader needs them, and the same spec as the canonical form.
+claim("draft: the prompt's example has no pairs to count, and reads as its canonical form", (exDraft.match(/[()]/g) || []).length <= 2 && JSON.stringify(exSpec) === JSON.stringify(lex.readLexLean(ex.trim() + "\n")), `${(exDraft.match(/[()]/g) || []).length} parentheses in the example's module, ${(ex.match(/[()]/g) || []).length} in its canonical form`);
+const vDraft = lex.draftOf(source);
+claim("draft: Verdant in draft form reads back to its canonical module, byte for byte", lex.toLexLean(lex.readLexLean(vDraft)) === source, `${(source.match(/[()]/g) || []).length} parentheses canonical, ${(vDraft.match(/[()]/g) || []).length} in the draft`);
 const sameAsExample = (text) => { try { const s = lex.readLexLean(text.trim() + "\n"); return same(semantic(logicOf(s)), semantic(logicOf(exSpec))) && JSON.stringify(s.properties) === JSON.stringify(exSpec.properties); } catch (e) { return false; } };
 const extra = refusal(ex.replace("<? 3))", "<? 3)))"));
 claim("errors: one \")\" too many is named, with where", /^inBounds: one "\)" too many, after/.test(extra), extra);
@@ -201,7 +236,7 @@ claim("errors: a \")\" missing is named", /^judge: 1 "\)" missing/.test(missing)
 const several = refusal(ex.replaceAll("<? 3))", "<? 3)))"));
 claim("errors: every unbalanced declaration is named at once", /^2 declarations have unbalanced parentheses: inBounds: .*; breaksInv001: /.test(several), several);
 const misnamed = refusal(ex.replaceAll("vehicleTruck", "typeTruck"));
-claim("errors: a value named after anything but its field is told its name", /typeTruck .*vehicleTruck$/.test(misnamed), misnamed);
+claim("errors: a value named after anything but its field is told its name", /typeTruck .*to vehicleTruck/.test(misnamed), misnamed);
 claim("reads: `x <? N` bounds a number as `x <=? N - 1`", sameAsExample(ex.replaceAll("(project request hours) <=? 24)", "(project request hours) <? 25)")));
 claim("reads: a guarantee may name inBounds and its rule, and leave its outer pair off", sameAsExample(ex.replace(/(name: breaksInv001,[\s\S]*?body: )[^\n]*/, "$1((inBounds request) && (rule1 request)) && ((judge request) =? (answerPremium))")));
 

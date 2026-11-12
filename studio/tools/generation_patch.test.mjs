@@ -28,11 +28,16 @@ test("identical writes are no-ops and pre-cancellation is typed", () => {
 });
 test("the host binds generation source signal and committed results", () => {
   const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
-  assert.ok(host.includes("codebaseOf(appId, projectSource)"));
+  // The model is shown the module from the captured source, never the code.
+  assert.ok(host.includes("[...new Map(projectSource.files)].find(([p]) => /^prism\\/[A-Z]\\w*\\.lex\\.tex$/.test(p))"));
+  assert.ok(host.includes("prism.moduleContext(moduleNow ? moduleNow[1] : null)"));
+  assert.ok(!host.includes('content: "This is my codebase. "'));
   assert.ok(host.includes("prism.deviceRequest(intent.prompt, capturedSpec)"));
   assert.ok(host.includes("current?.specKappa === await kappa(enc.encode(capturedSpec))"));
   assert.ok(host.includes("applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit })"));
-  assert.ok(host.includes("rulesAfterTurn(appId, full, tags.writes.map((w) => w.path), { signal: abort.signal, source: applied.source, onCommit })"));
+  // Code a model writes is never applied; the rules are read against the applied source.
+  assert.ok(host.includes("const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };"));
+  assert.ok(host.includes("rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit })"));
   assert.ok(host.includes("Committed project changes were retained."));
   assert.ok(!host.includes('if (updatedFiles) commit = await seal('));
 });

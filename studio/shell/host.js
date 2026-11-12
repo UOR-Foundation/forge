@@ -605,7 +605,11 @@ async function refreshLive(appId) {
   try {
     const bound = state?.spec && state.specKappa === await kappa(enc.encode(json));
     const trust = bound ? state.phase === "published" && state.publicationCurrent === false ? "proved" : state.phase : "draft";
-    pushLive(appId, JSON.parse(json), trust);
+    const spec = JSON.parse(json);
+    pushLive(appId, spec, trust);
+    // The edit history is ready before the first click, so even the first edit is drawn optimistically,
+    // before any storage read, instead of waiting for the history to be built.
+    if (liveEditors.has(appId)) liveEditors.get(appId).sync(spec); else liveEditors.set(appId, createEditor(spec, checkForEdit));
   } catch (e) {}
 }
 
@@ -658,6 +662,9 @@ async function patchSpec(appId, ops, { author = "user", key = null, ...options }
     const before = ed.spec;
     try { if (!drawn) pushLive(appId, applyOps(before, ops), "draft", true); }
     catch (e) { if (!(e instanceof PatchError)) throw e; refuse(appId, key, e.message); return { ok: false, issues: [e.message] }; }
+    // The check samples up to 200,000 requests on this thread, which the live frame shares: it waits
+    // until the frame has painted the edit, so the person sees their change before it is judged.
+    await new Promise((r) => (typeof requestAnimationFrame === "function" && typeof setTimeout === "function" ? requestAnimationFrame(() => setTimeout(r, 0)) : r()));
     const result = ed.apply(ops);
     if (!result.ok) { await refreshLive(appId); refuse(appId, key, result.issues[0]); return result; }
     try {
@@ -688,6 +695,15 @@ function pointedNote(appId) {
   if (!p) return "";
   const paths = Object.entries(p.edit).filter(([, v]) => Array.isArray(v)).map(([slot, v]) => `${slot} at ${JSON.stringify(v)}`).join("; ");
   return `\n\n(The user is pointing at the ${p.kind} "${p.text}" on the screen${paths ? ": " + paths : ""}. To change it, write a <dyad-spec-patch>.)`;
+}
+// The built page takes the preview back from the live frame (an app's first turn opened the frame, then
+// wrote code, not rules): announced as a restart, so the renderer forgets the live frame's route.
+async function showBuilt(appId) {
+  const { appUrl } = await buildPreview(appId);
+  if (liveShown.has(appId)) return;
+  const m = machineOf(appId);
+  publish(appId, { phase: "starting", operation: "restart", invocationRef: { kind: "app-run", entityKey: appId, operationId: "built-" + appId + "-" + Date.now() }, startedAt: Date.now(), operationError: null, exit: null });
+  publish(appId, { phase: "ready", operation: null, invocationRef: null, startedAt: Date.now(), operationError: null, exit: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: m.state.previewReloadEpoch + 1 });
 }
 // Point the app's preview at the live frame. The iframe loads once: after this, the address it shows
 // never changes for this app, so the preview never reloads.
@@ -1199,6 +1215,12 @@ async function chatTurn(chatId, intent) {
   emit("chat:stream:start", { chatId, invocationRef: ref });
   if (prism.isApproval(intent.prompt)) return approveTurn(chatId, appId, messages, userId, ref, intent.intentId);
   if (prism.isPublish(intent.prompt)) return publishTurn(chatId, appId, messages, userId, ref, intent.intentId);
+  // An app's first build turn opens the live frame now, while the model thinks, not when the spec's tag
+  // streams in: the frame takes about a tenth of a second to mount, and a spec can name its first field
+  // right after the tag. If the turn ends without rules (an app built as code), the built page takes the
+  // preview back. Later turns of a code app keep their built preview throughout.
+  const speculativeLive = !(await hasRules(appId)) && messages.filter((x) => x.role === "user").length === 1;
+  if (speculativeLive) showLive(appId).catch(() => liveShown.delete(appId));
   // T3: the assistant placeholder
   const projectSource = await captureProjectSource(await dbReady, appId);
   const head = projectSource.reference;
@@ -1213,11 +1235,13 @@ async function chatTurn(chatId, intent) {
   const onCommit = (oid) => { committed.push(oid); updatedFiles = true; emit("version-created", { appId, oid }); };
   try {
     const app = await get("apps", appId);
-    const rules = new Map(projectSource.files).get("AI_RULES.md");
     const history = messages.slice(0, -2).filter((x) => x.content).map((x) => ({ role: x.role, content: x.content }));
+    // A model writes and edits the app's LexLean module and nothing else: it is told only that, and shown
+    // only the module (in the draft form it writes), never the code, which Forge projects from the module.
+    const moduleNow = [...new Map(projectSource.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p));
     const request = [
-      { role: "system", content: buildSystemPrompt(rules) + "\n\n" + prism.SPEC_RULES },
-      { role: "user", content: "This is my codebase. " + (await codebaseOf(appId, projectSource)) },
+      { role: "system", content: prism.SPEC_RULES },
+      { role: "user", content: prism.moduleContext(moduleNow ? moduleNow[1] : null) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
@@ -1238,10 +1262,12 @@ async function chatTurn(chatId, intent) {
     let lastSave = 0;
     const onText = async (t) => {
       full = t;
-      let lcp = 0; while (lcp < lastSent.length && lcp < full.length && lastSent[lcp] === full[lcp]) lcp++;
-      if (lcp < lastSent.length) { messages[messages.length - 1].content = full; emit("chat:response:chunk", { chatId, invocationRef: ref, messages }); }
-      else emit("chat:response:chunk", { chatId, invocationRef: ref, streamingMessageId: asstId, streamingPatch: { offset: lcp, content: full.slice(lcp), ...(lcp > 0 ? { prefixHash: djb2(full.slice(0, lcp)) } : {}) } });
-      lastSent = full;
+      // The chat shows the answer without the module's text (prism.shownText); `full` keeps it for reading.
+      const shown = prism.shownText(full);
+      let lcp = 0; while (lcp < lastSent.length && lcp < shown.length && lastSent[lcp] === shown[lcp]) lcp++;
+      if (lcp < lastSent.length) { messages[messages.length - 1].content = shown; emit("chat:response:chunk", { chatId, invocationRef: ref, messages }); }
+      else emit("chat:response:chunk", { chatId, invocationRef: ref, streamingMessageId: asstId, streamingPatch: { offset: lcp, content: shown.slice(lcp), ...(lcp > 0 ? { prefixHash: djb2(shown.slice(0, lcp)) } : {}) } });
+      lastSent = shown;
       // The rules as far as the model has written them go to the live frame now, not after the turn.
       if (full.includes("<dyad-spec>")) {
         const raw = live.partialSpec(full);
@@ -1254,7 +1280,7 @@ async function chatTurn(chatId, intent) {
         const part = lexlean.partialFromTurn(full);
         if (part) pushLive(appId, part.spec, "draft");
       }
-      if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = full; await saveMessages(chatId, messages); lastSave = Date.now(); }
+      if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = shown; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
     // A model streams far faster than a screen draws, and every onText walks the whole answer and redraws the
     // message: deltas are coalesced to one onText per animation frame. The final text is delivered by onText
@@ -1339,19 +1365,32 @@ async function chatTurn(chatId, intent) {
     assertGenerationActive(abort.signal);
     const sm = full.match(/<dyad-chat-summary>([\s\S]*?)<\/dyad-chat-summary>/); summary = sm ? sm[1].trim() : undefined;
     if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
-    const tags = parseDyadTags(full);
+    // Code a model wrote is never applied: the app's code and screen are projections of its module.
+    const wrote = parseDyadTags(full);
+    const refusedCode = wrote.writes.length + wrote.deletes.length + wrote.renames.length + wrote.deps.length;
+    const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
     const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
     let changed = applied.changed;
-    const spec = await rulesAfterTurn(appId, full, tags.writes.map((w) => w.path), { signal: abort.signal, source: applied.source, onCommit });
+    const spec = await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
+    if (refusedCode) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.CODE_REFUSED;
     for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
       assertGenerationActive(abort.signal);
       let ops; try { ops = JSON.parse(match[1]); } catch {}
-      const result = ops ? await patchSpec(appId, Array.isArray(ops) ? ops : [ops], { author: "agent", signal: abort.signal, source: spec.source, onCommit }) : { ok: false, issues: ["The patch is not JSON."] };
-      if (!result.ok) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + result.issues[0];
-      else { spec.changed += result.changed; spec.source = result.source; spec.card = result.card; }
+      const list = ops ? (Array.isArray(ops) ? ops : [ops]) : [];
+      const result = ops ? await patchSpec(appId, list, { author: "agent", signal: abort.signal, source: spec.source, onCommit }) : { ok: false, issues: ["The patch is not JSON."] };
+      if (result.ok) { spec.changed += result.changed; spec.source = result.source; spec.card = result.card; continue; }
+      // One op the checker refuses does not cost the others (measured: GLM's meanings, keyed by field, took
+      // its heading, labels and words with it): they are applied one by one, and only the refused are named.
+      const refused = list.length > 1 ? [] : [result.issues[0]];
+      if (list.length > 1) for (const op of list) {
+        const one = await patchSpec(appId, [op], { author: "agent", signal: abort.signal, source: spec.source, onCommit });
+        if (one.ok) { spec.changed += one.changed; spec.source = one.source; spec.card = one.card; } else refused.push(`${(op.path || []).join(".") || "patch"}: ${one.issues[0]}`);
+      }
+      if (refused.length) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + refused.join(" ");
     }
     changed += spec.changed;
     if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshLive(appId); }
+    else if (speculativeLive && liveShown.has(appId)) { liveShown.delete(appId); showBuilt(appId).catch(() => {}); }
     updatedFiles = updatedFiles || changed > 0;
     const commit = committed.at(-1) || null;
     messages[messages.length - 1] = { ...messages[messages.length - 1], content: prism.withCard(full, spec.card), commitHash: commit, approvalState: "approved", requestId: provenance && provenance.receipt || null };
@@ -1359,7 +1398,7 @@ async function chatTurn(chatId, intent) {
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   } catch (e) {
     error = abort.signal.aborted ? null : String((e && e.message) || e);
-    messages[messages.length - 1] = { ...messages[messages.length - 1], commitHash: committed.at(-1) || null, content: full + (updatedFiles ? "\n\nCommitted project changes were retained." : "") + (abort.signal.aborted ? "\n\n<dyad-output type=\"warning\" message=\"Response cancelled by user\"></dyad-output>" : error ? `\n\n<dyad-output type="error" message="${error.replace(/"/g, "'")}"></dyad-output>` : "") };
+    messages[messages.length - 1] = { ...messages[messages.length - 1], commitHash: committed.at(-1) || null, content: prism.shownText(full) + (updatedFiles ? "\n\nCommitted project changes were retained." : "") + (abort.signal.aborted ? "\n\n<dyad-output type=\"warning\" message=\"Response cancelled by user\"></dyad-output>" : error ? `\n\n<dyad-output type="error" message="${error.replace(/"/g, "'")}"></dyad-output>` : "") };
     await saveMessages(chatId, messages);
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   }
