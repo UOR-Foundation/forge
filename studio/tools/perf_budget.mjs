@@ -117,9 +117,6 @@ if (process.argv.includes("--browser")) {
       return url.origin === new URL(BASE).origin ? route.continue() : route.abort();
     });
     page = await ctx.newPage();
-    await page.addLocatorHandler(page.getByRole("dialog", {name:"Review preview permissions",exact:true}), async dialog => {
-      await dialog.getByRole("button", {name:"Don't allow",exact:true}).click();
-    });
     const cdp = await ctx.newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
     const lcpOf = async () => { await page.waitForSelector("[role=textbox]", { timeout: 120000 }); await page.waitForTimeout(2500); return Math.round(await page.evaluate(() => window.__lcp)); };
@@ -148,7 +145,14 @@ if (process.argv.includes("--browser")) {
     // Enter, to the first streamed token on screen.
     const t0 = await page.evaluate(() => performance.now());
     await page.keyboard.press("Enter");
-    await page.getByRole("button", {name:"Send this request",exact:true}).click({timeout:120000});
+    // The browser can stack the preview and cloud disclosures in either order.
+    // Act on its topmost dialog: deny preview effects and explicitly approve
+    // inference. Each click uses the visible real control, never a forced click.
+    for (let decision = 0; decision < 8; decision++) {
+      await page.waitForFunction(() => /T0 /.test(document.body.innerText) || !!document.querySelector("dialog[open]"), null, {timeout:120000});
+      if (await page.evaluate(() => /T0 /.test(document.body.innerText))) break;
+      await page.locator("dialog[open]").last().getByRole("button", {name:/^(Don't allow|Send this request)$/}).click({timeout:120000});
+    }
     await page.waitForFunction(() => /T0 /.test(document.body.innerText), null, { timeout: 120000, polling: "raf" });
     token.push(Math.round((await page.evaluate(() => performance.now())) - t0));
     await ctx.close();
