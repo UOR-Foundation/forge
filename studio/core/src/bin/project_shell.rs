@@ -201,6 +201,12 @@ fn manifest(shell: &Path) -> String {
     let mut rows = Vec::new();
     for rel in files {
         let name = rel.to_string_lossy().replace('\\', "/");
+        // The Pages artifact leaves dotfiles out (upload-pages-artifact 5), and the worker installs only
+        // when every listed file answers: a listed `.nojekyll` that 404s left every visitor without the
+        // worker, so without previews. Only what the site serves is listed.
+        if name.split('/').any(|segment| segment.starts_with('.')) {
+            continue;
+        }
         if name == "manifest.json" || name == "provenance.json" || name == "warmup.json" || name == "sw.js" || name == "sw.template.js" || name == "404.html" {
             continue;
         }

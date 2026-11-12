@@ -24,6 +24,7 @@
 #                                # (rebuild the renderer after it: the plant leaves its build in shell/assets)
 #   ./scripts/plant.sh tap       # shrink the touch hit area under the kernel's tap target: the Experience gate must refuse
 #   ./scripts/plant.sh inpbudget # raise the kernel's mobile INP budget past 500 ms: Lean must refuse FK-14 (run in the SDK image)
+#   ./scripts/plant.sh dotfile   # list shell/.nojekyll in the worker's install list: the corpus's manifest check must refuse (after the lane)
 #   ./scripts/plant.sh table     # invert a condition mask in the decision table: the Table gate must refuse
 #   ./scripts/plant.sh edit      # keep a patch that does not check: the Edit gate must refuse
 #   ./scripts/plant.sh lexlean   # drop the upper piece of a box subtraction in the obligations: the LexLean gate must refuse
@@ -230,7 +231,13 @@ EOF
     grep -q 'then 600 else' ../app/src/ForgeKernel.lex.tex || { echo "anchor not found"; exit 1; }
     expect_fail bash -c 'cd .. && prismpm --project app verify'
     cp /tmp/plant-kernel.lex.tex ../app/src/ForgeKernel.lex.tex ;;
-  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|lexlean|lexread|repair|parens|proof|look|unapplied|heavy|tap|inpbudget|published" >&2; exit 2 ;;
+  dotfile)
+    # A dotfile in the worker's install list: the site does not serve it, so the worker never installs.
+    cp shell/manifest.json /tmp/plant-manifest.json
+    python3 -c 'import hashlib, json; p = "shell/manifest.json"; m = json.load(open(p)); b = open("shell/.nojekyll", "rb").read(); m["files"].insert(0, {"path": ".nojekyll", "sha256": hashlib.sha256(b).hexdigest(), "bytes": len(b)}); json.dump(m, open(p, "w"))'
+    expect_fail python3 tools/corpus_inference.py
+    cp /tmp/plant-manifest.json shell/manifest.json ;;
+  *) echo "usage: $0 words|grant|bytes|shell|publish|evidence|composer|brand|token|hand|parse|hole|live|shadcn|kitfile|rolled|rewrite|passage|table|edit|lexlean|lexread|repair|parens|proof|look|unapplied|heavy|tap|inpbudget|published|dotfile" >&2; exit 2 ;;
 esac
 restore
 echo "restored"
