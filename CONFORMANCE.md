@@ -150,6 +150,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-24` | `build` | Current live editing and reword flows retain source-bound commits and the complete compiled kernel protocols |
 
+## deferred-host-readiness
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-62` | `build` | Renderer startup may proceed while bounded captured calls await the same typed host without any provisional success or premature effects |
+
 ## durable-build-work
 
 | ID | Level | Statement |

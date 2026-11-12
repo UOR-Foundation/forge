@@ -525,3 +525,9 @@ id = "FA-61"
 level = "build"
 suite = "durable-prompt-library"
 statement = "Prompt library creation updates deletion and listing persist atomically with bounded validated records and unique slugs"
+
+[[id]]
+id = "FA-62"
+level = "build"
+suite = "deferred-host-readiness"
+statement = "Renderer startup may proceed while bounded captured calls await the same typed host without any provisional success or premature effects"
