@@ -138,6 +138,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-15` | `build` | Unimplemented browser queries return typed unsupported errors rather than fabricated resource status or empty findings |
 
+## chat-model-picker-scope
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-79` | `build` | The model picker resolves mounted chat routes and persists the active chat selection independently of Home defaults |
+
 ## chat-owner-recovery
 
 | ID | Level | Statement |

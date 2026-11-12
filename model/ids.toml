@@ -633,3 +633,9 @@ id = "FA-78"
 level = "build"
 suite = "read-only-chat-execution"
 statement = "Ask and Plan turns preserve source proof and preview state while retaining consented inference and transcript completion"
+
+[[id]]
+id = "FA-79"
+level = "build"
+suite = "chat-model-picker-scope"
+statement = "The model picker resolves mounted chat routes and persists the active chat selection independently of Home defaults"
