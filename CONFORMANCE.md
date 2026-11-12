@@ -291,6 +291,12 @@ model does not sanction.
 | `LL-01` | `build` | Every guarantee holds on every request in the bounds when every local obligation passes |
 | `LL-02` | `build` | Every guarantee of the Verdant Resonance fixture holds on every request in its bounds |
 
+## live-main-integration
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-69` | `build` | Current live module generation and every-app replay integrate without losing canonical ownership or consent |
+
 ## local-browser-compiler
 
 | ID | Level | Statement |

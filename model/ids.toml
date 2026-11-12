@@ -573,3 +573,9 @@ id = "FA-68"
 level = "build"
 suite = "sidebar-tool-access"
 statement = "Foundry tools remain reachable without covering renderer controls across responsive sidebar lifetimes"
+
+[[id]]
+id = "FA-69"
+level = "build"
+suite = "live-main-integration"
+statement = "Current live module generation and every-app replay integrate without losing canonical ownership or consent"
