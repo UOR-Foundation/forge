@@ -585,3 +585,9 @@ id = "FA-70"
 level = "build"
 suite = "source-bound-gallery"
 statement = "Gallery media and descriptions publish atomically only for their captured current project source"
+
+[[id]]
+id = "FA-71"
+level = "build"
+suite = "initial-project-theme"
+statement = "New projects inherit the validated selected generation theme in the project creation transaction"
