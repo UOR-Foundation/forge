@@ -387,18 +387,24 @@ export function canonicalSource(spec) {
  * same meaning is always the same bytes. A turn that wrote the module again (its repair) is read by its
  * last module.
  */
-export function specFromTurn(text) {
-  const all = [...(text || "").matchAll(/<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/g)].map((m) => m[1]);
-  // A module whose block was left open (measured: GLM ended at \end{lexlean} without </prism-lexlean>) is
-  // whole once \end{lexlean} is written; it is read as written.
+// The turn's last module, whole: it ends at \end{semanticmodule}, whatever closing markers follow. Measured
+// on GLM: one module ended at \end{lexlean} with the block left open, its repair at \end{prism-lexlean}
+// with no \end{lexlean}. The closing markers carry nothing, so they are written by Forge. Null while the
+// module is still being written; a closed block without its end is read as written, to name what is wrong.
+function lastModule(text) {
   const at = (text || "").lastIndexOf("<prism-lexlean>");
-  if (at >= 0 && !text.slice(at).includes("</prism-lexlean>")) {
-    const rest = text.slice(at + 15), end = rest.indexOf("\\end{lexlean}");
-    if (end >= 0) all.push(rest.slice(0, end + 13));
-  }
-  if (!all.length) return null;
+  if (at < 0) return null;
+  const rest = text.slice(at + 15), close = rest.indexOf("</prism-lexlean>");
+  const body = close >= 0 ? rest.slice(0, close) : rest;
+  const end = body.indexOf("\\end{semanticmodule}");
+  if (end < 0) return close >= 0 ? body : null;
+  return body.slice(0, end) + "\\end{semanticmodule}\n\\end{lexlean}";
+}
+export function specFromTurn(text) {
+  const module = lastModule(text);
+  if (module === null) return null;
   try {
-    const spec = readLexLean(all[all.length - 1].trim() + "\n");
+    const spec = readLexLean(module.trim() + "\n");
     return { ...canonicalSource(spec), spec };
   } catch (e) { return { error: "The LexLean module does not read: " + e.message }; }
 }

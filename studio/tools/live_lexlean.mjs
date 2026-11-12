@@ -200,6 +200,9 @@ const exDraft = example ? example[1] : "";
 const unclosed = lex.specFromTurn("Here is the module.\n<prism-lexlean>\n" + (example ? example[1].trim() : "") + "\n");
 const halfOpen = lex.specFromTurn("<prism-lexlean>\n" + (example ? example[1].trim().split("\\end{semanticmodule}")[0] : ""));
 claim("turn: a block left open reads once its module is whole, and not before", !!unclosed && !unclosed.error && unclosed.name === "ParkingFee" && halfOpen === null);
+// Its repair closed with \end{prism-lexlean} and no \end{lexlean}: the closing markers carry nothing.
+const misclosed = lex.specFromTurn("<prism-lexlean>\n" + (example ? example[1].trim().replace("\\end{lexlean}", "\\end{prism-lexlean}") : ""));
+claim("turn: a module whose closing markers are wrong reads once \\end{semanticmodule} is written", !!misclosed && !misclosed.error && misclosed.name === "ParkingFee");
 const exSpec = example ? lex.readLexLean(exDraft.trim() + "\n") : null;
 const ex = exSpec ? lex.toLexLean(exSpec).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "") : "";
 const refusal = (text) => { try { lex.readLexLean(text.trim() + "\n"); return ""; } catch (e) { return e.message; } };
