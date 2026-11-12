@@ -1,3 +1,4 @@
+import { isDecorativeImage } from "./decorative_image_fixture.mjs";
 // Actual verified shell: offline editor, Settings and language worker.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -25,7 +26,9 @@ let browser;
 try {
   browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox"] });
   const context = await browser.newContext({ serviceWorkers: "allow" }), page = await context.newPage(), external = [], errors = [], workers = [], closedWorkers = new Set();
-  page.on("pageerror", error => errors.push(error.message));
+  page.on("pageerror", error => { errors.push(error.message); console.error("PAGE ERROR", error.stack); });
+  page.on("console", message => { if(message.text().startsWith("REJECTION")) console.error(message.text()); });
+  await context.addInitScript(() => addEventListener("unhandledrejection", event => { const reason=event.reason; console.error("REJECTION", JSON.stringify(reason, Object.getOwnPropertyNames(reason || {}))); }));
   page.on("worker", worker => {workers.push(worker);worker.on("close",()=>closedWorkers.add(worker));});
   await context.route("**/*", route => {
     const url = new URL(route.request().url()); if (url.origin === origin) return route.continue(); external.push(url.href);
@@ -76,7 +79,7 @@ try {
   const workerResources = (await Promise.all(workers.filter(worker=>!closedWorkers.has(worker)).map(worker => worker.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name))))).flat();
   assert.ok(workerResources.some(url => url.startsWith(base + "editor/vs/") && url.includes("jsonWorker.js")), JSON.stringify(workerResources));
   // The declared decorative background is a separate product request.
-  const unexpected = external.filter(url => !url.startsWith("https://uor-foundation.github.io/template/frame/backdrops/") && !url.startsWith("https://images.unsplash.com/"));
+  const unexpected = external.filter(url => !isDecorativeImage(url));
   assert.deepEqual(unexpected, []);
   console.log(JSON.stringify({ renderer: "actual-built-shell", offlineSettings: true, offlineEditor: true, offlineJsonWorker: true, missingAsset: result.missing, unexpectedExternalRequests: 0, pageExceptions: 0 }));
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

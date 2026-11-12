@@ -1,3 +1,4 @@
+import { isDecorativeImage } from "./decorative_image_fixture.mjs";
 // The actual built renderer and host, including legacy local consent and Settings.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -47,7 +48,7 @@ try {
   if (errors.length) console.error(JSON.stringify({ errors, external }));
   assert.deepEqual(errors, []);
   // The declared decorative background is a separate product request.
-  const unexpected = external.filter(url => !url.startsWith("https://uor-foundation.github.io/template/frame/backdrops/") && !url.startsWith("https://images.unsplash.com/"));
+  const unexpected = external.filter(url => !isDecorativeImage(url));
   assert.deepEqual(unexpected, []);
   console.log(JSON.stringify({ renderer: "actual-built-shell", legacyConsent: "refused", settings: "privacy-disclosed", enableControl: "absent", typedEnableRefusal: result.code, unexpectedExternalRequests: 0, pageExceptions: 0 }));
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

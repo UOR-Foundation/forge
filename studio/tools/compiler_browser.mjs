@@ -1,3 +1,4 @@
+import { isDecorativeImage } from "./decorative_image_fixture.mjs";
 // Actual locked browser compiler under the verified shell worker, offline.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -68,7 +69,7 @@ try {
   const workerResources = (await Promise.all(workers.filter(worker=>!closedWorkers.has(worker)).map(worker => worker.evaluate(() => performance.getEntriesByType("resource").map(entry => entry.name))))).flat();
   assert.ok(workerResources.some(url => url === base + "compiler/esbuild.wasm"), JSON.stringify(workerResources));
   // The declared decorative background is a separate product request.
-  const unexpected = external.filter(url => !url.startsWith("https://uor-foundation.github.io/template/frame/backdrops/") && !url.startsWith("https://images.unsplash.com/"));
+  const unexpected = external.filter(url => !isDecorativeImage(url));
   assert.deepEqual(unexpected, []);
   console.log(JSON.stringify({ compiler: result.version, offlineTransform: result.transformedAnswer, offlineBundle: result.bundledAnswer, invalidSource: "refused", failedImport: "recovered", wasmWorker: true, repeatedKernelRequests:80, pageExceptions: 0 }));
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
