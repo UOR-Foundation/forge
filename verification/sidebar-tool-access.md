@@ -11,3 +11,5 @@ Seven representative defects are rejected and restored: restoring the fixed inte
 Host LexLean diagnostic verification covers two modules, attestation `e82b9f6b448d28c4262cba02230e6b5561333359040149cce8d8891926a705f5`. This is diagnostic evidence, not exact-SDK acceptance. Full application regression, performance, hosted SDK acceptance and independent review remain separately tracked. No factory substitute or guest change is introduced.
 
 All 49 mandatory browser journeys pass together on the restored 587-file application closure `490b9a71bc66a1e53a0263cfa3037f34a4bfadb38ee77abb878333f1c87460fc` (51,340,833 bytes). Complete results are in `sidebar-tools-browser-results.json`.
+
+The complete three-run mobile performance gate passes: cold median 9576 ms / 11500, warm 1800 / 2200, INP 200 / 450 and first token 3082 / 5000. Exact arrays are in `sidebar-tools-performance.json`; all seven route budgets pass. An earlier local performance invocation found an old renderer build manifest in the reused worktree. The locked renderer was rebuilt and restaged before this complete successful rerun; no budget or inventory check was weakened.
