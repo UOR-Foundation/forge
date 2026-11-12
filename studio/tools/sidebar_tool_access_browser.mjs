@@ -34,7 +34,7 @@ try {
     for(let attempt=0;attempt<8;attempt++){
       const preview=page.getByRole('dialog',{name:'Review preview permissions',exact:true});
       if(await preview.count())await preview.getByRole('button',{name:"Don't allow",exact:true}).click();
-      if(inSidebar&&!await dock.isVisible()&&!await page.locator('[data-mobile=true][data-state=open]').count())await page.locator('[data-slot=sidebar-trigger]').click();
+      if(inSidebar&&!await dock.isVisible()&&!await page.locator('[data-mobile=true][data-state=open]').count())await page.locator('[data-slot=sidebar-trigger]:visible').click();
       try{await locator.hover({timeout:500});if(await locator.evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return hit===node||node.contains(hit);}))break;}catch(error){if(error.name!=='TimeoutError'||attempt===7){console.log(await page.evaluate(()=>({dock:document.querySelector('#foundry-shell-actions')?.outerHTML,sidebars:[...document.querySelectorAll('[data-slot=sidebar-content]')].map(n=>({html:n.outerHTML.slice(-600),rect:n.getBoundingClientRect().toJSON(),ancestors:(()=>{const a=[];for(let p=n;p;p=p.parentElement)a.push([p.tagName,p.getAttribute('aria-hidden'),p.inert,p.dataset.slot]);return a;})()})),dialogs:[...document.querySelectorAll('dialog')].map(n=>n.outerHTML.slice(0,200))})));throw error;}}
     }
     assert.equal(await locator.evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return hit===node||node.contains(hit);}),true,'control pointer target is obstructed');
@@ -42,7 +42,7 @@ try {
   const activate=async(locator,inSidebar=false)=>{for(let attempt=0;attempt<8;attempt++){await pointer(locator,inSidebar);try{await locator.click({timeout:500});return;}catch(error){if(error.name!=='TimeoutError'||attempt===7)throw error;}}};
   let dialogCount=0;
   const checkTools=async()=>{
-    try{await dock.waitFor({timeout:1000});}catch(error){if(error.name!=='TimeoutError')throw error;await page.locator('[data-slot=sidebar-trigger]').click();}
+    try{await dock.waitFor({timeout:1000});}catch(error){if(error.name!=='TimeoutError')throw error;await page.locator('[data-slot=sidebar-trigger]:visible').click();}
     await dock.waitFor();assert.equal(await dock.count(),1);assert.equal(await dock.getByRole('button').count(),3);
     for(const [label,title,close] of [['Preview permissions','Stored preview permissions','Close permissions'],['Interactive apps','Interactive applications','Close'],['Discover an app','Discover an application','Cancel']]){
       console.log('sidebar tool',label);const entry=dock.getByRole('button',{name:label,exact:true});await activate(entry,true);
@@ -58,7 +58,7 @@ try {
   await checkTools();
   for(const width of [390,768,1280,390]){
     console.log("sidebar viewport",width);await page.setViewportSize({width,height:844});
-    if(width<768){const toggle=page.locator('[data-slot=sidebar-trigger]');await activate(toggle);await page.locator('[data-mobile=true]').waitFor();}
+    if(width<768){const toggle=page.locator('[data-slot=sidebar-trigger]:visible');await activate(toggle);await page.locator('[data-mobile=true]').waitFor();}
     await checkTools();
     if(width<768&&await page.locator('[data-mobile=true]').count()){await page.keyboard.press('Escape');await page.locator('[data-mobile=true]').waitFor({state:'hidden'});}
     await activate(auxiliary);await page.getByRole('menuitem',{name:'Themes',exact:true}).waitFor();await page.keyboard.press('Escape');
