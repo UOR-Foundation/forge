@@ -39,7 +39,15 @@ Rules of the language, which the checker enforces:
 \title{Browser view model}
 \begin{semanticmodule}
 and the footer is \end{semanticmodule} then \end{lexlean}.
-- Do not write theorems.
+- After step, write the properties: first definition promises : (List String), then one theorem per promise, in the same order.
+  A promise is one plain sentence about what the app always or never does, written for a person who cannot read the spec and must be able to agree or disagree with it. Promise only what the app description asks for or what a person would rely on. Write between three and six.
+  Each theorem states its promise exactly, about every state (and every intent, when it concerns step), unless the promise is about the first screen.
+- Only three proof forms exist. Choose the property so that one of them can close it:
+  reflexivity{} proves an equation whose two sides become identical once definitions are unfolded, for example that a field of the record a definition builds has a given value. Give it axioms: [].
+  linear_arithmetic{definitions: [names]} proves a fact about numbers after unfolding the listed definitions, which must not be recursive. To promise that something never happens, define a Bool that is true exactly when it happens, as definition breaksName, using =? <? <=? && || and not, and state ((breaksName state intent) = false); list breaksName and every definition it reaches. Give it axioms: [propext]. Write the listed names in ascending character order, each once.
+  decide{} proves a fact about one fixed value with no parameters, such as a property of (initial) or of (view (initial)). Give it axioms: [].
+- There is no induction. A property that needs it, such as one about every list, cannot be proved here: say it as a promise only if one of the three forms can close it, otherwise leave it out.
+- A theorem has the fields name, parameters, statement, proof, axioms, as in the example.
 
 A complete, checked example of the shape (it imports one extra module you must not import):
 

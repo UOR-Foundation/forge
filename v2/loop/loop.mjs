@@ -8,7 +8,7 @@
 //
 // Run: node loop.mjs "<one sentence describing the app>" [name]
 import { spawn } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadProject, toArray } from "../shell/interp.mjs";
@@ -72,7 +72,15 @@ Rules of the language, which the checker enforces:
 \\title{Browser view model}
 \\begin{semanticmodule}
 and the footer is \\end{semanticmodule} then \\end{lexlean}.
-- Do not write theorems.
+- After step, write the properties: first definition promises : (List String), then one theorem per promise, in the same order.
+  A promise is one plain sentence about what the app always or never does, written for a person who cannot read the spec and must be able to agree or disagree with it. Promise only what the app description asks for or what a person would rely on. Write between three and six.
+  Each theorem states its promise exactly, about every state (and every intent, when it concerns step), unless the promise is about the first screen.
+- Only three proof forms exist. Choose the property so that one of them can close it:
+  reflexivity{} proves an equation whose two sides become identical once definitions are unfolded, for example that a field of the record a definition builds has a given value. Give it axioms: [].
+  linear_arithmetic{definitions: [names]} proves a fact about numbers after unfolding the listed definitions, which must not be recursive. To promise that something never happens, define a Bool that is true exactly when it happens, as definition breaksName, using =? <? <=? && || and not, and state ((breaksName state intent) = false); list breaksName and every definition it reaches. Give it axioms: [propext]. Write the listed names in ascending character order, each once.
+  decide{} proves a fact about one fixed value with no parameters, such as a property of (initial) or of (view (initial)). Give it axioms: [].
+- There is no induction. A property that needs it, such as one about every list, cannot be proved here: say it as a promise only if one of the three forms can close it, otherwise leave it out.
+- A theorem has the fields name, parameters, statement, proof, axioms, as in the example.
 
 A complete, checked example of the shape (it imports one extra module you must not import):
 
@@ -155,6 +163,47 @@ async function dataForm(source) {
   return { data: read.data, ms: Math.round(now() - t0) };
 }
 
+// Every theorem through Lean and leanchecker, with exact axioms. `lexlean fmt` first, because verify refuses a non-canonical source.
+function verify() {
+  return new Promise((done) => {
+    const t0 = now();
+    const child = spawn("wsl", ["-d", "Ubuntu", "--", "bash", toWsl(join(work, "build-local.sh")), "lexlean fmt --all >/dev/null && lexlean lock >/dev/null && lexlean --diagnostic-format json verify --all"], { stdio: ["ignore", "pipe", "pipe"] });
+    let out = ""; child.stdout.on("data", (c) => { out += c; }); child.stderr.on("data", (c) => { out += c; });
+    child.on("close", () => {
+      let result = null; for (const line of out.split("\n")) { try { const j = JSON.parse(line); if (j.spec === "lexlean/command-result/1") result = j; } catch {} }
+      const attestation = /attestation\W+([0-9a-f]{64})/.exec(out)?.[1] ?? /"([0-9a-f]{64})"/.exec(JSON.stringify(result?.artifacts ?? []))?.[1];
+      done({ ms: Math.round(now() - t0), ok: !!result?.success, attestation, diagnostics: result ? result.diagnostics.map((d) => `${d.code}: ${d.message}`) : [out.trim().slice(-600)] });
+    });
+  });
+}
+
+// The attestation the checker wrote last, with what it says about each theorem.
+function newestAttestation() {
+  const dir = join(work, ".lexlean/verified");
+  if (!existsSync(dir)) return undefined;
+  const newest = readdirSync(dir).map((id) => ({ id, file: join(dir, id, "attestation.json") })).filter((a) => existsSync(a.file)).sort((x, y) => statSync(y.file).mtimeMs - statSync(x.file).mtimeMs)[0];
+  return newest?.id;
+}
+
+// Rewrites the axiom list of one declaration to the set Lean observed.
+function setAxioms(text, declaration, observed) {
+  const start = text.indexOf("\\begin{semanticmodule}") + "\\begin{semanticmodule}".length;
+  for (const d of splitDeclarations(text).complete) {
+    if (d.name !== declaration) continue;
+    const at = text.indexOf(d.source, start);
+    const fixed = /axioms:\s*\[[^\]]*\]/.test(d.source) ? d.source.replace(/axioms:\s*\[[^\]]*\]/, `axioms: [${observed}]`) : d.source.replace(/\s*\}$/, `,\n  axioms: [${observed}]\n}`);
+    return text.slice(0, at) + fixed + text.slice(at + d.source.length);
+  }
+  return text;
+}
+
+// The plain sentences the spec promises, in order: its `promises` definition, a list of string literals.
+function promisesOf(data) {
+  const out = [];
+  for (let node = data.declarations.find((d) => d.name === "promises")?.body; node?.kind === "cons"; node = node.tail) out.push(node.head.value);
+  return out;
+}
+
 // The library modules' data forms are the ones already fetched for the payment probe.
 function run(appData) {
   const base = join(scaffold, "data");
@@ -170,7 +219,8 @@ function run(appData) {
 }
 
 // Set up a project the checker can read: the library sources and lexicon, with the spec as its entrypoint.
-rmSync(work, { recursive: true, force: true });
+// The checker's own build directory (.lexlean) is kept between runs, so unchanged library modules are not proved again.
+for (const stale of ["src", "data", "language", "report.json"]) rmSync(join(work, stale), { recursive: true, force: true });
 mkdirSync(join(work, "src"), { recursive: true });
 for (const f of ["lakefile.toml", "lake-manifest.json", "lean-toolchain", "lexlean.toml", ".gitattributes", "build-local.sh", "language", "prismpm.lock"]) {
   if (!existsSync(join(scaffold, f))) { console.error("missing in the scaffold: " + f); process.exit(66); }
@@ -190,6 +240,9 @@ for (let round = 1; round <= (fromFile ? 1 : 4) && !accepted; round++) {
   if (viewAt) entry.viewDeclaredMs = viewAt.ms;
   report.rounds.push(entry);
   if (!source) { entry.refused = "no module in the answer"; prompt = `${rules}\n\nYour last answer held no module. Write the module for this app: ${sentence}\n`; continue; }
+  // Mechanical, not a matter of meaning: the checker wants each list of definitions sorted and without repeats.
+  const sorted = source.replace(/(linear_arithmetic\{\s*definitions:\s*\[)([^\]]*)(\])/g, (all, open, names, close) => open + [...new Set(names.split(",").map((n) => n.trim()).filter(Boolean))].sort((x, y) => (x < y ? -1 : x > y ? 1 : 0)).join(", ") + close);
+  if (sorted !== source) { entry.normalized = "sorted the definition lists of linear_arithmetic proofs"; source = sorted; }
   writeFileSync(join(work, "src/App.lex.tex"), source);
   const checked = await check();
   entry.checkMs = checked.ms; entry.checked = checked.ok;
@@ -208,7 +261,33 @@ if (accepted) {
     const names = JSON.parse(readFileSync(join(scaffold, "data/modules.json"), "utf8")).filter((n) => n.startsWith("Foundation."));
     writeFileSync(join(work, "data/modules.json"), JSON.stringify([...names, "App"]) + "\n");
     report.firstFrame = run(form.data);
+    report.promises = promisesOf(form.data);
   } catch (e) { report.runError = e.message.slice(0, 400); }
+  // Prove. A wrong axiom list is corrected from what Lean observed and proved again; any other
+  // refusal is reported as it is, and its property stays unproved.
+  const theorems = splitDeclarations(source).complete.filter((d) => d.kind === "theorem").map((d) => d.name);
+  report.proof = { theorems, runs: [] };
+  for (let attempt = 1; theorems.length && attempt <= 6; attempt++) {
+    const result = await verify();
+    const entry = { ms: result.ms, ok: result.ok };
+    report.proof.runs.push(entry);
+    if (result.ok) { report.proof.attestation = result.attestation ?? newestAttestation(); break; }
+    const fix = result.diagnostics.map((d) => /`[\w.]*\.(\w+)` violates its .* axiom policy: observed \[([^\]]*)\]/.exec(d)).find(Boolean);
+    if (!fix) { entry.diagnostics = result.diagnostics.slice(0, 6); break; }
+    // Lean names one wrong list per run, and a run takes minutes. Theorems closed by the same proof
+    // form usually need the same axioms, so the observed set is tried on those too; a wrong guess is
+    // refused and corrected by the next run, never accepted.
+    const declared = splitDeclarations(source).complete;
+    const form = (d) => /proof:\s*([a-z_]+)/.exec(d.source)?.[1];
+    const first = declared.find((d) => d.name === fix[1]);
+    const alike = first?.kind === "theorem" ? declared.filter((d) => d.kind === "theorem" && form(d) === form(first)).map((d) => d.name) : [fix[1]];
+    for (const theorem of alike) source = setAxioms(source, theorem, fix[2]);
+    entry.axiomsCorrected = `${alike.join(", ")}: [${fix[2]}]`;
+    writeFileSync(join(work, "src/App.lex.tex"), source);
+  }
+  report.proof.proved = !!report.proof.attestation;
+  // Verify formats the source first, so the proved bytes are the ones on disk now.
+  if (report.proof.proved) cpSync(join(work, "src/App.lex.tex"), join(work, "App.verified.lex.tex"));
 }
 report.totalMs = Math.round(now() - t0);
 report.preview = `shell/app.html?data=../loop/work/${name}/data/&entry=App`;

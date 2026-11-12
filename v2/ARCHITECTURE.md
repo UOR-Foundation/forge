@@ -325,3 +325,38 @@ What it does not establish:
 - That a check pass means the app is right. The one real fault here passed every automatic gate.
 
 `node --test v2/shell/test.mjs v2/shell/test-payment.mjs`: 20 of 20.
+
+## Properties: the model's promises, proved by Lean (2026-11-12)
+
+The instructions now ask a model for properties as well: a `promises` definition holding one plain sentence per property, then one theorem per promise, with the three proof forms that exist described (`reflexivity`, `linear_arithmetic`, `decide`) and the fact that there is no induction. The same independent model, under the same constraints, added them to its guest list: [loop/answers/guests-3.lex.tex](loop/answers/guests-3.lex.tex) as it wrote it, [guests-3.verified.lex.tex](loop/answers/guests-3.verified.lex.tex) as Lean proved it.
+
+Result: `lexlean verify` in the pinned SDK image verified the project, attestation `8b8794d3da52312a7ec0ce85dab361b486d92c982428fcbb5ec9ba317042291c`, status `verified`, 632 declarations, each with its observed axioms. The five theorems:
+
+| Promise, as a person reads it | Theorem | Proof form | Axioms observed |
+| --- | --- | --- | --- |
+| The guest list starts empty. | `startsEmpty` | reflexivity | none |
+| Pressing Clear always leaves the guest list empty. | `clearEmpties` | reflexivity | none |
+| An empty name is never added and changes nothing. | `emptyIgnored` | linear arithmetic | Quot.sound, propext |
+| A name longer than 40 bytes is never added and changes nothing. | `longIgnored` | linear arithmetic | Quot.sound, propext |
+| A press from an out-of-date screen never changes anything. | `staleIgnored` | linear arithmetic | Quot.sound, propext |
+
+What it took after the model wrote it:
+- One mechanical refusal at check: the names listed in a `linear_arithmetic` proof must be sorted. The harness now sorts them; no model round was needed.
+- Three runs refused for a wrong axiom list, each naming one theorem. The harness corrected each from what Lean observed. No statement and no proof was changed by hand.
+- Four Lean runs of 3.4 to 4.1 minutes, 15 minutes in all, because Lean reports one wrong axiom list per run. The harness now tries an observed set on the other theorems closed by the same proof form, which would have made this two runs.
+
+The gap that matters. The model reported it itself, and it is real:
+
+1. Promises 3, 4 and 5 are stronger than their theorems. Each theorem proves only that the revision number does not move. "Changes nothing" is an equation between records behind a condition, and none of the three proof forms can close it.
+2. Promises 2 to 5 are proved about helper functions (`cleared`, `added`, `guarded`), not about `step`. `step` reaches a recursive function, which the arithmetic form cannot unfold. The model moved `step`'s body into `guarded` to make the proofs possible; behaviour is unchanged.
+3. Four properties were left out because they need induction: the list never exceeds 16, a new name comes first, a name is added exactly as typed, and whole-state "nothing changes".
+
+So today a sentence approved by a person can say more than the theorem under it. The product must not call such a promise proved without qualification. Two honest options: show the exact statement Lean proved beside each sentence, or hold the sentence to the theorem and refuse a promise whose theorem is weaker. Closing the gap for real needs proof forms LexLean does not offer here: induction over lists, and equality of records under a case split. Both are upstream requests.
+
+Tested, to cover the gap on samples ([loop/test-guests.mjs](loop/test-guests.mjs), 9 of 9): each of promises 3, 4 and 5 in full (the whole state is unchanged, not only the revision), across seven states; the four properties left out of the proofs; frame validity; and the name box's draft epoch. Planted defect: raising the cap to 17 in the data form failed three tests, including the protocol's own validity rule; restored, green. In the browser, with real typing: unchanged behaviour.
+
+Status of this app, in the words this project uses: checked by `lexlean check`; five theorems proved by Lean; the stronger readings of three promises and four further properties tested on samples, not proved.
+
+All tests: `node --test v2/shell/test.mjs v2/shell/test-payment.mjs v2/loop/test-guests.mjs`, 29 of 29.
+
+Repository gate on this branch, run in the pinned SDK image: `cargo fmt --check`, `xtask validate` (model, limits, deferral, bootstrap audits), `prismpm template check` and `prismpm lock check` all pass. Not run locally: clippy, the workspace tests, `cargo deny` and the app build, which is the step that times out on this machine.
