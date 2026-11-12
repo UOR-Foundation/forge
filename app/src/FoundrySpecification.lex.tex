@@ -1155,6 +1155,7 @@ definition{
   result: String,
   body: "The generated browser entry gives the initial renderer stylesheet the same deployment-prefixed pathname that the locked Vite renderer uses for its stylesheet dependency identity. Before renderer module execution, the declared renderer asset is resolved against the document base and assigned once as the stylesheet pathname without changing the resource, origin, base directory or stylesheet semantics. Anonymous cross-origin mode matches the renderer's generated stylesheet loader. The home route reuses that existing stylesheet rather than adding a second render-blocking request for the same bytes. Root and nested deployments preserve the exact resolved asset path. This projection does not change asset bytes, cache verification, service-worker activation, renderer admission, offline readiness or any signed guest performance budget. Acceptance observes actual stylesheet requests and the rendered home and settings screens; deleting identity normalization must cause the duplicate-request gate to refuse."
 }
+
 inductive{
   name: BrowserSettingsError,
   type_parameters: [],

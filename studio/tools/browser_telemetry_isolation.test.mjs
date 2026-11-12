@@ -21,9 +21,9 @@ test("actual host settings normalize reads and writes and refuse before storage"
   const start = host.indexOf('// ---- settings'), end = host.indexOf('// What the renderer takes', start);
   let stored = { telemetryConsent: "opted_in", telemetryUserId: "secret" }, writes = 0;
   const handlers = new Map();
-  vm.runInNewContext(host.slice(start, end), { handlers, browserSettings, assertBrowserSettingsPatch, get: async () => stored, put: async (_, __, value) => { writes++; stored = value; } });
+  vm.runInNewContext(host.slice(start, end), { handlers, browserSettings, assertBrowserSettingsPatch, inference: { settingsGet: async () => stored }, dbReady: {}, changeUserSettings: async (_db, patch, apply) => { writes++; stored = apply(stored, structuredClone(patch)); return stored; } });
   const read = await handlers.get("get-user-settings")(); assert.equal(read.telemetryConsent, "opted_out"); assert.equal(read.telemetryUserId, undefined);
-  await assert.rejects(handlers.get("set-user-settings")({ telemetryConsent: "opted_in" }), { code: "browserTelemetryUnavailable" }); assert.equal(writes, 0);
+  await assert.rejects(async () => handlers.get("set-user-settings")({ telemetryConsent: "opted_in" }), { code: "browserTelemetryUnavailable" }); assert.equal(writes, 0);
   const saved = await handlers.get("set-user-settings")({ telemetryUserId: "secret replacement", autoExpandPreviewPanel: false });
   assert.equal(writes, 1); assert.equal(saved.telemetryConsent, "opted_out"); assert.equal(saved.telemetryUserId, undefined); assert.equal(stored.autoExpandPreviewPanel, false);
   const reset = await handlers.get("set-user-settings")({ telemetryConsent: "unset" }); assert.equal(reset.telemetryConsent, "opted_out"); assert.equal(writes, 2);

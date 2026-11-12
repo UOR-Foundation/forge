@@ -37,5 +37,27 @@ try {
   });
   assert.equal(race.autoExpandPreviewPanel,false,'first concurrent preference lost');
   assert.equal(race.enableContextCompaction,false,'second concurrent preference lost');
-  console.log('concurrent preferences preserved');
+  const peer=await context.newPage();peer.on('pageerror',e=>errors.push(e.message));await peer.goto(base);await peer.locator('[role=textbox]').waitFor();
+  const call=(tab,patch)=>tab.evaluate(patch=>window.electron.ipcRenderer.invoke('set-user-settings',patch),patch);
+  await call(page,{autoExpandPreviewPanel:true,enableContextCompaction:true});
+  await Promise.all([call(page,{autoExpandPreviewPanel:false}),call(peer,{enableContextCompaction:false})]);
+  const shared=await peer.evaluate(()=>window.electron.ipcRenderer.invoke('get-user-settings'));assert.equal(shared.autoExpandPreviewPanel,false);assert.equal(shared.enableContextCompaction,false);
+  const removal=await page.evaluate(async()=>{
+    const inference=await import('./inference.js');
+    for(let i=0;i<12;i++){
+      await inference.settingsPut({providerSettings:{openrouter:{apiKey:{value:'local-fixture'}}}});
+      const patch=window.electron.ipcRenderer.invoke('set-user-settings',{autoExpandPreviewPanel:!!(i%2)});
+      await inference.settingsPut({});await patch;
+      if(await inference.keyGet()!=='')return false;
+    }return true;
+  });assert.equal(removal,true,'removed credential was resurrected');
+  await call(page,{enableAppBlueprint:false});
+  const before=await page.evaluate(()=>window.__host.get('settings','user'));
+  const late=await page.evaluate(async()=>{
+    const put=IDBObjectStore.prototype.put;let injected=false;
+    IDBObjectStore.prototype.put=function(value,key){const q=put.call(this,value,key);if(this.name==='settings'&&key==='user'&&value.enableAppBlueprint===true){injected=true;q.addEventListener('success',()=>this.transaction.abort(),{once:true});}return q;};
+    try{await window.electron.ipcRenderer.invoke('set-user-settings',{enableAppBlueprint:true});return {injected,code:null};}catch(e){return {injected,code:e.code};}finally{IDBObjectStore.prototype.put=put;}
+  });assert.deepEqual(late,{injected:true,code:'settingsStorageFailed'});assert.deepEqual(await page.evaluate(()=>window.__host.get('settings','user')),before);
+  await peer.reload();await peer.locator('[role=textbox]').waitFor();assert.equal((await peer.evaluate(()=>window.electron.ipcRenderer.invoke('get-user-settings'))).enableAppBlueprint,false);
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({sameWindowContention:true,crossWindowContention:true,credentialRemoval:true,lateAbort:true,reload:true,pageExceptions:0}));
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

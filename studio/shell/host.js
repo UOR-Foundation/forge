@@ -1,3 +1,4 @@
+import {changeUserSettings} from "./settings-transactions.mjs";
 import {createPromptLibrary} from "./prompt-library.mjs";
 import {readWorkingTree} from "./working-tree.mjs";
 import {createWindowDelivery} from "./window-delivery.mjs";
@@ -115,8 +116,8 @@ const DEFAULT_SETTINGS = {
 // turn that writes files, so that is the mode the record always carries: an agent mode would promise
 // tool calls this host does not make.
 const BUILD_MODE = { selectedChatMode: "build", defaultChatMode: "build" };
-handlers.set("get-user-settings", async () => browserSettings({ ...DEFAULT_SETTINGS, ...((await get("settings", "user")) || {}), ...BUILD_MODE }));
-handlers.set("set-user-settings", async (patch) => { assertBrowserSettingsPatch(patch); const s = browserSettings({ ...DEFAULT_SETTINGS, ...((await get("settings", "user")) || {}), ...(patch || {}), ...BUILD_MODE }); await put("settings", "user", s); return s; });
+handlers.set("get-user-settings", async () => browserSettings({ ...DEFAULT_SETTINGS, ...((await inference.settingsGet()) || {}), ...BUILD_MODE }));
+handlers.set("set-user-settings", (patch) => { assertBrowserSettingsPatch(patch); return changeUserSettings(dbReady, patch || {}, (current,captured) => browserSettings({ ...DEFAULT_SETTINGS, ...current, ...captured, ...BUILD_MODE })); });
 // What the renderer takes as "set up": the site's included key counts as OpenRouter's, the device's
 // GPU counts as the local provider's, so no connect dialog stands between the first prompt and the
 // answer. The values are words, never the key itself.

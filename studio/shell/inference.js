@@ -1,3 +1,4 @@
+import {readUserSettings,replaceUserSettings,changeUserSettings} from "./settings-transactions.mjs";
 import {deviceProviderCredential} from './private-provider-credentials.mjs';
 import { authorizeInference } from "./inference-consent.mjs";
 import { cloudCompletion } from "./inference-effects.mjs";
@@ -86,14 +87,14 @@ async function byPrompt(promptKappa) {
 }
 
 // ---- settings: the renderer's own record, one place for the key and the chosen model
-export async function settingsGet() { const d = await db(); return new Promise((res, rej) => { const r = d.transaction("settings").objectStore("settings").get("user"); r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error); }); }
-export async function settingsPut(s) { const d = await db(); await new Promise((res, rej) => { const t = d.transaction("settings", "readwrite"); t.objectStore("settings").put(s, "user"); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+export function settingsGet() { return readUserSettings(db()); }
+export function settingsPut(s) { return replaceUserSettings(db(),s); }
 export async function deviceKeyGet() { return deviceProviderCredential(await settingsGet(), "openrouter"); }
 export async function keyGet() { return deviceKeyGet(); }
 export async function featherlessKeyGet() { return deviceProviderCredential(await settingsGet(), "featherless"); }
 export const providerOf = (model) => (String(model).startsWith("featherless/") ? "featherless" : "openrouter");
 export const keyFor = (model) => (providerOf(model) === "featherless" ? featherlessKeyGet() : keyGet());
-export async function keySet(value) { const s = (await settingsGet()) || {}; s.providerSettings = { ...(s.providerSettings || {}), openrouter: { ...((s.providerSettings || {}).openrouter || {}), apiKey: { value } } }; await settingsPut(s); }
+export function keySet(value) { return changeUserSettings(db(),{value},(s,captured)=>({...s,providerSettings:{...(s.providerSettings||{}),openrouter:{...(s.providerSettings?.openrouter||{}),apiKey:{value:captured.value}}}})); }
 // Who answers: local (the Q engine) or paid (an OpenRouter model). Read from and written to the same
 // selectedModel the renderer's settings page and composer use.
 export const MODEL_ID = "webgpu:BitNet";
@@ -104,11 +105,7 @@ export async function readWho() {
   if (m && m.provider === "openrouter" && m.name) return { provider: "paid", model: paidId(m.name) };
   return { provider: "local", model: "" };
 }
-export async function writeWho(w) {
-  const s = (await settingsGet()) || {};
-  s.selectedModel = w.provider === "paid" ? { provider: "openrouter", name: w.model } : { provider: "local", name: MODEL_ID };
-  await settingsPut(s);
-}
+export function writeWho(w) { return changeUserSettings(db(),w,(s,captured)=>({...s,selectedModel:captured.provider === "paid" ? {provider:"openrouter",name:captured.model} : {provider:"local",name:MODEL_ID}})); }
 
 // ---- memo: the core owns the preimages and the route, the wasm owns the address, the store owns the rest
 export async function keyOf(body) {

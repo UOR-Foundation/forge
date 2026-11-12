@@ -48,6 +48,7 @@ export async function invokeHost(channel, args, handler, schema, inputContract =
   try {
     value = await handler(...args);
   } catch (error) {
+    if (["invalidSettingsCommand","invalidStoredSettings","settingsStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "validation", "Browser settings operation refused");
     if (["invalidPromptCommand","promptLibraryInvalid","promptMissing","promptSlugConflict","promptLibraryLimit","promptLibraryStorageFailed"].includes(error?.code)) return refusal(error.code, channel, "validation", "Prompt library operation refused");
     if (error?.code === "projectPreviewActive") return refusal(error.code, channel, "validation", "Close version preview before changing project source");
     if (["windowCoordinationUnavailable","invalidWindowCoordination","windowCoordinationStorageFailed","windowCoordinationConflict","windowCoordinationLimitExceeded","windowTabOwnershipConflict"].includes(error?.code)) return refusal(error.code, channel, "validation", "Window coordination refused");
