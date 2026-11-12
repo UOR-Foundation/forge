@@ -79,6 +79,7 @@ test("live persistence failure discards optimistic history and reloads committed
   const source = { files: [["prism/spec.json", JSON.stringify(initial)]] }, editors = new Map([[1, createEditor(initial, () => ({ ok: true }))]]);
   let refreshed = 0, refused = 0;
   const patch = fn("patchSpec", "// What the user points", {
+    requestAnimationFrame: callback => setTimeout(callback,0), setTimeout,
     structuredClone, liveEditors: editors, liveBusy: new Map(), pushLive() {}, applyOps, inOrder: (_, job) => job(),
     assertGenerationActive, captureProjectSource: async () => source, dbReady: Promise.resolve(),
     editorOf: async (_, captured) => { assert.equal(captured, source); return editors.get(1); }, rulesOf: async () => proved(),
@@ -108,6 +109,7 @@ test("invalid live edits redraw with source-bound publication trust", async () =
     });
     const editor = createEditor(initial, () => ({ ok: false, issues: ["invalid"] }));
     const patch = fn("patchSpec", "// What the user points", {
+      requestAnimationFrame: callback => setTimeout(callback,0), setTimeout,
       structuredClone, liveEditors: new Map([[1, editor]]), liveBusy: new Map(), applyOps,
       pushLive: (_, __, value) => { trust = value; }, inOrder: (_, job) => job(),
       assertGenerationActive, dbReady: Promise.resolve(), captureProjectSource: async () => ({}),

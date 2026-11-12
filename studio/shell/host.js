@@ -52,7 +52,6 @@ import { admitWithGuest } from "./composition-codec.mjs";
 import { readBoundRules, readBoundRulesSnapshot, saveBoundRules } from "./rules-source.mjs";
 import { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteStoredChat, updateStoredChat } from "./project-lifecycle.mjs";
 import { invokeHost, unwrapHost } from "./host-boundary.mjs";
-import { buildSystemPrompt } from "./prompts.js";
 import * as inference from "./inference.js";
 import { viewReady, lookup, routeOf, refusalWord, seal as sealAnswer, sealPaid, paidGenerate, gpuReady, gpuIds, heldFor, rulesModel, rememberSession, withEngine, engine, readWho, MODEL_ID, paidId, deviceKeyGet } from "./inference.js";
 import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
@@ -413,9 +412,12 @@ handlers.set("chat:count-tokens", async ({ chatId, input }) => {
   const models = chosen.provider === "openrouter" ? OPENROUTER_MODELS : chosen.provider === "featherless" ? FEATHERLESS_MODELS : LOCAL_MODELS;
   const contextWindow = (models.find((m) => m.apiName === chosen.name) || models[0] || { contextWindow: 4096 }).contextWindow;
   const tokens = (text) => Math.ceil(String(text || "").length / 4);
-  const codebaseTokens = chat && chat.appId != null ? tokens(await codebaseOf(chat.appId)) : 0;
-  const systemPromptTokens = tokens(buildSystemPrompt(chat && chat.appId != null ? await get("files", chat.appId + ":AI_RULES.md") : "") + "\n\n" + (chat && chat.appId != null ? await themeLibrary("resolve",{appId:chat.appId}) : "") + "\n\n" + prism.SPEC_RULES);
-  const messageHistoryTokens = ((chat && chat.messages) || []).reduce((n, m) => n + tokens(m.content), 0);
+  const captured = chat && chat.appId != null ? await captureProjectSource(await dbReady,chat.appId) : null;
+  const moduleNow = captured ? [...new Map(captured.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p)) : null;
+  const codebaseTokens = tokens(prism.moduleContext(moduleNow ? moduleNow[1] : null));
+  const systemPromptTokens = tokens(prism.SPEC_RULES + "\n\n" + (chat && chat.appId != null ? await themeLibrary("resolve",{appId:chat.appId}) : ""));
+  const history = chat ? await messagesOf(chatId) : [];
+  const messageHistoryTokens = history.reduce((n,m)=>n+tokens(m.content),0);
   const inputTokens = tokens(input);
   return { estimatedTotalTokens: codebaseTokens + systemPromptTokens + messageHistoryTokens + inputTokens, actualMaxTokens: null, messageHistoryTokens, codebaseTokens, mentionedAppsTokens: 0, inputTokens, systemPromptTokens, contextWindow };
 });
@@ -675,7 +677,11 @@ async function refreshLive(appId) {
   try {
     const bound = state?.spec && state.specKappa === await kappa(enc.encode(json));
     const trust = bound ? state.phase === "published" && state.publicationCurrent === false ? "proved" : state.phase : "draft";
-    pushLive(appId, JSON.parse(json), trust);
+    const spec = JSON.parse(json);
+    pushLive(appId, spec, trust);
+    // The edit history is ready before the first click, so even the first edit is drawn optimistically,
+    // before any storage read, instead of waiting for the history to be built.
+    if (liveEditors.has(appId)) liveEditors.get(appId).sync(spec); else liveEditors.set(appId, createEditor(spec, checkForEdit));
   } catch (e) {}
 }
 
@@ -728,6 +734,9 @@ async function patchSpec(appId, ops, { author = "user", key = null, ...options }
     const before = ed.spec;
     try { if (!drawn) pushLive(appId, applyOps(before, ops), "draft", true); }
     catch (e) { if (!(e instanceof PatchError)) throw e; refuse(appId, key, e.message); return { ok: false, issues: [e.message] }; }
+    // The check samples up to 200,000 requests on this thread, which the live frame shares: it waits
+    // until the frame has painted the edit, so the person sees their change before it is judged.
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
     const result = ed.apply(ops);
     if (!result.ok) { await refreshLive(appId); refuse(appId, key, result.issues[0]); return result; }
     try {
@@ -758,6 +767,15 @@ function pointedNote(appId) {
   if (!p) return "";
   const paths = Object.entries(p.edit).filter(([, v]) => Array.isArray(v)).map(([slot, v]) => `${slot} at ${JSON.stringify(v)}`).join("; ");
   return `\n\n(The user is pointing at the ${p.kind} "${p.text}" on the screen${paths ? ": " + paths : ""}. To change it, write a <dyad-spec-patch>.)`;
+}
+// The built page takes the preview back from the live frame (an app's first turn opened the frame, then
+// wrote code, not rules): announced as a restart, so the renderer forgets the live frame's route.
+async function showBuilt(appId) {
+  const { appUrl } = await buildPreview(appId);
+  if (liveShown.has(appId)) return;
+  const m = machineOf(appId);
+  publish(appId, { phase: "starting", operation: "restart", invocationRef: { kind: "app-run", entityKey: appId, operationId: "built-" + appId + "-" + Date.now() }, startedAt: Date.now(), operationError: null, exit: null });
+  publish(appId, { phase: "ready", operation: null, invocationRef: null, startedAt: Date.now(), operationError: null, exit: null, url: { appUrl, originalUrl: appUrl, mode: "cloud" }, previewReloadEpoch: m.state.previewReloadEpoch + 1 });
 }
 // Point the app's preview at the live frame. The iframe loads once: after this, the address it shows
 // never changes for this app, so the preview never reloads.
@@ -1320,6 +1338,12 @@ async function chatTurn(chatId, intent) {
   emit("chat:stream:start", { chatId, invocationRef: ref });
   if (prism.isApproval(intent.prompt)) return approveTurn(chatId, appId, messages, userId, ref, intent.intentId);
   if (prism.isPublish(intent.prompt)) return publishTurn(chatId, appId, messages, userId, ref, intent.intentId);
+  // An app's first build turn opens the live frame now, while the model thinks, not when the spec's tag
+  // streams in: the frame takes about a tenth of a second to mount, and a spec can name its first field
+  // right after the tag. If the turn ends without rules (an app built as code), the built page takes the
+  // preview back. Later turns of a code app keep their built preview throughout.
+  const speculativeLive = !(await hasRules(appId)) && messages.filter((x) => x.role === "user").length === 1;
+  if (speculativeLive) showLive(appId).catch(() => liveShown.delete(appId));
   // T3: the assistant placeholder
   const projectSource = await captureProjectSource(await dbReady, appId);
   const head = projectSource.reference;
@@ -1334,11 +1358,13 @@ async function chatTurn(chatId, intent) {
   const onCommit = (oid) => { committed.push(oid); updatedFiles = true; emit("version-created", { appId, oid }); };
   try {
     const app = await get("apps", appId);
-    const rules = new Map(projectSource.files).get("AI_RULES.md");
     const history = messages.slice(0, -2).filter((x) => x.content).map((x) => ({ role: x.role, content: x.content }));
+    // A model writes and edits the app's LexLean module and nothing else: it is told only that, and shown
+    // only the module (in the draft form it writes), never the code, which Forge projects from the module.
+    const moduleNow = [...new Map(projectSource.files)].find(([p]) => /^prism\/[A-Z]\w*\.lex\.tex$/.test(p));
     const request = [
-      { role: "system", content: buildSystemPrompt(rules) + "\n\n" + await themeLibrary("resolve",{appId}) + "\n\n" + prism.SPEC_RULES },
-      { role: "user", content: "This is my codebase. " + (await codebaseOf(appId, projectSource)) },
+      { role: "system", content: prism.SPEC_RULES + "\n\n" + await themeLibrary("resolve",{appId}) },
+      { role: "user", content: prism.moduleContext(moduleNow ? moduleNow[1] : null) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
@@ -1359,10 +1385,12 @@ async function chatTurn(chatId, intent) {
     let lastSave = 0;
     const onText = async (t) => {
       full = t;
-      let lcp = 0; while (lcp < lastSent.length && lcp < full.length && lastSent[lcp] === full[lcp]) lcp++;
-      if (lcp < lastSent.length) { messages[messages.length - 1].content = full; emit("chat:response:chunk", { chatId, invocationRef: ref, messages }); }
-      else emit("chat:response:chunk", { chatId, invocationRef: ref, streamingMessageId: asstId, streamingPatch: { offset: lcp, content: full.slice(lcp), ...(lcp > 0 ? { prefixHash: djb2(full.slice(0, lcp)) } : {}) } });
-      lastSent = full;
+      // The chat shows the answer without the module's text (prism.shownText); `full` keeps it for reading.
+      const shown = prism.shownText(full);
+      let lcp = 0; while (lcp < lastSent.length && lcp < shown.length && lastSent[lcp] === shown[lcp]) lcp++;
+      if (lcp < lastSent.length) { messages[messages.length - 1].content = shown; emit("chat:response:chunk", { chatId, invocationRef: ref, messages }); }
+      else emit("chat:response:chunk", { chatId, invocationRef: ref, streamingMessageId: asstId, streamingPatch: { offset: lcp, content: shown.slice(lcp), ...(lcp > 0 ? { prefixHash: djb2(shown.slice(0, lcp)) } : {}) } });
+      lastSent = shown;
       // The rules as far as the model has written them go to the live frame now, not after the turn.
       if (full.includes("<dyad-spec>")) {
         const raw = live.partialSpec(full);
@@ -1375,14 +1403,20 @@ async function chatTurn(chatId, intent) {
         const part = lexlean.partialFromTurn(full);
         if (part) pushLive(appId, part.spec, "draft");
       }
-      if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = full; await saveMessages(chatId, messages); lastSave = Date.now(); }
+      if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = shown; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
     // A model streams far faster than a screen draws, and every onText walks the whole answer and redraws the
     // message: deltas are coalesced to one onText per animation frame. The final text is delivered by onText
     // itself after the stream, and drops whatever frame is still pending.
-    let pendingText = null, frame = 0;
-    const onTextSoon = (t) => { pendingText = t; if (!frame) frame = requestAnimationFrame(() => { frame = 0; const next = pendingText; pendingText = null; if (next !== null) onText(next); }); };
-    const settleText = () => { if (frame) cancelAnimationFrame(frame); frame = 0; pendingText = null; };
+    let pendingText = null, frame = 0, textWork = Promise.resolve();
+    const enqueueText = (text) => {
+      textWork = textWork.then(() => onText(text));
+      // Keep the failure for settleText while preventing an unhandled animation callback rejection.
+      void textWork.catch(() => {});
+      return textWork;
+    };
+    const onTextSoon = (t) => { pendingText = t; if (!frame) frame = requestAnimationFrame(() => { frame = 0; const next = pendingText; pendingText = null; if (next !== null) enqueueText(next); }); };
+    const settleText = async () => { if (frame) cancelAnimationFrame(frame); frame = 0; pendingText = null; await textWork; };
     // A LexLean module that does not read gets one repair turn from the same model, with the reader's
     // words, streamed into this answer, so the user sees a fixed app rather than an error to relay.
     const repaired = async (genBody) => {
@@ -1390,26 +1424,26 @@ async function chatTurn(chatId, intent) {
       const next = await lexlean.withRepair(before, async (prompt) => {
         const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: prompt }] };
         const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
-        settleText();
+        await settleText();
         return text;
       });
-      if (next !== before) await onText(next);
+      if (next !== before) await enqueueText(next);
     };
     // Warm up: the local model is chosen but not resident yet; a held key (the visitor's, or the
     // site's) answers through OpenRouter meanwhile, and the local model starts loading for the next turn.
     const warm = route === "Local" && !engine.instance && core.run({ op: "warmup", localReady: !!engine.instance, keyPresent: !!(await inference.keyGet()), online: navigator.onLine }).warmup;
     if (warm && navigator.gpu) gpuReady().catch(() => {});
     if (route === "Serve") {
-      await onText(hit.text);
+      await enqueueText(hit.text);
       provenance = { receipt: hit.receipt, served: true, fingerprint: hit.fingerprint };
     } else if (warm) {
       const warmBody = { ...body, model: "openrouter/" + V.paidModels[0].id };
       const warmHit = await lookup(warmBody);
-      if (warmHit.hit) { await onText(warmHit.text); provenance = { receipt: warmHit.receipt, served: true, fingerprint: warmHit.fingerprint, warm: true }; }
+      if (warmHit.hit) { await enqueueText(warmHit.text); provenance = { receipt: warmHit.receipt, served: true, fingerprint: warmHit.fingerprint, warm: true }; }
       else {
         const { text, rec } = await paidGenerate(warmBody, onTextSoon, abort.signal);
-        settleText();
-        await onText(text);
+        await settleText();
+        await enqueueText(text);
         await repaired(warmBody);
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
@@ -1418,8 +1452,8 @@ async function chatTurn(chatId, intent) {
       // replaces it, so the saved message, the history and the rules read only what the model answered.
       const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
       const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
-      settleText();
-      await onText(text);
+      await settleText();
+      await enqueueText(text);
       await repaired(body);
       // An answer cut at the token limit is not sealed, so the same request is never served it again.
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
@@ -1427,7 +1461,7 @@ async function chatTurn(chatId, intent) {
       // The device. Its window is about 3,000 tokens and a build request is several times that, so the
       // device is asked only for the app's rules, with a prompt that fits, by the rules model (the chat
       // ladder's models cannot write them); Forge draws the screen from the rules after the turn.
-      if (!engine.rules) await onText("Loading the on-device rules model…");
+      if (!engine.rules) await enqueueText("Loading the on-device rules model…");
       const held = await rulesModel();
       const inst = held.instance;
       // Rules that checked are the base of an edit. Rules that did not are left out: given them, the small
@@ -1442,17 +1476,18 @@ async function chatTurn(chatId, intent) {
       const { ids } = gpuIds(inst, deviceMessages, held.model);
       const room = held.model.ctx - ids.length - 8;
       if (room < 128) throw new Error("This request does not fit the on-device model. Choose a paid model in the model picker.");
-      await onText("");
+      await enqueueText("");
       // No repetition penalty: rules are JSON, which repeats its keys by nature, and a penalty pushes a
       // small model off valid syntax. The receipt records the penalty used, so the answer stays re-derivable.
       const maxNew = Math.min(held.model.cap, room);
       const res = await withEngine(() => inst.generate(ids, { maxNew, repPenalty: 1, onToken: ({ text }) => { if (!abort.signal.aborted) onTextSoon(text); } }));
-      settleText();
+      await settleText();
+      await settleText();
       const text = prism.withoutThinking(res.text);
       window.__prism.lastDevice = res.text || "";
       messages[messages.length - 1].model = "webgpu:" + held.model.fam; // the model that wrote the rules
       rememberSession(deviceMessages, res, text, held.model);
-      await onText(/<dyad-spec>/.test(text) ? text : text + "\n\nThe on-device model did not write rules for this app. Ask again with the inputs and the answers, or choose a paid model in the model picker.");
+      await enqueueText(/<dyad-spec>/.test(text) ? text : text + "\n\nThe on-device model did not write rules for this app. Ask again with the inputs and the answers, or choose a paid model in the model picker.");
       const rec = await inst.buildReceipt({ promptText: intent.prompt, ctxIds: [], turnIds: ids, outIds: res.outIds, paramsPatch: { repetitionPenalty: 1, maxTokens: maxNew } });
       provenance = { receipt: await sealAnswer(body, rec, hit.key), fingerprint: `${(rec.body["prov:used"] || {})["holo:model"]}` };
     }
@@ -1460,19 +1495,35 @@ async function chatTurn(chatId, intent) {
     assertGenerationActive(abort.signal);
     const sm = full.match(/<dyad-chat-summary>([\s\S]*?)<\/dyad-chat-summary>/); summary = sm ? sm[1].trim() : undefined;
     if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
-    const tags = parseDyadTags(full);
+    // Code a model wrote is never applied: the app's code and screen are projections of its module.
+    const wrote = parseDyadTags(full);
+    const refusedCode = wrote.writes.length + wrote.deletes.length + wrote.renames.length + wrote.deps.length;
+    const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
     const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
     let changed = applied.changed;
-    const spec = await rulesAfterTurn(appId, full, tags.writes.map((w) => w.path), { signal: abort.signal, source: applied.source, onCommit });
+    const spec = await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
+    const patchRefusals = [];
     for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
       assertGenerationActive(abort.signal);
       let ops; try { ops = JSON.parse(match[1]); } catch {}
-      const result = ops ? await patchSpec(appId, Array.isArray(ops) ? ops : [ops], { author: "agent", signal: abort.signal, source: spec.source, onCommit }) : { ok: false, issues: ["The patch is not JSON."] };
-      if (!result.ok) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + result.issues[0];
-      else { spec.changed += result.changed; spec.source = result.source; spec.card = result.card; }
+      const list = ops ? (Array.isArray(ops) ? ops : [ops]) : [];
+      const result = ops ? await patchSpec(appId, list, { author: "agent", signal: abort.signal, source: spec.source, onCommit }) : { ok: false, issues: ["The patch is not JSON."] };
+      if (result.ok) { spec.changed += result.changed; spec.source = result.source; spec.card = result.card; continue; }
+      // One op the checker refuses does not cost the others (measured: GLM's meanings, keyed by field, took
+      // its heading, labels and words with it): they are applied one by one, and only the refused are named.
+      const refused = list.length > 1 ? [] : [result.issues[0]];
+      if (list.length > 1) for (const op of list) {
+        assertGenerationActive(abort.signal);
+        const one = await patchSpec(appId, [op], { author: "agent", signal: abort.signal, source: spec.source, onCommit });
+        if (one.ok) { spec.changed += one.changed; spec.source = one.source; spec.card = one.card; } else { const label=Array.isArray(op?.path)&&op.path.every(p=>typeof p==="string"||Number.isSafeInteger(p))?op.path.join("."):"patch";refused.push(`${label || "patch"}: ${one.issues[0]}`); }
+      }
+      patchRefusals.push(...refused);
     }
+    if (patchRefusals.length) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + patchRefusals.join(" ");
+    if (refusedCode) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.CODE_REFUSED;
     changed += spec.changed;
     if (await hasRules(appId)) { await showLive(appId).catch(() => {}); await refreshLive(appId); }
+    else if (speculativeLive && liveShown.has(appId)) { liveShown.delete(appId); showBuilt(appId).catch(() => {}); }
     updatedFiles = updatedFiles || changed > 0;
     const commit = committed.at(-1) || null;
     messages[messages.length - 1] = { ...messages[messages.length - 1], content: prism.withCard(full, spec.card), commitHash: commit, approvalState: "approved", requestId: provenance && provenance.receipt || null };
@@ -1480,7 +1531,7 @@ async function chatTurn(chatId, intent) {
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   } catch (e) {
     error = abort.signal.aborted ? null : String((e && e.message) || e);
-    messages[messages.length - 1] = { ...messages[messages.length - 1], commitHash: committed.at(-1) || null, content: full + (updatedFiles ? "\n\nCommitted project changes were retained." : "") + (abort.signal.aborted ? "\n\n<dyad-output type=\"warning\" message=\"Response cancelled by user\"></dyad-output>" : error ? `\n\n<dyad-output type="error" message="${error.replace(/"/g, "'")}"></dyad-output>` : "") };
+    messages[messages.length - 1] = { ...messages[messages.length - 1], commitHash: committed.at(-1) || null, content: prism.shownText(full) + (updatedFiles ? "\n\nCommitted project changes were retained." : "") + (abort.signal.aborted ? "\n\n<dyad-output type=\"warning\" message=\"Response cancelled by user\"></dyad-output>" : error ? `\n\n<dyad-output type="error" message="${error.replace(/"/g, "'")}"></dyad-output>` : "") };
     await saveMessages(chatId, messages);
     emit("chat:response:chunk", { chatId, invocationRef: ref, messages });
   }

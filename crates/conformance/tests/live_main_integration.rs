@@ -1,7 +1,36 @@
-//! The `live-main-integration` suite: one test per scenario in `features/suites/live-main-integration.feature`.
+//! Execute the canonical module boundary and its negative controls.
+use std::path::PathBuf;
+use std::process::Command;
 
-/// `FA-69`: Current live module generation and every-app replay integrate without losing canonical ownership or consent
 #[test]
 fn live_main_integration_fa_69() {
-    panic!("FA-69 is registered and not built: assert what its scenario states");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("repository root")
+        .to_path_buf();
+    let output = Command::new("node")
+        .args(["--test", "--test-reporter=tap"])
+        .arg(root.join("studio/tools/live_main_integration.test.mjs"))
+        .output()
+        .expect("the locked SDK supplies Node");
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "{report}\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    for required in [
+        "# tests 7",
+        "# pass 7",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+    ] {
+        assert!(
+            report.lines().any(|line| line == required),
+            "incomplete oracle: {report}"
+        );
+    }
 }

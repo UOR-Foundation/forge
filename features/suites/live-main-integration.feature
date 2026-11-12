@@ -14,5 +14,6 @@ Feature: Current live module generation integration
     When live rendering and modification are replayed
     Then draft presentation cannot claim proof or publication
     And accepted patch operations retain source capture and cancellation checks
-    And every rejected operation is disclosed
+    And every rejected operation is disclosed even after later accepted patches
+    And delayed streaming saves finish before the final response is persisted
     And the full existing acceptance boundary remains required

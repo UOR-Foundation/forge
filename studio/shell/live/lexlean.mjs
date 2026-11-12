@@ -126,27 +126,53 @@ function parseExpr(src, where) {
   let i = 0;
   const peek = () => t[i], next = () => t[i++];
   const expect = (x) => { if (next() !== x) throw new LexLeanError(`expected "${x}"`, where); };
-  function primary() {
+  // Precedence, so a model may leave out the pairs the canonical source writes: comparisons bind tighter
+  // than &&, && tighter than ||, and `if … then … else if …` chains. Measured: a reasoning model (GLM 5.3
+  // Flash, on the live site) spent its whole answer budget counting the pairs of fully bracketed chains and
+  // never wrote the module. A fully bracketed module reads to the same tree as before.
+  const STOP = new Set([")", "then", "else", "&&", "||", "=?", "<?", "<=?"]);
+  function atom() {
     const k = next();
-    if (k === "(") { const e = inner(); expect(")"); return e; }
     if (k === undefined) throw new LexLeanError("unexpected end", where);
+    if (k === "(") { const e = expr(); expect(")"); return e; }
     if (/^\d+$/.test(k)) return { num: Number(k) };
-    if (k === ")" || BIN.has(k)) throw new LexLeanError(`unexpected "${k}"`, where);
+    if (STOP.has(k)) throw new LexLeanError(`unexpected "${k}"`, where);
+    if (k === "project") { const rec = next(); const field = next(); return { project: field, of: rec }; }
+    if (k === "not") return { not: atom() };
+    if (k === "if") { const c = expr(); expect("then"); const a = expr(); expect("else"); return { if: c, then: a, else: expr() }; }
+    // An application: a name and its arguments, up to an operator, a keyword or the closing pair.
+    if (peek() !== undefined && !STOP.has(peek())) { const args = []; while (peek() !== undefined && !STOP.has(peek())) args.push(atom()); return { app: k, args }; }
     return { id: k };
   }
-  function inner() {
-    if (peek() === "not") { next(); return { not: primary() }; }
-    if (peek() === "if") { next(); const c = primary(); expect("then"); const a = primary(); expect("else"); return { if: c, then: a, else: primary() }; }
-    if (peek() === "project") { next(); const rec = next(); const field = next(); return { project: field, of: rec }; }
-    let left = primary();
-    if (left.id && peek() !== ")" && !BIN.has(peek())) { const args = []; while (peek() !== ")" && !BIN.has(peek())) args.push(primary()); left = { app: left.id, args }; }
-    while (BIN.has(peek())) { const op = next(); left = { op, left, right: primary() }; }
+  function comparison() {
+    const left = atom();
+    if (peek() === "=?" || peek() === "<?" || peek() === "<=?") { const op = next(); return { op, left, right: atom() }; }
     return left;
   }
-  // A body may leave its outermost pair off (`a && b`): it reads the same, and the canonical source writes it on.
-  const e = inner();
+  function conjunction() { let left = comparison(); while (peek() === "&&") { next(); left = { op: "&&", left, right: comparison() }; } return left; }
+  function expr() { let left = conjunction(); while (peek() === "||") { next(); left = { op: "||", left, right: conjunction() }; } return left; }
+  const e = expr();
   if (i !== t.length) throw new LexLeanError(`unexpected "${t[i]}"`, where);
   return e;
+}
+
+// The draft form a model writes: the same declarations with only the pairs a reader needs (`not (…)`), so
+// there is nothing to count. readLexLean reads it to the same spec; the source kept is the canonical one.
+function flat(e) {
+  if (e.num !== undefined) return String(e.num);
+  if (e.id) return e.id;
+  if (e.project) return `project ${e.of} ${e.project}`;
+  if (e.app) return [e.app, ...e.args.map((a) => (a.app || a.op || a.if || a.not ? `(${flat(a)})` : flat(a)))].join(" ");
+  if (e.not) return `not (${flat(e.not)})`;
+  if (e.if) return `if ${flat(e.if)} then ${flat(e.then)} else ${flat(e.else)}`;
+  const side = (x, op) => (x.op === "||" && op !== "||") || (x.op === "&&" && op !== "&&" && op !== "||") || x.if ? `(${flat(x)})` : flat(x);
+  return `${side(e.left, e.op)} ${e.op} ${side(e.right, e.op)}`;
+}
+/** A canonical module in the draft form the prompt teaches: every body written without counted pairs. */
+export function draftOf(source) {
+  return source.replace(/^(\s*body: )(.+)$/gm, (all, head, body) => {
+    try { return head + flat(parseExpr(body.replace(/,\s*$/, ""), "draft")); } catch (e) { return all; }
+  });
 }
 
 const flatAnd = (e) => (e.op === "&&" ? [...flatAnd(e.left), ...flatAnd(e.right)] : [e]);
@@ -163,8 +189,7 @@ function signature(text, declarations) {
 }
 // This reader admits the canonical decision profile, not arbitrary LexLean programs.
 // Reconstructing every declaration prevents an unsupported constraint from disappearing.
-export function readLexLean(text) {
-  try {
+function checkedDeclarations(text) {
     if (typeof text !== "string" || text.length > 1024 * 1024 || new TextEncoder().encode(text).length > 1024 * 1024) throw invalidModule();
     const delimiters = [];
     for (const char of text) {
@@ -174,10 +199,32 @@ export function readLexLean(text) {
     if (delimiters.length) throw invalidModule();
     const declared = blocks(text);
     if (declared.length > 4096 || new Set(declared.map(d => d.name)).size !== declared.length) throw invalidModule();
-    const spec = readDecisionModule(text), canonical = toLexLean(spec);
-    if (signature(text, declared) !== signature(canonical, blocks(canonical))) throw invalidModule();
+    return declared;
+}
+export function readLexLean(text) {
+  try {
+    const declared=checkedDeclarations(text);
+    const spec=readDecisionModule(text),canonical=toLexLean(spec);
+    if(signature(text,declared)!==signature(canonical,blocks(canonical)))throw invalidModule();
     return spec;
-  } catch { throw invalidModule(); }
+  }catch{throw invalidModule();}
+}
+function draftSignature(text,declarations){
+  const semantic=declarations.filter(d=>d.kind!=='theorem').map(d=>{
+    if(d.kind!=='definition')return compact(text.slice(d.start,d.end));
+    const body=/\bbody:\s*/.exec(d.body);if(!body)throw invalidModule();
+    const offset=body.index+body[0].length;
+    return compact(d.body.slice(0,offset))+JSON.stringify(parseExpr(d.body.slice(offset).trim(),d.name));
+  }).sort();
+  let outside='',cursor=0;for(const d of declarations){outside+=text.slice(cursor,d.start);cursor=d.end;}outside+=text.slice(cursor);
+  return JSON.stringify([compact(outside),semantic]);
+}
+export function readDraftLexLean(text){
+  try{
+    const declared=checkedDeclarations(text),spec=readDecisionModule(text),canonical=toLexLean(spec);
+    if(draftSignature(text,declared)!==draftSignature(canonical,blocks(canonical)))throw invalidModule();
+    return readLexLean(canonical);
+  }catch{throw invalidModule();}
 }
 
 function readDecisionModule(text) {
@@ -211,11 +258,18 @@ function readDecisionModule(text) {
     const v = /^\d+$/.exec(bodyOf(b)); if (v) consts.set(b.name, Number(v[0]));
   }
   const choices = {}, constOf = new Map();
+  // Values named after something other than their field (measured: Haiku's `submittedYes` for
+  // `projectSubmitted`; GLM's `timePeak` and `timeOffPeak` for `peak`, and told of one it renamed only that
+  // one). Every such value of a group is named, with the name it must have, so one repair renames them all.
+  const ownerOf = (k) => fieldIds.find((f) => k.startsWith(f) && /^[A-Z]/.test(k.slice(f.length)));
+  const strays = (prefix) => [...consts.keys()].filter((k) => !/^answer[A-Z]/.test(k) && !ownerOf(k) && (!prefix || k.startsWith(prefix)));
+  const renames = (fid, ks) => ks.map((k) => `${k} to ${fid}${k.replace(/^[a-z][a-z0-9]*/, "") || k[0].toUpperCase() + k.slice(1)}`).join(", ");
+  const misnamed = (fid, ks) => (ks.length ? `; ${ks.join(", ")} ${ks.length > 1 ? "are" : "is"} named after no field, and every value of ${fid} is named ${fid}<Value>: rename ${renames(fid, ks)}, everywhere ${ks.length > 1 ? "they appear" : "it appears"}` : "");
   for (const fid of fieldIds) {
     const own = [...consts].filter(([k]) => k.startsWith(fid) && /^[A-Z]/.test(k.slice(fid.length)) && !fieldIds.some((g) => g !== fid && g.startsWith(fid) && k.startsWith(g)));
     if (own.length) {
       own.sort((a, b) => a[1] - b[1]);
-      own.forEach(([k, code], i) => { if (code !== i) throw new LexLeanError(`codes must run 0, 1, 2…; ${k} is ${code}`, k); });
+      own.forEach(([k, code], i) => { if (code !== i) throw new LexLeanError(`codes must run 0, 1, 2…; ${k} is ${code}${misnamed(fid, strays())}`, k); });
       choices[fid] = own.map(([k]) => kebab(k.slice(fid.length)));
       own.forEach(([k], i) => constOf.set(k, { field: fid, value: choices[fid][i] }));
     }
@@ -251,7 +305,7 @@ function readDecisionModule(text) {
       const x = lf ? b.right : b.left, id = x.id ?? (x.app && !x.args.length ? x.app : null);
       // A value is found by its name alone: `<field><Value>`. A model that names it otherwise (measured:
       // `submittedYes` for field `projectSubmitted`) is told the name the reader looks for.
-      if (id && consts.has(id)) throw new LexLeanError(`${id} is not a value of ${fid}: a choice's values are named after their field, so this one is ${fid}${(/[A-Z]\w*$/.exec(id) || [""])[0] || id[0].toUpperCase() + id.slice(1)}`, where);
+      if (id && consts.has(id)) throw new LexLeanError(`${id} is not a value of ${fid}${misnamed(fid, strays((/^[a-z][a-z0-9]*/.exec(id) || [id])[0]))}`, where);
       throw new LexLeanError(`${id ?? "this"} is not a value of ${fid}: compare ${fid} with a whole number${choices[fid] ? " or one of " + Object.keys(Object.fromEntries([...constOf].filter(([, c]) => c.field === fid))).join(", ") : ""}`, where);
     }
     if (v.choice) {
@@ -264,8 +318,7 @@ function readDecisionModule(text) {
       if (bound && lf && b.op === "<?" && !neg) {
         // A count that disagrees usually means a value named after something else: it is not counted.
         const owned = [...constOf].filter(([, c]) => c.field === fid).map(([k]) => k);
-        const stray = [...consts.keys()].filter((k) => !constOf.has(k) && !/^answer[A-Z]/.test(k));
-        throw new LexLeanError(`${fid} has ${owned.length} values (${owned.join(", ")}), not ${v.num}${stray.length ? `; ${stray.join(", ")} is named after no field, and a value of ${fid} is named ${fid}<Value>, as ${fid}${(/[A-Z]\w*$/.exec(stray[0]) || [""])[0]}` : ""}`, where);
+        throw new LexLeanError(`${fid} has ${owned.length} values (${owned.join(", ")}), not ${v.num}${misnamed(fid, strays())}`, where);
       }
       throw new LexLeanError(`${fid} is a choice: compare it with one of its codes`, where);
     }
@@ -340,7 +393,7 @@ export function readLexLeanPartial(text) {
   if (typeof text !== "string" || text.length > 1024 * 1024 || new TextEncoder().encode(text).length > 1024 * 1024) {
     const error = invalidModule(); return { spec: null, stage: "empty", complete: false, code: error.code, error: error.message };
   }
-  try { return { spec: readLexLean(text), stage: "complete", complete: true }; } catch (e) { /* fall through */ }
+  try { return { spec: readDraftLexLean(text), stage: "complete", complete: true }; } catch (e) { /* fall through */ }
   // Close the module at the last complete declaration and read what is there.
   const ends = [];
   const re = /(definition|structure|theorem)\{/g;
@@ -389,11 +442,26 @@ export function canonicalSource(spec) {
  * same meaning is always the same bytes. A turn that wrote the module again (its repair) is read by its
  * last module.
  */
+// The turn's last module, whole: it ends at \end{semanticmodule}, whatever closing markers follow. Measured
+// on GLM: one module ended at \end{lexlean} with the block left open, its repair at \end{prism-lexlean}
+// with no \end{lexlean}. The closing markers carry nothing, so they are written by Forge. Null while the
+// module is still being written; a closed block without its end is read as written, to name what is wrong.
+function lastModule(text) {
+  const at = (text || "").lastIndexOf("<prism-lexlean>");
+  if (at < 0) return null;
+  const rest = text.slice(at + 15), close = rest.indexOf("</prism-lexlean>");
+  const body = close >= 0 ? rest.slice(0, close) : rest;
+  const end = body.indexOf("\\end{semanticmodule}");
+  if (end < 0) return close >= 0 ? body : null;
+  const tail=body.slice(end+"\\end{semanticmodule}".length);
+  if(!/^\s*(?:\\end\{(?:lexlean|prism-lexlean)\}\s*)?$/.test(tail))return body;
+  return body.slice(0, end) + "\\end{semanticmodule}\n\\end{lexlean}";
+}
 export function specFromTurn(text) {
-  const all = [...(text || "").matchAll(/<prism-lexlean>([\s\S]*?)<\/prism-lexlean>/g)];
-  if (!all.length) return null;
+  const module = lastModule(text);
+  if (module === null) return null;
   try {
-    const spec = readLexLean(all[all.length - 1][1].trim() + "\n");
+    const spec = readDraftLexLean(module.trim() + "\n");
     return { ...canonicalSource(spec), spec };
   } catch { return { code: "invalidCanonicalModule", error: "The canonical decision module is invalid or unsupported" }; }
 }

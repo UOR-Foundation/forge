@@ -11,12 +11,13 @@ import {
   HelpCircle,
   House,
   LayoutGrid,
+  Menu,
   Settings,
   Star,
   Store,
   type LucideIcon,
 } from "lucide-react";
-import { Link, useLocation, useMatchRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Fragment, useEffect, useMemo } from "react";
 
@@ -93,12 +94,19 @@ function usePath() {
   return (pathname.startsWith(base) ? pathname.slice(base.length) : pathname) || "/";
 }
 
-// Matched by the router; the home page only on its own path (the router also matches it under the app's
-// routes, which are its children).
+// Matched against the path the visitor is on, segment by segment ("$name" matches any one segment; without
+// exact, deeper paths match too); home only on its own path. The router's own match read its settled
+// location, which lags a navigation while the next page's code loads, and nothing drew again once it
+// settled, so after a click the header and the sidebar kept naming the page before.
 function useIsActive() {
-  const matchRoute = useMatchRoute();
   const path = usePath();
-  return (to: string, exact?: boolean) => (to === "/" ? path === "/" : !!matchRoute({ to, fuzzy: !exact }));
+  const here = path.split("/").filter(Boolean);
+  return (to: string, exact?: boolean) => {
+    if (to === "/") return path === "/";
+    const want = to.split("/").filter(Boolean);
+    if (here.length < want.length || (exact && here.length !== want.length)) return false;
+    return want.every((seg, i) => seg.startsWith("$") || seg === here[i]);
+  };
 }
 
 export function AppSidebar() {
@@ -284,12 +292,20 @@ function useTrail(): { title: string; to?: string }[] {
 // the appearance switch the page shell keeps at the top right.
 export function SiteHeader() {
   const trail = useTrail();
+  const { toggleSidebar } = useSidebar();
+  // On a phone the menu is the familiar three lines at the top left, and home shows no title: the page's own
+  // headline says where you are. From the tablet up, the kit's panel trigger and the trail.
+  const home = usePath() === "/";
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b pr-14 transition-[width,height] ease-linear">
       <div className="flex w-full min-w-0 items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-        <Breadcrumb className="min-w-0">
+        <button type="button" data-slot="sidebar-trigger" data-mobile-menu="" aria-label="Menu" onClick={toggleSidebar}
+          className="-ml-1 inline-flex size-[34px] items-center justify-center rounded-full md:hidden">
+          <Menu className="size-[21px]" aria-hidden="true" />
+        </button>
+        <SidebarTrigger className="-ml-1 hidden md:flex" />
+        <Separator orientation="vertical" className={`mx-2 data-[orientation=vertical]:h-4 ${home ? "max-md:hidden" : ""}`} />
+        <Breadcrumb className={`min-w-0 ${home ? "max-md:hidden" : ""}`}>
           <BreadcrumbList className="flex-nowrap">
             {trail.map((step, i) => (
               <Fragment key={i}>
@@ -309,5 +325,25 @@ export function SiteHeader() {
         </Breadcrumb>
       </div>
     </header>
+  );
+}
+
+// A phone's way around: Home, Apps and Library in a floating bar at the foot of the page, as the sidebar's
+// own links (the menu at the top left keeps everything else). The build screen has its own bar, so this one
+// is drawn on every other screen, and only below the tablet width.
+const TABS = NAV.filter((n) => n.to === "/" || n.to === "/apps" || n.to === "/library");
+export function MobileTabBar() {
+  const isActive = useIsActive();
+  return (
+    <nav data-slot="mobile-tabs" aria-label="Main" className="md:hidden">
+      {TABS.map((tab) => {
+        const on = isActive(tab.to, tab.exact);
+        return (
+          <Link key={tab.to} to={tab.to} aria-label={tab.title} title={tab.title} aria-current={on ? "page" : undefined} data-active={on ? "" : undefined}>
+            <tab.icon aria-hidden="true" />
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

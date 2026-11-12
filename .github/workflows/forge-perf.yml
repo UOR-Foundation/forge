@@ -71,10 +71,16 @@ jobs:
         run: |
           node vendor/dyad/node_modules/playwright-core/cli.js install --with-deps chromium
           node tools/perf_budget.mjs --browser
+      - name: Every Prism app previews live within its budgets (tools/live_e2e.mjs on each app fixture)
+        run: |
+          export PLAYWRIGHT_MODULE="$(npm root --global)/playwright/index.mjs"
+          scripts/live_e2e_all.sh shell "$RUNNER_TEMP/live-e2e"
       - name: Keep what the journeys saw when they failed
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge-perf
-          path: ${{ runner.temp }}/forge-perf
+          path: |
+            ${{ runner.temp }}/forge-perf
+            ${{ runner.temp }}/live-e2e
           if-no-files-found: ignore

@@ -1,0 +1,13 @@
+# Live module integration — FA-69
+
+Authority: `FoundrySpecification.liveMainIntegrationBoundary`. Registration, scenarios and a genuinely failing Rust gate precede implementation at `2eab7a12ecf94e1fcd39105b76a5e74d6f2253ed`.
+
+Current upstream main (`fa9fdf4`) brings module-only generation, hidden module text in chat, per-operation live patch retries, mobile navigation and every-app replay. Integration retains exact selected-theme request disclosure, canonical source transactions, cancellation, editor lifecycle, original sidebar tool controls and the full shell inventory. The projector continues to inventory `.nojekyll` and `404.html`; incoming Pages uploads explicitly include hidden files. Credential-bearing warmup artifacts remain refused.
+
+The draft reader reconstructs expression syntax and exact declaration headers, compares every represented declaration and framing against the regenerated canonical module, then invokes the unchanged strict reader. Formatting cannot erase unknown definitions, bounds, constraints, names, fields or resource limits. The context meter counts the actual canonical module, selected theme and stored history. Generated implementation files never become authoritative source.
+
+Focused controls exposed and corrected malformed patch-path reporting, missing cancellation between retries, obsolete codebase token accounting, loss of earlier refusal notices after later accepted patches, and nonserialized streaming writes. Finalization drains streaming persistence; code refusal is appended after patch processing. Actual-browser qualification uses the real renderer, service worker, core, IndexedDB and intercepted provider response. It checks exact consented bytes after a theme change, no implementation-source disclosure, canonical draft admission, mixed accepted/refused patches, absence of generated code files, final stored notices, context counts and zero page exceptions.
+
+All 426 Node controls pass. Seven planted defects are rejected: erased draft declaration comparison, unsafe null-path access, omitted retry cancellation, omitted context history, omitted stream drain, erased refusal retention and exposed module text. The actual renderer generation gate passes after restoration. Host LexLean diagnostic verification covers two modules with attestation `4cbcbd65f37fe2bd88fdfac738ff8ba67a7fbd7a32658a447c25a7762809bc57`; this is not exact-SDK acceptance.
+
+The full mandatory browser sweep, every-app replay, performance and exact-head hosted SDK qualification are tracked separately. This feature does not claim generalized application generation, qualified factory adoption or completion of the entire Foundry conversion. Imported template/frame policies and the immutable SDK selection are unchanged.
