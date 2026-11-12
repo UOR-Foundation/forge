@@ -133,6 +133,9 @@ model does not sanction.
 | `FK-19` | `build` | The kernel never allows motion longer than 200 ms |
 | `FK-20` | `build` | The kernel never answers ok for a tap target under 44 px |
 | `FK-21` | `build` | The kernel never counts as this week what is older than 7 days |
+| `FK-22` | `build` | The kernel never allows model thinking on a first attempt |
+| `FK-23` | `build` | The budget from Enter to a checked app is never above 30 s |
+| `FK-24` | `build` | The budget from an edit to the screen is never above two frames, 33 ms |
 
 ## host-input-boundary
 

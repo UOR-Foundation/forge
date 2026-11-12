@@ -371,6 +371,40 @@ Verified: proved by Lean for every request (FK-21, theorem `oldRecentHolds`).
 - **WHEN** the request is `recent 691200`
 - **THEN** the answer SHALL be `no`
 
+### Requirement: The build journey's budgets
+
+A request `budget JOURNEY VALUE` SHALL also answer for the journey of building an app, each measured in milliseconds: `preview` (Enter to the preview frame, 1999), `declaration` (Enter to the model's first declaration, 19999), `pixel` (first declaration to first pixel, 99), `update` (work per preview update, 15), `edit` (an edit to the screen, 33), `checked` (the module complete to its check on screen, 2999) and `built` (Enter to a checked app, 29999). The gates that measure these ask the kernel; none keeps a number of its own.
+
+The budget for `built` SHALL NOT be above 30000, and the budget for `edit` SHALL NOT be above 33, two frames at 60 Hz.
+
+Verified: proved by Lean for every request (FK-23, theorem `builtBudgetBoundHolds`; FK-24, theorem `editBudgetBoundHolds`).
+
+#### Scenario: A model that thinks for 99 seconds is over
+
+- **WHEN** the request is `budget declaration 99000`
+- **THEN** the answer SHALL be `over`
+
+#### Scenario: An edit on screen in two frames
+
+- **WHEN** the request is `budget edit 33`
+- **THEN** the answer SHALL be `within`
+
+### Requirement: Model thinking
+
+A request `think ATTEMPT` asks whether the model may reason before it writes, ATTEMPT being 0 for the first attempt at a turn and 1 or more for a repair. The app SHALL answer `allow` or `deny`, and SHALL NOT answer `allow` for ATTEMPT 0: a first attempt that thinks cannot meet the `declaration` budget, and a refused module is repaired with the checker's words, where thinking is allowed.
+
+Verified: proved by Lean for every request (FK-22, theorem `firstThinkHolds`).
+
+#### Scenario: A first attempt writes at once
+
+- **WHEN** the request is `think 0`
+- **THEN** the answer SHALL be `deny`
+
+#### Scenario: A repair may think
+
+- **WHEN** the request is `think 1`
+- **THEN** the answer SHALL be `allow`
+
 ## Out of scope
 
 - It decides the build phase and whether an effect is admitted. It performs no effect: storage, network, inference and the screen belong to the runner that asks it.

@@ -32,6 +32,10 @@ only, bounded requests and answers, the per-visitor limit, concurrency passing t
 site's key failures kept private. For a local run in Cloudflare's runtime, put
 `FEATHERLESS_KEY=<anything>` in `.dev.vars` (ignored by git) and run `npx wrangler@4 dev`.
 
+## What it forwards
+
+The model, the messages, a bounded `max_tokens`, `temperature`, `top_p`, `stop`, and `chat_template_kwargs.enable_thinking` when it is a boolean: the switch Featherless documents for asking a model not to reason before it answers. Forge sends `false` for a first attempt when its kernel says so (`think 0`, FK-22). Everything else is dropped. A change to `worker.mjs` reaches visitors only after `npx wrangler@4 deploy`.
+
 ## Limits
 
 `wrangler.toml` holds them: `ALLOWED_ORIGINS`, `MODELS`, `MAX_TOKENS` and 20 requests a minute per

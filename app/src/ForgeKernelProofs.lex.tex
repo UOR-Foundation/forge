@@ -415,9 +415,7 @@ theorem{
   name: budgetOverWithinHolds,
   parameters: [request : ForgeKernel::BudgetRequest],
   statement: ((breaksBudgetOverWithin request) = false),
-  proof: linear_arithmetic{
-    definitions: [ForgeKernel::budgetOf, ForgeKernel::budgetWithin, breaksBudgetOverWithin]
-  },
+  proof: linear_arithmetic{definitions: [ForgeKernel::budgetWithin, breaksBudgetOverWithin]},
   axioms: [Quot.sound, propext]
 }
 
@@ -432,9 +430,7 @@ theorem{
   name: budgetWithinOverHolds,
   parameters: [request : ForgeKernel::BudgetRequest],
   statement: ((breaksBudgetWithinOver request) = false),
-  proof: linear_arithmetic{
-    definitions: [ForgeKernel::budgetOf, ForgeKernel::budgetWithin, breaksBudgetWithinOver]
-  },
+  proof: linear_arithmetic{definitions: [ForgeKernel::budgetWithin, breaksBudgetWithinOver]},
   axioms: [Quot.sound, propext]
 }
 
@@ -449,7 +445,9 @@ theorem{
   name: inpBudgetBoundHolds,
   parameters: [request : ForgeKernel::BudgetRequest],
   statement: ((breaksInpBudgetBound request) = false),
-  proof: linear_arithmetic{definitions: [ForgeKernel::budgetOf, breaksInpBudgetBound]},
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::budgetOf, ForgeKernel::siteBudget, breaksInpBudgetBound]
+  },
   axioms: [Quot.sound, propext]
 }
 
@@ -464,7 +462,9 @@ theorem{
   name: routeBelowFirstLoadHolds,
   parameters: [request : ForgeKernel::BudgetRequest],
   statement: ((breaksRouteBelowFirstLoad request) = false),
-  proof: linear_arithmetic{definitions: [ForgeKernel::budgetOf, breaksRouteBelowFirstLoad]},
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::budgetOf, ForgeKernel::siteBudget, breaksRouteBelowFirstLoad]
+  },
   axioms: [Quot.sound, propext]
 }
 
@@ -498,6 +498,55 @@ theorem{
   statement: ((breaksWideTabs request) = false),
   proof: linear_arithmetic{
     definitions: [ForgeKernel::layoutTabs, ForgeKernel::narrowBreakpoint, breaksWideTabs]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksFirstThink,
+  parameters: [request : ForgeKernel::ThinkRequest],
+  result: Bool,
+  body: (((project request attempt) =? 0) && ((ForgeKernel::thinkAllows request) =? 1))
+}
+
+theorem{
+  name: firstThinkHolds,
+  parameters: [request : ForgeKernel::ThinkRequest],
+  statement: ((breaksFirstThink request) = false),
+  proof: linear_arithmetic{definitions: [ForgeKernel::thinkAllows, breaksFirstThink]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksBuiltBudgetBound,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  result: Bool,
+  body: (((project request journey) =? 17) && (30000 <? (ForgeKernel::budgetOf (project request journey))))
+}
+
+theorem{
+  name: builtBudgetBoundHolds,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  statement: ((breaksBuiltBudgetBound request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::budgetOf, ForgeKernel::buildBudget, breaksBuiltBudgetBound]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksEditBudgetBound,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  result: Bool,
+  body: (((project request journey) =? 15) && (33 <? (ForgeKernel::budgetOf (project request journey))))
+}
+
+theorem{
+  name: editBudgetBoundHolds,
+  parameters: [request : ForgeKernel::BudgetRequest],
+  statement: ((breaksEditBudgetBound request) = false),
+  proof: linear_arithmetic{
+    definitions: [ForgeKernel::budgetOf, ForgeKernel::buildBudget, breaksEditBudgetBound]
   },
   axioms: [Quot.sound, propext]
 }

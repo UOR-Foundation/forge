@@ -1441,7 +1441,10 @@ async function chatTurn(chatId, intent) {
       // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
       const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
-      const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
+      // A first attempt thinks only if the kernel allows it (think 0, FK-22). A kernel that does not know the
+      // question answers neither word, and the model is then left as it is.
+      const think = (await kernelReady.then((k) => k.ask("think 0")).catch(() => "")) !== "deny";
+      const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking, { think });
       settleText();
       await onText(text);
       await repaired(body);
