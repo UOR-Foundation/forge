@@ -311,3 +311,103 @@ dialog:modal { pointer-events: auto; }
 :root[data-holo-pane] [data-slot="mobile-tabs"] { display: none; }
 @media (min-width: 768px) { [data-slot="mobile-tabs"] { display: none; } }
 @media (prefers-reduced-motion: reduce) { [data-slot="mobile-tabs"] > a { transition: none; } }
+
+/* Foundry's own surfaces: the questions it asks before anything leaves the browser, the notices while a
+   request is open, and its tools in the sidebar. They are built by the shell, outside the renderer's kit, and
+   each wrote its own inline style: system colours, browser buttons, a dialog in the page's corner. Here they
+   take the app's look from the brand's tokens, in every theme. The rules are !important because they replace
+   those inline styles; nothing about what a surface says or does is changed here.
+
+   A question is a notification, drawn as the app draws its own ("Get notified about chat events"): a card on
+   the popover glass with a hairline edge, a title, quiet words, and its two answers at the right, the
+   refusal plain and the approval solid. It sits low and centred, over a light scrim, so the build stays in
+   view behind it. */
+dialog:not([data-slot]) {
+  box-sizing: border-box !important; inset: auto 0 max(24px, env(safe-area-inset-bottom)) 0 !important; margin: 0 auto !important;
+  width: min(calc(100vw - 32px), 560px) !important; max-width: none !important; max-height: min(78vh, 640px) !important;
+  padding: 20px !important; overflow: auto !important; border-radius: 16px !important;
+  background: color-mix(in srgb, var(--popover) 94%, transparent) !important; color: var(--popover-foreground) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.6); backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid color-mix(in srgb, var(--popover-foreground) 12%, transparent) !important;
+  box-shadow: 0 24px 64px -16px color-mix(in srgb, var(--popover) 85%, transparent), inset 0 1px 0 color-mix(in srgb, var(--popover-foreground) 7%, transparent) !important;
+  font: 400 13.5px/1.55 var(--font-sans) !important; letter-spacing: 0 !important; color-scheme: inherit !important;
+}
+dialog:not([data-slot])[open] { display: flex !important; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; animation: foundry-rise 160ms ease-out; }
+dialog:not([data-slot])[open] > :not(button) { flex: 0 0 100%; min-width: 0; }
+dialog:not([data-slot])::backdrop { background: color-mix(in srgb, var(--popover) 32%, transparent); }
+@keyframes foundry-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+dialog:not([data-slot]) :is(h1, h2, h3) {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 4px !important;
+  font: 600 15px/1.35 var(--font-sans) !important; letter-spacing: -0.005em; color: var(--popover-foreground) !important;
+}
+/* The title's mark: a shield in a soft tile, as the app's own notification carries its bell. */
+dialog:not([data-slot]) h2::before {
+  content: ""; flex: none; width: 36px; height: 36px; border-radius: 10px;
+  background: color-mix(in srgb, var(--popover-foreground) 8%, transparent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8a399' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E") center / 18px no-repeat;
+}
+dialog:not([data-slot]) :is(p, li, label, summary, section) { margin: 0 !important; color: var(--muted-foreground) !important; overflow-wrap: anywhere; white-space: pre-line; }
+dialog:not([data-slot]) h2 + p { color: var(--popover-foreground) !important; font-weight: 500; }
+dialog:not([data-slot]) ul { margin: 0 !important; padding: 0 !important; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+dialog:not([data-slot]) li { padding: 3px 9px; border-radius: 999px; font: 500 12px/1.5 var(--font-mono); background: color-mix(in srgb, var(--popover-foreground) 7%, transparent); color: var(--popover-foreground) !important; }
+dialog:not([data-slot]) details { border: 1px solid color-mix(in srgb, var(--popover-foreground) 10%, transparent); border-radius: 10px; padding: 8px 12px; }
+dialog:not([data-slot]) summary { cursor: pointer; font-weight: 500; }
+dialog:not([data-slot]) pre { margin: 8px 0 0 !important; max-height: 220px !important; overflow: auto !important; font: 12px/1.5 var(--font-mono) !important; color: var(--muted-foreground); }
+dialog:not([data-slot]) section { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--popover-foreground) 8%, transparent); }
+dialog:not([data-slot]) :is(input, select, textarea) {
+  margin: 6px 0 0 !important; width: 100%; box-sizing: border-box; height: 36px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--input); background: color-mix(in srgb, var(--popover-foreground) 4%, transparent); color: var(--popover-foreground); font: inherit;
+}
+dialog:not([data-slot]) :is(input, select, textarea):focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+/* Answers: every button is quiet; the last one, the approval, is solid. Focus stays where the shell puts it,
+   on the refusal. */
+dialog:not([data-slot]) button, aside[aria-label^="Active"] button {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center; margin: 4px 0 0 !important; min-height: 36px; padding: 0 14px !important;
+  border-radius: 8px !important; border: 1px solid color-mix(in srgb, var(--popover-foreground) 14%, transparent) !important;
+  background: transparent !important; color: var(--popover-foreground) !important; font: 500 13.5px/1 var(--font-sans) !important; cursor: pointer;
+  transition: background-color 140ms, border-color 140ms, opacity 140ms;
+}
+dialog:not([data-slot]) button:hover, aside[aria-label^="Active"] button:hover { background: color-mix(in srgb, var(--popover-foreground) 8%, transparent) !important; }
+dialog:not([data-slot]) button:focus-visible, aside[aria-label^="Active"] button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+dialog:not([data-slot]) button:disabled { opacity: 0.5; cursor: default; }
+dialog:not([data-slot])[aria-label^="Review"] button:last-of-type {
+  background: var(--popover-foreground) !important; color: var(--popover) !important; border-color: transparent !important;
+}
+dialog:not([data-slot])[aria-label^="Review"] button:last-of-type:hover { opacity: 0.9; }
+dialog:not([data-slot]) div:has(> button) { display: flex !important; justify-content: flex-end !important; gap: 8px !important; margin: 0 !important; }
+/* A request that is open: one quiet pill, low and to the right, clear of the phone's tab bar. */
+aside[aria-label^="Active"] {
+  inset: auto 16px max(16px, env(safe-area-inset-bottom)) auto !important; padding: 4px !important; border-radius: 12px !important;
+  background: color-mix(in srgb, var(--popover) 88%, transparent) !important; color: var(--popover-foreground) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.6); backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid color-mix(in srgb, var(--popover-foreground) 12%, transparent) !important;
+  box-shadow: 0 13px 34px -13px color-mix(in srgb, var(--popover) 85%, transparent) !important; font: inherit !important;
+}
+aside[aria-label^="Active"] button { margin: 0 !important; border-color: transparent !important; min-height: 32px; gap: 8px; }
+aside[aria-label^="Active"] button::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--brand); }
+@media (max-width: 767px) { aside[aria-label^="Active"] { inset: auto 16px calc(76px + env(safe-area-inset-bottom)) auto !important; } }
+@media (pointer: coarse) { dialog:not([data-slot]) button, aside[aria-label^="Active"] button { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) { dialog:not([data-slot])[open] { animation: none; } }
+
+/* Foundry's tools in the sidebar are sidebar items: the same height, type, inset and hover as Home and Apps,
+   each with its mark, under one hairline. */
+#foundry-shell-actions { gap: 2px !important; padding: 8px !important; margin-top: 4px; border-top: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent); }
+#foundry-shell-actions > button {
+  appearance: none; display: flex !important; align-items: center; gap: 8px; width: 100% !important; height: 32px; padding: 0 8px !important; margin: 0 !important;
+  border: 0 !important; border-radius: 8px !important; background: transparent !important; color: var(--sidebar-foreground) !important;
+  font: 500 14px/1 var(--font-sans) !important; text-align: left !important; cursor: pointer; transition: background-color 140ms;
+}
+#foundry-shell-actions > button:hover { background: var(--sidebar-accent) !important; color: var(--sidebar-accent-foreground) !important; }
+#foundry-shell-actions > button:focus-visible { outline: 2px solid var(--sidebar-ring); outline-offset: -2px; }
+#foundry-shell-actions > button::before {
+  content: ""; flex: none; width: 16px; height: 16px; background: currentColor;
+  -webkit-mask: var(--mark) center / contain no-repeat; mask: var(--mark) center / contain no-repeat;
+  --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3C/svg%3E");
+}
+#foundry-preview-permissions::before { --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E") !important; }
+#foundry-interaction-applications::before { --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z'/%3E%3C/svg%3E") !important; }
+#foundry-application-discovery::before, #foundry-shell-actions > button[id*="discover"]::before { --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m16.24 7.76-1.8 5.4a2 2 0 0 1-1.27 1.27l-5.4 1.8 1.8-5.4a2 2 0 0 1 1.27-1.27z'/%3E%3C/svg%3E") !important; }
+@media (pointer: coarse) { #foundry-shell-actions > button { height: 44px; } }
+/* The home composer's app picker is a quiet control, the weight of the model's name beside it. */
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { font-weight: 500 !important; color: var(--muted-foreground) !important; }
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"]:hover { color: var(--foreground) !important; }
