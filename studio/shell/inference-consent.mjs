@@ -1,4 +1,5 @@
 // FoundrySpecification.inferenceConsentBoundary. One decision per exact request.
+import { oneAtATime } from "./approval-queue.mjs";
 import { inferenceEndpoints } from "./inference-effects.mjs";
 const messages = {
   invalidInferenceConsent: "The cloud request disclosure is invalid",
@@ -20,7 +21,9 @@ export function describeInference(input) {
   catch { throw fault("invalidInferenceConsent"); }
   return Object.freeze({ provider, endpoint: inferenceEndpoints[provider], model, bytes, size, credentialOwner });
 }
-export function authorizeInference(input, { document = globalThis.document, online = () => globalThis.navigator.onLine, timeoutMs = 300000 } = {}) {
+// Asked in its turn: a dialog opened over another approval's would cover its buttons (approval-queue.mjs).
+export function authorizeInference(input, options) { return oneAtATime(() => authorizeInferenceNow(input, options)); }
+function authorizeInferenceNow(input, { document = globalThis.document, online = () => globalThis.navigator.onLine, timeoutMs = 300000 } = {}) {
   let disclosure, signal;
   try {
     disclosure = describeInference(input);

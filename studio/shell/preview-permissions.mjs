@@ -1,3 +1,4 @@
+import { oneAtATime } from "./approval-queue.mjs";
 import {mountShellAction} from "./shell-action-dock.mjs";
 // FoundrySpecification.previewPermissionBoundary: consent binds a source and exact origins.
 const messages = {
@@ -52,7 +53,9 @@ export async function commitPreviewPermission(db, id, permission, expected) {
 }
 const element = (document, tag, text) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; return node; };
 const styleDialog = node => { node.style.cssText = "max-width:min(90vw,42rem);max-height:85vh;overflow:auto;padding:1.5rem;border-radius:0.75rem;color-scheme:light dark;font:inherit"; };
-export function authorizePreview(input, { document = globalThis.document, online = () => globalThis.navigator.onLine, timeoutMs = 300000 } = {}) {
+// Asked in its turn: a dialog opened over another approval's would cover its buttons (approval-queue.mjs).
+export function authorizePreview(input, options) { return oneAtATime(() => authorizePreviewNow(input, options)); }
+function authorizePreviewNow(input, { document = globalThis.document, online = () => globalThis.navigator.onLine, timeoutMs = 300000 } = {}) {
   let disclosure;
   try {
     disclosure = describePreview(input);

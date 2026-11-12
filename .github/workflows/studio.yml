@@ -218,6 +218,9 @@ jobs:
       - name: A stateful app is checked at the end of its turn, and the card claims no more than the check found
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/live_app_check.test.mjs
+      - name: One approval is asked at a time, and the chat counts an app's lines
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/approval_queue.test.mjs
       - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/live_app_prove.test.mjs

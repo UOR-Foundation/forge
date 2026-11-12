@@ -1,0 +1,73 @@
+// One approval at a time (shell/approval-queue.mjs), and what the chat says while a model writes an app in
+// the app notation (prism.js shownText). Found on the deployed site on 2026-11-12: the preview's permission
+// dialog opened over the cloud request's, covered its Send button, and the request expired unanswered; and
+// the chat said "0 declarations" of an app written in eight lines.
+//
+//   node --test tools/approval_queue.test.mjs
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { oneAtATime, waitingCount } from "../shell/approval-queue.mjs";
+import { shownText } from "../shell/prism.js";
+
+const read = (p) => fs.readFileSync(new URL(p, import.meta.url), "utf8");
+const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
+const settle = () => new Promise((r) => setImmediate(r));
+
+test("a question asked alone is shown at once", async () => {
+  let shown = false;
+  const answer = oneAtATime(() => { shown = true; return Promise.resolve("yes"); });
+  assert.equal(shown, true, "the dialog is opened in the same task as the request");
+  assert.equal(await answer, "yes");
+});
+
+test("a second question is not shown until the first is answered, whatever the answer", async () => {
+  const first = deferred(), second = deferred(), third = deferred(), shown = [];
+  const a = oneAtATime(() => { shown.push("preview"); return first.promise; });
+  const b = oneAtATime(() => { shown.push("request"); return second.promise; });
+  const c = oneAtATime(() => { shown.push("source"); return third.promise; });
+  await settle();
+  assert.deepEqual(shown, ["preview"]);
+  assert.equal(waitingCount(), 2);
+  // A refusal frees the next question as an approval does.
+  first.reject(new Error("denied"));
+  await assert.rejects(a, /denied/);
+  await settle();
+  assert.deepEqual(shown, ["preview", "request"]);
+  second.resolve("sent");
+  assert.equal(await b, "sent");
+  await settle();
+  assert.deepEqual(shown, ["preview", "request", "source"]);
+  third.resolve("allowed");
+  assert.equal(await c, "allowed");
+  assert.equal(waitingCount(), 0);
+});
+
+test("a question that cannot be shown rejects and does not hold the others", async () => {
+  await assert.rejects(oneAtATime(() => { throw new Error("no document"); }), /no document/);
+  assert.equal(await oneAtATime(() => Promise.resolve("next")), "next");
+});
+
+test("the three approvals of a build are each asked in their turn", () => {
+  for (const [file, name] of [["inference-consent.mjs", "authorizeInference"], ["preview-permissions.mjs", "authorizePreview"], ["hosted-source-permission.mjs", "authorizeHostedSource"]]) {
+    const source = read("../shell/" + file);
+    assert.ok(source.includes(`export function ${name}(input, options) { return oneAtATime(() => ${name}Now(input, options)); }`), file + " opens its dialog outside the queue");
+    assert.equal((source.match(/\.showModal\(\)/g) || []).length >= 1, true);
+    // No other export of the file opens the same dialog around the queue.
+    assert.equal(new RegExp(`export (async )?function ${name}Now`).test(source), false);
+  }
+});
+
+test("the chat counts an app's lines while a model writes the app notation, and declarations for a module", () => {
+  const lines = 'app Reading list\ntext title "Title" max 120\ntable books "Reading list": title\naction "Add": add to books\n';
+  assert.match(shownText("<prism-lexlean>\napp Reading list\ntext title \"Title\" max 120\n"), /Writing the app: 2 lines so far…/);
+  assert.match(shownText("<prism-lexlean>\napp Reading list\n"), /Writing the app: 1 line so far…/);
+  const done = shownText("Here it is.\n<prism-lexlean>\n" + lines + "</prism-lexlean>\nDone.");
+  assert.match(done, /The app, written in 4 lines\. Forge is writing its LexLean module from them\./);
+  assert.equal(/0 declarations/.test(done), false);
+  assert.equal(done.includes("table books"), false, "the lines themselves are not shown as chat text");
+  // A card, once there is one, replaces the line as before.
+  assert.match(shownText("<prism-lexlean>\n" + lines + "</prism-lexlean>", "**App** · checked"), /\*\*App\*\* · checked/);
+  // A module in full LexLean is still counted in declarations.
+  assert.match(shownText("<prism-lexlean>\n\\begin{lexlean}{App}\nstructure{ name: State }\ndefinition{ name: initial }\n"), /Writing the app's LexLean module: 2 declarations so far…/);
+});
