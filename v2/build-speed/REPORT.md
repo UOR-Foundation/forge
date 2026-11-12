@@ -136,13 +136,13 @@ Proposed: [app-build.proposed.yml](app-build.proposed.yml), not installed. Its d
 - Otherwise a `verify` job on `ubuntu-24.04` restores `target/hologram-oracle` keyed by the SDK image digest (the oracle harness is SDK-owned, so its compiled target depends on the image alone; Cargo's fingerprints still decide freshness, and the oracle still runs). It puts `/tmp` on the runner's disk instead of a tmpfs, runs the same `prismpm verify`, signs provenance, and saves the holo under its key.
 - amd64, not arm, and the standard runner: PrismPM fixes Lean at two threads and Cargo at two jobs, so more cores are not expected to help (not measured).
 
-Measured on GitHub, with your approval, in the public scratch repository [humuhumu33/prism-build-speed-scratch](https://github.com/humuhumu33/prism-build-speed-scratch). It holds the split probe as `app/` and this workflow unchanged, on `ubuntu-24.04`, one run each:
+Measured on GitHub, with your approval, in the public scratch repository `prism-build-speed-scratch`, under the owner's personal GitHub account. It holds the split probe as `app/` and this workflow unchanged, on `ubuntu-24.04`, one run each:
 
 | Case | Run | Whole run | Image pull | `prismpm verify` | Note |
 | --- | --- | --- | --- | --- | --- |
-| Cold: push to main, empty caches | [43194362133](https://github.com/humuhumu33/prism-build-speed-scratch/actions/runs/43194362133) | 7 min 39 s | 159 s | 270 s | saved the oracle target (409 MB compressed) in 5 s |
-| Warm: dispatch on main, oracle target cached | [43195612994](https://github.com/humuhumu33/prism-build-speed-scratch/actions/runs/43195612994) | 6 min 13 s | 167 s | 176 s | restored the cache in 4 s |
-| Pull request, README only, same proof inputs | [43195689964](https://github.com/humuhumu33/prism-build-speed-scratch/actions/runs/43195689964) ([PR 1](https://github.com/humuhumu33/prism-build-speed-scratch/pull/1)) | 17 s | none | none | reused main's holo; prove job skipped |
+| Cold: push to main, empty caches | run 43194362133 | 7 min 39 s | 159 s | 270 s | saved the oracle target (409 MB compressed) in 5 s |
+| Warm: dispatch on main, oracle target cached | run 43195612994 | 6 min 13 s | 167 s | 176 s | restored the cache in 4 s |
+| Pull request, README only, same proof inputs | run 43195689964 ([PR 1](that repository)) | 17 s | none | none | reused main's holo; prove job skipped |
 
 All three runs reproduced the local build exactly: attestation `c158b938…` and holo sha256 `c9a7389e…`, now signed by the scratch repository's workflow. The hosted runner verifies faster than this loaded desktop: 270 s against 566 s cold, 176 s against 257 s warm.
 
