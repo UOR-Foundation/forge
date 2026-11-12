@@ -480,3 +480,37 @@ Not done, and the app says so where it matters:
 - Editing a stateful app by clicking its words, undo, and the outcome diff: those exist for decisions only.
 - Keeping what a person typed across a new version of the module: a new version starts from `initial`.
 - The lane, the renderer's build and the performance budgets in CI: they run on GitHub, not here.
+
+## Step 4, done: a stateful app is checked at the end of its turn (2026-11-12)
+
+What changed in the studio:
+- `shell/live/app.mjs`: `checkApp` sends the module, as the model wrote it, and the one library module it imports to the hosted checker through `shell/live/v2/check.mjs` (a copy of `v2/hosted-check/check.mjs`, held by the Engine gate). `card` says what the state holds and no more. `repairPrompt` gives the model the checker's own words.
+- `host.js`: at the end of a turn the module is checked and its standing kept beside it as `prism/app.json`. The phase is the kernel's answer: an edit sends the app to drafting, a check that passes moves it to checked. A refusal gets one repair turn from the same model, as a decision's unreadable module already does. A module that has not changed is not checked again. The preview's badge shows the stored phase only while it is about the very bytes on screen.
+
+Tested in the real Foundry, over the deployed site, by ending turns through the host's own `rulesAfterTurn`:
+
+| Turn | Result | Time |
+| --- | --- | --- |
+| A model-written module | "App · checked … not proved yet, and it cannot be published yet"; the preview's badge reads Checked | 950 ms |
+| The same module again | nothing written, nothing asked of the service | 5 ms |
+| The module with a planted fault (a type that does not exist) | "App · not checked", with the checker's line naming the missing type; the app still runs as far as it can | 535 ms |
+| The fault fixed | checked again | 570 ms |
+
+Tests: `node --test studio/tools/live_app_check.test.mjs`, 5 claims and a sixth against the hosted service (`LIVE_APP_HOSTED=1`), all passing. Planted defect: `card` made to call every state checked; the claim failed; restored, green. With the earlier suite and all v2 suites: 79 pass, 2 skipped (both need the network and pass when run).
+
+Not shown:
+- The repair turn itself. It needs a model, and none is reachable from a script here. What is tested is everything around it: the refusal, the lines given to the model, and the request built from them.
+- Where a fault is. For a fault found while linking, LexLean gives the module's line, not the declaration's, on the hosted service and in the SDK image alike. The message names the thing, which is what a model can act on. A better position is an upstream request.
+- That checked means right. A check is not a proof, and the card says so.
+
+About the end-to-end gate (`tools/live_e2e.mjs`, a decision app, real Chromium). Its budgets are tight, and on this machine it does not pass every time:
+
+| Target | Runs | Passed |
+| --- | --- | --- |
+| This branch, before step 4 | 1 | 1 |
+| This branch, with step 4 | 6 | 3 |
+| The deployed site, with none of this code | 3 | 0 |
+
+Every miss was an edit reaching the screen 2 to 17 ms past the two-frame budget of 33.4 ms. The deployed site missed more often than this branch, so the misses are this machine, not this change. The gate's verdict that counts is the one in CI.
+
+Next: step 5, proof. The existing path proves a decision on the hosted verifier; a stateful app's module imports the library, whose title the hosted lexicon refuses, so the proof draft must carry a retitled library copy and the attestation will be over that draft. That, the time a hosted proof takes (over ten minutes for a small module), and showing each promise beside the statement proved are the work.

@@ -111,6 +111,8 @@ jobs:
         run: node tools/v2_engine.mjs --check
       - name: A stateful app's module, streamed, becomes frames; a press becomes the next frame
         run: node --test tools/live_app.test.mjs
+      - name: A stateful app is checked at the end of its turn, and the card claims no more than the check found
+        run: node --test tools/live_app_check.test.mjs
       - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
         run: |
           node tools/live_proof.mjs --check

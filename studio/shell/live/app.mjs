@@ -9,12 +9,39 @@
 import { loadProject, NIL, cons } from "./v2/interp.mjs";
 import { describe, fieldValue } from "./v2/render.mjs";
 import RULES from "./v2/rules.mjs";
+import { check as hostedCheck, loadLibrary } from "./v2/check.mjs";
 
 const HOSTED = "https://mcp.uor.foundation/";
 const PROFILE = "prism-app";
 const MODEL = "Foundation.View.Browser.V1.Model";
 const OPEN = "\\begin{semanticmodule}", CLOSE = "\n\\end{semanticmodule}\n\\end{lexlean}\n";
 const NEEDED = ["State", "catalogue", "initial", "view"];
+
+/** Where what is known about a stateful app's module is kept: its phase, and what the checker said. */
+export const STATE_PATH = "prism/app.json";
+/** What the chat shows for a state. It claims no more than the state holds. */
+export function card(state) {
+  if (state.phase === "checked") return "**App** · checked\n\nThe checker accepts this app's module, and it runs in the preview from it. It is not proved yet, and it cannot be published yet.";
+  if (state.issues && state.issues.length) return "**App** · not checked\n\n" + state.issues.map((i) => "- " + i).join("\n") + "\n\nIt still runs in the preview as far as it can. Ask me to fix the module.";
+  return CARD + (state.unchecked ? "\n\nIt could not be checked just now: " + state.unchecked : "");
+}
+/** One line a person or a model can act on. */
+export const issueLine = (d) => (d.line ? "Line " + d.line + ": " : "") + d.message + (d.code ? " (" + d.code + ")" : "");
+/** What a model is asked when the checker refuses its module: its own module, the checker's words, the whole module again. */
+export const repairPrompt = (issues) => "The checker refused your module:\n" + issues.map((i) => "- " + i).join("\n") + "\nWrite the whole module again, in one <prism-lexlean> block, with that fixed and nothing else changed. Write nothing but the block.";
+
+/** The library the checker sends with a module. `readText(path)` reads a file beside the checker (shell/live/v2/). */
+export const checkLibrary = (readText) => loadLibrary(readText);
+/**
+ * Checks a module on the hosted service. Resolves { ok, issues, ms }; `issues` are lines about the
+ * module as written. It checks; it does not prove. Rejects when the service cannot be reached.
+ */
+export async function checkApp(module, library, fetchImpl) {
+  const t0 = performance.now();
+  const result = await hostedCheck(String(module).trim() + "\n", { library: await library, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
+  const issues = result.ok ? [] : result.diagnostics.filter((d) => d.severity !== "warning").map(issueLine);
+  return { ok: !!result.ok, issues: result.ok ? [] : issues.length ? issues.slice(0, 8) : ["The checker refused the module and gave no reason."], ms: Math.round(performance.now() - t0) };
+}
 
 /** Where a stateful app's module is kept in its project. */
 export const SOURCE_PATH = "prism/App.lex.tex";
@@ -157,6 +184,8 @@ export function appLive({ post, library, fetchImpl = fetch, now = () => performa
       const a = entry(appId);
       a.trust = trust;
       if (!prefix.ready) return false;
+      // The same module with a new standing (checked, say) is the same frame under a new badge.
+      if (prefix.source === a.source && a.last) { send(appId); return true; }
       a.wanted = prefix.source;
       run(appId);
       return true;

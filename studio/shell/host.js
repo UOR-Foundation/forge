@@ -579,6 +579,10 @@ const appApps = new Set();     // apps whose preview is a running module, not a 
 const postApp = (appId, message) => { const m = { ...message, theme: themeOf() }; for (const [win, app] of liveWindows) { if (win.closed) liveWindows.delete(win); else if (app === appId) win.postMessage(m, "*"); } };
 let appFrames = null;
 const appFramesReady = () => appFrames || (appFrames = fetch(new URL("live/v2/Model.json", BASE)).then((r) => { if (!r.ok) throw new Error("live/v2/Model.json answered " + r.status); return r.json(); }).then((model) => appShape.appLive({ post: postApp, library: { "Foundation.View.Browser.V1.Model": model } })));
+// The checker for a stateful app (shell/live/v2/check.mjs), with the library source it sends.
+let appLibrary = null;
+const readEngine = async (p) => { const r = await fetch(new URL("live/v2/" + p, BASE)); if (!r.ok) throw new Error("live/v2/" + p + " answered " + r.status); return r.text(); };
+const checkAppModule = (module) => appShape.checkApp(module, appLibrary || (appLibrary = appShape.checkLibrary(readEngine).catch((e) => { appLibrary = null; throw e; })));
 function pushApp(appId, module, trust = "draft") { appApps.add(appId); appFramesReady().then((frames) => frames.push(appId, module, trust)).catch((e) => console.error(e)); }
 function pushLive(appId, raw, trust, edit = false) {
   liveLatest.set(appId, { raw, trust, edit });
@@ -608,7 +612,13 @@ new MutationObserver(() => { for (const appId of liveLatest.keys()) pushLive(app
 async function refreshLive(appId) {
   // A stateful app is its module: it is run again from the stored source.
   const appSource = await get("files", appId + ":" + appShape.SOURCE_PATH);
-  if (typeof appSource === "string" && appShape.isAppShape(appSource)) { pushApp(appId, appSource); return; }
+  if (typeof appSource === "string" && appShape.isAppShape(appSource)) {
+    // The badge is the stored phase only while it is about these very bytes.
+    let trust = "draft";
+    try { const known = JSON.parse(await get("files", appId + ":" + appShape.STATE_PATH) || "null"); if (known && known.sourceKappa === await kappa(enc.encode(appSource))) trust = known.phase; } catch (e) {}
+    pushApp(appId, appSource, trust);
+    return;
+  }
   const json = await get("files", appId + ":prism/spec.json");
   if (!json) return;
   const state = await rulesOf(appId);
@@ -1016,10 +1026,26 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   // write. It has no rules for the checker here to check; the card says it is a draft.
   const appModule = appShape.moduleFromTurn(text);
   if (appModule && appShape.isAppShape(appModule.text)) {
-    stage(appShape.SOURCE_PATH, appModule.text.trim() + "\n");
+    const appSource = appModule.text.trim() + "\n";
+    stage(appShape.SOURCE_PATH, appSource);
+    // The phase is the kernel's answer: an edit sends the app back to drafting, a check that passes
+    // moves it to checked. A check that could not be made leaves it drafting and says why.
+    let known = null;
+    try { known = JSON.parse(files.get(appShape.STATE_PATH) || "null"); } catch (e) {}
+    const sourceKappa = await kappa(enc.encode(appSource));
+    let appState;
+    if (known && known.sourceKappa === sourceKappa) appState = known;
+    else {
+      let phase = known && known.phase ? await nextPhase(known.phase, "edit") : "drafting";
+      const verdict = await checkAppModule(appSource).catch((e) => ({ ok: false, issues: [], unchecked: String((e && e.message) || e).slice(0, 200) }));
+      assertGenerationActive(options.signal);
+      if (verdict.ok) phase = await nextPhase(phase, "check");
+      appState = { phase, sourceKappa, issues: verdict.issues || [], ...(verdict.unchecked ? { unchecked: verdict.unchecked } : {}), updated: now() };
+      stage(appShape.STATE_PATH, JSON.stringify(appState, null, 2) + "\n");
+    }
     const kept = writes.length ? await applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, ...options, source }) : { changed: 0, source };
     assertGenerationActive(options.signal);
-    return { changed: kept.changed, source: kept.source, card: appShape.CARD };
+    return { changed: kept.changed, source: kept.source, card: appShape.card(appState) };
   }
   const lex = lexlean.specFromTurn(text);
   if (lex && lex.error) return { changed: 0, source, card: `**Rules** · not read\n\n- ${lex.error}\n\nAsk me to fix the module.` };
@@ -1320,9 +1346,19 @@ async function chatTurn(chatId, intent) {
     // words, streamed into this answer, so the user sees a fixed app rather than an error to relay.
     const repaired = async (genBody) => {
       const before = full;
-      // The decision reader cannot read the app shape, and would ask for a repair of a module that runs.
+      // A stateful app is checked by the hosted checker, not read by the decision reader. A refusal gets
+      // one repair turn from the same model, with the checker's words, streamed into this answer.
       const wrote = appShape.moduleFromTurn(before);
-      if (wrote && appShape.isAppShape(wrote.text)) return;
+      if (wrote && appShape.isAppShape(wrote.text)) {
+        const verdict = await checkAppModule(wrote.text).catch(() => null);
+        if (verdict && !verdict.ok) {
+          const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: appShape.repairPrompt(verdict.issues) }] };
+          const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
+          settleText();
+          await onText(before + "\n\n" + text);
+        }
+        return;
+      }
       const next = await lexlean.withRepair(before, async (prompt) => {
         const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: prompt }] };
         const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
