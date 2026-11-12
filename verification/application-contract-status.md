@@ -1,6 +1,6 @@
 # Application specification implementation status
 
-Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-73. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
+Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-74. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
 
 | Obligation | Implemented scope and evidence | Remaining acceptance or implementation |
 | --- | --- | --- |
@@ -50,3 +50,5 @@ Author completeness reviews are not independent approval. Earlier green revision
 The selected SDK remains `ghcr.io/uor-foundation/prismpm-sdk-candidate@sha256:cd3b47d7a370c4a26b8285f5e9c3bb15e639973c55505c3809ddbe55352fea58`. PrismPM factory PR #586 was rechecked on 2026-11-12: open/unmerged at `e8eb0ad15e8323a62915cf84e87c3c8180d7bcb5`; its release-graph host is not a qualified Foundry consumer interface. Repository rules prohibit replacing the selected SDK with host/vendored code. A published immutable consumer SDK and exact supported template update are required.
 
 The R6 dependency issue includes `uor-hologram` 0.12.1 at Git revision `2bda6a9a9476872dade705bd61ece4209607f6da` and six transitive Git packages, without qualified registry replacements. The separate `site/` Prism page remains byte-bound to the official frame and fails its mobile performance gate; importing a verified official frame update is the supported correction path. Neither hold is waived by Studio feature acceptance.
+
+FA-74 (#140) closes the surviving-window execution-lock race under `FoundrySpecification.chatOwnerRecoveryBoundary`: all 445 Node controls, full Rust/Clippy/fmt, 54 mandatory browser journeys, five Node mutations and the actual browser mutation pass. Author review 5869211564 records scoped completeness, not independent approval. FA-73 broader actual-app replay exposed document loss during service-worker acceptance; owner handoff remains under implementation.
