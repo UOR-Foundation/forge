@@ -1,6 +1,6 @@
 # Application specification implementation status
 
-Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-77. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
+Authority: `app/src/FoundrySpecification.lex.tex`. This ledger reports implementation and evidence; it neither defines behavior nor promotes a requirement into an accepted claim. Current feature stack: FA-01 through FA-78. The entire conversion remains incomplete. Earlier revision-specific results are retained in `application-contract-history.md` and each feature's verification file.
 
 | Obligation | Implemented scope and evidence | Remaining acceptance or implementation |
 | --- | --- | --- |
@@ -58,3 +58,5 @@ FA-74 (#140) closes the surviving-window execution-lock race under `FoundrySpeci
 FA-75 recovers lost verified document owners during bounded service-worker kernel replay, including post-verification readiness hints. FA-76 admits all rules of a structurally valid large canonical module while preserving the explicit 24-rule Lean proof restriction. Its 56 mandatory browsers, full mobile and four-app replay pass; two initial Verdant patch-work timings exceed the unchanged budget before attempt 3 passes. Hosted Studio and Forge performance pass at b81d7d326f67ade0f9fc97d5b72420740610d941; SDK acceptance at that revision was superseded/cancelled by the next evidence commit, not accepted.
 
 FA-77 registers and implements atomic chat preference persistence under the imported renderer schema. Focused unit/actual-browser mutation controls pass; all 57 mandatory browser journeys pass together. Stored mode selection does not implement Ask/Plan execution semantics. Further identified work includes chat-screen preview-refusal/submission races and legacy OpenRouter model routing. See `atomic-chat-preferences.md`; the conversion remains incomplete.
+
+FA-78 enforces read-only Ask/Plan execution independently of preference persistence. All 463 Node controls and 58 mandatory browser journeys pass, with ten unit and three actual-browser mutations qualified. Source/proof/version/preview invariance and a positive Build mutation are checked. Native local-agent tools and plan approval/storage workflows remain open. The later FA-76 hosted Studio run 43160715684 failed the mobile sidebar pointer-obstruction assertion; investigation remains open, while its Forge performance run 43160715704 passes.
