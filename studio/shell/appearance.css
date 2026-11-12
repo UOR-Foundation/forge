@@ -178,6 +178,25 @@
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
+/* Hints (tooltips): the same glass, as a small pill. Dyad paints them in the foreground colour with the words
+   in --background, which Immersive makes fully transparent, so the hint was a blank white pill there and an
+   inverted one elsewhere. Here every hint is the popover glass with the popover's own words: legible over any
+   photo in every look, 12 px medium, a hairline edge, no arrow, and it settles in quickly. */
+[data-slot="tooltip-content"] {
+  background: color-mix(in srgb, var(--popover) 88%, transparent) !important;
+  color: var(--popover-foreground) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  border: 1px solid color-mix(in srgb, var(--popover-foreground) 12%, transparent);
+  border-radius: calc(var(--radius) - 2px) !important;
+  box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--popover) 80%, transparent), inset 0 1px 0 color-mix(in srgb, var(--popover-foreground) 7%, transparent);
+  padding: 5px 9px !important;
+  font-size: 12px !important; font-weight: 500; line-height: 16px; letter-spacing: 0.005em;
+  width: max-content; max-width: min(320px, calc(100vw - 32px)); text-wrap: balance;
+  animation-duration: 120ms !important;
+}
+[data-slot="tooltip-content"] > span:has(> svg), [data-slot="tooltip-arrow"] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { [data-slot="tooltip-content"] { animation: none !important; } }
 
 /* Electron's title bar (the logo, "Manage app", the window controls) is window chrome, not the
    product: hidden, and the layout's offset for it set to zero so the page starts at the top. */
