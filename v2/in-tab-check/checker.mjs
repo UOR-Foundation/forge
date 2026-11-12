@@ -140,6 +140,15 @@ export async function load({ wasm, pack, manifest, store = null, recycleBytes = 
       if (r.code !== 0) throw fail("ITC_DATA", `no data form for ${name} (exit ${r.code})`);
       return JSON.parse(r.stdout.match(/\\semanticdata\{([\s\S]*)\}\n\\end\{semanticmodule\}/)[1]);
     },
+    // The data form of the author's first module as written, by LexLean's own reader. It reads; it does not check,
+    // so a module the checker would refuse still has one when it parses.
+    data(spec, { extras = [] } = {}) {
+      const { own, files } = project(spec, extras);
+      const r = call("data", [`/${modulePath(own[0].name)}`], files);
+      const text = r.code === 0 ? r.stdout.match(/\\semanticdata\{([\s\S]*)\}\n\\end\{semanticmodule\}/)?.[1] : null;
+      if (!text) throw fail("ITC_DATA", `no data form for ${own[0].name} (exit ${r.code}): ${r.stderr.trim().split("\n")[0].slice(0, 200)}`);
+      return JSON.parse(text);
+    },
     // Returns { ok, diagnostics, data?, by, cached, ms }. A result is reused only under the address of everything that
     // produced it: the checker, the pack and every module's text. A stored result that does not hash to what was
     // recorded with it is dropped and the check is run.
@@ -168,5 +177,43 @@ export async function load({ wasm, pack, manifest, store = null, recycleBytes = 
       memo.set(key, text);
       return { ...JSON.parse(text), by, cached, key, ms: { ...ms, key: keyed - started, total: performance.now() - started } };
     },
+  };
+}
+
+// The worker's side of the conversation with the page. `scope` is the worker's global, or a stand-in with the same
+// postMessage, onmessage, addEventListener, fetch and location. The worker holds no storage of its own: reuse across
+// visits is asked of the page, one message a read or a write, and what comes back is verified by `check` above.
+export function serve(scope) {
+  let checker = null, asked = 0, blocked = 0;
+  const answers = new Map();
+  const failure = (e) => ({ error: { code: e.code ?? "ITC_INTERNAL", message: e.message } });
+  scope.addEventListener?.("securitypolicyviolation", () => { blocked++; });
+  const page = (message) => new Promise((resolve) => { const n = ++asked; answers.set(n, resolve); scope.postMessage({ store: n, ...message }); });
+  const store = { get: (key) => page({ get: key }), put: (key, value) => page({ put: key, value }) };
+  scope.onmessage = async ({ data: m }) => {
+    if (m.stored) { answers.get(m.stored)?.(m.value ?? null); answers.delete(m.stored); return; }
+    try {
+      if (m.type === "probe") {
+        // What this worker can reach. A policy that forbids connections refuses the fetch and reports a violation;
+        // a fetch that merely failed (no network) reports none, so the two are told apart.
+        const before = blocked;
+        let network;
+        try { await scope.fetch(m.url ?? scope.location.href, { cache: "no-store" }); network = "reached"; } catch (e) { network = `refused: ${e.message}`; }
+        for (let i = 0; i < 20 && blocked === before && network !== "reached"; i++) await new Promise((r) => setTimeout(r, 5));
+        scope.postMessage({ id: m.id, network, policy: blocked > before, isolated: scope.crossOriginIsolated });
+      } else if (m.type === "load") {
+        checker = await load({ wasm: m.wasm, pack: m.pack, manifest: m.manifest, store: m.store ? store : null });
+        scope.postMessage({ id: m.id, by: checker.by, loadMs: checker.loadMs });
+      } else if (!checker) {
+        scope.postMessage({ id: m.id, ...failure(fail("ITC_NOT_LOADED", "the checker is not loaded")) });
+      } else if (m.type === "warm") {
+        scope.postMessage({ id: m.id, ms: checker.warm(), memoryBytes: checker.memoryBytes() });
+      } else if (m.type === "check") {
+        const result = await checker.check(m.spec, { extras: m.extras ?? [] });
+        scope.postMessage({ id: m.id, result, memoryBytes: checker.memoryBytes() });
+      } else if (m.type === "data") {
+        scope.postMessage({ id: m.id, data: checker.data(m.spec, { extras: m.extras ?? [] }) });
+      } else scope.postMessage({ id: m.id, ...failure(fail("ITC_MESSAGE", `unknown message ${m.type}`)) });
+    } catch (e) { scope.postMessage({ id: m.id, ...failure(e) }); }
   };
 }

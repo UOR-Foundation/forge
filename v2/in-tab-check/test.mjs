@@ -183,7 +183,7 @@ test("the client answers in the tab when ready, through the hosted route while l
   // With bytes that are not the manifest's the tab's checker never becomes ready, and the answer says so.
   const wrong = createClient({ makeWorker: worker, manifest: manifest(), bytesOf: async () => pack, hosted });
   await assert.rejects(wrong.start(), { code: "ITC_ADDRESS" });
-  assert.equal((await wrong.check(guests)).by.instead.code, "ITC_UNAVAILABLE");
+  assert.equal((await wrong.check(guests)).by.instead.code, "ITC_ADDRESS");
   await assert.rejects(wrong.check(guests, { only: "in-tab" }), { code: "ITC_ADDRESS" });
 });
 }

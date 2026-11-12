@@ -20,6 +20,10 @@
 //     empty capability baseline: its grant names no host, so the kernel admits no network and its
 //     files are served in a CSP sandbox with an opaque origin that reaches no other host and none of
 //     this origin's stores.
+//  5. The checker that runs in the tab (live/v2/in-tab/): its manifest, its worker's scripts and its library
+//     pack are answered only with the bytes this closure lists, and the worker's script is answered with a
+//     policy that allows no connection, which a static host cannot send. The checker's own bytes (15 MB)
+//     are no part of the closure: the page fetches them by the address the manifest names and keeps them.
 const CLOSURE = "__CLOSURE__";   // written by the projector; a new shell is a new worker
 const BASE = new URL(self.registration.scope).pathname;
 
@@ -65,6 +69,34 @@ async function fillRest() {
   for (const f of m.files) if (LATER.test(f.path)) { try { await fillOne(f.path); } catch (e) {} }
 }
 self.addEventListener("message", (event) => { if (event.data === "fill") event.waitUntil(fillRest()); });
+
+// ---- the checker in the tab
+// What decides which checker may run (the manifest) and the code that runs it are never taken from a newer
+// or an altered deployment: a file whose bytes are not the ones this closure lists is refused, the page's
+// checker does not start, and the page says the hosted service checked instead and why. client.mjs is left
+// out: the page imports it before any worker controls it, as it does every other script of the first load.
+const CHECKER = /^live\/v2\/in-tab\/(?!client\.mjs$)/;
+const CHECK_WORKER = "live/v2/in-tab/worker.mjs";
+// The worker is handed bytes and answers checks. It may load its own modules and compile WebAssembly; it may
+// open no connection of any kind, to this origin or another.
+const NO_CONNECTION = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'none'";
+async function checkerFile(path) {
+  const cache = await shellCache();
+  let hit = await cache.match(BASE + path);
+  if (!hit) {
+    const row = (await closureManifest()).files.find((f) => f.path === path);
+    const r = await fetch(new Request(BASE + path, { cache: "reload" }));
+    if (!r.ok) return r;
+    const bytes = await r.arrayBuffer();
+    if (!row || hex(await crypto.subtle.digest("SHA-256", bytes)) !== row.sha256) return new Response("refused: " + path + " is not the file this shell's closure lists", { status: 409, headers: { "content-type": "text/plain; charset=utf-8" } });
+    hit = new Response(bytes, { headers: { "content-type": r.headers.get("content-type") || "application/octet-stream" } });
+    await cache.put(BASE + path, hit.clone());
+  }
+  if (path !== CHECK_WORKER) return hit;
+  const headers = new Headers(hit.headers);
+  headers.set("content-security-policy", NO_CONNECTION);
+  return new Response(hit.body, { status: 200, headers });
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
@@ -242,6 +274,9 @@ self.addEventListener("fetch", (event) => {
     if (event.request.method !== "GET") return;
     // app/ is the Forge kernel's Prism page, a separate site with its own worker: never answered here.
     if (path === "app" || path.startsWith("app/")) return;
+    // The checker's bytes are named by their address and kept by the page that verified them: never answered here.
+    if (path.startsWith("checker/")) return;
+    if (CHECKER.test(path)) { event.respondWith(checkerFile(path).catch(() => new Response("the checker's file could not be read", { status: 503 }))); return; }
     // The chat app under ui/ routes on the client: every navigation there is its one page, from the closure first.
     if (path.startsWith("ui/") && event.request.mode === "navigate") { event.respondWith((async () => (await caches.match(BASE + "ui/index.html")) || fetch(new Request(BASE + "ui/index.html")))()); return; }
     // The renderer's files under assets/ sit outside the closure. A chunk is named by its content hash, so a

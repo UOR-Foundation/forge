@@ -15,6 +15,14 @@ const COPIES = {
   "studio/shell/live/v2/Model.json": "v2/probe-payment/data/Foundation/View/Browser/V1/Model.json",
   "studio/shell/live/v2/check.mjs": "v2/hosted-check/check.mjs",
   "studio/shell/live/v2/Model.lex.tex": "v2/probe-payment/src/Foundation/View/Browser/V1/Model.lex.tex",
+  // The checker that runs in the tab: the page's side, the worker, the file-system host, the library pack and the
+  // manifest of the lean build. The checker's own bytes are not here: they are fetched by the address the manifest names.
+  "studio/shell/live/v2/in-tab/client.mjs": "v2/in-tab-check/client.mjs",
+  "studio/shell/live/v2/in-tab/worker.mjs": "v2/in-tab-check/worker.mjs",
+  "studio/shell/live/v2/in-tab/checker.mjs": "v2/in-tab-check/checker.mjs",
+  "studio/shell/live/v2/in-tab/wasi.mjs": "v2/in-tab-check/wasi.mjs",
+  "studio/shell/live/v2/in-tab/pack.json": "v2/in-tab-check/pack.json",
+  "studio/shell/live/v2/in-tab/checker-lean.json": "v2/in-tab-check/checker-lean.json",
 };
 // The instructions a model is given for the app shape, as a module the shell can import.
 const DERIVED = { "studio/shell/live/v2/rules.mjs": ["v2/loop/RULES.txt", (text) => "// Written by tools/v2_engine.mjs from v2/loop/RULES.txt. Edit that file, not this one.\nexport default " + JSON.stringify(text) + ";\n"] };

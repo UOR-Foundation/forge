@@ -578,12 +578,27 @@ function sendLive(appId) {
 const appApps = new Set();     // apps whose preview is a running module, not a projection
 const postApp = (appId, message) => { const m = { ...message, theme: themeOf() }; for (const [win, app] of liveWindows) { if (win.closed) liveWindows.delete(win); else if (app === appId) win.postMessage(m, "*"); } };
 let appFrames = null;
-const appFramesReady = () => appFrames || (appFrames = fetch(new URL("live/v2/Model.json", BASE)).then((r) => { if (!r.ok) throw new Error("live/v2/Model.json answered " + r.status); return r.json(); }).then((model) => appShape.appLive({ post: postApp, library: { "Foundation.View.Browser.V1.Model": model } })));
-// The checker for a stateful app (shell/live/v2/check.mjs), with the library source it sends.
+const appFramesReady = () => appFrames || (appFrames = fetch(new URL("live/v2/Model.json", BASE)).then((r) => { if (!r.ok) throw new Error("live/v2/Model.json answered " + r.status); return r.json(); }).then((model) => appShape.appLive({ post: postApp, library: { "Foundation.View.Browser.V1.Model": model }, dataOf: async (source) => (await appCheck.data(source, { only: await checkOnly() })).data })));
+// The checker for a stateful app: LexLean's own check in this tab (shell/live/in-tab.mjs, loaded once the page
+// is idle), and the hosted service (shell/live/v2/check.mjs, with the library source it sends) while that
+// one loads or when it cannot run. Every verdict says which answered; the card shows it.
 let appLibrary = null;
 const readEngine = async (p) => { const r = await fetch(new URL("live/v2/" + p, BASE)); if (!r.ok) throw new Error("live/v2/" + p + " answered " + r.status); return r.text(); };
-const checkAppModule = (module) => appShape.checkApp(module, appLibrary || (appLibrary = appShape.checkLibrary(readEngine).catch((e) => { appLibrary = null; throw e; })));
-function pushApp(appId, module, trust = "draft") { appApps.add(appId); appFramesReady().then((frames) => frames.push(appId, module, trust)).catch((e) => console.error(e)); }
+const appCheck = appShape.appChecker({
+  library: () => appLibrary || (appLibrary = appShape.checkLibrary(readEngine).catch((e) => { appLibrary = null; throw e; })),
+  tab: () => import("./live/in-tab.mjs").then((m) => m.parts({ base: BASE, get, put, del })),
+});
+// A person who wants no module sent to a server sets `specStaysInTab` in the user settings: every check and
+// every data form then waits for the tab's checker, and fails with the reason when that one cannot run.
+const checkOnly = async () => (((await get("settings", "user")) || {}).specStaysInTab ? "in-tab" : null);
+const checkAppModule = async (module) => {
+  const only = await checkOnly();
+  try { return await appCheck.check(module, { only }); }
+  catch (e) { throw only ? new Error("nothing was sent to a server, and the checker in this tab could not run: " + String((e && e.message) || e)) : e; }
+};
+// The data form a check read on a pass, by app, for the very bytes it checked: the preview draws from it.
+const appData = new Map();
+function pushApp(appId, module, trust = "draft", data = null) { appApps.add(appId); appFramesReady().then((frames) => frames.push(appId, module, trust, data)).catch((e) => console.error(e)); }
 function pushLive(appId, raw, trust, edit = false) {
   liveLatest.set(appId, { raw, trust, edit });
   // An edit is one change a person just made: it goes now, not at the next frame, so the frame can paint
@@ -614,9 +629,9 @@ async function refreshLive(appId) {
   const appSource = await get("files", appId + ":" + appShape.SOURCE_PATH);
   if (typeof appSource === "string" && appShape.isAppShape(appSource)) {
     // The badge is the stored phase only while it is about these very bytes.
-    let trust = "draft";
-    try { const known = JSON.parse(await get("files", appId + ":" + appShape.STATE_PATH) || "null"); if (known && known.sourceKappa === await kappa(enc.encode(appSource))) trust = known.phase; } catch (e) {}
-    pushApp(appId, appSource, trust);
+    let trust = "draft", data = null;
+    try { const known = JSON.parse(await get("files", appId + ":" + appShape.STATE_PATH) || "null"); if (known && known.sourceKappa === await kappa(enc.encode(appSource))) { trust = known.phase; const read = appData.get(appId); if (read && read.sourceKappa === known.sourceKappa) data = read.data; } } catch (e) {}
+    pushApp(appId, appSource, trust, data);
     return;
   }
   const json = await get("files", appId + ":prism/spec.json");
@@ -761,7 +776,7 @@ function warmLive() {
   }).catch(() => {});
 }
 (window.requestIdleCallback || ((fn) => setTimeout(fn, 1500)))(warmLive, { timeout: 4000 });
-window.__live = { liveFrame, showLive, pushLive, pushApp, appFrames: appFramesReady, refreshLive, patchSpec, stepSpec, pointed: livePointed, times: liveTimes, project: live.project };
+window.__live = { liveFrame, showLive, pushLive, pushApp, appFrames: appFramesReady, checker: appCheck, checkApp: checkAppModule, refreshLive, patchSpec, stepSpec, pointed: livePointed, times: liveTimes, project: live.project };
 
 handlers.set("distributed-machine:subscribe", async ({ machineId, encodedKey }) => {
   if (machineId === "chat_stream") return chatSubscribe({ machineId, encodedKey });
@@ -1037,10 +1052,12 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
     if (known && known.sourceKappa === sourceKappa) appState = known;
     else {
       let phase = known && known.phase ? await nextPhase(known.phase, "edit") : "drafting";
-      const verdict = await checkAppModule(appSource).catch((e) => ({ ok: false, issues: [], unchecked: String((e && e.message) || e).slice(0, 200) }));
+      const verdict = await checkAppModule(appSource).catch((e) => ({ ok: false, issues: [], unchecked: String((e && e.message) || e).slice(0, 320) }));
       assertGenerationActive(options.signal);
       if (verdict.ok) phase = await nextPhase(phase, "check");
-      appState = { phase, sourceKappa, issues: verdict.issues || [], ...(verdict.unchecked ? { unchecked: verdict.unchecked } : {}), updated: now() };
+      if (verdict.ok && verdict.data && verdict.data.App) appData.set(appId, { sourceKappa, data: verdict.data.App }); else appData.delete(appId);
+      // `by` is who checked: the route, the checker's address and LexLean's version when it was this tab, the reason when it was not.
+      appState = { phase, sourceKappa, issues: verdict.issues || [], ...(verdict.unchecked ? { unchecked: verdict.unchecked } : {}), ...(verdict.by ? { by: verdict.by } : {}), updated: now() };
       stage(appShape.STATE_PATH, JSON.stringify(appState, null, 2) + "\n");
     }
     const kept = writes.length ? await applyStoredProjectPatch(await dbReady, appId, { writes, deletes: [], renames: [], deps: [] }, { core, derive: kappa, ...options, source }) : { changed: 0, source };
@@ -1730,6 +1747,9 @@ if ("serviceWorker" in navigator) {
   const idle = (fn) => (self.requestIdleCallback ? requestIdleCallback(fn, { timeout: 10000 }) : setTimeout(fn, 3000));
   addEventListener("load", () => idle(() => navigator.serviceWorker.ready.then((r) => r.active && r.active.postMessage("fill")).catch(() => {})), { once: true });
 }
+// The tab's own checker is loaded once the page has loaded and is idle: nothing of it but its 1.5 KB client
+// is in the first load. Until it is ready, and if it cannot run, the hosted service checks and the card says so.
+addEventListener("load", () => (self.requestIdleCallback ? requestIdleCallback(() => appCheck.start(), { timeout: 10000 }) : setTimeout(() => appCheck.start(), 3000)), { once: true });
 // After a deployment a page can run an entry that names a chunk the origin no longer serves: the worker has
 // already revalidated the entry, so one reload runs the new build whole.
 addEventListener("vite:preloadError", (event) => {
