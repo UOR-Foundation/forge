@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
 import { chromium } from "../vendor/dyad/node_modules/playwright-core/index.mjs";
+const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
+const helloStart = host.indexOf('window.addEventListener("message", (e) => {\n  const m = e.data;'), helloEnd = host.indexOf('new MutationObserver', helloStart);
+const identityStart = host.indexOf('const isLiveFrame ='), identityEnd = host.indexOf('\n', identityStart);
+assert.ok(helloStart >= 0 && helloEnd > helloStart && identityStart >= 0);
+const helloModule = `export function installHello(env) { const {liveFrameUrl,liveWindows,appApps,liveLatest,appFramesReady,refreshPreview,sendLive,refuse} = env; ${host.slice(identityStart,identityEnd)}\n${host.slice(helloStart,helloEnd)} }`;
 const sources = new Map([
+  ["/live-hello.mjs", helloModule],
   ["/browser-chat-modes.mjs", fs.readFileSync(new URL("../shell/browser-chat-modes.mjs", import.meta.url))],
   ["/chat-mode-catalog.mjs", fs.readFileSync(new URL("../shell/chat-mode-catalog.mjs", import.meta.url))],
   ["/chat-contracts.mjs", fs.readFileSync(new URL("../shell/chat-contracts.mjs", import.meta.url))],
@@ -15,13 +21,15 @@ const sources = new Map([
   ["/storage.mjs", fs.readFileSync(new URL("../shell/storage-request.mjs", import.meta.url))],
   ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))],
 ]);
-const server = http.createServer((request, response) => { const source = sources.get(request.url); response.setHeader("content-type", source ? "text/javascript" : "text/html"); response.end(source || "<!doctype html><title>Atomic edit acceptance</title>"); });
+const server = http.createServer((request, response) => {
+  if(request.url === '/hello-frame.html') {response.setHeader('content-type','text/html');response.end('<!doctype html><script>parent.postMessage({type:"live/hello",app:decodeURIComponent(location.hash.slice(1))},"*")</script>');return;}
+  const source = sources.get(request.url); response.setHeader("content-type", source ? "text/javascript" : "text/html"); response.end(source || "<!doctype html><title>Atomic edit acceptance</title>"); });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const executablePath = process.env.CHROME_BIN || ["/usr/bin/chromium", "/usr/bin/google-chrome"].find(p => fs.existsSync(p));
 let browser;
 try {
   browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox"] });
-  const page = await browser.newPage(); await page.goto(`http://127.0.0.1:${server.address().port}/`);
+  const page = await browser.newPage(), pageErrors = [];page.on("pageerror",error=>pageErrors.push(error.message)); await page.goto(`http://127.0.0.1:${server.address().port}/`);
   const report = await page.evaluate(async () => {
     const { editStoredProject, captureProjectSource, commitPreparedProject } = await import("/project-edit.mjs");
     const { prepareNewProject, prepareExistingProject, createStoredProject } = await import("/project-creation.mjs");
@@ -95,8 +103,30 @@ try {
     check(lifecycleRefused&&await snapshot()===beforeLifecycle,'stale lifecycle overwrote a replacement approval');
     await editStoredProject(db,{appId:statefulId,filePath:'prism/App.lex.tex',content:'structure{ name: State }\n\n'},boundary);
     check(await get('refs',`stateful:${statefulId}`)===undefined,'ordinary source mutation retained protected standing');
+    // The production frame listener receives warm-up's empty hash before any project exists.
+    // Keep strict project reads; reject non-project identities at the frame boundary instead.
+    const {installHello}=await import('/live-hello.mjs');
+    const liveFrameUrl=new URL('/hello-frame.html',location.href).href, liveWindows=new Map(), reads=[], refreshed=[], refusals=[];
+    installHello({liveFrameUrl,liveWindows,appApps:new Set(),liveLatest:new Map(),appFramesReady:()=>{throw Error('unexpected stateful path');},
+      refreshPreview:async id=>{reads.push(id);refreshed.push(await captureProjectSource(db,id));},
+      sendLive:()=>{throw Error('unexpected cached projection');},refuse:(...args)=>refusals.push(args)});
+    const pause=()=>new Promise(resolve=>setTimeout(resolve,10));
+    const waitFor=async predicate=>{for(let i=0;i<100;i++){if(predicate())return;await pause();}throw Error('live hello did not settle');};
+    const hello=async id=>{
+      const frame=document.createElement('iframe');frame.src=liveFrameUrl+'#'+encodeURIComponent(id);
+      const said=new Promise(resolve=>{const on=e=>{if(e.source===frame.contentWindow&&e.data?.type==='live/hello'){removeEventListener('message',on);resolve();}};addEventListener('message',on);});
+      document.body.append(frame);await said;await pause();return frame;
+    };
+    for(const id of ['', '0', 'not-an-app', '9007199254740992']){const frame=await hello(id);frame.remove();}
+    check(reads.length===0&&liveWindows.size===0,'warmup or invalid frame read project state');
+    let missingRefused=false;try{await captureProjectSource(db,'');}catch(error){missingRefused=error.code==='projectEditStateInvalid';}
+    check(missingRefused,'missing source was admitted to hide preview failure');
+    const frame=await hello(String(appId));await waitFor(()=>refreshed.length===1);
+    check(reads[0]===appId&&refreshed[0].reference===recovery,'valid frame failed its captured source read');frame.remove();
+    const absent=await hello('9007199254740991');await waitFor(()=>refusals.length===1);
+    check(refusals[0][0]===9007199254740991&&/preview.*could not be refreshed/i.test(refusals[0][2]),'missing app refresh did not report refusal');absent.remove();
     db.close();
-    return { exactParent: true, rulesInvalidated: true, raceKindsRefused: 5, concurrentWinner: 1, failedWrite: "rolled-back", recovery: "committed", statefulLifecycle:'source-bound-cas' };
+    return { exactParent: true, rulesInvalidated: true, raceKindsRefused: 5, concurrentWinner: 1, failedWrite: "rolled-back", recovery: "committed", statefulLifecycle:'source-bound-cas', liveWarmup:'no-project-read', invalidRefresh:'private-refusal' };
   });
-  assert.deepEqual(report, { exactParent: true, rulesInvalidated: true, raceKindsRefused: 5, concurrentWinner: 1, failedWrite: "rolled-back", recovery: "committed", statefulLifecycle:'source-bound-cas' }); console.log(JSON.stringify(report));
+  assert.deepEqual(report, { exactParent: true, rulesInvalidated: true, raceKindsRefused: 5, concurrentWinner: 1, failedWrite: "rolled-back", recovery: "committed", statefulLifecycle:'source-bound-cas', liveWarmup:'no-project-read', invalidRefresh:'private-refusal' }); assert.deepEqual(pageErrors,[]);console.log(JSON.stringify(report));
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
