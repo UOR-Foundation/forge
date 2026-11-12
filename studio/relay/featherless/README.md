@@ -34,7 +34,9 @@ site's key failures kept private. For a local run in Cloudflare's runtime, put
 
 ## What it forwards
 
-The model, the messages, a bounded `max_tokens`, `temperature`, `top_p`, `stop`, and `chat_template_kwargs.enable_thinking` when it is a boolean: the switch Featherless documents for asking a model not to reason before it answers. Forge sends `false` for a first attempt when its kernel says so (`think 0`, FK-22). Everything else is dropped. A change to `worker.mjs` reaches visitors only after `npx wrangler@4 deploy`.
+The model, the messages, a bounded `max_tokens`, `temperature`, `top_p` and `stop`. Everything else is dropped. A change to `worker.mjs` reaches visitors only after `npx wrangler@4 deploy`.
+
+`chat_template_kwargs.enable_thinking` is deliberately not forwarded. It was, for about three hours on 2026-11-12: with it set to `false`, Featherless returned GLM 5.3 Flash's whole answer in the reasoning channel and an empty answer, in every one of five requests. The worker was rolled back to the version before it.
 
 ## Limits
 

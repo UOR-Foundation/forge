@@ -14,6 +14,7 @@ fn current_main_integration_fa_24() {
         .arg(root.join("studio/tools/current_main_integration.test.mjs"))
         .arg(root.join("studio/tools/rules_transaction.test.mjs"))
         .arg(root.join("studio/tools/main_stateful_integration.test.mjs"))
+        .arg(root.join("studio/tools/notation_host_integration.test.mjs"))
         .arg(root.join("studio/tools/backlog_workflows.test.mjs"))
         .output()
         .expect("the locked SDK supplies Node");
@@ -24,8 +25,8 @@ fn current_main_integration_fa_24() {
         String::from_utf8_lossy(&output.stderr)
     );
     for required in [
-        "# tests 23",
-        "# pass 23",
+        "# tests 29",
+        "# pass 29",
         "# fail 0",
         "# cancelled 0",
         "# skipped 0",

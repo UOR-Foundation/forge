@@ -8,7 +8,7 @@
 // A frame drawn from here is a draft. It says nothing about the spec being checked or proved.
 import { loadProject, NIL, cons } from "./v2/interp.mjs";
 import { describe, fieldValue } from "./v2/render.mjs";
-import RULES from "./v2/rules.mjs";
+import * as notation from "./notation.mjs";
 import { check as hostedCheck, loadLibrary, prepare } from "./v2/check.mjs";
 import { isStatefulModule as isAppShape } from '../application-shape.mjs';
 export { isAppShape };
@@ -105,21 +105,35 @@ export async function checkApp(module, library, fetchImpl = globalThis.fetch, op
 
 /** Where a stateful app's module is kept in its project. */
 export const SOURCE_PATH = "prism/App.lex.tex";
+/** Where the lines a model wrote for it are kept: only a shorter way to show a model the same module. */
+export const NOTATION_PATH = "prism/app.notation";
 /** What the chat shows once a turn has written one. It claims no more than is true. */
 export const CARD = "**App** · draft\n\nThis app is stored as a LexLean module. Preview parsing and checking require approval to send source to mcp.uor.foundation. It is not checked or proved yet, and it cannot be published yet.";
 /** What a model is told about the app shape, after the instructions for a decision. */
-export const PROMPT = "\n\n# When the app keeps state: the app shape\nA decision module answers one request. If what is asked for is used over several steps (a list that grows, entries that are kept, a counter, a table of results, a form whose answer stays on the screen), write the module in the app shape instead, in the same <prism-lexlean> block. The shorthand above does not apply to it: write full LexLean, exactly as these rules and their example show, and inside the block write the module and nothing else. Forge runs it in the preview as you write it.\n\n" + RULES;
+export const PROMPT = "\n\n# When the app keeps state: the app notation\nA decision module answers one request. If what is asked for is used over several steps (a list that grows, entries that are kept, a table of results), the shorthand above does not apply. " + notation.PROMPT;
 /** What a model is shown of a stateful app: its module as it stands. */
-export const moduleContext = (source) => "The app's current LexLean module, in the app shape:\n<prism-lexlean>\n" + String(source).trim() + "\n</prism-lexlean>";
+export const moduleContext = (source, lines) => {
+  // The lines are shown only while they still stand for this very module, byte for byte.
+  if (typeof lines === "string" && lines.trim()) { const e = notation.expand(lines); if (e.ok && e.module.trim() === String(source).trim()) return "The app's current lines, in the app notation:\n<prism-lexlean>\n" + lines.trim() + "\n</prism-lexlean>"; }
+  return "The app's current LexLean module, in the app shape:\n<prism-lexlean>\n" + String(source).trim() + "\n</prism-lexlean>";
+};
+/** What a model is asked when its lines do not read: the reader's words, the whole block again. */
+export const notationRepairPrompt = (issues) => "Forge could not read your lines:\n" + issues.slice(0, 8).map((i) => "- Line " + i.line + ": " + i.message).join("\n") + "\nWrite all the lines again, in one <prism-lexlean> block, with that fixed and nothing else changed. Write nothing but the block.";
+/** What the chat shows when a turn's lines still do not read. It claims nothing about an app. */
+export const notationCard = (issues) => "**App** · not read\n\nForge could not read this turn's lines, so nothing was changed:\n" + issues.slice(0, 8).map((i) => "- Line " + i.line + ": " + i.message).join("\n") + "\n\nAsk me to fix it.";
 
 /** Whether a module, or the start of one, is in the app shape rather than the decision shape. */
 
 /** The module a chat turn is writing: the text after its last <prism-lexlean>, closed or not. */
-export function moduleFromTurn(text) {
+export function moduleFromTurn(text, { final = false } = {}) {
   const at = String(text || "").lastIndexOf("<prism-lexlean>");
   if (at < 0) return null;
   const rest = text.slice(at + 15), close = rest.indexOf("</prism-lexlean>");
-  return { text: close < 0 ? rest : rest.slice(0, close), closed: close >= 0 };
+  const block = close < 0 ? rest : rest.slice(0, close), closed = close >= 0;
+  // Lines in the app notation stand for a module: the module is what the turn wrote. While the turn is
+  // still streaming, a last line that does not read yet is left out. Final reads refuse it.
+  if (notation.isNotation(block)) { const e = notation.expand(block.replace(/^\s+/, ""), { lenient: !closed && !final }); return { text: e.ok ? e.module : "", closed, notation: block.trim() + "\n", issues: e.issues }; }
+  return { text: block, closed };
 }
 
 /** The whole top-level declarations of a module so far, by matching braces outside strings. */

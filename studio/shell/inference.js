@@ -300,17 +300,17 @@ export function withEngine(fn) { const run = gpuBusy.then(fn, fn); gpuBusy = run
 // A reasoning model (GLM 5.3 Flash) streams its reasoning in `delta.reasoning` for minutes before the
 // answer starts; onReasoning receives it so the chat can show the work instead of an empty message.
 const GLM_LOCK = "forge-featherless-glm";
-export async function paidGenerate(body, onDelta, signal, onReasoning, options = {}) {
+export async function paidGenerate(body, onDelta, signal, onReasoning) {
   // One GLM request per browser: this browser's tabs and turns queue for it in order (Web Locks), rather
   // than racing each other for the configured account's provider capacity.
-  if (providerOf(body.model) !== "featherless" || !(navigator.locks && navigator.locks.request)) return paidGenerateOnce(body, onDelta, signal, onReasoning, options);
-  const run = () => paidGenerateOnce(body, onDelta, signal, onReasoning, options);
+  if (providerOf(body.model) !== "featherless" || !(navigator.locks && navigator.locks.request)) return paidGenerateOnce(body, onDelta, signal, onReasoning);
+  const run = () => paidGenerateOnce(body, onDelta, signal, onReasoning);
   const first = await navigator.locks.request(GLM_LOCK, { ifAvailable: true }, async (lock) => (lock ? { done: await run() } : null));
   if (first) return first.done;
   if (onReasoning) onReasoning("Waiting for this browser's other GLM 5.3 Flash request to finish…");
   return navigator.locks.request(GLM_LOCK, signal ? { signal } : {}, run);
 }
-async function paidGenerateOnce(body, onDelta, signal, onReasoning, options = {}) {
+async function paidGenerateOnce(body, onDelta, signal, onReasoning) {
   const provider = providerOf(body.model);
   const route = await inferenceRoute(body.model), key = route.key;
   if (!key && route.kind !== "siteFeatherless") throw Object.assign(new Error("The provider requires a valid API key"), {code:"inferenceUnauthorized"});
@@ -318,11 +318,7 @@ async function paidGenerateOnce(body, onDelta, signal, onReasoning, options = {}
   let bytes = c.run({ op: "encode-openrouter-request", model: paidId(body.model), request: body, stream: true }).bytes;
   // Featherless speaks plain OpenAI chat completions: the core's request without the three fields only
   // OpenRouter reads (usage.include, reasoning, provider), and the standard usage option in their place.
-  if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true };
-    // Whether the model reasons before it writes is the kernel's answer (think ATTEMPT, FK-22); the switch is
-    // the one Featherless documents. It is not part of the question, so the answer's address is unchanged.
-    if (options.think === false) j.chat_template_kwargs = { enable_thinking: false };
-    bytes = JSON.stringify(j); }
+  if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; bytes = JSON.stringify(j); }
   const credentialOwner = route.credentialOwner;
   const permission = await authorizeInference({ provider: route.provider, model: paidId(body.model), bytes, credentialOwner, signal });
   let result;

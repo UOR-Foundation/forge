@@ -1178,7 +1178,14 @@ const saveRules = async (appId, state, expected, signal) => saveBoundRules(await
 // The end of a turn that wrote a stateful app: its module is kept as its source and checked. Resolves
 // null when the turn wrote none, and the turn is then a decision's (rulesAfterTurn).
 async function appAfterTurn(appId, text, options = {}) {
-  const appModule = options.moduleText === undefined ? appShape.moduleFromTurn(text) : {text:options.moduleText};
+  const appModule = options.moduleText === undefined ? appShape.moduleFromTurn(text, { final: true }) : {text:options.moduleText};
+  // Lines that still do not read change nothing; the chat says what the reader said.
+  if (appModule && appModule.notation && !appModule.text) {
+    assertGenerationActive(options.signal);
+    const source = options.source || await captureProjectSource(await dbReady, appId);
+    assertGenerationActive(options.signal);
+    return { changed: 0, source, card: appShape.notationCard(appModule.issues) };
+  }
   if (!appModule || !appShape.isAppShape(appModule.text)) return null;
   assertGenerationActive(options.signal);
   await coreReady;
@@ -1187,6 +1194,7 @@ async function appAfterTurn(appId, text, options = {}) {
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
   const appSource = appModule.text.trim() + "\n";
   stage(appShape.SOURCE_PATH, appSource);
+  if (appModule.notation) stage(appShape.NOTATION_PATH, appModule.notation);
   // The phase is the kernel's answer: an edit sends the app back to drafting, a check that passes
   // moves it to checked. A check that could not be made leaves it drafting and says why.
   const known = new Map(source.files).has('prism/spec.json') ? null : await boundApplicationState(source, kappa);
@@ -1674,7 +1682,7 @@ async function chatTurn(chatId, intent) {
     const moduleNow = activeApplicationModule(projectSource, lexlean.canonicalSource);
     const request = [
       { role: "system", content: chatExecutionPrompt(execution,prism.SPEC_RULES) + "\n\n" + await themeLibrary("resolve",{appId}) },
-      { role: "user", content: moduleNow && appShape.isAppShape(moduleNow[1]) ? appShape.moduleContext(moduleNow[1]) : prism.moduleContext(moduleNow ? moduleNow[1] : null) },
+      { role: "user", content: moduleNow && appShape.isAppShape(moduleNow[1]) ? appShape.moduleContext(moduleNow[1], new Map(projectSource.files).get(appShape.NOTATION_PATH)) : prism.moduleContext(moduleNow ? moduleNow[1] : null) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
@@ -1737,7 +1745,18 @@ async function chatTurn(chatId, intent) {
       const before = full;
       // A stateful app is checked by the hosted checker, not read by the decision reader. A refusal gets
       // one repair turn from the same model, with the checker's words, streamed into this answer.
-      const wrote = appShape.moduleFromTurn(before);
+      const wrote = appShape.moduleFromTurn(before, { final: true });
+      // Lines in the app notation are read here, not checked: the module they stand for is Forge's own
+      // writing. Lines that do not read get one repair turn, with the reader's words.
+      if (wrote && wrote.notation) {
+        if (wrote.issues.length) {
+          const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: appShape.notationRepairPrompt(wrote.issues) }] };
+          const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
+          await settleText();
+          await enqueueText(before + "\n\n" + text);
+        }
+        return;
+      }
       if (wrote && appShape.isAppShape(wrote.text)) {
         assertGenerationActive(abort.signal);
         const verdict = await checkAppModule(wrote.text, { signal: abort.signal, session: hostedSession }).catch(() => null);
@@ -1780,10 +1799,7 @@ async function chatTurn(chatId, intent) {
       // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
       const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
-      // A first attempt thinks only if the kernel allows it (think 0, FK-22). A kernel that does not know the
-      // question answers neither word, and the model is then left as it is.
-      const think = (await kernelReady.then((k) => k.ask("think 0")).catch(() => "")) !== "deny";
-      const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking, { think });
+      const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
       await settleText();
       await enqueueText(text);
       await repaired(body);

@@ -155,7 +155,9 @@ jobs:
           node tools/host_bundle.mjs --check
           node tools/host_bundle_runtime.mjs
       - name: Stateful source transactions and combined workflow reuse remain qualified
-        run: node --test tools/main_stateful_integration.test.mjs tools/backlog_workflows.test.mjs tools/application_shape_authority.test.mjs tools/proof_approval_cancellation.test.mjs
+        run: node --test tools/main_stateful_integration.test.mjs
+      - name: Notation preserves serialized source-owned generation
+        run: node --test tools/notation_host_integration.test.mjs tools/backlog_workflows.test.mjs tools/application_shape_authority.test.mjs tools/proof_approval_cancellation.test.mjs
       - name: The site's Featherless relay takes only the site's offered, bounded chat requests, and keeps its key private
         run: node --test relay/featherless/worker.test.mjs
       - name: Every shell script parses the way the browser parses it
@@ -190,6 +192,8 @@ jobs:
         run: node --test tools/live_app_check.test.mjs
       - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
         run: node --test tools/live_app_prove.test.mjs
+      - name: The app notation always expands to the same checked module, and lines that do not read are refused
+        run: node --test tools/live_notation.test.mjs
       - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
         run: |
           node tools/live_proof.mjs --check
