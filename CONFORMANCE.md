@@ -321,6 +321,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-55` | `build` | Message-linked restoration atomically binds verified source preview to exact chat truncation or a history-preserving fork |
 
+## module-presentation-ownership
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-72` | `build` | Generated modules retain presentation only when the canonical application interface remains compatible |
+
 ## portable-build-permission
 
 | ID | Level | Statement |
