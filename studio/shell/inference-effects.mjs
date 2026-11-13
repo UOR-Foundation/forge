@@ -17,9 +17,9 @@ const codes = new Set(["invalidInferenceRequest", "inferenceCancelled", "inferen
 // The site's Featherless relay (studio/relay/featherless): it holds the site's key, so a visitor without a
 // key of their own sends no credential at all. Their own key, when they have one, goes to Featherless itself.
 export const RELAY = "https://prism-featherless.trinity-03d.workers.dev/v1/chat/completions";
-const endpoints = { openrouter: "https://openrouter.ai/api/v1/chat/completions", featherless: "https://api.featherless.ai/v1/chat/completions", featherlessSite: RELAY };
+export const inferenceEndpoints = Object.freeze({ openrouter: "https://openrouter.ai/api/v1/chat/completions", featherless: "https://api.featherless.ai/v1/chat/completions", featherlessSite: RELAY });
 export async function cloudCompletion({ provider, key, bytes, origin, signal, onDelta, onReasoning }, { fetch = globalThis.fetch, timeoutMs = 600000, retryMs = 5000 } = {}) {
-  if (!Object.hasOwn(endpoints, provider) || typeof bytes !== "string" || new TextEncoder().encode(bytes).length > 2 * 1024 * 1024 || !Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 600000 || !Number.isSafeInteger(retryMs) || retryMs < 0 || retryMs > 5000) throw fault("invalidInferenceRequest");
+  if (!Object.hasOwn(inferenceEndpoints, provider) || typeof bytes !== "string" || new TextEncoder().encode(bytes).length > 2 * 1024 * 1024 || !Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 600000 || !Number.isSafeInteger(retryMs) || retryMs < 0 || retryMs > 5000) throw fault("invalidInferenceRequest");
   const relayed = provider === "featherlessSite";
   if (relayed ? key !== "" : (typeof key !== "string" || !key.trim())) throw fault(relayed ? "invalidInferenceRequest" : "inferenceUnauthorized");
   if (signal?.aborted) throw fault("inferenceCancelled");
@@ -51,7 +51,7 @@ export async function cloudCompletion({ provider, key, bytes, origin, signal, on
     if (provider === "openrouter") { headers["HTTP-Referer"] = origin; headers["X-Title"] = "hologram-forge"; }
     let response;
     for (let attempt = 0; ; attempt++) {
-      check(); response = await fetch(endpoints[provider], { method: "POST", headers, body: bytes, signal: controller.signal }); check();
+      check(); response = await fetch(inferenceEndpoints[provider], { method: "POST", redirect: "error", credentials: "omit", headers, body: bytes, signal: controller.signal }); check();
       if (response.ok) break;
       if (response.status === 401 || response.status === 403) throw fault("inferenceUnauthorized");
       if (response.status === 402) throw fault("inferencePaymentRequired");

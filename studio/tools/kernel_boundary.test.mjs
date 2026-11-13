@@ -153,8 +153,8 @@ test("the kernel's composition boundary vectors replay through the pinned guest"
   const guest = await load();
   assert.equal(await guest.ask(vectors[0][0].toString("latin1")), "accepted");
   await assert.rejects(guest.ask(vectors[1][0].toString("latin1") + "x".repeat(8)), code("kernelRequestTooLarge"));
-  // And they are not in the shipped acceptance list any more: the one shipped request over 8 KB is the exact
-  // allocation boundary PrismPM requires.
-  const large = originalMeta.vectors.map(([request]) => Buffer.from(request, "base64").length).filter((n) => n > 8192);
-  assert.deepEqual(large, [originalMeta.limits.guestAllocation], "only the allocation-boundary vector is over 8 KB");
+  // The compact composition list excludes these two large cases, while the allocation boundary
+  // and the independent interaction oversize refusal remain embedded.
+  const large = originalMeta.vectors.map(([request,response]) => [Buffer.from(request, "base64"),Buffer.from(response,"base64").toString()]).filter(([request]) => request.length > 8192).map(([request,response])=>[request.length,response]).sort((a,b)=>a[0]-b[0]);
+  assert.deepEqual(large, [[8202,"interactionTooLarge"],[originalMeta.limits.guestAllocation,"compositionTooLarge"]], "only explicit allocation and interaction oversize refusals remain large");
 });

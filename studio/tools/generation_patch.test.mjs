@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import fs from "node:fs";
+import vm from "node:vm";
+import {activeApplicationModule} from "../shell/application-shape.mjs";
+import * as lexlean from "../shell/live/lexlean.mjs";
 import { stageGenerationPatch, assertGenerationActive } from "../shell/generation-patch.mjs";
 const source = { name: "app", reference: "blake3:" + "a".repeat(64), files: [["a", "old"], ["b", "other"]], dependencies: [] };
 const tags = (extra = {}) => ({ writes: [], deletes: [], renames: [], deps: [], ...extra });
@@ -29,7 +32,13 @@ test("identical writes are no-ops and pre-cancellation is typed", () => {
 test("the host binds generation source signal and committed results", () => {
   const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
   // The model is shown the module from the captured source, never the code.
-  assert.ok(host.includes("[...new Map(projectSource.files)].find(([p]) => /^prism\\/[A-Z]\\w*\\.lex\\.tex$/.test(p))"));
+  const selection = host.slice(host.indexOf('async function chatTurn(')).match(/const moduleNow = ([^;]+);/)?.[1];
+  assert.ok(selection?.includes("activeApplicationModule(projectSource, lexlean.canonicalSource)"));
+  const fixture = JSON.parse(fs.readFileSync(new URL("./fixtures/live/rsvp.json", import.meta.url), "utf8")), canonical = lexlean.canonicalSource(fixture);
+  const captured = {files:[["prism/AAA.lex.tex","inactive"],["prism/spec.json",JSON.stringify(fixture)],[`prism/${canonical.name}.lex.tex`,canonical.source]]};
+  const selected = expression => vm.runInNewContext(expression,{projectSource:captured,activeApplicationModule,lexlean,Map});
+  assert.equal(selected(selection)[1],canonical.source);
+  assert.notEqual(selected('[...new Map(projectSource.files)].find(([path]) => path.endsWith(".lex.tex"))')[1],canonical.source,"old first-module selection is a failing control");
   assert.ok(host.includes("prism.moduleContext(moduleNow ? moduleNow[1] : null)"));
   assert.ok(!host.includes('content: "This is my codebase. "'));
   assert.ok(host.includes("prism.deviceRequest(intent.prompt, capturedSpec)"));

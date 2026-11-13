@@ -1,41 +1,42 @@
 // The View's words for the model's codes: what the panel shows and what Prometheus calls each series.
 // Words only; no decision lives here. Keys are the model's names (Telemetry.lex.tex), read at load.
+// The wording follows the shell's surface standard (FoundrySpecification.foundrySurfaceExperienceBoundary):
+// plain words, why then how then what, no technical terms. Prometheus names stay as Prometheus spells them.
 
-// Label values for budgeted KPIs are the kernel's journey names, so a Prometheus rule, the kernel and
-// the panel name the same thing the same way.
 export const KPI_WORDS = {
-  preview: { label: "Enter to preview frame", unit: "time" },
-  declaration: { label: "Enter to first declaration", unit: "time" },
-  pixel: { label: "First declaration to first pixel", unit: "time" },
-  update: { label: "Work per preview update (worst)", unit: "time" },
-  edit: { label: "Edit to screen (worst)", unit: "time" },
-  checked: { label: "Module complete to Checked", unit: "time" },
-  built: { label: "Enter to Checked", unit: "time" },
-  reloads: { label: "Preview reloads", unit: "count" },
-  think: { label: "Enter to first token (model thinking)", unit: "time" },
-  lead: { label: "First token to first declaration", unit: "time" },
-  write: { label: "First declaration to module complete", unit: "time" },
-  firstTry: { label: "Modules reading at the first try", unit: "count" },
-  repaired: { label: "Modules reading after one repair", unit: "count" },
-  refused: { label: "Modules refused by the reader", unit: "count" },
-  reused: { label: "Checks reused", unit: "count" },
-  rechecked: { label: "Checks run", unit: "count" },
+  preview: { label: "Enter to the app's first look", unit: "time" },
+  declaration: { label: "Enter to the first line of the app", unit: "time" },
+  pixel: { label: "First line to first drawing", unit: "time" },
+  update: { label: "Longest redraw as the app is written", unit: "time" },
+  edit: { label: "Longest wait for a change to show", unit: "time" },
+  checked: { label: "Finished app to its check", unit: "time" },
+  built: { label: "Enter to a checked app", unit: "time" },
+  reloads: { label: "Times the preview reloaded", unit: "count" },
+  think: { label: "Enter to the model's first word", unit: "time" },
+  lead: { label: "First word to the first line of the app", unit: "time" },
+  write: { label: "First line to the finished app", unit: "time" },
+  firstTry: { label: "Apps that read at the first try", unit: "count" },
+  repaired: { label: "Apps that read after one repair", unit: "count" },
+  refused: { label: "Apps that did not read", unit: "count" },
+  reused: { label: "Checks answered from earlier work", unit: "count" },
+  rechecked: { label: "Checks run in full", unit: "count" },
 };
 
+// Each says why it matters, then how to change it, then what to expect.
 export const LEVER_WORDS = {
-  warmFrame: "Open the live frame earlier: keep a warm frame mounted before Enter so the first preview is a message, not a page load.",
-  reasoning: "The model spends most of the wait reasoning before it writes. Cap its reasoning for build turns, or pick a model that reasons less.",
-  declarationsFirst: "The first declaration comes late in the answer. Ask the model to write the module's declarations before any prose.",
-  projectEarly: "Paint the first declaration as soon as it is whole, without waiting for a structure or the rules.",
-  coalesce: "Preview updates cost more than a frame. Coalesce updates to one per animation frame and move the decision table off the main thread.",
-  editPath: "An edit takes more than two frames to reach the screen. Send an edit to the frame on its own frame, without waiting for a model stream's batch.",
-  reuseChecks: "Checking dominates. Reuse checks by content address so an edit re-checks only what changed (v2/reuse).",
-  shorterModule: "Writing the module dominates. Ask for a smaller first module and add to it in later turns.",
-  reloadTrigger: "A turn reloaded the preview. Find what changed the frame's address; the live frame should load once per app.",
+  warmFrame: "The first look at the app is slow because the preview loads after you press Enter. Keep the preview ready before Enter, and the first look becomes a message instead of a page load.",
+  reasoning: "Most of the wait is the model thinking before it writes. Limit its thinking for build requests, or choose a model that thinks less, and the first line arrives sooner.",
+  declarationsFirst: "The first line of the app comes late in the answer. Ask the model to write the app's lines before any explanation, and it appears sooner.",
+  projectEarly: "The first drawing waits for more than it needs. Draw the first line as soon as it is whole, and the app appears sooner.",
+  coalesce: "Redraws take longer than one screen refresh. Combine redraws into one per refresh and move the table work out of the way, and the preview stays smooth.",
+  editPath: "A change takes more than two screen refreshes to show. Send an edit on its own refresh instead of with the model's batch, and it shows sooner.",
+  reuseChecks: "The check is where the time goes. Reuse earlier checks for what did not change, and an edit checks only what it touched.",
+  shorterModule: "Writing the app is where the time goes. Ask for a smaller first version and add to it in later requests.",
+  reloadTrigger: "The preview reloaded during a build. Find what changed its address; it should load once for each app.",
 };
 
 export const SWITCH_WORDS = (from, to, fromRate, toRate) =>
-  `Turns run over budget and ${from}'s modules read at the first try ${fromRate / 10}% of the time against ${toRate / 10}% for ${to}. Consider ${to} for build turns.`;
+  `Builds run slow, and ${from} writes apps that read at the first try ${fromRate / 10}% of the time, against ${toRate / 10}% for ${to}. Try ${to} for build requests.`;
 
 // Prometheus metric families. Names follow Prometheus's conventions: base unit seconds, counters end in
 // _total, one family per meaning, the KPI as a label.

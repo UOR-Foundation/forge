@@ -4,7 +4,7 @@
 // answers within or over. No budget is written anywhere else.
 //
 //   node tools/perf_budget.mjs             the JS each route needs, gzip bytes, from the build's manifest
-//   node tools/perf_budget.mjs --browser   also the mobile journeys in Chromium (Playwright 1.56.1, as CI
+//   node tools/perf_budget.mjs --browser   also the mobile journeys in Chromium (the locked Playwright, as CI
 //                                          installs it): cold and warm LCP, INP of three presses, and the
 //                                          first streamed token against a provider that answers at once
 //
@@ -16,7 +16,6 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import zlib from "node:zlib";
-import { execSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { RELAY } from "../shell/inference-effects.mjs";
 
@@ -83,12 +82,12 @@ for (const [journey, route] of Object.entries(routes)) {
 // ---- the mobile journeys
 if (process.argv.includes("--browser")) {
   process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS = "1";
-  const pw = await import("playwright").catch(() => import(pathToFileURL(path.join(execSync("npm root -g").toString().trim(), "playwright", "index.mjs")).href));
+  const pw = await import("../vendor/dyad/node_modules/playwright-core/index.mjs");
   const { chromium } = pw.default ?? pw;
   const port = await serve();
   const BASE = `http://localhost:${port}/foundry/`;
   // PERF_CHANNEL=chrome runs it in an installed Chrome on a workstation; CI uses the Chromium Playwright installs.
-  const browser = await chromium.launch({ headless: true, channel: process.env.PERF_CHANNEL || undefined });
+  const browser = await chromium.launch({ headless: true, channel: process.env.PERF_CHANNEL || undefined, executablePath: process.env.CHROME_BIN || undefined, args: ["--no-sandbox"] });
   const median = (xs) => xs.slice().sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   const cold = [], warm = [], inp = [], token = [];
   // On a failed journey, what the page showed is kept (PERF_ARTIFACTS, set by CI), so a timeout says why.
@@ -109,23 +108,28 @@ if (process.argv.includes("--browser")) {
       new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__lcp = e.startTime; }).observe({ type: "largest-contentful-paint", buffered: true });
       new PerformanceObserver((l) => { for (const e of l.getEntries()) if (e.interactionId) window.__inp = Math.max(window.__inp, e.duration); }).observe({ type: "event", buffered: true, durationThreshold: 16 });
     });
-    // The provider, reached directly with a visitor's own key or through the site's relay without one: both
-    // answer with the same mocked stream, with the relay's CORS answer for the page's origin.
-    await ctx.route("https://api.featherless.ai/**", (r) => r.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: sse() }));
-    await ctx.route(new URL("/**", RELAY).href, (r) => r.request().method() === "OPTIONS"
-      ? r.fulfill({ status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "POST, OPTIONS", "access-control-allow-headers": "content-type" } })
-      : r.fulfill({ status: 200, headers: { "content-type": "text/event-stream", "access-control-allow-origin": "*" }, body: sse() }));
+    await ctx.route("**/*", route => {
+      const url = new URL(route.request().url());
+      if (url.origin === new URL(RELAY).origin) return route.request().method()==="OPTIONS"
+        ? route.fulfill({status:204,headers:{"access-control-allow-origin":"*","access-control-allow-methods":"POST, OPTIONS","access-control-allow-headers":"content-type"}})
+        : route.fulfill({status:200,headers:{"content-type":"text/event-stream","access-control-allow-origin":"*"},body:sse()});
+      if (url.origin === "https://api.featherless.ai") return route.fulfill({status:200,headers:{"content-type":"text/event-stream"},body:sse()});
+      return url.origin === new URL(BASE).origin ? route.continue() : route.abort();
+    });
     page = await ctx.newPage();
     const cdp = await ctx.newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
     const lcpOf = async () => { await page.waitForSelector("[role=textbox]", { timeout: 120000 }); await page.waitForTimeout(2500); return Math.round(await page.evaluate(() => window.__lcp)); };
     link.on = true;
     await page.goto(BASE, { timeout: 120000 }); cold.push(await lcpOf());
+    console.log(JSON.stringify({run,stage:"cold",lcp:cold.at(-1)}));
     // A second visit comes later: the worker has filled the rest of its closure by then (unthrottled here).
     link.on = false;
-    await page.evaluate(async () => { await navigator.serviceWorker.ready; for (let i = 0; i < 600 && !(await caches.match(new URL("ui/index.html", location.href).href)); i++) await new Promise((r) => setTimeout(r, 500)); });
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, {timeout:120000});
+    console.log(JSON.stringify({run,stage:"verified-worker-active"}));
     link.on = true;
     await page.reload({ timeout: 120000 }); warm.push(await lcpOf());
+    console.log(JSON.stringify({run,stage:"warm",lcp:warm.at(-1)}));
     link.on = false;
     // Three presses: the model picker, the sidebar, a key in the composer.
     await page.evaluate(() => (window.__inp = 0));
@@ -135,9 +139,27 @@ if (process.argv.includes("--browser")) {
     await page.click("[role=textbox]"); await page.keyboard.type("A habit tracker");
     await page.waitForTimeout(500);
     inp.push(Math.round(await page.evaluate(() => window.__inp)));
+    // The fixture supplies a private local credential and explicitly approves the
+    // captured request. Timing includes automated approval, not human decision time.
+    await page.evaluate(() => window.electron.ipcRenderer.invoke("set-user-settings", {providerSettings:{featherless:{apiKey:{value:"performance-local-fixture"}}}}));
     // Enter, to the first streamed token on screen.
     const t0 = await page.evaluate(() => performance.now());
     await page.keyboard.press("Enter");
+    // The browser can stack the preview and cloud disclosures in either order.
+    // Act on its topmost dialog: deny preview effects and explicitly approve
+    // inference. Each click uses the visible real control, never a forced click.
+    for (let decision = 0; decision < 8; decision++) {
+      await page.waitForFunction(() => /T0 /.test(document.body.innerText) || !!document.querySelector("dialog[open]"), null, {timeout:120000});
+      if (await page.evaluate(() => /T0 /.test(document.body.innerText))) break;
+      try {
+        await page.locator("dialog[open]").last().getByRole("button", {name:/^(Don't allow|Send this request)$/}).click({timeout:500});
+      } catch (error) {
+        // A second modal can arrive after Playwright resolves the first button.
+        // Retry a fresh locator; never force a click through the new modal.
+        if (error.name !== "TimeoutError") throw error;
+        console.log(JSON.stringify({run,stage:"consent-reordered",decision}));
+      }
+    }
     await page.waitForFunction(() => /T0 /.test(document.body.innerText), null, { timeout: 120000, polling: "raf" });
     token.push(Math.round((await page.evaluate(() => performance.now())) - t0));
     await ctx.close();
@@ -175,9 +197,7 @@ function serve() {
     if (!url.pathname.startsWith("/foundry/")) { res.writeHead(404); return res.end(); }
     const rel = decodeURIComponent(url.pathname.slice("/foundry/".length));
     let body, status = 200, type;
-    // The site's included key, as the deploy writes it: a placeholder the mocked provider accepts.
-    if (rel === "warmup.json") { body = Buffer.from(JSON.stringify({ key: "", model: "", featherless: "perf-gate" })); type = TYPES[".json"]; }
-    else {
+    {
       let file = path.join(shell, rel);
       if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
       if (!fs.existsSync(file)) { file = path.join(shell, "404.html"); status = 404; }

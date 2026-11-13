@@ -71,7 +71,7 @@ test("the actual paidGenerate adapter delegates transport and records validated 
   const source = fs.readFileSync(new URL("../shell/inference.js", import.meta.url), "utf8");
   const start = source.indexOf("export async function paidGenerate"), end = source.indexOf("// ---- the route:", start);
   let captured;
-  const context = { providerOf: () => "openrouter", paidId: m => m.replace("openrouter/", ""), coreReady: async () => ({ run: () => ({ bytes: '{}' }) }), keyFor: async () => "key", viewReady: async () => ({}), location: { origin: "https://foundry.test" }, cloudCompletion: async input => { captured = input; return { text: "answer", finish: "stop", ttftMs: 12, last: { id: "r", usage: { prompt_tokens: 4, completion_tokens: 1 } } }; } };
+  const context = { settingsGet: async () => ({}), authorizeInference: async input => ({ disclosure: input, signal: input.signal, close() {} }), providerOf: () => "openrouter", paidId: m => m.replace("openrouter/", ""), coreReady: async () => ({ run: () => ({ bytes: '{}' }) }), inferenceRoute: async () => ({kind:"visitorOpenRouter",provider:"openrouter",key:"key",credentialOwner:"visitor"}), viewReady: async () => ({}), location: { origin: "https://foundry.test" }, cloudCompletion: async input => { captured = input; return { text: "answer", finish: "stop", ttftMs: 12, last: { id: "r", usage: { prompt_tokens: 4, completion_tokens: 1 } } }; } };
   vm.createContext(context); vm.runInContext(source.slice(start, end).replace("export ", ""), context);
   const result = await context.paidGenerate({ model: "openrouter/model" });
   assert.equal(captured.bytes, '{}'); assert.equal(result.text, "answer"); assert.equal(result.rec.ttftMs, 12); assert.equal(result.rec.rederivable, false);
@@ -86,14 +86,9 @@ test("the site's Featherless relay gets no credential, keeps concurrency retries
   const source = fs.readFileSync(new URL("../shell/inference.js", import.meta.url), "utf8");
   const start = source.indexOf("async function paidGenerateOnce"), end = source.indexOf("// ---- the route:", start);
   let captured;
-  const context = { SITE_RELAY: "site-relay", providerOf: () => "featherless", paidId: m => m.replace("featherless/", ""), coreReady: async () => ({ run: () => ({ bytes: '{"usage":{},"reasoning":{},"provider":{},"stream":true}' }) }), keyFor: async () => "site-relay", viewReady: async () => ({}), location: { origin: "https://foundry.test" }, cloudCompletion: async input => { captured = input; return { text: "answer", finish: "stop", ttftMs: 1, last: { id: "r", usage: {} } }; } };
+  const context = { SITE_RELAY: "site-relay", providerOf: () => "featherless", paidId: m => m.replace("featherless/", ""), coreReady: async () => ({ run: () => ({ bytes: '{"usage":{},"reasoning":{},"provider":{},"stream":true}' }) }), inferenceRoute: async () => ({kind:"siteFeatherless",provider:"featherlessSite",key:"",credentialOwner:"site"}), authorizeInference: async input => ({disclosure:input,signal:input.signal,close(){}}), viewReady: async () => ({}), location: { origin: "https://foundry.test" }, cloudCompletion: async input => { captured = input; return { text: "answer", finish: "stop", ttftMs: 1, last: { id: "r", usage: {} } }; } };
   vm.createContext(context); vm.runInContext(source.slice(start, end), context);
   await context.paidGenerateOnce({ model: "featherless/zai-org/GLM-5.3-Flash" });
   assert.equal(captured.provider, "featherlessSite"); assert.equal(captured.key, "");
   assert.deepEqual(JSON.parse(captured.bytes), { stream: true, stream_options: { include_usage: true } });
-  // The kernel's answer to think 0 reaches Featherless as its one documented switch, and only when it is no.
-  await context.paidGenerateOnce({ model: "featherless/zai-org/GLM-5.3-Flash" }, undefined, undefined, undefined, { think: false });
-  assert.deepEqual(JSON.parse(captured.bytes), { stream: true, stream_options: { include_usage: true }, chat_template_kwargs: { enable_thinking: false } });
-  await context.paidGenerateOnce({ model: "featherless/zai-org/GLM-5.3-Flash" }, undefined, undefined, undefined, { think: true });
-  assert.equal("chat_template_kwargs" in JSON.parse(captured.bytes), false);
 });

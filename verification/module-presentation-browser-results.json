@@ -1,0 +1,10 @@
+{
+  "profile": "foundry/module-presentation-acceptance/1",
+  "crossProfile": true,
+  "oldModuleRemoved": true,
+  "canonicalBytes": true,
+  "compatiblePresentation": true,
+  "invalidModuleNoWrite": true,
+  "actualPreview": true,
+  "pageErrors": []
+}

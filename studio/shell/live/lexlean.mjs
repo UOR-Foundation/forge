@@ -84,7 +84,7 @@ function blocks(text) {
     const body = text.slice(m.index + m[1].length + 1, i);
     const name = /^\s*name:\s*([A-Za-z_][\w]*)/.exec(body)?.[1];
     if (!name) throw new LexLeanError(`a ${m[1]} has no name`);
-    out.push({ kind: m[1], name, body });
+    out.push({ kind: m[1], name, body, start: m.index, end: i + 1 });
     re.lastIndex = i + 1;
   }
   return out;
@@ -178,7 +178,56 @@ export function draftOf(source) {
 const flatAnd = (e) => (e.op === "&&" ? [...flatAnd(e.left), ...flatAnd(e.right)] : [e]);
 const field = (e) => e.project ?? null;
 
+const invalidModule = () => Object.assign(new Error("The canonical decision module is invalid or unsupported"), { code: "invalidCanonicalModule" });
+const compact = text => text.replace(/\s+/g, "");
+function signature(text, declarations) {
+  const semantic = declarations.filter(d => d.kind !== "theorem").map(d => compact(text.slice(d.start, d.end))).sort();
+  let outside = "", cursor = 0;
+  for (const d of declarations) { outside += text.slice(cursor, d.start); cursor = d.end; }
+  outside += text.slice(cursor);
+  return JSON.stringify([compact(outside), semantic]);
+}
+// This reader admits the canonical decision profile, not arbitrary LexLean programs.
+// Reconstructing every declaration prevents an unsupported constraint from disappearing.
+function checkedDeclarations(text) {
+    if (typeof text !== "string" || text.length > 1024 * 1024 || new TextEncoder().encode(text).length > 1024 * 1024) throw invalidModule();
+    const delimiters = [];
+    for (const char of text) {
+      if (char === "(" || char === "{") { delimiters.push(char); if (delimiters.length > 256) throw invalidModule(); }
+      else if (char === ")" || char === "}") { if (delimiters.pop() !== (char === ")" ? "(" : "{")) throw invalidModule(); }
+    }
+    if (delimiters.length) throw invalidModule();
+    const declared = blocks(text);
+    if (declared.length > 4096 || new Set(declared.map(d => d.name)).size !== declared.length) throw invalidModule();
+    return declared;
+}
 export function readLexLean(text) {
+  try {
+    const declared=checkedDeclarations(text);
+    const spec=readDecisionModule(text),canonical=toLexLean(spec);
+    if(signature(text,declared)!==signature(canonical,blocks(canonical)))throw invalidModule();
+    return spec;
+  }catch{throw invalidModule();}
+}
+function draftSignature(text,declarations){
+  const semantic=declarations.filter(d=>d.kind!=='theorem').map(d=>{
+    if(d.kind!=='definition')return compact(text.slice(d.start,d.end));
+    const body=/\bbody:\s*/.exec(d.body);if(!body)throw invalidModule();
+    const offset=body.index+body[0].length;
+    return compact(d.body.slice(0,offset))+JSON.stringify(parseExpr(d.body.slice(offset).trim(),d.name));
+  }).sort();
+  let outside='',cursor=0;for(const d of declarations){outside+=text.slice(cursor,d.start);cursor=d.end;}outside+=text.slice(cursor);
+  return JSON.stringify([compact(outside),semantic]);
+}
+export function readDraftLexLean(text){
+  try{
+    const declared=checkedDeclarations(text),spec=readDecisionModule(text),canonical=toLexLean(spec);
+    if(draftSignature(text,declared)!==draftSignature(canonical,blocks(canonical)))throw invalidModule();
+    return readLexLean(canonical);
+  }catch{throw invalidModule();}
+}
+
+function readDecisionModule(text) {
   const header = /\\begin\{lexlean\}\{([A-Za-z_]\w*)\}/.exec(text);
   if (!header) throw new LexLeanError("no \\begin{lexlean}{Module}");
   if (!/\\end\{lexlean\}/.test(text)) throw new LexLeanError("no \\end{lexlean}");
@@ -205,7 +254,7 @@ export function readLexLean(text) {
   // Codes: `<field><Value>` for choices, `answer<Word>` for answers, each a Nat literal.
   const consts = new Map();
   for (const b of bs) {
-    if (b.kind !== "definition" || !/parameters:\s*\[\]/.test(b.body) || !/result:\s*Nat/.test(b.body)) continue;
+    if (b.kind !== "definition" || !/parameters:\s*\[\s*\]/.test(b.body) || !/result:\s*Nat/.test(b.body)) continue;
     const v = /^\d+$/.exec(bodyOf(b)); if (v) consts.set(b.name, Number(v[0]));
   }
   const choices = {}, constOf = new Map();
@@ -338,10 +387,13 @@ export function readLexLean(text) {
 /**
  * The whole parts of a module still being written (a model streaming it). Never throws: complete
  * declarations are kept, the one being written is ignored. Returns { spec, stage, complete } where
- * stage is "empty", "fields", "rules" or "complete"; spec is a prism/spec/1 value or null.
+ * stage is "empty", "header", "fields", "rules" or "complete"; spec is a prism/spec/1 value or null.
  */
 export function readLexLeanPartial(text) {
-  try { return { spec: readLexLean(text), stage: "complete", complete: true }; } catch (e) { /* fall through */ }
+  if (typeof text !== "string" || text.length > 1024 * 1024 || new TextEncoder().encode(text).length > 1024 * 1024) {
+    const error = invalidModule(); return { spec: null, stage: "empty", complete: false, code: error.code, error: error.message };
+  }
+  try { return { spec: readDraftLexLean(text), stage: "complete", complete: true }; } catch (e) { /* fall through */ }
   // Close the module at the last complete declaration and read what is there.
   const ends = [];
   const re = /(definition|structure|theorem)\{/g;
@@ -354,23 +406,26 @@ export function readLexLeanPartial(text) {
     re.lastIndex = i + 1;
   }
   const head = /\\begin\{lexlean\}\{([A-Za-z_]\w*)\}/.exec(text);
-  if (!head || !ends.some((d) => d.kind === "structure")) return { spec: null, stage: "empty", complete: false };
+  if (!head) return { spec: null, stage: "empty", complete: false };
+  const title = head[1].replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+  const header = { spec: { schema: "prism/spec/1", name: kebab(head[1]), title, purpose: title, fields: [], outcomes: [], rules: [], properties: [], examples: [] }, stage: "header", complete: false };
+  if (!ends.some((d) => d.kind === "structure")) return header;
   const body = text.slice(0, ends[ends.length - 1].end);
   const names = new Set(ends.map((d) => d.name));
   // What is missing is supplied as the least that reads: bounds from the fields, an empty judge.
   let extra = "";
-  if (!names.has("inBounds")) return { spec: null, stage: "empty", complete: false };
+  if (!names.has("inBounds")) return header;
   const answers = [...text.matchAll(/definition\{name: (answer[A-Z]\w*), parameters: \[\], result: Nat, body: (\d+)\}/g)];
   if (!names.has("judge")) {
-    if (!answers.length) return { spec: null, stage: "empty", complete: false };
+    if (!answers.length) return header;
     extra = `\ndefinition{\n  name: judge,\n  parameters: [request : Request],\n  result: Nat,\n  body: (${answers[answers.length - 1][1]})\n}\n`;
   }
   try {
-    const spec = readLexLean(body + extra + "\n\\end{semanticmodule}\n\\end{lexlean}\n");
+    const spec = readDecisionModule(body + extra + "\n\\end{semanticmodule}\n\\end{lexlean}\n");
     if (!names.has("judge")) { spec.rules = []; spec.otherwise = undefined; }
     return { spec, stage: names.has("judge") ? "rules" : "fields", complete: false };
   } catch (e) {
-    return { spec: null, stage: "empty", complete: false, error: e.message };
+    return { ...header, code: "invalidCanonicalModule", error: "The canonical decision module is invalid or unsupported" };
   }
 }
 
@@ -398,15 +453,17 @@ function lastModule(text) {
   const body = close >= 0 ? rest.slice(0, close) : rest;
   const end = body.indexOf("\\end{semanticmodule}");
   if (end < 0) return close >= 0 ? body : null;
+  const tail=body.slice(end+"\\end{semanticmodule}".length);
+  if(!/^\s*(?:\\end\{(?:lexlean|prism-lexlean)\}\s*)?$/.test(tail))return body;
   return body.slice(0, end) + "\\end{semanticmodule}\n\\end{lexlean}";
 }
 export function specFromTurn(text) {
   const module = lastModule(text);
   if (module === null) return null;
   try {
-    const spec = readLexLean(module.trim() + "\n");
+    const spec = readDraftLexLean(module.trim() + "\n");
     return { ...canonicalSource(spec), spec };
-  } catch (e) { return { error: "The LexLean module does not read: " + e.message }; }
+  } catch { return { code: "invalidCanonicalModule", error: "The canonical decision module is invalid or unsupported" }; }
 }
 
 /** What Forge asks the model when its module does not read: the reader's own words, and the whole module again. */

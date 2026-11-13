@@ -2,12 +2,12 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-/// `FA-28`: App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules
+/// `AC-01`: App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules
 ///
 /// The card rules run here; the capture across the sandbox runs in Chromium in Studio CI
 /// (`studio/tools/covers_browser.mjs`), where the renderer's locked html-to-image is installed.
 #[test]
-fn app_covers_fa_28() {
+fn app_covers_ac_01() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(2)
