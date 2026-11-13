@@ -67,7 +67,7 @@ export function ChatModeSelector() {
   });
   return (
     // Every chat builds: the selector is kept for the page's own checks and is not shown, focused or clicked.
-    <div className="relative flex w-0 flex-col gap-1">
+    <div className="relative flex flex-col gap-1">
       <select
         aria-label="Chat mode"
         data-testid="chat-mode-selector"

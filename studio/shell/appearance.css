@@ -426,6 +426,7 @@ aside[aria-label^="Active"] button::before { content: ""; width: 8px; height: 8p
 #setting-default-chat-mode { display: none !important; }
 /* The tools are the first card of Settings, where they are found without scrolling. */
 #foundry-shell-actions { order: -1; }
-/* The selector itself is kept for the page's own checks, one pixel and unseen; it takes no space and no pointer. */
+/* The selector itself is kept for the page's own checks, one pixel and unseen; it takes no space and no pointer.
+   Its wrapper keeps its place, so a mode that could not be saved is still said there. */
 select[data-testid="chat-mode-selector"] { position: absolute !important; left: 0; top: 0; width: 1px !important; height: 1px !important; padding: 0 !important; border: 0 !important; opacity: 0 !important; pointer-events: none !important; }
-div:has(> select[data-testid="chat-mode-selector"]) { position: relative; width: 0; min-width: 0; }
+div:has(> select[data-testid="chat-mode-selector"]) { position: relative; }
