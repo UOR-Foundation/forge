@@ -556,6 +556,13 @@ model does not sanction.
 | `TL-19` | `build` | Approving with no suggestion pending adopts nothing |
 | `TL-20` | `build` | An adopted change is never called an improvement unless the KPI got faster |
 | `TL-21` | `build` | The device never keeps more than 512 turns |
+| `TL-22` | `build` | An app the kernel refused anything is never shown as all clear |
+| `TL-23` | `build` | An app is never shown as reaching a site it was never allowed to reach |
+| `TL-24` | `build` | A refused site is never shown as only allowed |
+| `TL-25` | `build` | A refusal is never counted as allowed, and an allowance never as a refusal |
+| `TL-26` | `build` | Every allowance and every refusal is counted once |
+| `TL-27` | `build` | The time an app or a site was last seen never moves back |
+| `TL-28` | `build` | The device never keeps more than 256 apps |
 
 ## verified-host-bundle
 

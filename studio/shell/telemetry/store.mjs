@@ -6,23 +6,35 @@
 //
 // A turn is one record: { id, at, model, events: [[kind, at, value, model], ...], dropped }.
 // Meta is a small key-value table: model names (the index a record carries) and the loop's state.
+// An app is one record: { id, name, installed, net: the model's AppNet, sites: { site: the model's Reach } },
+// the totals of the kernel's decisions about it, never the requests themselves.
 
 export function memoryBackend() {
-  const turns = new Map(), meta = new Map();
+  const turns = new Map(), meta = new Map(), apps = new Map();
   return {
+    async putApp(app) { apps.set(app.id, structuredClone(app)); },
+    async getApp(id) { return apps.has(id) ? structuredClone(apps.get(id)) : undefined; },
+    async allApps() { return [...apps.values()].map((a) => structuredClone(a)); },
+    async removeApps(ids) { for (const id of ids) apps.delete(id); },
     async put(turn) { turns.set(turn.id, structuredClone(turn)); },
     async all() { return [...turns.values()].sort((a, b) => a.at - b.at).map((t) => structuredClone(t)); },
     async remove(ids) { for (const id of ids) turns.delete(id); },
     async getMeta(key) { return meta.has(key) ? structuredClone(meta.get(key)) : undefined; },
     async setMeta(key, value) { meta.set(key, structuredClone(value)); },
-    async erase() { turns.clear(); meta.clear(); },
+    async erase() { turns.clear(); meta.clear(); apps.clear(); },
   };
 }
 
 export function indexedDbBackend(name = "prism-telemetry") {
   const open = () => new Promise((resolve, reject) => {
-    const req = indexedDB.open(name, 1);
-    req.onupgradeneeded = () => { req.result.createObjectStore("turns", { keyPath: "id" }).createIndex("at", "at"); req.result.createObjectStore("meta"); };
+    // Version 2 adds the apps; a version 1 database keeps its turns and meta.
+    const req = indexedDB.open(name, 2);
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if (!d.objectStoreNames.contains("turns")) d.createObjectStore("turns", { keyPath: "id" }).createIndex("at", "at");
+      if (!d.objectStoreNames.contains("meta")) d.createObjectStore("meta");
+      if (!d.objectStoreNames.contains("apps")) d.createObjectStore("apps", { keyPath: "id" });
+    };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -42,6 +54,10 @@ export function indexedDbBackend(name = "prism-telemetry") {
     put: (turn) => tx(["turns"], "readwrite", (t) => { t.objectStore("turns").put(turn); }),
     async all() { const d = await db; return request(d.transaction("turns").objectStore("turns").index("at").getAll()); },
     remove: (ids) => tx(["turns"], "readwrite", (t) => { for (const id of ids) t.objectStore("turns").delete(id); }),
+    putApp: (app) => tx(["apps"], "readwrite", (t) => { t.objectStore("apps").put(app); }),
+    async getApp(id) { const d = await db; return request(d.transaction("apps").objectStore("apps").get(id)); },
+    async allApps() { const d = await db; return request(d.transaction("apps").objectStore("apps").getAll()); },
+    removeApps: (ids) => tx(["apps"], "readwrite", (t) => { for (const id of ids) t.objectStore("apps").delete(id); }),
     async getMeta(key) { const d = await db; return request(d.transaction("meta").objectStore("meta").get(key)); },
     setMeta: (key, value) => tx(["meta"], "readwrite", (t) => { t.objectStore("meta").put(value, key); }),
     async erase() {

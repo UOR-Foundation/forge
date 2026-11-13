@@ -1,7 +1,7 @@
 # Build telemetry (studio/telemetry, studio/shell/telemetry): the Telemetry model's proofs, and the tests that hold
 # the tab's data form, its adapters and its zero-egress gate to it. Project content, not universal policy.
 #
-# Lean proves the model (TL-01 to TL-21) in the locked SDK image, as `just app` proves the kernel. The kernel's own
+# Lean proves the model (TL-01 to TL-28) in the locked SDK image, as `just app` proves the kernel. The kernel's own
 # telemetry decision (FK-25 to FK-27) is proved by `just app` and pinned into the shell by kernel-pin.yml; the tests
 # here ask that pinned kernel, so they pass once the pin on this branch names a kernel that knows `telemetry`.
 #
@@ -20,6 +20,9 @@ on:
       - "studio/shell/telemetry/**"
       - "studio/tools/telemetry*"
       - "studio/tools/fixtures/telemetry_turns.mjs"
+      - "studio/tools/fixtures/telemetry_apps.mjs"
+      - "studio/shell/sw.template.js"
+      - "studio/shell/host.js"
       - "studio/shell/kernel/**"
       - "prismpm.lock"
       - ".github/workflows/telemetry.yml"
@@ -29,6 +32,9 @@ on:
       - "studio/shell/telemetry/**"
       - "studio/tools/telemetry*"
       - "studio/tools/fixtures/telemetry_turns.mjs"
+      - "studio/tools/fixtures/telemetry_apps.mjs"
+      - "studio/shell/sw.template.js"
+      - "studio/shell/host.js"
       - "studio/shell/kernel/**"
       - "prismpm.lock"
       - ".github/workflows/telemetry.yml"
@@ -97,9 +103,9 @@ jobs:
           mkdir -p .telemetry-proof
           printf '%s\n' "$attestation" >.telemetry-proof/attestation
           printf '%s\n' "$DIGEST" >.telemetry-proof/inputs
-      - name: The proofs state the claims their conformance rows make (TL-01 to TL-21)
+      - name: The proofs state the claims their conformance rows make (TL-01 to TL-28)
         run: |
-          grep -c '^  statement: ' studio/telemetry/src/TelemetryProofs.lex.tex | grep -qx 21
+          grep -c '^  statement: ' studio/telemetry/src/TelemetryProofs.lex.tex | grep -qx 28
       - name: The conformance test and claims list are what the proofs generator writes
         run: |
           node studio/telemetry/tools/proofs.mjs
