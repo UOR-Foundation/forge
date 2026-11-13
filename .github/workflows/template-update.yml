@@ -15,6 +15,13 @@ on:
         description: Reviewed 40-character template policy-input revision.
         required: true
         type: string
+      standards-sha256:
+        description: >-
+          The sha256 of the selected SDK's standards.lock, given only when a person has reviewed
+          that standards change; the proposal then carries it. Empty keeps the existing standards.
+        required: false
+        default: ''
+        type: string
 
 permissions: {}
 
@@ -45,6 +52,7 @@ jobs:
           ACTION_REFERENCE: ${{ inputs.action-reference }}
           SDK_IMAGE: ${{ inputs.sdk-image }}
           TEMPLATE_REVISION: ${{ inputs.template-revision }}
+          STANDARDS_SHA256: ${{ inputs.standards-sha256 }}
         shell: bash
         run: |
           set -euo pipefail
@@ -79,6 +87,15 @@ jobs:
             docker rm "$platform_container" >/dev/null
             platform_container=
           done < "$platform_bundle/children.txt"
+          # The template binds standards.lock to the SDK's bytes and refuses a change nobody
+          # reviewed. A reviewed change names the exact bytes every platform of the SDK ships.
+          if test -n "$STANDARDS_SHA256"; then
+            [[ $STANDARDS_SHA256 =~ ^[0-9a-f]{64}$ ]]
+            for selected in "$platform_bundle"/*/standards.lock; do
+              test "$(sha256sum "$selected" | cut -d' ' -f1)" = "$STANDARDS_SHA256"
+            done
+            install -m 0644 "$selected" standards.lock
+          fi
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             --network none \
