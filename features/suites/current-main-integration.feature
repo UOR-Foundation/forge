@@ -7,3 +7,5 @@ Feature: current-main-integration
     Then source races refuse and proof state remains bound to the accepted logic and source
     And the signed compiled guest retains lifecycle reword, composition and work protocols
     And the current renderer and its inherited verification gates remain active
+    And notation expansions retain exact source authority and malformed lines cannot change the application
+    And the provider default thinking behavior does not change source authorization or serialized text ownership

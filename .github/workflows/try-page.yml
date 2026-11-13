@@ -3,11 +3,15 @@ name: Try Prism page and the canonical frame
 on:
   push:
     branches: [main]
-  pull_request:
-    # Forge (studio/) is not read by the try page, the frame, the identity page or the try codespace: a pull
-    # request that changes only Forge does not wait for them.
     paths-ignore:
       - "studio/**"
+      - "v2/**"
+  pull_request:
+    # Forge (studio/) is not read by the try page, the frame, the identity page or the try codespace: a pull
+    # request that changes only Forge or the v2/ prototypes does not wait for them.
+    paths-ignore:
+      - "studio/**"
+      - "v2/**"
   workflow_dispatch:
 
 permissions:

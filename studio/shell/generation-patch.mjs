@@ -48,16 +48,17 @@ export function stageGenerationPatch(source, input) {
 export async function applyStoredProjectPatch(db, appId, patch, boundary) {
   assertGenerationActive(boundary.signal);
   if (!Number.isSafeInteger(appId) || appId < 1) throw failure("invalidGenerationPatch");
-  let copied, rulesUpdate; try { copied = structuredClone(patch); rulesUpdate = structuredClone(boundary.rulesUpdate); } catch { throw failure("invalidGenerationPatch"); }
+  let copied, rulesUpdate, appUpdate; try { copied = structuredClone(patch); rulesUpdate = structuredClone(boundary.rulesUpdate); appUpdate = structuredClone(boundary.appUpdate); } catch { throw failure("invalidGenerationPatch"); }
   let source;
   if (boundary.source) { try { source = structuredClone(boundary.source); } catch { throw failure("invalidGenerationPatch"); } }
   else source = await captureProjectSource(db, appId);
   const staged = stageGenerationPatch(source, copied);
   assertGenerationActive(boundary.signal);
-  if (!staged.changed && !rulesUpdate) return { changed: 0, oid: source.reference, source };
+  if (!staged.changed && !rulesUpdate && !appUpdate) return { changed: 0, oid: source.reference, source };
   const prepared = staged.changed ? await prepareExistingProject({ name: source.name, files: Object.fromEntries(staged.files) }, boundary, source.reference) : { oid: source.reference, files: source.files, objects: [] };
   assertGenerationActive(boundary.signal);
-  const oid = await commitPreparedProject(db, appId, staged.changedPaths, source, prepared, { signal: boundary.signal, dependencies: staged.dependencies, message: "Apply generated file batch", rulesUpdate, recordVersion: !!staged.changed });
+  const oid = await commitPreparedProject(db, appId, staged.changedPaths, source, prepared, { signal: boundary.signal, dependencies: staged.dependencies, message: "Apply generated file batch", rulesUpdate, appUpdate, recordVersion: !!staged.changed });
   if (staged.changed) boundary.onCommit?.(oid, staged.changed);
-  return { changed: staged.changed, oid, source: { name: source.name, reference: oid, files: prepared.files, dependencies: staged.dependencies || source.dependencies } };
+  const applicationState = appUpdate ? appUpdate.state ?? undefined : staged.changedPaths.some(path => ['prism/App.lex.tex','prism/spec.json'].includes(path)) ? undefined : source.applicationState;
+  return { changed: staged.changed, oid, source: { name: source.name, reference: oid, files: prepared.files, dependencies: staged.dependencies || source.dependencies, ...(applicationState === undefined ? {} : {applicationState}) } };
 }

@@ -130,3 +130,21 @@ Feature: forge_kernel
     Given the model in app/src/ForgeKernel.lex.tex
     When the Lean kernel checks oldRecentHolds during prismpm verify
     Then no request meets breaksOldRecent
+
+  @FK-22 @build
+  Scenario: The kernel never allows model thinking on a first attempt
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks firstThinkHolds during prismpm verify
+    Then no request meets breaksFirstThink
+
+  @FK-23 @build
+  Scenario: The budget from Enter to a checked app is never above 30 s
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks builtBudgetBoundHolds during prismpm verify
+    Then no request meets breaksBuiltBudgetBound
+
+  @FK-24 @build
+  Scenario: The budget from an edit to the screen is never above two frames, 33 ms
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks editBudgetBoundHolds during prismpm verify
+    Then no request meets breaksEditBudgetBound

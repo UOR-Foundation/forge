@@ -132,15 +132,25 @@ Each finding gives the screen, viewport and appearance, the problem, the fix and
 
 ## What the kernel decides
 
-Foundry is a Prism app: its decisions are FK requirements in `app/src/ForgeKernel.lex.tex`, with theorems in `ForgeKernelProofs.lex.tex` that Lean proves for every request (`prismpm --project app verify`). The words the page shows stay in the View (`studio/src`). The kernel's guest runs in the page and in the worker, pinned by `KERNEL_REV`, and replays all 100 acceptance vectors before it answers anything.
+Foundry is a Prism app: its decisions are FK requirements in `app/src/ForgeKernel.lex.tex`, with theorems in `ForgeKernelProofs.lex.tex` that Lean proves for every request (`prismpm --project app verify`). The words the page shows stay in the View (`studio/src`). The kernel's guest runs in the page and in the worker, pinned by `KERNEL_REV`, and replays all 174 acceptance vectors before it answers anything.
 
 | Rule | Kernel request and answer | Theorems (Lean) | Who asks |
 |---|---|---|---|
 | Performance budgets: mobile cold and warm LCP, INP, first token (ms; first token 5,000 since main's atomic project creation, measured 4.5 s); first-load JS per route (gzip KB) | `budget JOURNEY VALUE`: `within` or `over` | FK-12 never within when over, FK-13 never over when within, FK-14 INP budget at most 500 ms, FK-15 no route below the first load | the Performance gate, for every verdict; the numbers exist nowhere else |
+| The build journey (ms): `preview` 1,999 Enter to the preview frame, `declaration` 19,999 Enter to the model's first declaration, `pixel` 99 first declaration to first pixel, `update` 15 work per preview update, `edit` 33 an edit to the screen, `checked` 2,999 the module complete to its check on screen, `built` 29,999 Enter to a checked app | `budget JOURNEY VALUE`: `within` or `over` | FK-12, FK-13; FK-23 `built` at most 30 s; FK-24 `edit` at most 33 ms | the live preview gate (`tools/live_e2e.mjs`) for `pixel`, `update` and `checked`. Nothing measures `preview`, `declaration`, `edit` or `built` against the kernel yet: the first and the last two need a real model's turn, which no gate runs |
+| Model thinking: none on a first attempt, allowed on a repair | `think ATTEMPT`: `allow` or `deny` | FK-22 | nobody. The chat asked it and sent a `deny` as Featherless's `chat_template_kwargs.enable_thinking: false`; that was taken out on 2026-11-12 (see below), and the decision has no adapter |
 | Chat and preview stack under 768 px | `layout WIDTH`: `tabs` or `split` | FK-16, FK-17 | the chat page, on load and on resize |
 | Motion: at most 200 ms, none when reduced motion is asked | `motion MS REDUCED`: `allow` or `deny` | FK-18, FK-19 | the Experience gate, for every duration in `appearance.css` |
 | Tap targets at least 44 px | `target PX`: `ok` or `small` | FK-20 | the Experience gate, for the touch hit area |
 | "This week" on the Apps page: seven days | `recent SECONDS`: `yes` or `no` | FK-21 | the Apps page, for each date |
+
+Where the build journey stood on 2026-11-12, by the owner's measurements on the deployed site with GLM 5.3 Flash: `preview` 1.3 s (within); `declaration` 99 to 290 s (over); `pixel` 31 to 64 ms (within); `update` 4.8 to 8.5 ms (within); `edit` 16 to 25 ms, rarely 34 to 37 (over when it is); `checked` 35 to 70 ms (within); `built` 167 to 196 s (over). Both misses that matter are the model reasoning before it writes, which is what FK-22 turns off.
+
+FK-22 to FK-24 were proved by Lean in the kernel pin run that built the kernel this branch pins (blake3:2562a0ed, attestation `655c6d4b…`), and the pinned guest replays all 174 vectors, the twenty new ones among them.
+
+What FK-22's switch did, measured through the deployed relay on 2026-11-12 with GLM 5.3 Flash: with the switch alone the model still reasoned, and Featherless returned its whole answer in the reasoning channel with an empty answer (five requests of five). With the switch and an instruction not to reason, it planned in the answer instead: no declaration in 326 s. The switch is no longer sent, and the relay was rolled back. FK-22 stays proved and unused; removing it is a kernel change of its own.
+
+What did shorten the journey is the app notation (`shell/live/notation.mjs`): a model writes a few lines, and Forge expands them into the canonical LexLean module. Four real builds through the relay, default thinking, the instructions this branch ships: first line of the app after 17.8, 19.1, 24.1 and 31.5 s; the whole app written after 24.7, 24.8, 25.7 and 35.0 s; all four read and passed the hosted checker. The same request in full LexLean wrote no declaration in 300 s. These are times to the model's text over a direct request, not to pixels in the app: the in-app journey was not timed.
 
 What stays outside the kernel, and why:
 
@@ -153,3 +163,22 @@ What stays outside the kernel, and why:
 ## Hologram's lookup-table inference
 
 Studied, not adopted. Hologram-Technologies/hologram's "O(1)" tables precompute 16-bit and 8-bit activation functions (128 KB per bf16 function) on the CPU, with bit-identical results. Matrix multiplication is still computed, and it dominates LLM decode on WebGPU. Its "KV-dispatch" reuses a graph's result for identical inputs, which Forge's sealed answers already serve faster. Its releases ship native binaries only. The npm packages (`@tryhologram/sdk`, `@tryhologram/wasm`) compile tensor graphs and are not an LLM runtime. Forge's Q engine wasm is byte for byte the one in Hologram-Technologies/hologram-apps. Nothing here would measurably cut Forge's first token, warm-up or cache. Adopting the inference code would also need a Git dependency, which R6 forbids. Nothing was measured in the browser, because there was no browser artifact to measure.
+
+## How long a change takes to reach the site (measured 2026-11-12)
+
+Measured from GitHub's own step times, on a pull request that changed only the shell and a test step (158) and on its merge to main (`2248dcd`).
+
+| Where | Step | Time |
+|---|---|---|
+| Pull request | acceptance (the kernel proof is reused when `app/` is unchanged) | 255 s |
+| Pull request | lane (the browser journeys are 249 s of it) | 623 s |
+| Pull request | mobile journeys and live previews | 562 s |
+| Main | build and verify the holo, before anything is published | 1,745 s |
+| Main | build Forge | 317 s |
+| Main | live previews on the deployed site | 374 s |
+
+The 1,745 s on main was the kernel built and proved again for a change that touched no kernel input: the Prism page's address hashed every workflow file, and the pull request had added one test step to another workflow. The address now leaves the other workflows out (`pages.yml`, held by `xtask`'s `the_page_address_omits_only_workflows_its_build_does_not_read`). Expected on the next shell-only merge: that job restores the verified page instead of building it. Not yet observed.
+
+A change to how Foundry looks and reads no longer touches `app/` at all: those preferences are `studio/experience/src/FoundryExperience.lex.tex`, checked in about a second.
+
+Still slow, and not changed here: a change to `app/` is proved on the pull request (about 20 minutes), again on main for both architectures, again for the page, and again by the kernel pin, which then publishes a second time. Main proves by design; reusing a proof there is a trust decision of its own.

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import http from "node:http";
 import { chromium } from "../vendor/dyad/node_modules/playwright-core/index.mjs";
 const sources = new Map([
+  ["/application-shape.mjs", fs.readFileSync(new URL("../shell/application-shape.mjs", import.meta.url))],
   ["/rules.mjs", fs.readFileSync(new URL("../shell/rules-source.mjs", import.meta.url))],
   ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))],
 ]);

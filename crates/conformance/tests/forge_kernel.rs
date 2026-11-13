@@ -254,3 +254,33 @@ fn forge_kernel_fk_21() {
         "oldRecentHolds",
     );
 }
+
+/// `FK-22`: The kernel never allows model thinking on a first attempt
+#[test]
+fn forge_kernel_fk_22() {
+    pinned(
+        "breaksFirstThink",
+        "body: (((project request attempt) =? 0) && ((ForgeKernel::thinkAllows request) =? 1))",
+        "firstThinkHolds",
+    );
+}
+
+/// `FK-23`: The budget from Enter to a checked app is never above 30 s
+#[test]
+fn forge_kernel_fk_23() {
+    pinned(
+        "breaksBuiltBudgetBound",
+        "body: (((project request journey) =? 17) && (30000 <? (ForgeKernel::budgetOf (project request journey))))",
+        "builtBudgetBoundHolds",
+    );
+}
+
+/// `FK-24`: The budget from an edit to the screen is never above two frames, 33 ms
+#[test]
+fn forge_kernel_fk_24() {
+    pinned(
+        "breaksEditBudgetBound",
+        "body: (((project request journey) =? 15) && (33 <? (ForgeKernel::budgetOf (project request journey))))",
+        "editBudgetBoundHolds",
+    );
+}

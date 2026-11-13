@@ -7,7 +7,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { privacySource } from "./hologram.privacy.mjs";
 import { LEAN } from "./hologram.lean.mjs";
+import {PREVIEW_AUTO_START_PATCHES} from "./hologram.preview-auto-start.mjs";
+import {CHAT_MODE_PATCHES} from "./hologram.chat-mode-patches.mjs";
+import {INITIAL_THEME_PATCHES} from "./hologram.initial-theme.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const slash = (p) => p.replace(/\\/g, "/");
@@ -27,6 +31,9 @@ export const SCREENS = {
 const PAGE = "w-full overflow-y-auto px-4 py-4 md:py-6 lg:px-6";
 
 const SCREEN_PATCHES = [
+  ...INITIAL_THEME_PATCHES,
+  ...CHAT_MODE_PATCHES,
+  ...PREVIEW_AUTO_START_PATCHES,
   {
     file: "src/pages/settings.tsx",
     from: `    <section
@@ -465,7 +472,7 @@ export function screenSource(file, code) {
     out = out.replace(p.from, p.to);
     applied.add(p);
   }
-  return out;
+  return privacySource(rel, out);
 }
 
 // A patch whose file the build never read did nothing, silently: the build and the typecheck ask for these

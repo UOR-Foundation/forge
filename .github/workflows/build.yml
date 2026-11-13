@@ -24,6 +24,7 @@
 # is checked.
 name: build
 
+# reuse-exempt: every push to prism/build/** is an explicit request to build and sign that revision
 on:
   push:
     branches: ['prism/build/**']
@@ -122,7 +123,15 @@ jobs:
             --env BUILDX_CONFIG=/tmp/prismpm-buildx \
             --env HOME=/tmp/prismpm-home \
             --env PRISMPM_EPHEMERAL_HOME=1 \
-            "$image" sh -c "$COMMAND"
+            "$image" sh -c "$COMMAND" 2>&1 | tee "$RUNNER_TEMP/prism-build-sdk.log"
+      - name: Preserve the SDK diagnostic even when construction fails
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-sdk-diagnostic-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/prism-build-sdk.log
+          if-no-files-found: warn
+          retention-days: 7
       - name: Collect the holo, its build directory and what this run knows about them
         id: collect
         shell: bash

@@ -46,7 +46,11 @@ fn page() -> String {
 <meta name="description" content="{lede}">
 <link rel="icon" href="mark.svg" type="image/svg+xml">
 <link rel="manifest" href="app.webmanifest">
-<link rel="stylesheet" href="assets/index.css">
+<link id="renderer-style" rel="stylesheet" crossorigin>
+<script>
+// Vite identifies a stylesheet by its deployment-prefixed href attribute.
+(function () {{ const style = document.getElementById("renderer-style"); style.setAttribute("href", new URL("assets/index.css", document.baseURI).pathname); }})();
+</script>
 <link rel="stylesheet" href="brand.css">
 <link rel="stylesheet" href="appearance.css">
 <script>
@@ -82,7 +86,7 @@ fn page() -> String {
   <button class="mode" type="button" data-mode="dark"><span>{dark}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button>
   <button class="mode" type="button" data-mode="light"><span>{light}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg></button>
 </div>
-<script type="module" src="host.js"></script>
+<script type="module" src="host.bundle.js"></script>
 <script type="module" src="assets/index.js"></script>
 <script type="module" src="appearance.js"></script>
 </body>
@@ -173,12 +177,9 @@ fn openapi() -> String {
     serde_json::to_string_pretty(&doc).unwrap() + "\n"
 }
 
-/// Every file of the shell with its SHA-256, lexically ordered. Not in the closure: the worker and
-/// its template, this list, `provenance.json` (the closure digest is one of its fields; the worker
-/// precaches it beside this list), `warmup.json` (the site's included key, written at deploy time,
-/// never hashed into the closure), the renderer build under `assets/` and the staged `scaffold/` and
-/// `404.html` (written after the lane by the Pages workflow and content hashed by Vite already), and
-/// model weights, which live in the device store the engine keeps.
+/// The complete staged shell, including renderer and scaffold, in portable path order.
+/// Worker, manifest and closure-bound provenance are excluded to avoid circular hashes.
+/// Provider credentials cannot enter the public shell; model weights have separate ownership.
 fn manifest(shell: &Path) -> String {
     fn walk(dir: &Path, root: &Path, out: &mut Vec<PathBuf>) {
         let mut entries: Vec<_> = std::fs::read_dir(dir).expect("shell dir").flatten().collect();
@@ -187,7 +188,7 @@ fn manifest(shell: &Path) -> String {
             let path = entry.path();
             if path.is_dir() {
                 let name = path.file_name().unwrap().to_string_lossy().to_string();
-                if path.parent() == Some(root) && (name == "app" || name == "assets" || name == "scaffold") {
+                if path.parent() == Some(root) && name == "app" {
                     continue;
                 }
                 walk(&path, root, out);
@@ -198,16 +199,12 @@ fn manifest(shell: &Path) -> String {
     }
     let mut files = Vec::new();
     walk(shell, shell, &mut files);
+    files.sort_by_key(|path| path.to_string_lossy().replace('\\', "/"));
     let mut rows = Vec::new();
     for rel in files {
         let name = rel.to_string_lossy().replace('\\', "/");
-        // The Pages artifact leaves dotfiles out (upload-pages-artifact 5), and the worker installs only
-        // when every listed file answers: a listed `.nojekyll` that 404s left every visitor without the
-        // worker, so without previews. Only what the site serves is listed.
-        if name.split('/').any(|segment| segment.starts_with('.')) {
-            continue;
-        }
-        if name == "manifest.json" || name == "provenance.json" || name == "warmup.json" || name == "sw.js" || name == "sw.template.js" || name == "404.html" {
+        assert!(name != "warmup.json" && !name.ends_with("/warmup.json"), "providerCredentialArtifact: public credential file refused");
+        if name == "manifest.json" || name == "provenance.json" || name == "sw.js" || name == "sw.template.js" {
             continue;
         }
         let bytes = std::fs::read(shell.join(&rel)).expect("read shell file");

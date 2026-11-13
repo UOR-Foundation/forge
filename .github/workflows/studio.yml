@@ -10,17 +10,18 @@ on:
   # shell serves (tools/v2_engine.mjs): a change there must be held to the Engine gate too.
   push:
     branches: [main]
-    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**"]
+    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**", "v2/probe-payment/src/**", "v2/hosted-check/**"]
   pull_request:
-    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**"]
+    paths: ["studio/**", ".github/workflows/studio.yml", "v2/shell/**", "v2/loop/**", "v2/probe-payment/data/**", "v2/probe-payment/src/**", "v2/hosted-check/**"]
 
 permissions:
   contents: read
 
-# A newer push to a pull request makes its earlier run moot: that run is cancelled. Runs on main all finish.
+# BEGIN FoundrySpecification.studioConcurrencyYaml
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('studio-pr-{0}', github.event.pull_request.number) || format('studio-run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# END FoundrySpecification.studioConcurrencyYaml
 
 jobs:
   lane:
@@ -48,12 +49,36 @@ jobs:
             ~/.cache/hologram-forge-lane
             ~/.elan
           key: lane-${{ hashFiles('studio/PRISMPM_REV', 'studio/lean-toolchain') }}
+      # How Foundry looks and reads is a LexLean module of its own (studio/experience), outside app/, so a
+      # preference changes no kernel proof input. Its check needs the locked SDK image, which is large, so
+      # the check is kept by its address: the module's files and the lock that names the SDK. A hit means
+      # these exact bytes were checked by this exact SDK, and nothing is pulled.
+      - name: The look-and-feel module's check, kept by its address
+        id: experience
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .experience-checked
+          key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}
+      - name: How Foundry looks and reads is a canonical, locked, checked LexLean module
+        if: steps.experience.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
+          if [[ ! $image =~ ^[a-z0-9.-]+(:[0-9]{1,5})?/[a-z0-9./_-]+@sha256:[0-9a-f]{64}$ ]]; then
+            printf '%s\n' 'prismpm.lock does not select an immutable SDK image' >&2
+            exit 64
+          fi
+          docker run --rm --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,exec,nosuid,size=1g \
+            --volume "$PWD:$PWD" --workdir "$PWD/studio/experience" --env HOME=/tmp/home \
+            "$image" sh -c 'mkdir -p /tmp/home && lexlean fmt --check && lexlean lock --check && lexlean check'
+          mkdir -p .experience-checked
+          printf '%s\n' "$image" >.experience-checked/sdk
+      - name: Verify the canonical PR concurrency boundary
+        run: python3 tools/studio_concurrency_projection.py --check
       - name: The authored model is what the author script writes
         run: python3 tools/author.py --check
-      - name: The lane, byte compared against the committed artifacts
-        run: ./scripts/lane.sh
-      - name: Byte identity corpus
-        run: python3 tools/corpus.py
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
@@ -61,65 +86,186 @@ jobs:
           cache-dependency-path: studio/vendor/dyad/package-lock.json
       - name: Install locked renderer contracts for boundary verification
         run: npm ci --prefix vendor/dyad --ignore-scripts --no-audit --no-fund
+      - name: Reproduce the imported chat schemas from locked sources
+        run: node tools/chat_contracts_projection.mjs --check
+      - name: Install the locked browser compiler archive
+        run: npm ci --prefix runtime --ignore-scripts --no-audit --no-fund
+      - name: Build the renderer and stage its complete closure before projection
+        run: (cd vendor/dyad && node node_modules/vite/bin/vite.js build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir) && python3 scripts/stamp_shell.py
+      - name: The lane, byte compared against the committed artifacts
+        run: ./scripts/lane.sh
+      - name: Independently verify staged editor bytes against the locked npm archive
+        run: python3 scripts/editor_assets.py --check && python3 scripts/compiler_assets.py --check
+      - name: Verify every staged renderer, scaffold and shell byte before acceptance
+        id: shell_closure
+        run: node tools/check_shell_closure.mjs
+      - name: Byte identity corpus
+        id: corpus
+        run: python3 tools/corpus.py
       - name: Check the declared host scope and real renderer error recovery
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: |
-          node tools/contract_shapes.mjs --check
-          node tools/renderer_boundary.mjs
-          node tools/renderer_inputs.mjs
+          status=0
+          run() { "$@" || status=1; }
+          run node tools/contract_shapes.mjs --check
+          run node tools/renderer_boundary.mjs
+          run node tools/renderer_inputs.mjs
+          run node tools/privacy_projection.mjs
+          run node tools/privacy_browser.mjs
+          run node tools/privacy_shell_browser.mjs
+          run node tools/editor_browser.mjs
+          run node tools/editor_load_lifecycle_browser.mjs
+          run node tools/compiler_browser.mjs
+          exit "$status"
       - name: Verify snapshot rollback in browser storage
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: |
-          node tools/snapshot_restore_browser.mjs
-          node tools/storage_request_browser.mjs
-          node tools/project_creation_browser.mjs
-          node tools/project_edit_browser.mjs
-          node tools/project_lifecycle_browser.mjs
-          node tools/build_source_browser.mjs
-          node tools/build_modules_browser.mjs
-          node tools/generation_patch_browser.mjs
-          node tools/rules_source_browser.mjs
-          node tools/inference_effects_browser.mjs
-          node tools/exact_representation_browser.mjs
-          node tools/provider_key_browser.mjs
-          node tools/covers_browser.mjs
+          status=0
+          run() { "$@" || status=1; }
+          run node tools/snapshot_restore_browser.mjs
+          run node tools/storage_request_browser.mjs
+          run node tools/project_creation_browser.mjs
+          run node tools/verified_project_import_browser.mjs
+          run node tools/verified_shell_cache_browser.mjs
+          run node tools/project_edit_browser.mjs
+          run node tools/project_lifecycle_browser.mjs
+          run node tools/build_source_browser.mjs
+          run node tools/build_modules_browser.mjs
+          run node tools/generation_patch_browser.mjs
+          run node tools/canonical_model_edits_browser.mjs
+          run node tools/canonical_generation_ownership_browser.mjs
+          run node tools/canonical_build_closure_browser.mjs
+          run node tools/preview_permissions_browser.mjs
+          run node tools/durable_event_delivery_browser.mjs
+          run node tools/stateful_application_journeys_browser.mjs
+          run node tools/command_ownership_registry_browser.mjs
+          run node tools/portable_build_permission_browser.mjs
+          run node tools/github_publication_permission_browser.mjs
+          run node tools/durable_build_work_browser.mjs
+          run node tools/private_provider_credentials_browser.mjs
+          run node tools/private_provider_credentials_artifact.mjs
+          run node tools/semantic_routing_runtime.mjs
+          run node tools/semantic_routing_browser.mjs
+          run node tools/semantic_application_discovery_browser.mjs
+          run node tools/chat_queue_runtime.mjs
+          run node tools/version_preview_runtime.mjs
+          run node tools/version_preview_browser.mjs
+          run node tools/durable_version_preview_browser.mjs
+          run node tools/verified_working_tree_browser.mjs
+          run node tools/durable_prompt_library_browser.mjs
+          run node tools/builtin_themes_projection.mjs --check
+          run node tools/durable_theme_library_browser.mjs
+          run node tools/sidebar_tool_access_browser.mjs
+          run node tools/live_main_integration_browser.mjs
+          run node tools/source_bound_gallery_browser.mjs
+          run node tools/initial_project_theme_browser.mjs
+          run node tools/module_presentation_browser.mjs
+          run node tools/large_module_presentation_browser.mjs
+          run node tools/kernel_owner_readiness_browser.mjs
+          run node tools/kernel_owner_handoff_browser.mjs
+          run node tools/renderer_stylesheet_identity_browser.mjs
+          run node tools/atomic_browser_settings_browser.mjs
+          run node tools/atomic_chat_preferences_browser.mjs
+          run node tools/read_only_chat_execution_browser.mjs
+          run node tools/chat_model_picker_scope_browser.mjs
+          run python3 tools/chat_mode_catalog_projection.py --check
+          run node tools/browser_chat_mode_controls_browser.mjs
+          run node tools/chat_provider_routing_browser.mjs
+          run node tools/preview_auto_start_browser.mjs
+          run node tools/site_relay_authorization_browser.mjs
+          run node tools/browser_window_coordination_browser.mjs
+          run node tools/message_linked_restoration_browser.mjs
+          run node tools/chat_queue_browser.mjs
+          run node tools/durable_chat_queue_browser.mjs
+          run node tools/canonical_version_history_browser.mjs
+          run node tools/rules_source_browser.mjs
+          run node tools/inference_effects_browser.mjs
+          run node tools/hosted_source_permission_browser.mjs
+          run node tools/inference_consent_browser.mjs
+          run node tools/exact_representation_browser.mjs
+          run node tools/provider_key_browser.mjs
+          run node tools/covers_browser.mjs
+          exit "$status"
+      - name: Recompile the exact host projection and compare its receipt
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: |
+          node tools/host_bundle.mjs --check
+          node tools/host_bundle_runtime.mjs
+      - name: Stateful source transactions and combined workflow reuse remain qualified
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/main_stateful_integration.test.mjs
+      - name: Notation preserves serialized source-owned generation
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/notation_host_integration.test.mjs tools/backlog_workflows.test.mjs tools/application_shape_authority.test.mjs tools/proof_approval_cancellation.test.mjs
       - name: The site's Featherless relay takes only the site's offered, bounded chat requests, and keeps its key private
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test relay/featherless/worker.test.mjs
       - name: Every shell script parses the way the browser parses it
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/shell_parse.mjs
       - name: The build screen opens Dark, keeps its own choice, and leaves the home look alone
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/build_look.mjs
       - name: The kernel in the shell is the holo KERNEL_REV pins, and every vector replays
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: |
           node tools/kernel.mjs --check
           node tools/kernel_browser.mjs
       - name: The Experience gate, the stylesheet held to the kernel's answers (FK-16 to FK-21)
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/experience.mjs --check
       - name: The Prism journey in the shell is prism-code's, byte for byte
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/prism_journey.mjs --check
       - name: The commit Forge makes on a template instance is prism-code's, byte for byte
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/prism_template.mjs --check
       - name: The live frame's shadcn/ui components are the vendored ones, and rebuild byte for byte
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: (cd live-src && npm ci --no-audit --no-fund) && node tools/live_components.mjs --check
       - name: The live preview draws the spec, and only the spec
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/live_preview.mjs --check
       - name: The decision table decides as the rules do, on every request
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/live_table.mjs --check
       - name: Every word on the live screen is edited in the spec, and only there
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/live_edit.mjs --check
       - name: An app's canonical LexLean module is its source, and its obligations agree with the table
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/live_lexlean.mjs --check
       - name: The engine a stateful app runs on is v2's, byte for byte
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/v2_engine.mjs --check
       - name: A stateful app's module, streamed, becomes frames; a press becomes the next frame
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/live_app.test.mjs
       - name: A stateful app is checked at the end of its turn, and the card claims no more than the check found
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/live_app_check.test.mjs
+      - name: One approval is asked at a time, and the chat counts an app's lines
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/approval_queue.test.mjs
+      - name: Foundry's own dialogs, notices and sidebar tools take the app's look from one stylesheet
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/shell_ui.test.mjs
+      - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/live_app_prove.test.mjs
+      - name: The app notation always expands to the same checked module, and lines that do not read are refused
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/live_notation.test.mjs
       - name: Lean proves the obligations sound once for every model, and its kernel decides the fixture's
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: |
           node tools/live_proof.mjs --check
           export PATH="$HOME/.elan/bin:$PATH"
           cd proof && lake build && lake env lean PrismLive/Axioms.lean | tee axioms.txt
           test "$(grep -c 'depends on axioms: \[propext, Quot.sound\]' axioms.txt)" = 2
       - name: A published app's card draws what its live preview draws
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/published_preview.mjs --check
       - name: Nothing in this repository names Forge's old home
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/self_contained.mjs

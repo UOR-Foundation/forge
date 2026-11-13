@@ -251,6 +251,48 @@ suite = "bounded-build-modules"
 statement = "Portable builds fetch only bounded approved-origin modules and retain exact module-byte receipts"
 
 [[id]]
+id = "FA-28"
+level = "build"
+suite = "verified-project-import"
+statement = "Imports validate bounded snapshot closure and discard authority-bearing metadata before atomic insertion"
+
+[[id]]
+id = "FA-29"
+level = "build"
+suite = "verified-shell-cache"
+statement = "Worker activation requires bounded independently verified shell bytes including renderer and scaffold closure"
+
+[[id]]
+id = "FA-30"
+level = "build"
+suite = "browser-telemetry-isolation"
+statement = "The browser renderer never initializes vendor telemetry and cannot restore collection through stored settings"
+
+[[id]]
+id = "FA-31"
+level = "build"
+suite = "local-editor-closure"
+statement = "The editor loads only from integrity-checked locked package bytes inside the active shell closure"
+
+[[id]]
+id = "FA-32"
+level = "build"
+suite = "local-browser-compiler"
+statement = "The browser compiler loads locked verified local bytes and recovers after failed initialization"
+
+[[id]]
+id = "FA-33"
+level = "build"
+suite = "event-wire-protocol"
+statement = "Typed event admission crosses a bounded byte protocol executed by the generated Prism guest"
+
+[[id]]
+id = "FA-34"
+level = "build"
+suite = "inference-consent"
+statement = "Cloud inference requires per-request disclosure and approval with cancellation before and after submission"
+
+[[id]]
 id = "FK-12"
 level = "build"
 suite = "forge_kernel"
@@ -311,6 +353,24 @@ suite = "forge_kernel"
 statement = "The kernel never counts as this week what is older than 7 days"
 
 [[id]]
+id = "FK-22"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never allows model thinking on a first attempt"
+
+[[id]]
+id = "FK-23"
+level = "build"
+suite = "forge_kernel"
+statement = "The budget from Enter to a checked app is never above 30 s"
+
+[[id]]
+id = "FK-24"
+level = "build"
+suite = "forge_kernel"
+statement = "The budget from an edit to the screen is never above two frames, 33 ms"
+
+[[id]]
 id = "LL-01"
 level = "build"
 suite = "live-lexlean"
@@ -323,7 +383,313 @@ suite = "live-lexlean"
 statement = "Every guarantee of the Verdant Resonance fixture holds on every request in its bounds"
 
 [[id]]
-id = "FA-28"
+id = "FA-35"
+level = "build"
+suite = "canonical-module-boundary"
+statement = "The canonical decision-module reader refuses ambiguous or discarded semantics before authoring"
+
+[[id]]
+id = "FA-36"
+level = "build"
+suite = "canonical-model-edits"
+statement = "Direct canonical edits atomically update the decision source, projections and source-bound rules state"
+
+[[id]]
+id = "FA-37"
+level = "build"
+suite = "canonical-generation-ownership"
+statement = "Generic generation batches cannot overwrite canonical decision sources or their generated rule runtime"
+
+[[id]]
+id = "FA-38"
+level = "build"
+suite = "canonical-build-closure"
+statement = "Decision builds require the canonical module and generated runtime to match the captured specification"
+
+[[id]]
+id = "FA-39"
+level = "build"
+suite = "preview-permissions"
+statement = "Networked previews require explicit source-bound permission with persistent revocation controls"
+
+[[id]]
+id = "FA-40"
+level = "build"
+suite = "durable-event-delivery"
+statement = "Guest-admitted events commit to a source-bound durable queue and remain pending until ordered acknowledgement"
+
+[[id]]
+id = "FA-41"
+level = "build"
+suite = "stateful-application-model"
+statement = "The generated interaction profile admits bounded state transitions and projects consent-sensitive visual audio and motion outputs"
+
+[[id]]
+id = "FA-42"
+level = "build"
+suite = "stateful-application-journeys"
+statement = "Stored gallery and garden applications execute canonical guest transitions with atomic recovery and explicit audio consent"
+
+[[id]]
+id = "FA-43"
+level = "build"
+suite = "command-ownership-registry"
+statement = "Every imported and browser command is classified by canonical ownership and dispatch refuses missing or changed bindings"
+
+[[id]]
+id = "FA-44"
+level = "build"
+suite = "portable-build-permission"
+statement = "Portable builds require revocable source-bound consent before package retrieval or generated-code execution"
+
+[[id]]
+id = "FA-45"
+level = "build"
+suite = "github-publication-permission"
+statement = "Public GitHub writes require explicit repository and source-bound approval rechecked before each mutation"
+
+[[id]]
+id = "FA-46"
+level = "build"
+suite = "durable-build-work"
+statement = "Portable builds execute under guest-admitted durable ownership and retain source-bound completed artifacts or resumable reservations"
+
+[[id]]
+id = "FA-47"
+level = "build"
+suite = "private-provider-credentials"
+statement = "Direct cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files"
+
+[[id]]
+id = "FA-48"
+level = "build"
+suite = "semantic-routing-model"
+statement = "Typed semantic proposals rank explicit concept relations and close dependencies while Prism independently admits ambiguity constraints and effects"
+
+[[id]]
+id = "FA-49"
+level = "build"
+suite = "semantic-application-discovery"
+statement = "Finite language discovery creates only guest-admitted catalog applications after source-bound explicit review"
+
+[[id]]
+id = "FA-50"
+level = "build"
+suite = "chat-queue-model"
+statement = "Bounded chat queues preserve unique pending work and reject stale revisions owners and stop policies through guest transitions"
+
+[[id]]
+id = "FA-51"
+level = "build"
+suite = "durable-chat-queue"
+statement = "Actual chat queue commands atomically bind guest transitions to durable payloads and exclusive recoverable execution"
+
+[[id]]
+id = "FA-52"
+level = "build"
+suite = "canonical-version-history"
+statement = "Version history preserves canonical content identity through renderer aliases and atomically commits metadata with verified snapshot differences"
+
+[[id]]
+id = "FA-53"
+level = "build"
+suite = "version-preview-model"
+statement = "Version preview transitions preserve exact origin identity and reject stale or conflicting ownership through the Prism guest"
+
+[[id]]
+id = "FA-54"
+level = "build"
+suite = "durable-version-preview"
+statement = "Version preview ownership binds guest transitions to atomic source restoration and exclusive recoverable browser sessions"
+
+[[id]]
+id = "FA-55"
+level = "build"
+suite = "message-linked-restoration"
+statement = "Message-linked restoration atomically binds verified source preview to exact chat truncation or a history-preserving fork"
+
+[[id]]
+id = "FA-56"
+level = "build"
+suite = "studio-pr-concurrency"
+statement = "Only superseded pull-request Studio runs are cancelled while every main and release run retains its full acceptance boundary"
+
+[[id]]
+id = "FA-57"
+level = "build"
+suite = "browser-window-coordination"
+statement = "Browser window registration focus visibility interests and invalidation recovery replace empty acknowledgements with bounded origin coordination"
+
+[[id]]
+id = "FA-58"
+level = "build"
+suite = "verified-working-tree"
+statement = "Working-tree queries compare atomically captured source with verified snapshot bytes and refuse corrupt or over-budget differences"
+
+[[id]]
+id = "FA-59"
+level = "build"
+suite = "application-main-integration"
+statement = "Current-main experience rules and renderer improvements coexist with complete application protocols and verified private offline closure"
+
+[[id]]
+id = "FA-60"
+level = "build"
+suite = "bounded-kernel-execution"
+statement = "Fresh guest instances execute in bounded browser worker lifetimes without exhausting compiler memory reservations"
+
+[[id]]
+id = "FA-61"
+level = "build"
+suite = "durable-prompt-library"
+statement = "Prompt library creation updates deletion and listing persist atomically with bounded validated records and unique slugs"
+
+[[id]]
+id = "FA-62"
+level = "build"
+suite = "renderer-stylesheet-identity"
+statement = "Generated renderer stylesheet identity prevents duplicate blocking CSS retrieval"
+
+[[id]]
+id = "FA-63"
+level = "build"
+suite = "atomic-browser-settings"
+statement = "Browser settings updates serialize their read and write and acknowledge only transaction completion"
+
+[[id]]
+id = "FA-64"
+level = "build"
+suite = "verified-host-bundle"
+statement = "The browser host loads one reproducible static bundle with preserved module URL identities"
+
+[[id]]
+id = "AC-01"
 level = "build"
 suite = "app-covers"
 statement = "App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules"
+
+[[id]]
+id = "FA-65"
+level = "build"
+suite = "site-relay-authorization"
+statement = "Site-funded inference retains exact request consent and never confuses visitor credentials with relay markers"
+
+[[id]]
+id = "FA-66"
+level = "build"
+suite = "editor-load-lifecycle"
+statement = "Editor initialization preserves cancellation ownership and reports load failures without detached rejections"
+
+[[id]]
+id = "FA-67"
+level = "build"
+suite = "durable-theme-library"
+statement = "Custom generation themes and app selection persist atomically with exact imported renderer contracts"
+
+[[id]]
+id = "FA-68"
+level = "build"
+suite = "sidebar-tool-access"
+statement = "Foundry tools remain reachable without covering renderer controls across responsive sidebar lifetimes"
+
+[[id]]
+id = "FA-69"
+level = "build"
+suite = "live-main-integration"
+statement = "Current live module generation and every-app replay integrate without losing canonical ownership or consent"
+
+[[id]]
+id = "FA-70"
+level = "build"
+suite = "source-bound-gallery"
+statement = "Gallery media and descriptions publish atomically only for their captured current project source"
+
+[[id]]
+id = "FA-71"
+level = "build"
+suite = "initial-project-theme"
+statement = "New projects inherit the validated selected generation theme in the project creation transaction"
+
+[[id]]
+id = "FA-72"
+level = "build"
+suite = "module-presentation-ownership"
+statement = "Generated modules retain presentation only when the canonical application interface remains compatible"
+
+[[id]]
+id = "FA-73"
+level = "build"
+suite = "kernel-owner-readiness"
+statement = "Service-worker guest requests await an initializing matching document owner without accepting unverified executables"
+
+[[id]]
+id = "FA-74"
+level = "build"
+suite = "chat-owner-recovery"
+statement = "Surviving chat windows retain execution-lock interest until closed-owner recovery pauses the exact durable head"
+
+[[id]]
+id = "FA-75"
+level = "build"
+suite = "kernel-owner-handoff"
+statement = "Service-worker guest execution reselects verified document owners lost during navigation within one bounded deadline"
+
+[[id]]
+id = "FA-76"
+level = "build"
+suite = "large-module-presentation"
+statement = "Presentation validation retains complete large canonical modules without promoting them into the bounded proof profile"
+
+[[id]]
+id = "FA-77"
+level = "build"
+suite = "atomic-chat-preferences"
+statement = "Chat title mode and model preferences commit atomically through their imported schema without losing concurrent transcript updates"
+
+[[id]]
+id = "FA-78"
+level = "build"
+suite = "read-only-chat-execution"
+statement = "Ask and Plan turns preserve source proof and preview state while retaining consented inference and transcript completion"
+
+[[id]]
+id = "FA-79"
+level = "build"
+suite = "chat-model-picker-scope"
+statement = "The model picker resolves mounted chat routes and persists the active chat selection independently of Home defaults"
+
+[[id]]
+id = "FA-80"
+level = "build"
+suite = "browser-chat-mode-controls"
+statement = "Canonical Build Ask and Plan controls persist scoped preferences and initialize chats with the captured supported mode"
+
+[[id]]
+id = "FA-81"
+level = "build"
+suite = "chat-provider-routing"
+statement = "Chat model routing preserves the captured provider and exact model identity without silently replacing cloud selections with device inference"
+
+[[id]]
+id = "FA-82"
+level = "build"
+suite = "preview-auto-start"
+statement = "Automatic preview startup respects existing app state so remounts cannot repeat declined execution while explicit retry remains available"
+
+[[id]]
+id = "FA-83"
+level = "build"
+suite = "hosted-source-permission"
+statement = "Stateful preview parsing and checking transmit source only under disclosed source-bound or turn-scoped revocable hosted permission"
+
+[[id]]
+id = "FA-84"
+level = "build"
+suite = "application-shape-authority"
+statement = "Application shape edits and transitions retain one source-bound authority and cannot obtain proof standing from authored files"
+
+[[id]]
+id = "FA-85"
+level = "build"
+suite = "proof-reuse"
+statement = "A theorem Lean proved on the same declarations is reused instead of proved again, and only changed theorems go to Lean"

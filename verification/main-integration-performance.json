@@ -1,0 +1,35 @@
+{
+  "cold": [
+    9744,
+    9672,
+    9816
+  ],
+  "warm": [
+    1720,
+    1636,
+    1456
+  ],
+  "inp": [
+    216,
+    208,
+    224
+  ],
+  "token": [
+    2710,
+    3040,
+    2907
+  ],
+  "medians": {
+    "cold": 9744,
+    "warm": 1636,
+    "inp": 216,
+    "token": 2907
+  },
+  "budgets": {
+    "cold": 11500,
+    "warm": 2200,
+    "inp": 450,
+    "token": 5000
+  },
+  "provider": "intercepted fixture; explicit cloud approval and visible preview refusal"
+}

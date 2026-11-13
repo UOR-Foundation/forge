@@ -32,6 +32,12 @@ only, bounded requests and answers, the per-visitor limit, concurrency passing t
 site's key failures kept private. For a local run in Cloudflare's runtime, put
 `FEATHERLESS_KEY=<anything>` in `.dev.vars` (ignored by git) and run `npx wrangler@4 dev`.
 
+## What it forwards
+
+The model, the messages, a bounded `max_tokens`, `temperature`, `top_p` and `stop`. Everything else is dropped. A change to `worker.mjs` reaches visitors only after `npx wrangler@4 deploy`.
+
+`chat_template_kwargs.enable_thinking` is deliberately not forwarded. It was, for about three hours on 2026-11-12: with it set to `false`, Featherless returned GLM 5.3 Flash's whole answer in the reasoning channel and an empty answer, in every one of five requests. The worker was rolled back to the version before it.
+
 ## Limits
 
 `wrangler.toml` holds them: `ALLOWED_ORIGINS`, `MODELS`, `MAX_TOKENS` and 20 requests a minute per

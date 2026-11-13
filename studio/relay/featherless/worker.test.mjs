@@ -79,6 +79,10 @@ test("the answer's length is capped and unknown fields are dropped", () => {
   assert.equal(shape(body({ max_tokens: undefined }), env()).max_tokens, 32768);
 });
 
+test("the thinking switch is never forwarded: with it Featherless returns the answer as reasoning", () => {
+  for (const kw of [{ enable_thinking: false }, { enable_thinking: true }]) assert.equal("chat_template_kwargs" in shape(body({ chat_template_kwargs: kw }), env()), false);
+});
+
 test("a visitor over the per-minute limit is refused before Featherless", async () => {
   const calls = upstream();
   const seen = new Map();

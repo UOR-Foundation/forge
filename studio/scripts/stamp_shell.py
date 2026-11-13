@@ -6,7 +6,7 @@ under shell/assets/, writes shell/404.html as a copy of the homepage so Pages an
 of the renderer's routes with the app (the router reads the URL), and stages the renderer's scaffold with a file list,
 which the host creates apps from. Run after the Vite build: python3 scripts/stamp_shell.py
 """
-import json, pathlib, re, shutil
+import json, pathlib, re, shutil, subprocess
 
 root = pathlib.Path(__file__).resolve().parent.parent
 dist = root / "vendor" / "dyad" / "dist" / "assets"
@@ -54,3 +54,19 @@ app.write_text(app.read_text(encoding="utf-8").replace("<BrowserRouter>", "<Brow
 files = sorted(str(p.relative_to(dst)).replace("\\", "/") for p in (dst / "src").rglob("*") if p.is_file())
 (dst / "files.json").write_text(json.dumps(files), encoding="utf-8", newline="\n")
 print(f"staged {len(files)} scaffold files")
+
+# Exact locked editor bytes join the shell before its manifest is projected.
+from editor_assets import stage_editor_assets
+editor = stage_editor_assets(root)
+print(f"staged {len(editor['files'])} locked editor assets and licenses")
+
+from compiler_assets import compiler_assets
+compiler_receipt = compiler_assets(root)
+print(f"staged {len(compiler_receipt['files'])} locked compiler assets and licenses")
+
+# Application instances carry the exact project-owned model source.
+shutil.copyfile(root.parent / "app" / "src" / "InteractionModel.lex.tex", root / "shell" / "interaction-model.lex.tex")
+
+# The locked renderer compiler projects the host before the complete manifest is written.
+subprocess.run(["node", str(root / "tools" / "host_bundle.mjs")], check=True)
+subprocess.run(["node", str(root / "tools" / "host_bundle.mjs"), "--check"], check=True)

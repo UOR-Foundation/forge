@@ -22,71 +22,37 @@
 //     this origin's stores.
 const CLOSURE = "__CLOSURE__";   // written by the projector; a new shell is a new worker
 const BASE = new URL(self.registration.scope).pathname;
+const matchShell = async (request, options) => (await caches.open("shell-" + CLOSURE)).match(request, options);
 
 // The kernel decides what an untrusted document may do: its capability gate is proved by Lean
 // (FK-05 to FK-09 in UOR-Foundation/foundry). kernel.js checks the guest against its pin and replays
 // every acceptance vector before the first question; until then, and if that fails, nothing
 // untrusted is served.
-importScripts("kernel.js");
+importScripts("kernel.js", "shell-cache.js");
 let kernelLoad = null;
-const kernel = () => (kernelLoad ??= ForgeKernel.load(async (p) => (await caches.match(BASE + p)) || fetch(BASE + p, { cache: "no-store" })).catch((error) => { kernelLoad = null; throw error; }));
+const kernel = () => (kernelLoad ??= ForgeKernel.load(async (p) => (await matchShell(BASE + p)) || fetch(BASE + p, { cache: "no-store" })).catch((error) => { kernelLoad = null; throw error; }));
 
 async function readManifest() {
   const r = await fetch("manifest.json", { cache: "no-store" });
   return r.json();
 }
 
-// What a first paint needs is fetched at install; the closure's large parts (the Q engine, the chat app,
-// the photos, the Prism code, the live frame: some 14 MB of 15.5) are filled after the page has loaded and
-// asks for them (the "fill" message), or when first requested. Installing all of it first kept the worker
-// from activating for the length of that download and took the link from the page while it loaded.
-const LATER = /^(q|ui|wallpapers|prism-code|live)\//;
-const shellCache = () => caches.open("shell-" + CLOSURE);
-let manifestOnce = null;
-const closureManifest = () => (manifestOnce ??= (async () => (await caches.match(BASE + "manifest.json")) || fetch("manifest.json", { cache: "no-store" }))().then((r) => r.clone().json()).catch((e) => { manifestOnce = null; throw e; }));
-const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-// A file fetched after install joins the closure only if its bytes are the ones the manifest lists: a
-// newer deployment's file is served to the page that asked but never kept under this closure's name.
-async function fillOne(path) {
-  const m = await closureManifest();
-  const row = m.files.find((f) => f.path === path);
-  if (!row) return null;
-  const cache = await shellCache();
-  const hit = await cache.match(BASE + path);
-  if (hit) return hit;
-  const r = await fetch(new Request(BASE + path, { cache: "reload", priority: "low" }));
-  if (!r.ok) return r;
-  const bytes = await r.clone().arrayBuffer();
-  if (hex(await crypto.subtle.digest("SHA-256", bytes)) === row.sha256) await cache.put(BASE + path, r.clone());
-  return r;
-}
-async function fillRest() {
-  const m = await closureManifest();
-  for (const f of m.files) if (LATER.test(f.path)) { try { await fillOne(f.path); } catch (e) {} }
-}
-self.addEventListener("message", (event) => { if (event.data === "fill") event.waitUntil(fillRest()); });
-
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
-    const m = await readManifest();
-    if (m.closure !== CLOSURE) throw new Error("manifest closure does not match this worker");
-    const cache = await shellCache();
-    // Fetch every first-paint file fresh at install: the HTTP cache must not hand an older byte into a
-    // closure whose digest says otherwise.
-    await cache.addAll(m.files.map((f) => f.path).filter((p) => !LATER.test(p)).concat(["manifest.json", "provenance.json"]).map((p) => new Request(p, { cache: "reload" })));
-    // The renderer's entry and stylesheet too (outside the closure, revalidated on every use), so the second
-    // visit paints from the cache although the first page fetched them before this worker controlled it.
-    await (await caches.open("assets")).addAll(["assets/index.js", "assets/index.css"].map((p) => new Request(p, { cache: "no-cache" })));
+    const entries = await ShellClosure.prepare(self.registration.scope, CLOSURE);
+    try {
+      const cache = await caches.open("shell-" + CLOSURE);
+      for (const [url, response] of entries) await cache.put(url, response);
+    } catch {
+      throw Object.assign(new Error("Shell installation refused: shellClosureUnavailable"), { code: "shellClosureUnavailable" });
+    }
     await self.skipWaiting();
   })());
 });
 
 self.addEventListener("activate", (event) => {
-  // Only a worker that replaces an older shell reloads pages: a first visit's page already runs this closure.
-  const older = caches.keys().then((names) => names.some((n) => n.startsWith("shell-") && n !== "shell-" + CLOSURE));
   event.waitUntil((async () => {
     const keep = "shell-" + CLOSURE;
-    await older;
     for (const name of await caches.keys()) if (name.startsWith("shell-") && name !== keep) await caches.delete(name);
     await self.clients.claim();
   })());
@@ -96,7 +62,6 @@ self.addEventListener("activate", (event) => {
   // waitUntil and never awaited: a navigation waits for the worker to be active, so waiting on it here
   // would leave this worker activating for ever and every page on the shell it already had.
   (async () => {
-    if (!(await older)) return;
     // The page decides when: it reloads at once if no turn runs, else as soon as the running turn ends
     // (host.js), so a build, a proof or a publish is never cut short by a deploy.
     for (const client of await self.clients.matchAll({ type: "window" })) {
@@ -159,6 +124,16 @@ async function principalOf(e) {
 // endpoints it allows enter the policy. No record means no grant: the kernel refuses to serve.
 const SANDBOX = "sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads allow-pointer-lock allow-presentation allow-orientation-lock";
 const ENDPOINT_FORM = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:[0-9]{1,5})?$/;
+function previewGrantValid(record, id) {
+  const endpoints = record?.network?.endpoints;
+  if (!Array.isArray(endpoints)) return false;
+  if (endpoints.length === 0 && record?.previewConsent?.purpose !== "portable-build") return true;
+  if (record?.previewConsent?.purpose === "portable-build") {
+    const {expires,grantedAt} = record.previewConsent, at = Date.now();
+    if (!Number.isFinite(expires) || !Number.isFinite(grantedAt) || at < grantedAt || at >= expires || expires > grantedAt + 120000) return false;
+  }
+  return record?.previewConsent?.profile === "foundry/preview-consent/1" && record.previewConsent.id === id && /^blake3:[0-9a-f]{64}$/.test(record.previewConsent.source);
+}
 function policyOf(endpoints) {
   const named = (head) => (endpoints.length ? head + " " + endpoints.join(" ") : head);
   return [SANDBOX, "default-src 'none'", named("script-src 'unsafe-inline' 'wasm-unsafe-eval' blob: data:"), named("style-src 'unsafe-inline' blob: data:"),
@@ -175,7 +150,7 @@ async function policyFor(kind, id) {
   const record = await grants(id);
   const network = (record && record.network) || {};
   const denied = new Set(Array.isArray(network.denied) ? network.denied : []);
-  const served = await gate(origin, "serve", !!record, !!(record && record.serve === true), false);
+  const served = await gate(origin, "serve", !!record, !!(record && record.serve === true && (kind !== "p" || previewGrantValid(record, id))), false);
   await audit({ principal: kind + ":" + id, operation: "kernel.gate.serve", resource: id, outcome: served ? "granted" : "refused" });
   if (!served) return null;
   const allowed = [];
@@ -227,6 +202,7 @@ async function serveHolo(request, path) {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin === self.location.origin) {
+    if (!url.pathname.startsWith(BASE)) return;
     const path = url.pathname.slice(BASE.length);
     if (ENDPOINT.has(path)) { event.respondWith(serveFromPage(event.request, path)); return; }
     if (path.startsWith("holo/")) { event.respondWith(serveHolo(event.request, path)); return; }
@@ -243,45 +219,29 @@ self.addEventListener("fetch", (event) => {
     // app/ is the Forge kernel's Prism page, a separate site with its own worker: never answered here.
     if (path === "app" || path.startsWith("app/")) return;
     // The chat app under ui/ routes on the client: every navigation there is its one page, from the closure first.
-    if (path.startsWith("ui/") && event.request.mode === "navigate") { event.respondWith((async () => (await caches.match(BASE + "ui/index.html")) || fetch(new Request(BASE + "ui/index.html")))()); return; }
-    // The renderer's files under assets/ sit outside the closure. A chunk is named by its content hash, so a
-    // name is an address: kept for good once fetched. The entry and its stylesheet keep fixed names (the
-    // projected page names them): served from the cache at once and revalidated behind the answer, so a
-    // repeat visit paints with no network wait and the next visit runs what the origin serves now. A page
-    // whose entry names a chunk the origin no longer has reloads once (host.js, vite:preloadError).
-    if (path.startsWith("assets/")) {
-      event.respondWith((async () => {
-        const cache = await caches.open("assets");
-        const hit = await cache.match(event.request, { ignoreSearch: true });
-        if (/-[A-Za-z0-9_-]{8}\.(js|css)$/.test(path)) {
-          if (hit) return hit;
-          const r = await fetch(event.request);
-          if (r.ok) await cache.put(event.request, r.clone());
-          return r;
-        }
-        const fresh = fetch(event.request, { cache: "no-cache" }).then(async (r) => { if (r.ok) await cache.put(event.request, r.clone()); return r; });
-        if (hit) { event.waitUntil(fresh.catch(() => {})); return hit; }
-        return fresh;
-      })());
-      return;
+    if (path.startsWith("ui/") && event.request.mode === "navigate") { event.respondWith((async () => (await matchShell(BASE + "ui/index.html")) || fetch(new Request(BASE + "ui/index.html")))()); return; }
+    // Renderer and scaffold bytes come from this worker's verified version, even offline.
+    if (path.startsWith("assets/") || path.startsWith("scaffold/") || path.startsWith("editor/") || path.startsWith("compiler/")) {
+      event.respondWith((async () => (await (await caches.open("shell-" + CLOSURE)).match(event.request, { ignoreSearch: true })) || new Response("File absent from the active shell", { status: 404 }))()); return;
     }
     // The hash list is the staleness oracle: the page compares the closure it was projected with
     // against the one this origin serves now, so it is never answered from a cache while the network
     // can answer. Offline, the cached copy is the truth.
-    if (path === "manifest.json" || path === "provenance.json") { event.respondWith(fetch(event.request, { cache: "no-store" }).catch(() => caches.match(event.request, { ignoreSearch: true }))); return; }
+    if (path === "manifest.json" || path === "provenance.json") { event.respondWith(fetch(event.request, { cache: "no-store" }).catch(() => matchShell(event.request, { ignoreSearch: true }))); return; }
     event.respondWith((async () => {
-      const hit = await caches.match(event.request, { ignoreSearch: true });
+      const hit = await matchShell(event.request, { ignoreSearch: true });
       if (hit) return hit;
-      // A closure file filled after install is fetched, checked against the manifest and kept.
-      if (LATER.test(path)) { try { const r = await fillOne(path); if (r) return r; } catch (e) {} }
-      // Every route of the renderer is its one page (Pages answers them with 404.html, a copy): served
-      // from the closure, so a navigation paints without waiting for the network. The page compares its
-      // closure with the published one and reloads once when a newer shell is out (host.js).
-      if (event.request.mode === "navigate" && !path.includes(".")) { const page = await caches.match(BASE + "index.html"); if (page) return page; }
+      // Pages maps unknown renderer routes to its HTML fallback. Keep those navigations
+      // on this closure too; a route allowlist would drift when a newer renderer adds one.
+      // Subapps, engine/API and resource namespaces keep their existing ownership.
+      const separate = /^(?:app|ui|p|holo|v1|engine|assets|scaffold|editor|compiler|live|q|kernel|prism|prism-code|fonts|wallpapers)(?:\/|$)/.test(path);
+      if (event.request.mode === "navigate" && !separate) {
+        return (await matchShell(BASE + "index.html")) || new Response("Document absent from the active shell", { status: 404 });
+      }
       try {
         return await fetch(event.request);
       } catch (error) {
-        if (event.request.mode === "navigate") return (await caches.match("index.html")) || (await caches.match("./"));
+        if (event.request.mode === "navigate") return (await matchShell(BASE + "index.html")) || (await matchShell(BASE));
         throw error;
       }
     })());
@@ -293,7 +253,7 @@ self.addEventListener("fetch", (event) => {
     // A frame this worker still controls under p/ or holo/: the kernel's gate decides each request.
     const record = await grants(who.id);
     const network = (record && record.network) || {};
-    const granted = Array.isArray(network.endpoints) && network.endpoints.includes(url.origin);
+    const granted = Array.isArray(network.endpoints) && network.endpoints.includes(url.origin) && (who.kind !== "p" || previewGrantValid(record, who.id));
     const denied = Array.isArray(network.denied) && network.denied.includes(url.origin);
     let allowed = false;
     try { allowed = await gate(who.kind === "p" ? "preview" : "published", "fetch", !!record, granted, denied); } catch (error) { allowed = false; }

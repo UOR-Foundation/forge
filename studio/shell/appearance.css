@@ -268,6 +268,8 @@ button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button
   *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
+/* FoundrySpecification.sidebarToolAccessBoundary: native top-layer disclosures remain operable over renderer drawers. */
+dialog:modal { pointer-events: auto; }
 /* Home on a phone: one screen, no scrolling, every measure from the golden ratio (phi = 1.618). The type
    steps by phi from the 16 px body: a 26 px headline over 16 px words. The spaces are the phi series 8, 13,
    21, 34, 55: 8 between headline and words, 21 to the composer and on to Surprise me. The block sits at the
@@ -309,3 +311,124 @@ button[aria-label^="Voice to text"], button[aria-label="Stop recording"], button
 :root[data-holo-pane] [data-slot="mobile-tabs"] { display: none; }
 @media (min-width: 768px) { [data-slot="mobile-tabs"] { display: none; } }
 @media (prefers-reduced-motion: reduce) { [data-slot="mobile-tabs"] > a { transition: none; } }
+
+/* Foundry's own surfaces: the questions it asks before anything leaves the browser, the notices while a
+   request is open, and its tools in the sidebar. They are built by the shell, outside the renderer's kit, and
+   each wrote its own inline style: system colours, browser buttons, a dialog in the page's corner. Here they
+   take the app's look from the brand's tokens, in every theme. The rules are !important because they replace
+   those inline styles; nothing about what a surface says or does is changed here.
+
+   A question is a notification, drawn as the app draws its own ("Get notified about chat events"): a card on
+   the popover glass with a hairline edge, a title, quiet words, and its two answers at the right, the
+   refusal plain and the approval solid. Every one sits at the centre of the screen, over a light scrim.
+
+   Every measure is from the golden ratio (phi = 1.618), as the phone's home screen already is: the spaces are
+   the series 5, 8, 13, 21, 34, 55; the card is 550 px wide (340 x phi) and at most 61.8% of the screen tall;
+   its words are 13 px under a 16 px title; a control is 34 px tall (44 px under a finger). */
+dialog:not([data-slot]) {
+  box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;
+  width: min(calc(100vw - 42px), 550px) !important; max-width: none !important; max-height: 61.8vh !important;
+  padding: 21px !important; overflow: auto !important; border-radius: 13px !important;
+  background: color-mix(in srgb, var(--popover) 94%, transparent) !important; color: var(--popover-foreground) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.6); backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid color-mix(in srgb, var(--popover-foreground) 12%, transparent) !important;
+  box-shadow: 0 24px 64px -16px color-mix(in srgb, var(--popover) 85%, transparent), inset 0 1px 0 color-mix(in srgb, var(--popover-foreground) 7%, transparent) !important;
+  font: 400 13px/1.618 var(--font-sans) !important; letter-spacing: 0 !important; color-scheme: inherit !important;
+}
+dialog:not([data-slot])[open] { display: flex !important; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 13px 8px; animation: foundry-rise 160ms ease-out; }
+dialog:not([data-slot])[open] > :not(button) { flex: 0 0 100%; min-width: 0; }
+dialog:not([data-slot])::backdrop { background: color-mix(in srgb, var(--popover) 32%, transparent); }
+@keyframes foundry-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+dialog:not([data-slot]) :is(h1, h2, h3) {
+  display: flex; align-items: center; gap: 13px; margin: 0 !important;
+  font: 600 16px/1.3 var(--font-sans) !important; letter-spacing: -0.005em; color: var(--popover-foreground) !important;
+}
+/* The title's mark: a shield in a soft tile, as the app's own notification carries its bell. */
+dialog:not([data-slot]) h2::before {
+  content: ""; flex: none; width: 34px; height: 34px; border-radius: 8px;
+  background: color-mix(in srgb, var(--popover-foreground) 8%, transparent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8a399' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E") center / 21px no-repeat;
+}
+dialog:not([data-slot]) :is(p, li, label, summary, section) { margin: 0 !important; color: var(--muted-foreground) !important; overflow-wrap: anywhere; white-space: pre-line; }
+dialog:not([data-slot]) h2 + p { color: var(--popover-foreground) !important; font-weight: 500; }
+dialog:not([data-slot]) ul { margin: 0 !important; padding: 0 !important; list-style: none; display: flex; flex-wrap: wrap; gap: 5px 8px; }
+dialog:not([data-slot]) li { padding: 3px 8px; border-radius: 999px; font: 500 12px/1.5 var(--font-mono); background: color-mix(in srgb, var(--popover-foreground) 7%, transparent); color: var(--popover-foreground) !important; }
+dialog:not([data-slot]) details { border: 1px solid color-mix(in srgb, var(--popover-foreground) 10%, transparent); border-radius: 8px; padding: 8px 13px; }
+dialog:not([data-slot]) summary { cursor: pointer; font-weight: 500; }
+dialog:not([data-slot]) pre { margin: 8px 0 0 !important; max-height: 220px !important; overflow: auto !important; font: 12px/1.5 var(--font-mono) !important; color: var(--muted-foreground); }
+dialog:not([data-slot]) section { display: flex; align-items: center; justify-content: space-between; gap: 13px; padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--popover-foreground) 8%, transparent); }
+dialog:not([data-slot]) :is(input, select, textarea) {
+  margin: 5px 0 0 !important; width: 100%; box-sizing: border-box; height: 34px; padding: 0 13px; border-radius: 8px;
+  border: 1px solid var(--input); background: color-mix(in srgb, var(--popover-foreground) 4%, transparent); color: var(--popover-foreground); font: inherit;
+}
+dialog:not([data-slot]) :is(input, select, textarea):focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+/* Answers: every button is quiet; the last one, the approval, is solid. Focus stays where the shell puts it,
+   on the refusal. */
+dialog:not([data-slot]) button, aside[aria-label^="Active"] button {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center; margin: 0 !important; min-height: 34px; padding: 0 13px !important;
+  border-radius: 8px !important; border: 1px solid color-mix(in srgb, var(--popover-foreground) 14%, transparent) !important;
+  background: transparent !important; color: var(--popover-foreground) !important; font: 500 13px/1 var(--font-sans) !important; cursor: pointer;
+  transition: background-color 140ms, border-color 140ms, opacity 140ms;
+}
+dialog:not([data-slot]) button:hover, aside[aria-label^="Active"] button:hover { background: color-mix(in srgb, var(--popover-foreground) 8%, transparent) !important; }
+dialog:not([data-slot]) button:focus-visible, aside[aria-label^="Active"] button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+dialog:not([data-slot]) button:disabled { opacity: 0.5; cursor: default; }
+dialog:not([data-slot])[aria-label^="Review"] button:last-of-type {
+  background: var(--popover-foreground) !important; color: var(--popover) !important; border-color: transparent !important;
+}
+dialog:not([data-slot])[aria-label^="Review"] button:last-of-type:hover { opacity: 0.9; }
+dialog:not([data-slot]) div:has(> button) { display: flex !important; justify-content: flex-end !important; gap: 8px !important; margin: 0 !important; }
+/* A request that is open: one quiet pill, low and to the right, clear of the phone's tab bar. */
+aside[aria-label^="Active"] {
+  inset: auto 21px max(21px, env(safe-area-inset-bottom)) auto !important; padding: 5px !important; border-radius: 13px !important;
+  background: color-mix(in srgb, var(--popover) 88%, transparent) !important; color: var(--popover-foreground) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.6); backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid color-mix(in srgb, var(--popover-foreground) 12%, transparent) !important;
+  box-shadow: 0 13px 34px -13px color-mix(in srgb, var(--popover) 85%, transparent) !important; font: inherit !important;
+}
+aside[aria-label^="Active"] button { margin: 0 !important; border-color: transparent !important; min-height: 34px; gap: 8px; }
+aside[aria-label^="Active"] button::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--brand); }
+@media (max-width: 767px) { aside[aria-label^="Active"] { inset: auto 21px calc(76px + env(safe-area-inset-bottom)) auto !important; } }
+@media (pointer: coarse) { dialog:not([data-slot]) button, aside[aria-label^="Active"] button { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) { dialog:not([data-slot])[open] { animation: none; } }
+
+/* Foundry's tools are on the Settings page, as its last card: a title, then one quiet control each, with its
+   mark. They are not in the sidebar, which holds only where you can go. */
+#foundry-shell-actions {
+  display: flex !important; flex-direction: row !important; flex-wrap: wrap; align-items: center; gap: 8px !important; padding: 21px !important;
+  border-radius: 13px; border: 1px solid var(--border); background: var(--card); color: var(--card-foreground);
+}
+#foundry-shell-actions::before { content: "Tools"; flex: 0 0 100%; margin-bottom: 5px; font: 600 16px/1.3 var(--font-sans); }
+#foundry-shell-actions > button {
+  appearance: none; display: inline-flex !important; align-items: center; gap: 8px; width: auto !important; min-height: 34px; padding: 0 13px !important; margin: 0 !important;
+  border: 1px solid color-mix(in srgb, var(--card-foreground) 14%, transparent) !important; border-radius: 8px !important; background: transparent !important;
+  color: var(--card-foreground) !important; font: 500 13px/1 var(--font-sans) !important; cursor: pointer; transition: background-color 140ms;
+}
+#foundry-shell-actions > button:hover { background: color-mix(in srgb, var(--card-foreground) 8%, transparent) !important; }
+#foundry-shell-actions > button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+#foundry-shell-actions > button::before {
+  content: ""; flex: none; width: 16px; height: 16px; background: currentColor;
+  -webkit-mask: var(--mark) center / contain no-repeat; mask: var(--mark) center / contain no-repeat;
+  --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3C/svg%3E");
+}
+#foundry-preview-permissions::before { --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E") !important; }
+#foundry-interaction-applications::before { --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z'/%3E%3C/svg%3E") !important; }
+#foundry-application-discovery::before, #foundry-shell-actions > button[id*="discover"]::before { --mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m16.24 7.76-1.8 5.4a2 2 0 0 1-1.27 1.27l-5.4 1.8 1.8-5.4a2 2 0 0 1 1.27-1.27z'/%3E%3C/svg%3E") !important; }
+@media (pointer: coarse) { #foundry-shell-actions > button { min-height: 44px; } }
+/* The home composer's app picker is a quiet control, the weight of the model's name beside it. */
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { font-weight: 500 !important; color: var(--muted-foreground) !important; }
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"]:hover { color: var(--foreground) !important; }
+/* The sidebar is 233 px wide, 144 x phi, in place of the kit's 288. */
+[data-slot="sidebar-wrapper"] { --sidebar-width: 233px !important; }
+/* Home asks one thing, what to build: the app picker is not shown there. */
+[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { display: none !important; }
+/* Every chat builds. The mode selector is not shown, on Home, in a chat or in Settings. */
+#setting-default-chat-mode { display: none !important; }
+/* The tools are the first card of Settings, where they are found without scrolling. */
+#foundry-shell-actions { order: -1; }
+/* The selector itself is kept for the page's own checks, one pixel and unseen; it takes no space and no pointer.
+   Its wrapper keeps its place, so a mode that could not be saved is still said there. */
+select[data-testid="chat-mode-selector"] { position: absolute !important; left: 0; top: 0; width: 1px !important; height: 1px !important; padding: 0 !important; border: 0 !important; opacity: 0 !important; pointer-events: none !important; }
+div:has(> select[data-testid="chat-mode-selector"]) { position: relative; }
+/* Home asks its question and nothing more: the line under it is not shown, on any screen. */
+p:has(> [data-slot="home-wide"]) { display: none !important; }

@@ -1,6 +1,6 @@
 Feature: app-covers
 
-  @FA-28 @build
+  @AC-01 @build
   Scenario: App covers are captured only from the asked preview, never from a blank frame, and card words are stored only within the sentence and tag rules
     Given an app preview served in the worker's sandbox with the capture responder
     When the host asks that preview for its cover
