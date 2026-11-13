@@ -1399,14 +1399,14 @@ definition{
   name: browserChatModeCatalog,
   parameters: [],
   result: String,
-  body: "{\"profile\":\"foundry/browser-chat-modes/1\",\"modes\":[{\"id\":\"build\",\"label\":\"Build\"},{\"id\":\"ask\",\"label\":\"Ask\"},{\"id\":\"plan\",\"label\":\"Plan\"}]}"
+  body: "{\"profile\":\"foundry/browser-chat-modes/1\",\"modes\":[{\"id\":\"build\",\"label\":\"Build\"},{\"id\":\"ask\",\"label\":\"Chat\"},{\"id\":\"plan\",\"label\":\"Plan\"}]}"
 }
 
 definition{
   name: browserChatModeControlsBoundary,
   parameters: [],
   result: String,
-  body: "The browser exposes only the Build, Ask and Plan choices in browserChatModeCatalog, projected literally without a second authored catalog. The mode selector resolves the configured router base through the existing route-scope boundary. An existing chat uses its imported mode mutation; Home writes selectedChatMode and defaultChatMode together through the existing atomic settings transaction. The same canonical choices govern keyboard cycling with exactly one active shortcut owner; loading, missing identity and in-flight selection disable repeat writes; failure retains the committed value and displays a fixed retry message. Settings are no longer forcibly rewritten to Build on read or update. A newly created application or chat captures the supported default, with an explicit initial mode taking precedence; unsupported or invalid modes fail with invalidChatExecutionMode before project creation. Existing nullable chat mode remains nullable so imported default resolution works. New chat creation commits its captured mode with chat allocation. The current browser catalog excludes native local-agent tooling; legacy unsupported selections remain visible as unavailable and require an explicit supported choice rather than silently becoming Build. Ask and Plan execution is governed by readOnlyChatExecutionBoundary, including immutable queued-mode precedence."
+  body: "The browser exposes only the build, ask and plan choices in browserChatModeCatalog, labelled Build, Chat and Plan, projected literally without a second authored catalog. The mode selector resolves the configured router base through the existing route-scope boundary. An existing chat uses its imported mode mutation; Home writes selectedChatMode and defaultChatMode together through the existing atomic settings transaction. The same canonical choices govern keyboard cycling with exactly one active shortcut owner; loading, missing identity and in-flight selection disable repeat writes; failure retains the committed value and displays a fixed retry message. Settings are no longer forcibly rewritten to Build on read or update. A newly created application or chat captures the supported default, with an explicit initial mode taking precedence; unsupported or invalid modes fail with invalidChatExecutionMode before project creation. Existing nullable chat mode remains nullable so imported default resolution works. New chat creation commits its captured mode with chat allocation. The current browser catalog excludes native local-agent tooling; legacy unsupported selections remain visible as unavailable and require an explicit supported choice rather than silently becoming Build. Ask and Plan execution is governed by readOnlyChatExecutionBoundary, including immutable queued-mode precedence."
 }
 
 inductive{

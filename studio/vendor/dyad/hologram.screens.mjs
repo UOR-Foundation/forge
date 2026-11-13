@@ -251,6 +251,22 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     from: `<div className="mt-4 flex flex-wrap justify-center gap-2">`,
     to: `<div className="mt-4 flex flex-wrap justify-center gap-2" data-slot="home-suggestions">`,
   },
+  // Three ideas, and only three: the row is a hint, not a menu, and every load offers a fresh three, so the
+  // chip that asked for another three is one chip too many.
+  {
+    file: "src/pages/home.tsx",
+    from: `            <button
+              type="button"
+              disabled={isCheckingProviders}
+              onClick={() => setRandomPrompts(getRandomPrompts())}
+              className="group flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:bg-accent hover:text-foreground disabled:cursor-default disabled:opacity-50"
+            >
+              <RefreshCw className="size-4 transition-transform duration-200 group-hover:rotate-[-25deg]" />
+              {t("moreIdeas")}
+            </button>
+`,
+    to: ``,
+  },
   // On a phone the page keeps the inset's 16 px gutter instead of 32 px, so the composer has the room.
   {
     file: "src/pages/home.tsx",
@@ -271,8 +287,7 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
             <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
               Describe your idea. Dyad will turn it into a working app.
             </p>`,
-    to: `              <span data-slot="home-wide">Build your ideas with Prism</span>
-              <span data-slot="home-narrow">Build your ideas with Prism</span>
+    to: `              Build your ideas with Prism
             </h1>
             <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
               <span data-slot="home-wide">Describe your idea. Dyad will turn it into a working app.</span>
@@ -308,7 +323,7 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
   {
     file: "src/pages/home.tsx",
     from: `import { RefreshCw, Zap } from "lucide-react";`,
-    to: `import { RefreshCw, Sparkles, Zap } from "lucide-react";`,
+    to: `import { Sparkles, Zap } from "lucide-react";`,
   },
   {
     file: "src/components/chat/HomeChatInput.tsx",

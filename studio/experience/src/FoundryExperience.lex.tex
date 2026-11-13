@@ -63,7 +63,14 @@ definition{
   name: homeIsAWorkspace,
   parameters: [],
   result: String,
-  body: "Home is a workspace, not a page: the hero fills the first screen at every size, and the floor of apps already made peeks above the bottom edge, 89 pixels on a desktop and 55 on a phone, so one short scroll brings the whole row and its way into the gallery into view, clear of the phone's tab bar. The hero sits at the golden section of the room above the floor on a phone as on a desktop, its question over a room at most 987 pixels wide; the box it is asked in is that room's golden section, 610 pixels, centred, with the ideas centred under it on one line that scrolls sideways rather than a block that wraps. On a tall window the room under the hero is capped at 233 pixels, so it settles toward the middle instead of leaving a void. The floor is one row on a panel that rises from the bottom edge, inset from the sides, on the popover glass under a hairline, with a card 233 by 144 for each app and its name under it. On a phone the panel keeps the page gutter, its cards are 144 wide. Before the first app is made the floor is not empty: it holds what a person can start from, the gallery's own templates, with the way into the gallery beside them."
+  body: "Home is a workspace, not a page: the hero fills the first screen at every size, and the floor of apps already made peeks above the bottom edge, 89 pixels on a desktop and 55 on a phone, so one short scroll brings the whole row and its way into the gallery into view, clear of the phone's tab bar. The hero sits at the golden section of the room above the floor on a phone as on a desktop, its question over a room at most 987 pixels wide; the box it is asked in is that room's golden section, 610 pixels, centred, with three ideas centred under it on one line, a fresh three on every visit and no chip asking for more. On a tall window the room under the hero is capped at 233 pixels, so it settles toward the middle instead of leaving a void. The floor is one row on a panel that rises from the bottom edge, inset from the sides, on the popover glass under a hairline, with a card 233 by 144 for each app and its name under it. On a phone the panel keeps the page gutter, its cards are 144 wide. Before the first app is made the floor is not empty: it holds what a person can start from, the gallery's own templates, with the way into the gallery beside them."
+}
+
+definition{
+  name: composerRow,
+  parameters: [],
+  result: String,
+  body: "The box's row reads left to right as the question is made: attach, then the model that will answer beside it, then the three ways to ask, then send. The way of asking is chosen on the same pill as the model, with its name and a chevron, and its menu lists each way on two lines, its name over a few words on what choosing it means. The names are the ones the kernel's catalogue gives: Build, Chat and Plan."
 }
 
 definition{

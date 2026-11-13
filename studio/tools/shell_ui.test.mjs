@@ -49,11 +49,11 @@ test("the look comes from the brand's tokens: no colour of its own, in any theme
 test("studio/experience: centred popups, golden measures, tools on Settings, a quiet Home", () => {
   // The preferences are a LexLean module of their own, outside the kernel's proof inputs.
   const spec = read("../experience/src/FoundryExperience.lex.tex");
-  for (const name of ["oneLook", "popupsCentred", "goldenRatio", "questionAsNotification", "whyHowWhat", "sidebarIsNavigation", "toolsOnSettings", "homeAsksOneThing", "homeIsAWorkspace", "featuredCovers", "modelMenu"]) assert.ok(spec.includes("name: " + name + ","), name);
+  for (const name of ["oneLook", "popupsCentred", "goldenRatio", "questionAsNotification", "whyHowWhat", "sidebarIsNavigation", "toolsOnSettings", "homeAsksOneThing", "homeIsAWorkspace", "composerRow", "featuredCovers", "modelMenu"]) assert.ok(spec.includes("name: " + name + ","), name);
   assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
   for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
   assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
-  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "the hero fills the first screen at every size", "one short scroll brings the whole row", "that room's golden section, 610 pixels, centred", "it holds what a person can start from", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "the hero fills the first screen at every size", "one short scroll brings the whole row", "that room's golden section, 610 pixels, centred", "three ideas centred under it on one line", "attach, then the model that will answer beside it", "the same pill as the model, with its name and a chevron", "it holds what a person can start from", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
   // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
@@ -72,6 +72,23 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   // The box is the room's golden section, centred, and the ideas are centred under it.
   assert.ok(css.includes('[data-testid="home-chat-input-container"] { max-width: 610px !important; margin-inline: auto !important;'));
   assert.ok(css.includes("justify-content: safe center !important;"), "the ideas are not centred");
+  // Three ideas, and no fourth chip asking for another three.
+  const screens = read("../vendor/dyad/hologram.screens.mjs");
+  assert.ok(screens.includes('{t("moreIdeas")}'), "the chip the shell removes is no longer named");
+  assert.equal(read("../vendor/dyad/src/pages/home.tsx").includes("getRandomPrompts())}"), true);
+  assert.ok(screens.includes('to: `import { Sparkles, Zap } from "lucide-react";`'), "the removed chip's icon is still imported");
+  // The model sits beside attach, the three ways to ask beside send, and the toggle is drawn from tokens.
+  assert.ok(css.includes('[data-testid="model-picker"] { grid-column: 2; justify-self: start; }'));
+  assert.ok(css.includes('[data-slot="chat-mode"] { grid-row: var(--controls); grid-column: 3; justify-self: end;'));
+  const selector = read("../vendor/dyad/hologram.ChatModeSelector.tsx");
+  assert.ok(selector.includes('data-slot="chat-mode-toggle"') && selector.includes("DropdownMenuTrigger"));
+  assert.ok(selector.includes('aria-hidden="true"') && selector.includes("tabIndex={-1}"), "the toggle is a second voice beside the select");
+  assert.ok(selector.includes("chatModeCatalog.modes.map"), "the toggle names its own modes instead of the catalogue's");
+  // The two controls are one pair: the same pill, the same two-line rows.
+  const model = read("../vendor/dyad/hologram.ModelPicker.tsx");
+  const pill = 'className="inline-flex h-8 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border border-border/70';
+  assert.ok(selector.includes(pill) && model.includes(pill.replace("h-8 cursor-pointer", "h-8 max-w-[240px] cursor-pointer")));
+  assert.ok(selector.includes('className="w-72 p-1.5"') && model.includes('className="w-72 p-1.5"'));
   // Before the first app, the floor holds the gallery's templates rather than nothing.
   const floor = read("../vendor/dyad/hologram.screens/FeaturedAppShowcase.tsx");
   assert.ok(floor.includes("useTemplates") && floor.includes("Explore the app gallery"));

@@ -139,6 +139,14 @@
   display: inline-flex; align-items: center; justify-content: center; border-radius: calc(var(--radius) + 2px); background: color-mix(in srgb, var(--foreground) 9%, transparent); }
 [data-testid="chat-input-container"] div.flex.items-end > button:last-child:not(:disabled) { color: var(--primary) !important; }
 [data-testid="chat-input-container"] div.flex.items-end > button:has(> svg.absolute) { display: none; }
+/* The composer's row reads left to right as the question is made: attach, the model answering, then how it
+   should answer, then send. The model sits beside attach; the way of asking sits beside send, on the same
+   pill as the model's, so the two read as one pair. */
+:is([data-testid="home-chat-input-container"], [data-testid="chat-input-container"]) [data-testid="model-picker"] { grid-column: 2; justify-self: start; }
+:is([data-testid="home-chat-input-container"], [data-testid="chat-input-container"]) [data-slot="chat-mode"] { grid-row: var(--controls); grid-column: 3; justify-self: end; align-self: center; }
+/* The way of asking is chosen the way the model is: one pill with its name and a chevron, its menu two-line
+   rows, so the two controls in the row read as one pair. */
+[data-slot="chat-mode-toggle"] { max-width: 144px; }
 /* Narrow boxes, measured by the box itself (a phone, or the build screen's chat beside the preview): the
    model drops its Cloud/Local tag and takes at most half the row, so its name and the other controls fit. */
 :is([data-testid="home-chat-input-container"], [data-testid="chat-input-container"]) { container-type: inline-size; }
