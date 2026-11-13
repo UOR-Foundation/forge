@@ -22,8 +22,8 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${server.address().port}/foundry/`, origin = new URL(base).origin;
 const executablePath = process.env.CHROME_BIN || ["/usr/bin/chromium", "/usr/bin/google-chrome"].find(p => fs.existsSync(p));
 const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures/specs/parking-fee.json',import.meta.url),'utf8')).spec;
-const {SPEC_RULES,moduleContext}=await import('../shell/prism.js');
-const draft=SPEC_RULES.match(/Example: <prism-lexlean>([\s\S]*?)<\/prism-lexlean>/)[1];
+const {SPEC_RULES,MODULE_EXAMPLE,moduleContext}=await import('../shell/prism.js');
+const draft=MODULE_EXAMPLE;
 const answer='Here is the updated application.\n<prism-lexlean>'+draft+'</prism-lexlean>\n<dyad-write path="intruder.txt" description="ignored">UNTRUSTED_GENERATED_CODE</dyad-write>\n<dyad-spec-patch>[null,{"op":"set","path":["purpose"],"value":"A checked purpose from the accepted operation"}]</dyad-spec-patch>\nThe update is ready.';
 let browser;
 try {

@@ -159,12 +159,16 @@ const bad = lex.specFromTurn("<prism-lexlean>" + source.replace("else (answerWin
 claim("turn: a module that does not read is refused", !!bad && !!bad.error, bad && bad.error);
 claim("turn: the module being written projects as a draft", !!lex.partialFromTurn("<prism-lexlean>" + source.slice(0, Math.floor(source.length / 2))));
 
-// the model writes LexLean: declarations only, the theorems are derived
+// the model writes JSON: one spec, from which Forge renders the module; the module reader is still held
+// to the example's own module, since stored modules and stateful apps are LexLean
 const SPEC_RULES = prism.SPEC_RULES || "";
-const example = /Example: <prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(SPEC_RULES);
+const example = prism.MODULE_EXAMPLE ? ["", prism.MODULE_EXAMPLE] : null;
+const jsonExample = /Example: <dyad-spec>([\s\S]*?)<\/dyad-spec>/.exec(SPEC_RULES);
+let jsonExampleChecks = false;
+try { const c = prism.checkSpec(JSON.parse(jsonExample[1])); jsonExampleChecks = c.ok === true && lex.canonicalSource(c.spec).source === lex.specFromTurn("<prism-lexlean>" + prism.MODULE_EXAMPLE + "</prism-lexlean>").source; } catch (e) {}
 let exampleReads = false;
 try { exampleReads = !!example && lex.readDraftLexLean(example[1]).rules.length > 0 && !/theorem\{/.test(example[1]); } catch (e) {}
-claim("prompt: the model is asked for <prism-lexlean>, and the prompt's example reads", SPEC_RULES.includes("<prism-lexlean>") && !SPEC_RULES.includes("<dyad-spec>{") && exampleReads);
+claim("prompt: the model is asked for one JSON spec, never LexLean, and the prompt's example checks and renders the example module", /You write the app's spec as JSON, and nothing else/.test(SPEC_RULES) && /You never write LexLean/.test(SPEC_RULES) && SPEC_RULES.includes("<dyad-spec>{") && !/Write one <prism-lexlean> block holding the module/.test(SPEC_RULES) && jsonExampleChecks && exampleReads);
 const bare = source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
 let bareSpec = null;
 try { bareSpec = lex.readLexLean(bare); } catch (e) {}
@@ -201,7 +205,7 @@ claim("only the module: a turn sends the prompt and the module, and applies no c
 // streams, one line counts its declarations; after the turn the card stands in its place; the reasoning is
 // left as it is. The host streams and saves only what is shown.
 {
-  const mod = "<prism-lexlean>\n" + (/Example: <prism-lexlean>([\s\S]*?)<\/prism-lexlean>/.exec(SPEC_RULES) || ["", ""])[1].trim() + "\n</prism-lexlean>";
+  const mod = "<prism-lexlean>\n" + (prism.MODULE_EXAMPLE || "").trim() + "\n</prism-lexlean>";
   const answer = "Here it is.\n" + mod + "\n<dyad-spec-patch>[]</dyad-spec-patch>\nIt decides the fee.";
   const half = prism.shownText(answer.slice(0, answer.indexOf("name: rule2")));
   const done = prism.withCard(answer, "**Rules** · checked");

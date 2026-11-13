@@ -431,7 +431,7 @@ handlers.set("chat:count-tokens", async ({ chatId, input }) => {
   const tokens = (text) => Math.ceil(String(text || "").length / 4);
   const captured = chat && chat.appId != null ? await captureProjectSource(await dbReady,chat.appId) : null;
   const moduleNow = captured ? activeApplicationModule(captured, lexlean.canonicalSource) : null;
-  const codebaseTokens = tokens(prism.moduleContext(moduleNow ? moduleNow[1] : null));
+  const codebaseTokens = tokens(moduleNow && appShape.isAppShape(moduleNow[1]) ? prism.moduleContext(moduleNow[1]) : prism.specContext(captured ? new Map(captured.files).get("prism/spec.json") : null));
   const systemPromptTokens = tokens(chatExecutionPrompt(chatExecutionPolicy(null,chat?.chatMode),prism.SPEC_RULES) + "\n\n" + (chat && chat.appId != null ? await themeLibrary("resolve",{appId:chat.appId}) : ""));
   const history = chat ? await messagesOf(chatId) : [];
   const messageHistoryTokens = history.reduce((n,m)=>n+tokens(m.content),0);
@@ -1751,12 +1751,13 @@ async function chatTurn(chatId, intent) {
     });
     const app = await get("apps", appId);
     const history = messages.slice(0, -2).filter((x) => x.content).map((x) => ({ role: x.role, content: x.content }));
-    // A model writes and edits the app's LexLean module and nothing else: it is told only that, and shown
-    // only the module (in the draft form it writes), never the code, which Forge projects from the module.
+    // A model writes and edits a decision app's JSON spec and nothing else: it is told only that, and shown
+    // only the spec, never the LexLean module or the code, which Forge renders from the spec. A stateful
+    // app, which has no spec yet, is still shown its module.
     const moduleNow = activeApplicationModule(projectSource, lexlean.canonicalSource);
     const request = [
       { role: "system", content: chatExecutionPrompt(execution,prism.SPEC_RULES) + "\n\n" + await themeLibrary("resolve",{appId}) },
-      { role: "user", content: moduleNow && appShape.isAppShape(moduleNow[1]) ? appShape.moduleContext(moduleNow[1], new Map(projectSource.files).get(appShape.NOTATION_PATH)) : prism.moduleContext(moduleNow ? moduleNow[1] : null) },
+      { role: "user", content: moduleNow && appShape.isAppShape(moduleNow[1]) ? appShape.moduleContext(moduleNow[1], new Map(projectSource.files).get(appShape.NOTATION_PATH)) : prism.specContext(new Map(projectSource.files).get("prism/spec.json")) },
       { role: "assistant", content: "OK, got it. I'm ready to help" },
       ...history,
       { role: "user", content: intent.prompt + pointedNote(appId) },
