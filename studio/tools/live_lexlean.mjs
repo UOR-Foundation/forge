@@ -23,6 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
+import { spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const prism = await import(new URL("../shell/prism.js", import.meta.url));
@@ -169,6 +170,12 @@ try { const c = prism.checkSpec(JSON.parse(jsonExample[1])); jsonExampleChecks =
 let exampleReads = false;
 try { exampleReads = !!example && lex.readDraftLexLean(example[1]).rules.length > 0 && !/theorem\{/.test(example[1]); } catch (e) {}
 claim("prompt: the model is asked for one JSON spec, never LexLean, and the prompt's example checks and renders the example module", /You write the app's spec as JSON, and nothing else/.test(SPEC_RULES) && /You never write LexLean/.test(SPEC_RULES) && SPEC_RULES.includes("<dyad-spec>{") && !/Write one <prism-lexlean> block holding the module/.test(SPEC_RULES) && jsonExampleChecks && exampleReads);
+// Run the actual host adapter, not a parallel spread expression or source substring assertion.
+const namedSpec = spawnSync(process.execPath, ["--test", "--test-reporter=tap", path.join(root, "tools/spec_name_storage.test.mjs")], { encoding: "utf8" });
+const namedReport = (namedSpec.stdout || "").split(/\r?\n/);
+const namedPass = namedSpec.status === 0 && ["# tests 9", "# pass 9", "# fail 0", "# cancelled 0", "# skipped 0", "# todo 0"].every(line => namedReport.includes(line));
+if (!namedPass) console.error(namedSpec.error || "", namedSpec.stdout || "", namedSpec.stderr || "");
+claim("name: the actual host stores checker-defaulted names with their canonical modules and preserves the canonical address", namedPass);
 claim("boundary: LexLean a model writes is dropped before the turn is applied, closed or open, and no model is told a second notation", prism.wroteLexLean("a <prism-lexlean>x") && !prism.wroteLexLean("<dyad-spec>{}</dyad-spec>") && prism.withoutLexLean("a<prism-lexlean>m</prism-lexlean>b<prism-lexlean>open") === "ab" && !SPEC_RULES.includes("app notation") && !SPEC_RULES.includes("<prism-lexlean>") && hostSource.includes("const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);") && hostSource.includes("appAfterTurn(appId, turn,") && !hostSource.includes("lexlean.partialFromTurn(full)"));
 const bare = source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
 let bareSpec = null;

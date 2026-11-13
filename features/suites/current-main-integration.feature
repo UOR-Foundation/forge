@@ -9,3 +9,4 @@ Feature: current-main-integration
     And the current renderer and its inherited verification gates remain active
     And notation expansions retain exact source authority and malformed lines cannot change the application
     And the provider default thinking behavior does not change source authorization or serialized text ownership
+    And checker-defaulted names commit with their canonical module and generated runtime without replacing other authoring fields
