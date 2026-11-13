@@ -78,8 +78,8 @@ test("build-source browser fixture links the complete production module closure 
   `;
   const run = (missing = '', wrongExport = '') => spawnSync(process.execPath, ['--experimental-vm-modules', '--input-type=module', '-e', link, new URL('./build_source_browser.mjs', import.meta.url).href, missing, wrongExport], {encoding:'utf8',timeout:30000});
   const good = run();assert.equal(good.status,0,good.stdout+'\n'+good.stderr);assert.match(good.stdout,/linked [1-9][0-9]* exact fixture modules/);
-  for(const missing of ['/live/app.mjs','/live/v2/check.mjs','/hosted-source-permission.mjs','/prism/spec-file.mjs']) {
+  for(const missing of ['/application-shape.mjs','/prism/spec-file.mjs','/live/lexlean.mjs']) {
     const bad = run(missing);assert.notEqual(bad.status,0);assert.ok(bad.stderr.includes('fixture does not serve '+missing),bad.stderr);
   }
-  const wrong = run('', '/live/app.mjs');assert.notEqual(wrong.status,0);assert.match(wrong.stderr,/does not provide an export named 'PROMPT'/);
+  const wrong = run('', '/prism/spec-file.mjs');assert.notEqual(wrong.status,0);assert.match(wrong.stderr,/does not provide an export named 'readSpecFile'/);
 });

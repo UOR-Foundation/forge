@@ -1793,16 +1793,8 @@ async function chatTurn(chatId, intent) {
       if (execution.sourceEffects && full.includes("<dyad-spec>")) {
         const raw = live.partialSpec(full);
         if (raw) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } tmOnce("declaration"); pushLive(appId, raw, "draft"); }
-      } else if (execution.sourceEffects && full.includes("<prism-lexlean>")) {
-        // A canonical LexLean module is the source: whatever declarations are whole are projected now.
-        // The frame opens on the tag, not on the first whole declaration (thousands of characters
-        // later), so it has mounted by the time there is something to paint.
-        if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); }
-        // The app shape is run; the decision shape is read and projected.
-        const writing = appShape.moduleFromTurn(full);
-        if (writing && appShape.isAppShape(writing.text)) { tmOnce("declaration"); pushApp(appId, writing.text, "draft", { signal: abort.signal, session: hostedSession }); }
-        else { const part = lexlean.partialFromTurn(full); if (part) { tmOnce("declaration"); pushLive(appId, part.spec, "draft"); } }
       }
+      // LexLean a model writes is not projected: the frame shows the spec, and nothing else is a source.
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = shown; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
     // A model streams far faster than a screen draws, and every onText walks the whole answer and redraws the
@@ -1872,7 +1864,7 @@ async function chatTurn(chatId, intent) {
         const { text, rec } = await paidGenerate(warmBody, onTextSoon, abort.signal);
         await settleText();
         await enqueueText(text);
-        await repaired(warmBody);
+        if (!prism.wroteLexLean(full)) await repaired(warmBody);
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
@@ -1882,7 +1874,8 @@ async function chatTurn(chatId, intent) {
       const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
       await settleText();
       await enqueueText(text);
-      await repaired(body);
+      // No repair turn is spent on LexLean: a model does not write it, and it is not applied.
+      if (!prism.wroteLexLean(full)) await repaired(body);
       // An answer cut at the token limit is not sealed, so the same request is never served it again.
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
     } else {
@@ -1933,7 +1926,10 @@ async function chatTurn(chatId, intent) {
       const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
       let changed = applied.changed;
       hostedSource = applied.source;
-      const spec = (await appAfterTurn(appId, full, { signal: abort.signal, session: hostedSession, source: applied.source, onCommit })) || await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
+      // A model writes the app's JSON spec and nothing else: LexLean in its turn is dropped before the
+      // turn is applied, whichever model wrote it, and the chat says so.
+      const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);
+      const spec = (await appAfterTurn(appId, turn, { signal: abort.signal, session: hostedSession, source: applied.source, onCommit })) || await rulesAfterTurn(appId, turn, [], { signal: abort.signal, source: applied.source, onCommit });
       hostedSource = spec.source;
       const patchRefusals = [];
       for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
@@ -1954,6 +1950,7 @@ async function chatTurn(chatId, intent) {
       }
       if (patchRefusals.length) spec.card = (spec.card ? spec.card + "\n\n" : "") + "**Patch refused.** " + patchRefusals.join(" ");
       if (refusedCode) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.CODE_REFUSED;
+      if (refusedLexLean) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.LEXLEAN_REFUSED;
       if (tm.turn === chatId && tm.complete) {
         // Checked is the phase the turn left the app in: the kernel's answer to the check just made.
         let phase = null;

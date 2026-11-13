@@ -18,7 +18,6 @@ import { readSpecFile } from "./prism/spec-file.mjs";
 const sealOf = (spec) => readSpecFile(spec).specAddress;
 import { TEMPLATE_EXAMPLE, appJson, conformanceText, featureText, idsToml, lexleanLockText, rustTestText, suiteOf } from "./prism/template.mjs";
 import { toLexLean, draftOf } from "./live/lexlean.mjs";
-import { PROMPT as APP_SHAPE } from "./live/app.mjs";
 import { checkObligations } from "./live/obligations.mjs";
 import { tableKernel } from "./live/table.mjs";
 import { KEY_PREFIX, REFUSAL, trustDescriptor, sameVerifier, attests, reuseSentence, addresses, admit, headersOf, record as reuseRecord, theoremsOf, without } from "./prism/proof-reuse.mjs";
@@ -61,7 +60,18 @@ Every app here is one JSON spec: its inputs, its answers, its rules and its guar
 - Think about which rules and guarantees the app needs, not about syntax. State the guarantees the request implies: what must never be answered, and what must always be.
 - To change one part (a word, an answer, one rule), or to set the screen's words or order, write a patch on the spec: <dyad-spec-patch>[{"op":"set","path":["rules",2,"then"],"value":"none"}]</dyad-spec-patch>. Ops are set, insert and remove; \`view\` ({"blocks":[...]}, each one of {"kind":"heading","text"}, {"kind":"text","text"}, {"kind":"input","field","label"}, {"kind":"answer","label"}, {"kind":"guarantees"}, {"kind":"rules"}, {"kind":"examples"}), \`purpose\` (one sentence) and \`meanings\` ({"<answer>": "what it tells the user"}, one key per answer; fields have no meanings) are set this way. When the user points at something on the screen, its paths are given with the request.
 - To change the rules, write the whole spec again in a new <dyad-spec> block, starting from the current spec when one is given.
-Example: <dyad-spec>${SPEC_EXAMPLE}</dyad-spec>` + APP_SHAPE;
+- An app that must keep what it is given between requests (a list that grows, entries that are kept) cannot be written yet. Say so in one sentence, and write the spec of what it could decide.
+Example: <dyad-spec>${SPEC_EXAMPLE}</dyad-spec>`;
+
+// ---- the one thing a model may write
+// Every model, on the device or in the cloud, writes the app's JSON spec and nothing else. LexLean a
+// model writes is never read: the module is Forge's own rendering of the spec, so the same JSON is the
+// same app on every device, and the app's seal is the address of that JSON.
+/** Whether a model's turn carries LexLean, closed or still open. */
+export const wroteLexLean = (text) => String(text || "").includes("<prism-lexlean>");
+/** A model's turn without the LexLean it wrote. */
+export const withoutLexLean = (text) => String(text || "").replace(/<prism-lexlean>[\s\S]*?(<\/prism-lexlean>|$)/g, "");
+export const LEXLEAN_REFUSED = "**LexLean not applied.** An app is written as its JSON spec, and Forge writes the LexLean module from it; a module a model writes is not used.";
 
 /**
  * What a model is shown of a decision app: its current spec, as the JSON it writes, or that there is
