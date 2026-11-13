@@ -1,0 +1,108 @@
+\begin{lexlean}{Reuse}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Stored,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: present, type: Nat}, {name: key, type: Nat}, {name: address, type: Nat}, {name: verdict, type: Nat}]
+}
+
+definition{
+  name: useStored,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: recompute,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: choice,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  result: Nat,
+  body: (if ((project entry present) =? 1) then (if ((project entry key) =? key) then (if ((project entry address) =? derived) then (useStored) else (recompute)) else (recompute)) else (recompute))
+}
+
+definition{
+  name: reused,
+  parameters: [entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  result: Nat,
+  body: (if ((choice entry key derived) =? (useStored)) then (project entry verdict) else fresh)
+}
+
+definition{
+  name: breaksRead,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  result: Bool,
+  body: ((not ((project entry address) =? derived)) && ((choice entry key derived) =? (useStored)))
+}
+
+theorem{
+  name: storedResultFailingItsCheckIsNeverBelieved,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  statement: ((breaksRead entry key derived) = false),
+  proof: linear_arithmetic{definitions: [breaksRead, choice, recompute, useStored]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksKey,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  result: Bool,
+  body: ((not ((project entry key) =? key)) && ((choice entry key derived) =? (useStored)))
+}
+
+theorem{
+  name: storedUnderAnotherKeyIsNeverBelieved,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  statement: ((breaksKey entry key derived) = false),
+  proof: linear_arithmetic{definitions: [breaksKey, choice, recompute, useStored]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksAbsent,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  result: Bool,
+  body: ((not ((project entry present) =? 1)) && ((choice entry key derived) =? (useStored)))
+}
+
+theorem{
+  name: nothingStoredMeansComputing,
+  parameters: [entry : Stored, key : Nat, derived : Nat],
+  statement: ((breaksAbsent entry key derived) = false),
+  proof: linear_arithmetic{definitions: [breaksAbsent, choice, recompute, useStored]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: deterministic,
+  parameters: [collisionFree : Nat, entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  result: Bool,
+  body: ((not ((((collisionFree =? 1) && ((project entry present) =? 1)) && ((project entry key) =? key)) && ((project entry address) =? derived))) || ((project entry verdict) =? fresh))
+}
+
+definition{
+  name: breaksReuse,
+  parameters: [collisionFree : Nat, entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  result: Bool,
+  body: ((((collisionFree =? 1) && (deterministic collisionFree entry key derived fresh)) && ((choice entry key derived) =? (useStored))) && (not ((project entry verdict) =? fresh)))
+}
+
+theorem{
+  name: reuseNeverChangesTheVerdict,
+  parameters: [collisionFree : Nat, entry : Stored, key : Nat, derived : Nat, fresh : Nat],
+  statement: ((breaksReuse collisionFree entry key derived fresh) = false),
+  proof: linear_arithmetic{definitions: [breaksReuse, choice, deterministic, recompute, useStored]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

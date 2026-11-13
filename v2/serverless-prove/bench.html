@@ -1,0 +1,58 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serverless proving bench</title>
+<style>body{font:14px system-ui;margin:16px;max-width:900px}pre{white-space:pre-wrap;font-size:12px}</style>
+<h1>Serverless proving bench</h1>
+<p id="state">loading</p>
+<pre id="out"></pre>
+<script type="module">
+const base = "/v2/serverless-prove/";
+const get = async (p, kind = "bytes") => { const r = await fetch(base + p); if (!r.ok) throw new Error(p); return kind === "json" ? r.json() : new Uint8Array(await r.arrayBuffer()); };
+const runs = Number(new URLSearchParams(location.search).get("runs") ?? 12);
+const t0 = performance.now();
+const manifest = await get("dist/manifest.json", "json"), records = await get("dist/records.json", "json");
+const [wasm, library] = await Promise.all([get("dist/kernel-tab.wasm"), get("dist/library.ndjson")]);
+const specOf = async (name) => {
+  const src = await get(`corpus/${name}/data/source.json`, "json");
+  return { prefix: "PrismTextRequest", modules: Object.fromEntries(await Promise.all(src.modules.map(async (m) => [m, await get(`corpus/${name}/data/${m}.json`, "json")]))) };
+};
+const projects = {};
+for (const name of ["guests", "payment"]) {
+  const mine = records.filter((r) => r.suffix.startsWith(name));
+  projects[name] = { records: mine, suffix: await get("dist/" + mine[0].suffix), spec: await specOf(name) };
+}
+const edits = { true: await get("dist/guests.App.edit-true.json", "json"), false: await get("dist/guests.App.edit-false.json", "json") };
+const fetchMs = performance.now() - t0;
+const results = [];
+for (let i = 0; i < runs; i++) {
+  document.getElementById("state").textContent = `run ${i + 1} of ${runs}`;
+  const w = new Worker(base + "worker.mjs", { type: "module" });
+  const t = performance.now();
+  const r = await new Promise((ok) => {
+    w.onmessage = (e) => ok(e.data);
+    w.onerror = (e) => ok({ ok: false, error: e.message });
+    w.postMessage({ manifest, wasm, library, projects, edits });
+  });
+  r.roundTripMs = performance.now() - t;
+  w.terminate();
+  results.push(r);
+  if (!r.ok) break;
+}
+const pick = (f) => results.filter((r) => r.ok).map(f).sort((a, b) => a - b);
+const stat = (f) => { const v = pick(f); return { median: Math.round(v[Math.floor((v.length - 1) / 2)]), worst: Math.round(v[v.length - 1]), n: v.length }; };
+const summary = results[0]?.ok ? {
+  viewport: `${innerWidth}x${innerHeight}`, userAgent: navigator.userAgent, fetchMs: Math.round(fetchMs),
+  ready: stat((r) => r.timings.ready), roundTrip: stat((r) => r.roundTripMs),
+  admitBundle: stat((r) => r.projects.guests.admitMs),
+  guestsFirst: stat((r) => r.projects.guests.firstMs), guestsWhole: stat((r) => r.projects.guests.againMs), guestsKernel: stat((r) => r.projects.guests.kernelMs),
+  paymentFirst: stat((r) => r.projects.payment.firstMs), paymentWhole: stat((r) => r.projects.payment.againMs),
+  editTrue: stat((r) => r.edits.true.ms), editFalse: stat((r) => r.edits.false.ms), cachedVerdict: stat((r) => r.cached.ms),
+  wasmMemoryMB: stat((r) => r.projects.guests.memoryBytes / 1048576), heapMB: stat((r) => (r.heapBytes ?? 0) / 1048576),
+  verdicts: { guests: results[0].projects.guests.verdicts, payment: results[0].projects.payment.verdicts, edits: results[0].edits, cachedHit: results[0].cached.hit },
+  crossOriginIsolated: results[0].crossOriginIsolated, sharedArrayBuffer: results[0].sharedArrayBuffer, workerNetwork: results[0].network,
+} : { error: results[0]?.error };
+window.__bench = { summary, results };
+document.getElementById("state").textContent = "done";
+document.getElementById("out").textContent = JSON.stringify(summary, null, 1);
+</script>

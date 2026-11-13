@@ -1,0 +1,26 @@
+== True: lean
+exit 0
+== True: leanchecker
+exit 0
+== Sorry: lean
+faults/Sorry.lean:5:8: warning: declaration uses `sorry`
+exit 0
+== Sorry: leanchecker
+exit 0
+== Hacked: lean
+exit 0
+== Hacked: leanchecker
+leanchecker found a problem in Fault.Hacked
+uncaught exception: while replaying declaration 'Fault.hackedAdvance':
+(kernel) declaration type mismatch, 'Fault.hackedAdvance' has type
+  ∀ (state : PrismTextRequest.Payment.State),
+    Eq (PrismTextRequest.Payment.cleared state).revision (instHAdd.hAdd state.revision 1)
+but it is expected to have type
+  ∀ (state : PrismTextRequest.Payment.State),
+    Eq (PrismTextRequest.Payment.cleared state).revision (instHAdd.hAdd state.revision 2)
+exit 1
+== audit
+'Fault.trueAdvance' depends on axioms: [propext]
+'Fault.sorryAdvance' depends on axioms: [sorryAx]
+'Fault.hackedAdvance' depends on axioms: [propext]
+exit 0

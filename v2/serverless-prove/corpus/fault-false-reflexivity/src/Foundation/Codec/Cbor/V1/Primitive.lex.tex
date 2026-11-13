@@ -1,0 +1,619 @@
+\begin{lexlean}{Foundation.Codec.Cbor.V1.Primitive}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\importmodule{Foundation.Bytes}
+\importmodule{Foundation.Codec}
+\title{CBOR primitive codec}
+\begin{semanticmodule}
+inductive{
+  name: CborError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: BadLimits, fields: []},
+    {name: BadCursor, fields: []},
+    {name: Truncated, fields: []},
+    {name: WrongType, fields: []},
+    {name: UnsupportedHead, fields: []},
+    {name: NonCanonical, fields: []},
+    {name: ValueLimit, fields: []},
+    {name: InvalidUtf8, fields: []},
+    {name: TrailingInput, fields: []}
+  ]
+}
+
+structure{
+  name: CborLimits,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: maximumInput, type: Nat},
+    {name: maximumOutput, type: Nat},
+    {name: maximumBytes, type: Nat},
+    {name: maximumText, type: Nat},
+    {name: maximumArrayItems, type: Nat}
+  ]
+}
+
+inductive{
+  name: CborValue,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: Unsigned, fields: [Nat]},
+    {name: ByteString, fields: [Bytes]},
+    {name: TextString, fields: [String]},
+    {name: Boolean, fields: [Bool]},
+    {name: Null, fields: []}
+  ]
+}
+
+structure{
+  name: CborHead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: argument, type: Nat}, {name: cursor, type: Foundation.Codec::BoundedCursor}]
+}
+
+structure{
+  name: CborPayload,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: bytes, type: Bytes}, {name: cursor, type: Foundation.Codec::BoundedCursor}]
+}
+
+structure{
+  name: CborDecoded,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: value, type: CborValue}, {name: cursor, type: Foundation.Codec::BoundedCursor}]
+}
+
+structure{
+  name: CborArrayHead,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: count, type: Nat}, {name: cursor, type: Foundation.Codec::BoundedCursor}]
+}
+
+definition{
+  name: cborLimitsValid,
+  parameters: [limits : CborLimits],
+  result: Bool,
+  body: (((project limits maximumInput) <=? 4294967295) && (((project limits maximumOutput) <=? 4294967295) && (((project limits maximumBytes) <=? 4294967295) && (((project limits maximumText) <=? 4294967295) && (((project limits maximumArrayItems) <=? 4294967295) && true))))),
+  axioms: []
+}
+
+definition{
+  name: cborCursorValid,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, limits : CborLimits],
+  result: Bool,
+  body: (((prim length (project cursor bytes) : Nat) <=? (project limits maximumInput)) && (((project cursor limit) <=? (prim length (project cursor bytes) : Nat)) && (((project cursor offset) <=? (project cursor limit)) && true))),
+  axioms: []
+}
+
+definition{
+  name: cborOctetNat,
+  parameters: [value : UInt8],
+  result: Nat,
+  body: ((((((((0 + (match (prim equal (prim bit_and value (1 : UInt8) : UInt8) (1 : UInt8) : Bool)
+    | Bool.false => 0
+    | Bool.true => 1)) + (match (prim equal (prim bit_and value (2 : UInt8) : UInt8) (2 : UInt8) : Bool)
+    | Bool.false => 0
+    | Bool.true => 2)) + (match (prim equal (prim bit_and value (4 : UInt8) : UInt8) (4 : UInt8) : Bool)
+    | Bool.false => 0
+    | Bool.true => 4)) + (match (prim equal (prim bit_and value (8 : UInt8) : UInt8) (8 : UInt8) : Bool)
+    | Bool.false => 0
+    | Bool.true => 8)) + (match (prim equal (prim bit_and value (16 : UInt8) : UInt8) (16 : UInt8) : Bool)
+    | Bool.false => 0
+    | Bool.true => 16)) + (match (prim equal (prim bit_and value (32 : UInt8) : UInt8) (32 : UInt8) : Bool)
+    | Bool.false => 0
+    | Bool.true => 32)) + (match (prim equal (prim bit_and value (64 : UInt8) : UInt8) (64 : UInt8) : Bool)
+    | Bool.false => 0
+    | Bool.true => 64)) + (match (prim equal (prim bit_and value (128 : UInt8) : UInt8) (128 : UInt8) : Bool)
+    | Bool.false => 0
+    | Bool.true => 128)),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: cborOctetTable0,
+  parameters: [],
+  result: Bytes,
+  body: 0x000102030405060708090a0b0c0d0e0f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable1,
+  parameters: [],
+  result: Bytes,
+  body: 0x101112131415161718191a1b1c1d1e1f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable2,
+  parameters: [],
+  result: Bytes,
+  body: 0x202122232425262728292a2b2c2d2e2f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable3,
+  parameters: [],
+  result: Bytes,
+  body: 0x303132333435363738393a3b3c3d3e3f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable4,
+  parameters: [],
+  result: Bytes,
+  body: 0x404142434445464748494a4b4c4d4e4f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable5,
+  parameters: [],
+  result: Bytes,
+  body: 0x505152535455565758595a5b5c5d5e5f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable6,
+  parameters: [],
+  result: Bytes,
+  body: 0x606162636465666768696a6b6c6d6e6f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable7,
+  parameters: [],
+  result: Bytes,
+  body: 0x707172737475767778797a7b7c7d7e7f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable8,
+  parameters: [],
+  result: Bytes,
+  body: 0x808182838485868788898a8b8c8d8e8f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable9,
+  parameters: [],
+  result: Bytes,
+  body: 0x909192939495969798999a9b9c9d9e9f,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable10,
+  parameters: [],
+  result: Bytes,
+  body: 0xa0a1a2a3a4a5a6a7a8a9aaabacadaeaf,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable11,
+  parameters: [],
+  result: Bytes,
+  body: 0xb0b1b2b3b4b5b6b7b8b9babbbcbdbebf,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable12,
+  parameters: [],
+  result: Bytes,
+  body: 0xc0c1c2c3c4c5c6c7c8c9cacbcccdcecf,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable13,
+  parameters: [],
+  result: Bytes,
+  body: 0xd0d1d2d3d4d5d6d7d8d9dadbdcdddedf,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable14,
+  parameters: [],
+  result: Bytes,
+  body: 0xe0e1e2e3e4e5e6e7e8e9eaebecedeeef,
+  axioms: []
+}
+
+definition{
+  name: cborOctetTable15,
+  parameters: [],
+  result: Bytes,
+  body: 0xf0f1f2f3f4f5f6f7f8f9fafbfcfdfeff,
+  axioms: []
+}
+
+definition{
+  name: cborOctetBytes,
+  parameters: [value : Nat],
+  result: Bytes,
+  body: (match (value <? 256)
+    | Bool.false => 0x
+    | Bool.true => (match (prim slice (match (value <? 128)
+        | Bool.false => (match (value <? 192)
+          | Bool.false => (match (value <? 224)
+            | Bool.false => (match (value <? 240)
+              | Bool.false => (cborOctetTable15)
+              | Bool.true => (cborOctetTable14))
+            | Bool.true => (match (value <? 208)
+              | Bool.false => (cborOctetTable13)
+              | Bool.true => (cborOctetTable12)))
+          | Bool.true => (match (value <? 160)
+            | Bool.false => (match (value <? 176)
+              | Bool.false => (cborOctetTable11)
+              | Bool.true => (cborOctetTable10))
+            | Bool.true => (match (value <? 144)
+              | Bool.false => (cborOctetTable9)
+              | Bool.true => (cborOctetTable8))))
+        | Bool.true => (match (value <? 64)
+          | Bool.false => (match (value <? 96)
+            | Bool.false => (match (value <? 112)
+              | Bool.false => (cborOctetTable7)
+              | Bool.true => (cborOctetTable6))
+            | Bool.true => (match (value <? 80)
+              | Bool.false => (cborOctetTable5)
+              | Bool.true => (cborOctetTable4)))
+          | Bool.true => (match (value <? 32)
+            | Bool.false => (match (value <? 48)
+              | Bool.false => (cborOctetTable3)
+              | Bool.true => (cborOctetTable2))
+            | Bool.true => (match (value <? 16)
+              | Bool.false => (cborOctetTable1)
+              | Bool.true => (cborOctetTable0))))) (prim remainder value 16 0 : Nat) 1 : (Option Bytes))
+      | Option.none => 0x
+      | Option.some octetBytes => octetBytes)),
+  axioms: []
+}
+
+definition{
+  name: cborRead1,
+  parameters: [cursor : Foundation.Codec::BoundedCursor],
+  result: (Result CborHead CborError),
+  body: (match (1 <=? (prim subtract (project cursor limit) (project cursor offset) : Nat))
+    | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+    | Bool.true => (match (Foundation.Bytes::byteAt (project cursor bytes) ((project cursor offset) + 0))
+      | Option.none => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+      | Option.some octet0 => (ctor Result.ok [CborHead, CborError] (record CborHead {argument := (0 + (prim multiply (cborOctetNat octet0) 1 : Nat)), cursor := (record Foundation.Codec::BoundedCursor {bytes := (project cursor bytes), offset := ((project cursor offset) + 1), limit := (project cursor limit)})})))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: cborRead2,
+  parameters: [cursor : Foundation.Codec::BoundedCursor],
+  result: (Result CborHead CborError),
+  body: (match (2 <=? (prim subtract (project cursor limit) (project cursor offset) : Nat))
+    | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+    | Bool.true => (match (Foundation.Bytes::byteAt (project cursor bytes) ((project cursor offset) + 0))
+      | Option.none => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+      | Option.some octet0 => (match (Foundation.Bytes::byteAt (project cursor bytes) ((project cursor offset) + 1))
+        | Option.none => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+        | Option.some octet1 => (ctor Result.ok [CborHead, CborError] (record CborHead {argument := ((0 + (prim multiply (cborOctetNat octet0) 256 : Nat)) + (prim multiply (cborOctetNat octet1) 1 : Nat)), cursor := (record Foundation.Codec::BoundedCursor {bytes := (project cursor bytes), offset := ((project cursor offset) + 2), limit := (project cursor limit)})}))))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: cborRead4,
+  parameters: [cursor : Foundation.Codec::BoundedCursor],
+  result: (Result CborHead CborError),
+  body: (match (4 <=? (prim subtract (project cursor limit) (project cursor offset) : Nat))
+    | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+    | Bool.true => (match (Foundation.Bytes::byteAt (project cursor bytes) ((project cursor offset) + 0))
+      | Option.none => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+      | Option.some octet0 => (match (Foundation.Bytes::byteAt (project cursor bytes) ((project cursor offset) + 1))
+        | Option.none => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+        | Option.some octet1 => (match (Foundation.Bytes::byteAt (project cursor bytes) ((project cursor offset) + 2))
+          | Option.none => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+          | Option.some octet2 => (match (Foundation.Bytes::byteAt (project cursor bytes) ((project cursor offset) + 3))
+            | Option.none => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+            | Option.some octet3 => (ctor Result.ok [CborHead, CborError] (record CborHead {argument := ((((0 + (prim multiply (cborOctetNat octet0) 16777216 : Nat)) + (prim multiply (cborOctetNat octet1) 65536 : Nat)) + (prim multiply (cborOctetNat octet2) 256 : Nat)) + (prim multiply (cborOctetNat octet3) 1 : Nat)), cursor := (record Foundation.Codec::BoundedCursor {bytes := (project cursor bytes), offset := ((project cursor offset) + 4), limit := (project cursor limit)})}))))))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: cborReadHeadArgument,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, additional : Nat],
+  result: (Result CborHead CborError),
+  body: (match (additional <? 24)
+    | Bool.false => (match (additional =? 24)
+      | Bool.false => (match (additional =? 25)
+        | Bool.false => (match (additional =? 26)
+          | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.UnsupportedHead))
+          | Bool.true => (match (cborRead4 cursor)
+            | Result.error cause => (ctor Result.error [CborHead, CborError] cause)
+            | Result.ok read => (match (65536 <=? (project read argument))
+              | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.NonCanonical))
+              | Bool.true => (ctor Result.ok [CborHead, CborError] read))))
+        | Bool.true => (match (cborRead2 cursor)
+          | Result.error cause => (ctor Result.error [CborHead, CborError] cause)
+          | Result.ok read => (match (256 <=? (project read argument))
+            | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.NonCanonical))
+            | Bool.true => (ctor Result.ok [CborHead, CborError] read))))
+      | Bool.true => (match (cborRead1 cursor)
+        | Result.error cause => (ctor Result.error [CborHead, CborError] cause)
+        | Result.ok read => (match (24 <=? (project read argument))
+          | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.NonCanonical))
+          | Bool.true => (ctor Result.ok [CborHead, CborError] read))))
+    | Bool.true => (ctor Result.ok [CborHead, CborError] (record CborHead {argument := additional, cursor := cursor}))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: cborReadHeadInitial,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, major : Nat, initial : Nat],
+  result: (Result CborHead CborError),
+  body: (match ((prim quotient initial 32 0 : Nat) =? major)
+    | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.WrongType))
+    | Bool.true => (cborReadHeadArgument (record Foundation.Codec::BoundedCursor {bytes := (project cursor bytes), offset := ((project cursor offset) + 1), limit := (project cursor limit)}) (prim remainder initial 32 0 : Nat))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: cborReadHead,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, limits : CborLimits, major : Nat],
+  result: (Result CborHead CborError),
+  body: (match (cborLimitsValid limits)
+    | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.BadLimits))
+    | Bool.true => (match (cborCursorValid cursor limits)
+      | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.BadCursor))
+      | Bool.true => (match ((project cursor offset) <? (project cursor limit))
+        | Bool.false => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+        | Bool.true => (match (Foundation.Bytes::byteAt (project cursor bytes) (project cursor offset))
+          | Option.none => (ctor Result.error [CborHead, CborError] (ctor CborError.Truncated))
+          | Option.some initialByte => (cborReadHeadInitial cursor major (cborOctetNat initialByte)))))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: cborReadPayload,
+  parameters: [head : CborHead, maximum : Nat],
+  result: (Result CborPayload CborError),
+  body: (match ((project head argument) <=? maximum)
+    | Bool.false => (ctor Result.error [CborPayload, CborError] (ctor CborError.ValueLimit))
+    | Bool.true => (match ((project head argument) <=? (prim subtract (project (project head cursor) limit) (project (project head cursor) offset) : Nat))
+      | Bool.false => (ctor Result.error [CborPayload, CborError] (ctor CborError.Truncated))
+      | Bool.true => (match (Foundation.Bytes::sliceBytes (project (project head cursor) bytes) (project (project head cursor) offset) (project head argument))
+        | Option.none => (ctor Result.error [CborPayload, CborError] (ctor CborError.Truncated))
+        | Option.some payload => (ctor Result.ok [CborPayload, CborError] (record CborPayload {bytes := payload, cursor := (record Foundation.Codec::BoundedCursor {bytes := (project (project head cursor) bytes), offset := ((project (project head cursor) offset) + (project head argument)), limit := (project (project head cursor) limit)})}))))),
+  axioms: []
+}
+
+definition{
+  name: cborReadString,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, limits : CborLimits, textMode : Bool],
+  result: (Result CborDecoded CborError),
+  body: (match (cborReadHead cursor limits (match textMode | Bool.false => 2 | Bool.true => 3))
+    | Result.error cause => (ctor Result.error [CborDecoded, CborError] cause)
+    | Result.ok head => (match (cborReadPayload head (match textMode
+        | Bool.false => (project limits maximumBytes)
+        | Bool.true => (project limits maximumText)))
+      | Result.error cause => (ctor Result.error [CborDecoded, CborError] cause)
+      | Result.ok payload => (match textMode
+        | Bool.false => (ctor Result.ok [CborDecoded, CborError] (record CborDecoded {value := (ctor CborValue.ByteString (project payload bytes)), cursor := (project payload cursor)}))
+        | Bool.true => (match (prim utf8_decode (project payload bytes) : (Option String))
+          | Option.none => (ctor Result.error [CborDecoded, CborError] (ctor CborError.InvalidUtf8))
+          | Option.some textValue => (ctor Result.ok [CborDecoded, CborError] (record CborDecoded {value := (ctor CborValue.TextString textValue), cursor := (project payload cursor)})))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: cborReadPrimitiveInitial,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, limits : CborLimits, initial : Nat],
+  result: (Result CborDecoded CborError),
+  body: (match ((prim quotient initial 32 0 : Nat) =? 0)
+    | Bool.false => (match ((prim quotient initial 32 0 : Nat) =? 2)
+      | Bool.false => (match ((prim quotient initial 32 0 : Nat) =? 3)
+        | Bool.false => (match (initial =? 244)
+          | Bool.false => (match (initial =? 245)
+            | Bool.false => (match (initial =? 246)
+              | Bool.false => (ctor Result.error [CborDecoded, CborError] (ctor CborError.WrongType))
+              | Bool.true => (ctor Result.ok [CborDecoded, CborError] (record CborDecoded {value := (ctor CborValue.Null), cursor := (record Foundation.Codec::BoundedCursor {bytes := (project cursor bytes), offset := ((project cursor offset) + 1), limit := (project cursor limit)})})))
+            | Bool.true => (ctor Result.ok [CborDecoded, CborError] (record CborDecoded {value := (ctor CborValue.Boolean true), cursor := (record Foundation.Codec::BoundedCursor {bytes := (project cursor bytes), offset := ((project cursor offset) + 1), limit := (project cursor limit)})})))
+          | Bool.true => (ctor Result.ok [CborDecoded, CborError] (record CborDecoded {value := (ctor CborValue.Boolean false), cursor := (record Foundation.Codec::BoundedCursor {bytes := (project cursor bytes), offset := ((project cursor offset) + 1), limit := (project cursor limit)})})))
+        | Bool.true => (cborReadString cursor limits true))
+      | Bool.true => (cborReadString cursor limits false))
+    | Bool.true => (match (cborReadHead cursor limits 0)
+      | Result.error cause => (ctor Result.error [CborDecoded, CborError] cause)
+      | Result.ok head => (ctor Result.ok [CborDecoded, CborError] (record CborDecoded {value := (ctor CborValue.Unsigned (project head argument)), cursor := (project head cursor)})))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readCborPrimitive,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, limits : CborLimits],
+  result: (Result CborDecoded CborError),
+  body: (match (cborLimitsValid limits)
+    | Bool.false => (ctor Result.error [CborDecoded, CborError] (ctor CborError.BadLimits))
+    | Bool.true => (match (cborCursorValid cursor limits)
+      | Bool.false => (ctor Result.error [CborDecoded, CborError] (ctor CborError.BadCursor))
+      | Bool.true => (match ((project cursor offset) <? (project cursor limit))
+        | Bool.false => (ctor Result.error [CborDecoded, CborError] (ctor CborError.Truncated))
+        | Bool.true => (match (Foundation.Bytes::byteAt (project cursor bytes) (project cursor offset))
+          | Option.none => (ctor Result.error [CborDecoded, CborError] (ctor CborError.Truncated))
+          | Option.some initialByte => (cborReadPrimitiveInitial cursor limits (cborOctetNat initialByte)))))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: readCborArrayHead,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, limits : CborLimits],
+  result: (Result CborArrayHead CborError),
+  body: (match (cborReadHead cursor limits 4)
+    | Result.error cause => (ctor Result.error [CborArrayHead, CborError] cause)
+    | Result.ok head => (match ((project head argument) <=? (project limits maximumArrayItems))
+      | Bool.false => (ctor Result.error [CborArrayHead, CborError] (ctor CborError.ValueLimit))
+      | Bool.true => (ctor Result.ok [CborArrayHead, CborError] (record CborArrayHead {count := (project head argument), cursor := (project head cursor)})))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: finishCborCursor,
+  parameters: [cursor : Foundation.Codec::BoundedCursor, limits : CborLimits],
+  result: (Result Bool CborError),
+  body: (match (cborLimitsValid limits)
+    | Bool.false => (ctor Result.error [Bool, CborError] (ctor CborError.BadLimits))
+    | Bool.true => (match (cborCursorValid cursor limits)
+      | Bool.false => (ctor Result.error [Bool, CborError] (ctor CborError.BadCursor))
+      | Bool.true => (match ((project cursor offset) =? (project cursor limit))
+        | Bool.false => (ctor Result.error [Bool, CborError] (ctor CborError.TrailingInput))
+        | Bool.true => (ctor Result.ok [Bool, CborError] true)))),
+  axioms: []
+}
+
+definition{
+  name: cborHeadWidth,
+  parameters: [value : Nat],
+  result: Nat,
+  body: (match (value <? 24)
+    | Bool.false => (match (value <=? 255)
+      | Bool.false => (match (value <=? 65535) | Bool.false => 5 | Bool.true => 3)
+      | Bool.true => 2)
+    | Bool.true => 1),
+  axioms: []
+}
+
+definition{
+  name: cborWriteHeadUnchecked,
+  parameters: [value : Nat, major : Nat],
+  result: Bytes,
+  body: (match (value <? 24)
+    | Bool.false => (match (value <=? 255)
+      | Bool.false => (match (value <=? 65535)
+        | Bool.false => (prim append (cborOctetBytes ((prim multiply major 32 : Nat) + 26)) (prim append (prim append (prim append (prim append 0x (cborOctetBytes (prim remainder (prim quotient value 16777216 0 : Nat) 256 0 : Nat)) : Bytes) (cborOctetBytes (prim remainder (prim quotient value 65536 0 : Nat) 256 0 : Nat)) : Bytes) (cborOctetBytes (prim remainder (prim quotient value 256 0 : Nat) 256 0 : Nat)) : Bytes) (cborOctetBytes (prim remainder (prim quotient value 1 0 : Nat) 256 0 : Nat)) : Bytes) : Bytes)
+        | Bool.true => (prim append (cborOctetBytes ((prim multiply major 32 : Nat) + 25)) (prim append (cborOctetBytes (prim quotient value 256 0 : Nat)) (cborOctetBytes (prim remainder value 256 0 : Nat)) : Bytes) : Bytes))
+      | Bool.true => (prim append (cborOctetBytes ((prim multiply major 32 : Nat) + 24)) (cborOctetBytes value) : Bytes))
+    | Bool.true => (cborOctetBytes ((prim multiply major 32 : Nat) + value))),
+  axioms: []
+}
+
+definition{
+  name: cborWriteHead,
+  parameters: [value : Nat, major : Nat, limits : CborLimits],
+  result: (Result Bytes CborError),
+  body: (match (cborLimitsValid limits)
+    | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.BadLimits))
+    | Bool.true => (match (value <=? 4294967295)
+      | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.ValueLimit))
+      | Bool.true => (match ((cborHeadWidth value) <=? (project limits maximumOutput))
+        | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.ValueLimit))
+        | Bool.true => (ctor Result.ok [Bytes, CborError] (cborWriteHeadUnchecked value major))))),
+  axioms: []
+}
+
+definition{
+  name: cborWritePayload,
+  parameters: [bytes : Bytes, major : Nat, maximum : Nat, limits : CborLimits],
+  result: (Result Bytes CborError),
+  body: (match ((prim length bytes : Nat) <=? maximum)
+    | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.ValueLimit))
+    | Bool.true => (match (((prim length bytes : Nat) + (cborHeadWidth (prim length bytes : Nat))) <=? (project limits maximumOutput))
+      | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.ValueLimit))
+      | Bool.true => (match (cborWriteHead (prim length bytes : Nat) major limits)
+        | Result.error cause => (ctor Result.error [Bytes, CborError] cause)
+        | Result.ok headBytes => (ctor Result.ok [Bytes, CborError] (Foundation.Bytes::appendBytes headBytes bytes))))),
+  axioms: []
+}
+
+definition{
+  name: cborTextLength,
+  parameters: [value : String],
+  result: Nat,
+  body: (prim length value : Nat),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: cborWritePrimitiveChecked,
+  parameters: [value : CborValue, limits : CborLimits],
+  result: (Result Bytes CborError),
+  body: (match value
+    | CborValue.Unsigned integer => (cborWriteHead integer 0 limits)
+    | CborValue.ByteString payload => (cborWritePayload payload 2 (project limits maximumBytes) limits)
+    | CborValue.TextString textValue => (match ((cborTextLength textValue) <=? (project limits maximumText))
+      | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.ValueLimit))
+      | Bool.true => (cborWritePayload (prim utf8_encode textValue : Bytes) 3 (project limits maximumText) limits))
+    | CborValue.Boolean boolean => (match (1 <=? (project limits maximumOutput))
+      | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.ValueLimit))
+      | Bool.true => (ctor Result.ok [Bytes, CborError] (match boolean
+        | Bool.false => 0xf4
+        | Bool.true => 0xf5)))
+    | CborValue.Null => (match (1 <=? (project limits maximumOutput))
+      | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.ValueLimit))
+      | Bool.true => (ctor Result.ok [Bytes, CborError] 0xf6))),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeCborPrimitive,
+  parameters: [value : CborValue, limits : CborLimits],
+  result: (Result Bytes CborError),
+  body: (match (cborLimitsValid limits)
+    | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.BadLimits))
+    | Bool.true => (cborWritePrimitiveChecked value limits)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: writeCborArrayHead,
+  parameters: [count : Nat, limits : CborLimits],
+  result: (Result Bytes CborError),
+  body: (match (cborLimitsValid limits)
+    | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.BadLimits))
+    | Bool.true => (match (count <=? (project limits maximumArrayItems))
+      | Bool.false => (ctor Result.error [Bytes, CborError] (ctor CborError.ValueLimit))
+      | Bool.true => (cborWriteHead count 4 limits))),
+  axioms: []
+}
+
+definition{
+  name: cborInvocationLimits,
+  parameters: [],
+  result: CborLimits,
+  body: (record CborLimits {maximumInput := 4202618, maximumOutput := 4202617, maximumBytes := 4202612, maximumText := 4202612, maximumArrayItems := 4294967295}),
+  axioms: []
+}
+
+definition{
+  name: cborCanonicalResult,
+  parameters: [decoded : CborDecoded],
+  result: Bytes,
+  body: (match (finishCborCursor (project decoded cursor) (cborInvocationLimits))
+    | Result.error unusedFinishError => 0x
+    | Result.ok unusedFinished => (match (writeCborPrimitive (project decoded value) (cborInvocationLimits))
+      | Result.error unusedEncodeError => 0x
+      | Result.ok encoded => encoded)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: canonicalCborPrimitiveBytes,
+  parameters: [input : Bytes],
+  result: Bytes,
+  body: (match (readCborPrimitive (record Foundation.Codec::BoundedCursor {bytes := input, offset := 0, limit := (prim length input : Nat)}) (cborInvocationLimits))
+    | Result.error unusedDecodeError => 0x
+    | Result.ok decoded => (cborCanonicalResult decoded)),
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

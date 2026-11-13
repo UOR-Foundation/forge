@@ -1,0 +1,9 @@
+lexlean 0.3.0
+language 1.0
+compiler-semantics 8554008034f6e9284382619a7aa71e0f0071ad404ea9d821068294d2d8804851
+lean-toolchain leanprover/lean4:v4.32.1
+wrote lexlean.lock
+lock exit 0
+check exit 0
+verify exit 0
+verify ms 46196

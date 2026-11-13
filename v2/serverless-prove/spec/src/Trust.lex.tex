@@ -1,0 +1,86 @@
+\begin{lexlean}{Trust}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{Verdict}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Assumptions,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: collisionFree, type: Nat}, {name: emitterFaithful, type: Nat}, {name: equationsDetermine, type: Nat}, {name: independentKernelAgrees, type: Nat}, {name: engineFaithful, type: Nat}, {name: attesterHonest, type: Nat}]
+}
+
+structure{
+  name: Truth,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: leanAcceptsAssembled, type: Nat}, {name: leanProvesSpecStatement, type: Nat}]
+}
+
+definition{
+  name: attesterMeaning,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: ((not (((((project a attesterHonest) =? 1) && ((project a collisionFree) =? 1)) && ((project e leanAttested) =? 1)) && ((project e attestedBytes) =? (project e assembledBytes)))) || ((project t leanAcceptsAssembled) =? 1))
+}
+
+definition{
+  name: kernelMeaning,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: ((not ((((project a independentKernelAgrees) =? 1) && ((project a engineFaithful) =? 1)) && ((project e kernelAccepted) =? 1))) || ((project t leanAcceptsAssembled) =? 1))
+}
+
+definition{
+  name: bindingMeaning,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: ((not (((((((((project t leanAcceptsAssembled) =? 1) && ((project a collisionFree) =? 1)) && ((project a emitterFaithful) =? 1)) && ((project a equationsDetermine) =? 1)) && ((project e checkedStatement) =? (project e specStatement))) && ((project e libraryDerived) =? (project e libraryPinned))) && (((project e typesMatch) =? 1) && ((project e allBound) =? 1))) && ((project e axiomsObserved) =? (project e axiomsDeclared)))) || ((project t leanProvesSpecStatement) =? 1))
+}
+
+definition{
+  name: coherent,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: (((attesterMeaning a t e) && (kernelMeaning a t e)) && (bindingMeaning a t e))
+}
+
+definition{
+  name: shared,
+  parameters: [a : Assumptions],
+  result: Bool,
+  body: ((((project a collisionFree) =? 1) && ((project a emitterFaithful) =? 1)) && ((project a equationsDetermine) =? 1))
+}
+
+definition{
+  name: breaksProved,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: (((((coherent a t e) && (shared a)) && (((project a attesterHonest) =? 1) || (((project a independentKernelAgrees) =? 1) && ((project a engineFaithful) =? 1)))) && ((Verdict::verdictCode e) =? (Verdict::codeProved))) && (not ((project t leanProvesSpecStatement) =? 1)))
+}
+
+theorem{
+  name: provedHoldsIfEitherKernelKeyHolds,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  statement: ((breaksProved a t e) = false),
+  proof: linear_arithmetic{definitions: [Verdict::codeKernelChecked, Verdict::codePending, Verdict::codeProved, Verdict::codeRefused, Verdict::verdictCode, attesterMeaning, bindingMeaning, breaksProved, coherent, kernelMeaning, shared]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksKernelChecked,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  result: Bool,
+  body: (((((coherent a t e) && (shared a)) && (((project a independentKernelAgrees) =? 1) && ((project a engineFaithful) =? 1))) && (Verdict::accepted (Verdict::verdictCode e))) && (not ((project t leanProvesSpecStatement) =? 1)))
+}
+
+theorem{
+  name: kernelCheckedRestsOnTheIndependentKernel,
+  parameters: [a : Assumptions, t : Truth, e : Verdict::Evidence],
+  statement: ((breaksKernelChecked a t e) = false),
+  proof: linear_arithmetic{definitions: [Verdict::accepted, Verdict::codeKernelChecked, Verdict::codePending, Verdict::codeProved, Verdict::codeRefused, Verdict::verdictCode, attesterMeaning, bindingMeaning, breaksKernelChecked, coherent, kernelMeaning, shared]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}
