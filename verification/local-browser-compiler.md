@@ -98,3 +98,16 @@ seven tests and zero for every other count. Two negative controls execute the
 real runner with an empty suite and with all seven cases skipped; both Python
 processes exit successfully, and the Node caller rejects both receipts. The
 outer seven-test FA-32 wrapper cannot count either case as preparation success.
+
+## Reconciliation with the merged runtime-install mitigation
+
+Main `212deccf0e12086e5583b003374a980de9ac2538` adds #177's runtime
+`npm ci` even on unpacked modules-cache hits. Reconciliation retains that
+mitigation alongside the independently verified archive preflight and both-lock
+npm cache key. The install comment now acknowledges both hydration paths.
+The existing workflow control requires exactly one runtime install with only the
+whole-Forge reuse condition; adding back the modules-cache condition fails
+`node --test studio/tools/local_browser_compiler.test.mjs` with
+`runtime install must survive modules and bundle cache hits`. Restoring the
+workflow returns the control to passing. Main's #178 template-update workflow
+is carried unchanged; no model, SDK or universal-policy bytes were edited.

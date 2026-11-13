@@ -358,7 +358,9 @@ jobs:
             studio/vendor/dyad/node_modules
           key: forge-modules-v1-${{ hashFiles('studio/runtime/package-lock.json', 'studio/vendor/dyad/package-lock.json') }}
       - name: Install the locked browser compiler archive
-        if: steps.forge-reuse.outputs.cache-hit != 'true' && steps.modules.outputs.cache-hit != 'true'
+      # Keep the runtime install even on unpacked-tree hits: shell staging needs npm's locked archive.
+      # The preflight below independently verifies availability and hydrates missing archives too.
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
         run: npm ci --prefix runtime --ignore-scripts --no-audit --no-fund
       # The bundle is what the renderer's own files compile to: its address is those files and the lockfile,
       # nothing else. A change to the shell's stylesheet or scripts leaves it alone, and the build below is

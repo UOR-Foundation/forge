@@ -64,6 +64,10 @@ test("actual build publication and CI require the local compiler closure",()=>{
   const pages = read('../../.github/workflows/pages.yml');
   const forge = pages.slice(pages.indexOf('\n  forge:'), pages.indexOf('\n  deploy:'));
   assert.match(forge, /cache-dependency-path: \|\n            studio\/vendor\/dyad\/package-lock.json\n            studio\/runtime\/package-lock.json/);
+  const runtimeInstalls = forge.split('      - name:').filter(step => step.includes('run: npm ci --prefix runtime'));
+  assert.equal(runtimeInstalls.length, 1, 'exactly one runtime install is required');
+  assert.deepEqual([...runtimeInstalls[0].matchAll(/        if: (.*)/g)].map(match => match[1]), ["steps.forge-reuse.outputs.cache-hit != 'true'"], 'runtime install must survive modules and bundle cache hits');
+  assert.match(runtimeInstalls[0], /        run: npm ci --prefix runtime --ignore-scripts --no-audit --no-fund\n/);
   const preparation = forge.split('      - name:').find(step => step.includes('run: python3 scripts/prepare_asset_cache.py'));
   assert.ok(preparation, 'missing archive preparation');
   assert.deepEqual([...preparation.matchAll(/        if: (.*)/g)].map(match => match[1]), ["steps.forge-reuse.outputs.cache-hit != 'true'"]);
