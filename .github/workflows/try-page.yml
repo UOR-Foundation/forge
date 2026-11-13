@@ -64,7 +64,7 @@ jobs:
           fi
       - name: Verify, answer add 20 22 and replay 22/22
         run: npm run test:try
-      - name: Prism accounts - every signature check refuses, and the passkey flow signs in
+      - name: Prism ids - the pinned stitch copy matches its lock, every session check refuses, and the flow signs in
         run: npm run test:identity
       - name: Build the canonical frame every Prism app loads
         run: node frame/publish.mjs "$RUNNER_TEMP/frame" "$GITHUB_SHA"
