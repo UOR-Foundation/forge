@@ -1,4 +1,4 @@
-// hologram-forge (ours, not Dyad's; see VENDORED.md): the build screen on a phone. One pane at a time over the
+// hologram-forge (ours, not upstream's; see VENDORED.md): the build screen on a phone. One pane at a time over the
 // full width (the chat, or the app, or its publishing), chosen from one bar at the bottom: back to the apps,
 // Chat / Preview / Publish as the kit's Tabs, and a slot the shell's appearance switch takes. Built only from
 // the kit's shadcn/ui components. Both panes stay mounted, so the running app and the chat keep their state

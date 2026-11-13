@@ -1093,7 +1093,7 @@ window.__preview = buildPreview;
 // ---- the renderer's tags: what the model writes becomes files. The grammar is the renderer's: a block per
 // file, attributes path and description, content verbatim between the tags; delete and rename are
 // single tags; add-dependency names packages the import map must carry.
-function parseDyadTags(text) {
+function parsePrismTags(text) {
   const writes = [], deletes = [], renames = [], deps = [];
   const attr = (s, name) => { const m = s.match(new RegExp(name + '="([^"]*)"')); return m ? m[1] : null; };
   for (const m of text.matchAll(/<dyad-write\s+([^>]*)>([\s\S]*?)<\/dyad-write>/g)) {
@@ -1106,7 +1106,7 @@ function parseDyadTags(text) {
   for (const m of text.matchAll(/<dyad-add-dependency\s+([^>]*?)\s*\/?>/g)) { const p = attr(m[1], "packages") || attr(m[1], "package"); if (p) deps.push(...p.split(/\s+/).filter(Boolean)); }
   return { writes, deletes, renames, deps };
 }
-async function applyDyadTags(appId, tags, options = {}) {
+async function applyPrismTags(appId, tags, options = {}) {
   const copied = copyGenerationInput(tags, options.source), { signal, onCommit } = options;
   await coreReady;
   assertGenerationActive(signal);
@@ -1114,7 +1114,7 @@ async function applyDyadTags(appId, tags, options = {}) {
   assertCanonicalGeneration(source, copied.tags, lexlean);
   return applyStoredProjectPatch(await dbReady, appId, copied.tags, { core, derive: kappa, source, signal, onCommit });
 }
-window.__chat = { parseDyadTags, applyDyadTags };
+window.__chat = { parsePrismTags, applyPrismTags };
 
 // ---- the chat stream machine. the renderer submits a turn only here: SUBMIT on the chat_stream
 // machine, then it watches the snapshot (admitting, streaming, finalizing, idle) and applies the
@@ -1880,7 +1880,7 @@ async function chatTurn(chatId, intent) {
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
-      // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
+      // Until the answer starts, the model's reasoning shows in upstream's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
       const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
       const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
@@ -1932,10 +1932,10 @@ async function chatTurn(chatId, intent) {
     if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
     if (execution.sourceEffects) {
       // Code a model wrote is never applied: the app's code and screen are projections of its module.
-      const wrote = parseDyadTags(full);
+      const wrote = parsePrismTags(full);
       const refusedCode = wrote.writes.length + wrote.deletes.length + wrote.renames.length + wrote.deps.length;
       const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
-      const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
+      const applied = await applyPrismTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
       let changed = applied.changed;
       hostedSource = applied.source;
       // A model writes the app's JSON spec and nothing else: LexLean in its turn is dropped before the

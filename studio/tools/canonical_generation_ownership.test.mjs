@@ -12,7 +12,7 @@ const source = {name:"app", reference:"snapshot", files:[["prism/spec.json",JSON
 const patch = extra => ({writes:[],deletes:[],renames:[],deps:[],...extra});
 const guard = (s,p) => assertCanonicalGeneration(s,p,lexlean);
 const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
-function adapter(env) { const start = host.indexOf("async function applyDyadTags("), end=host.indexOf("window.__chat =",start); return vm.runInNewContext(host.slice(start,end)+"\napplyDyadTags",{structuredClone, copyGenerationInput, assertCanonicalGeneration, assertGenerationActive, lexlean, ...env}); }
+function adapter(env) { const start = host.indexOf("async function applyPrismTags("), end=host.indexOf("window.__chat =",start); return vm.runInNewContext(host.slice(start,end)+"\napplyPrismTags",{structuredClone, copyGenerationInput, assertCanonicalGeneration, assertGenerationActive, lexlean, ...env}); }
 test("writes and deletes cannot touch any canonical owned path", () => {
   for (const file of ["prism/spec.json",path,"src/lib/prism.ts"]) for (const p of [patch({writes:[{path:"ordinary",content:"safe"},{path:file,content:"new"}]}),patch({deletes:[{path:file}]})]) assert.throws(()=>guard(source,p),e=>e.code==="canonicalGenerationRefused");
 });

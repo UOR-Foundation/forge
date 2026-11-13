@@ -18,7 +18,7 @@
 #   ./scripts/plant.sh kitfile   # add a component of our own to the vendored registry: the components gate must refuse
 #   ./scripts/plant.sh rolled    # a screen imports Base UI itself: the renderer's build must refuse the bundle
 #   ./scripts/plant.sh rewrite   # a screen calls a ui component in a way the Radix rewrite cannot convert: the typecheck must refuse
-#   ./scripts/plant.sh passage   # Dyad changes a passage the shell patches: the shell's screens must refuse rather than skip it
+#   ./scripts/plant.sh passage   # Upstream changes a passage the shell patches: the shell's screens must refuse rather than skip it
 #   ./scripts/plant.sh unapplied # a patch names a file the build never reads: the build must refuse rather than skip it
 #   ./scripts/plant.sh heavy     # home imports the chat page itself, un-split: the Performance gate must refuse
 #                                # (rebuild the renderer after it: the plant leaves its build in shell/assets)

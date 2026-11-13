@@ -198,7 +198,7 @@ claim("cap: proving an app over 24 rules is refused, and says why", /24 rules/.t
 // changed the way a model changed its module. The prompt shows the draft form; the mistakes were made in
 // the canonical, fully bracketed one, so they are planted there.
 // A model writes the module and nothing else: the prompt never asks for code, the request carries only the
-// prompt and the module (never Dyad's code prompt or the codebase), and code a model writes is not applied.
+// prompt and the module (never upstream's code prompt or the codebase), and code a model writes is not applied.
 claim("only the module: the prompt asks for the module and refuses code", /You never write code, files or dependencies: Forge does not apply them/.test(SPEC_RULES) && !/write its files|write no module/.test(SPEC_RULES));
 claim("only the module: a turn sends the prompt and the module, and applies no code", hostSource.includes('content: chatExecutionPrompt(execution,prism.SPEC_RULES) +') && chatExecutionPrompt(chatExecutionPolicy('build',null),SPEC_RULES) === SPEC_RULES && !chatExecutionPrompt(chatExecutionPolicy('ask',null),SPEC_RULES).includes(SPEC_RULES) && hostSource.includes('await themeLibrary("resolve",{appId})') && !hostSource.includes("buildSystemPrompt(rules) + ") && hostSource.includes("prism.moduleContext(") && hostSource.includes("writes: [], deletes: [], renames: [], deps: []") && hostSource.includes("prism.CODE_REFUSED"));
 

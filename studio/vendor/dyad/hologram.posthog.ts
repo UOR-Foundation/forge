@@ -1,5 +1,5 @@
 // hologram-forge (ours, see VENDORED.md): posthog-js and posthog-js/react as the shell builds them, a client
-// that sends nothing. Dyad's calls (init, capture, captureException, identify, people.set, usePostHog,
+// that sends nothing. Upstream's calls (init, capture, captureException, identify, people.set, usePostHog,
 // PostHogProvider) keep their shape: every property at any depth is a function that answers undefined,
 // and init answers the client itself.
 import type { ReactNode } from "react";

@@ -1,7 +1,7 @@
-// hologram-forge (ours, not Dyad's; see VENDORED.md): the Apps page, in place of src/pages/apps.tsx
+// hologram-forge (ours, not upstream's; see VENDORED.md): the Apps page, in place of src/pages/apps.tsx
 // (hologram.screens.mjs; compiled at that path). Laid out as shadcn's dashboard-01 block: section cards with
 // trend badges, tabs with counts beside the table's tools, and a data table with row selection and a row
-// menu. Every part is the kit's shadcn/ui component. The data and every action are Dyad's own (its hooks,
+// menu. Every part is the kit's shadcn/ui component. The data and every action are upstream's own (its hooks,
 // its ipc calls, its collection views and dialogs), so nothing behind the page changes.
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -113,7 +113,7 @@ export default function AppsPage() {
       return next;
     });
 
-  // Dyad's bulk delete, unchanged: failed ids stay picked so they can be retried.
+  // Upstream's bulk delete, unchanged: failed ids stay picked so they can be retried.
   const deletePicked = async () => {
     if (!picked.size) return;
     setDeleting(true);

@@ -21,7 +21,7 @@ Lean, fast, secure and auditable are the four tests of every decision. Delete an
 Read these before writing anything: `AGENTS.md`, `README.md`, `VERIFICATION.md`, `studio/README.md`, `studio/PERFORMANCE.md`, `studio/UPSTREAM.md`, `app/src/FoundrySpecification.lex.tex`, `app/src/ForgeKernel.lex.tex`, `openspec/specs/forge-kernel/spec.md`.
 
 - The proved part is small: `app/src`, about 4,800 lines of LexLean, a phase machine (drafting, checked, proving, proved, published) and a deny-by-default capability gate, FK-01 to FK-21.
-- The product is not proved. It is a vendored Electron app, Dyad (`studio/vendor/dyad`, 2,131 files, 535,000 lines, React), run in the browser by a 1,636-line `studio/shell/host.js` that imitates `window.electron`.
+- The product is not proved. It is a vendored Electron app (`studio/vendor/dyad`, 2,131 files, 535,000 lines, React), run in the browser by a 1,636-line `studio/shell/host.js` that imitates `window.electron`.
 - Around it: Hollama as a second chat UI, a vendored shadcn copy, Python scripts that write the `.lex.tex` files, zod contracts published only to police the imitation, and gates whose job is to keep vendored bytes from drifting.
 - Cost: 603 KB gzip of JavaScript for the home screen, cold mobile LCP 9.6 s, Enter to first token 2.8 s on a phone.
 - Worth keeping: the kernel and its proofs, `FoundrySpecification` (15 obligations that already describe the target), the holo format and composer, the service worker as origin kernel with a CSP sandbox for previews, content addressing (BLAKE3), the in-tab proof obligations (`studio/shell/live/obligations.mjs`, sound by `regionCheck_sound`), passkey identity, the template contract and `just vv`.

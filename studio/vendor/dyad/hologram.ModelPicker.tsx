@@ -1,4 +1,4 @@
-// dyad-prism (ours, not Dyad's; see VENDORED.md): the model picker, replacing Dyad's at build time
+// dyad-prism (ours, not upstream's; see VENDORED.md): the model picker, replacing upstream's at build time
 // through `resolveId` in vite.shell.config.mts. Two models answer here (shell/host.js): GLM 5.3 Flash in the
 // cloud (Featherless) and BitNet 2B on this device. The menu is those two, each on two lines: its name over
 // a few words on what choosing it means, and at the right, in one column, a tag saying where it runs. Nothing
@@ -80,7 +80,7 @@ export function ModelPicker() {
     settings?.selectedModel ?? { name: "", provider: "local" };
   const modelsOf = (providerId: string) => modelsByProvider?.[providerId] ?? [];
   const isSelected = (providerId: string, model: LanguageModel) =>
-    // The product's default is the device, so a selection Dyad left as "auto" reads as the device's model.
+    // The product's default is the device, so a selection upstream left as "auto" reads as the device's model.
     (selected.provider === providerId ||
       (selected.provider === "auto" && providerId === "local")) &&
     (selected.name === model.apiName || selected.provider === "auto");
