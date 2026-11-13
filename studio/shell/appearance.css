@@ -509,8 +509,6 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
 [data-slot="home-featured"] [role="region"] button > div:first-child { transition: border-color 160ms ease; }
 [data-slot="home-featured"] [role="region"] > *:hover button > div:first-child { border-color: color-mix(in srgb, var(--foreground) 26%, transparent) !important; }
 [data-slot="home-featured"] [role="region"] button > div + div { gap: 0 !important; }
-[data-slot="home-featured"] [role="region"] button p:first-child { font-size: 14px !important; line-height: 21px !important; }
-[data-slot="home-featured"] [role="region"] button p + p { display: none !important; }
 @media (prefers-reduced-motion: reduce) { [data-slot="home-featured"] [role="region"] > * > *, [data-slot="home-featured"] [role="region"] > button { transition: none; } }
 /* On a phone the panel keeps the page's 16 px gutter, the cards are 144 wide, and it clears the tab bar. */
 @media (max-width: 767px) {
@@ -543,17 +541,49 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
   [data-testid="home-chat-input-container"] { max-width: 610px !important; margin-inline: auto !important; border-radius: 21px !important; }
   [data-testid="home-chat-input-container"] textarea { min-height: 89px !important; }
 }
-/* The app's own name under its card: quiet, one line, the card's own width. */
-[data-slot="home-featured"] [role="region"] > * > * + *, [data-slot="home-featured"] [role="region"] p {
-  font-size: 13px !important; color: color-mix(in srgb, var(--foreground) 72%, transparent) !important;
+/* The floor's four ways to look at it, in one track like the ways of asking in the box: Search, Featured,
+   My apps, Bookmarked, the chosen one lit. The star on a card is quiet until the card is under the pointer,
+   and stays lit once it is set. */
+[data-slot="home-featured-views"] {
+  gap: 2px; padding: 3px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
-/* A card without a cover yet: the app's own picture is captured from its preview, so an app that has not
-   been previewed shows a tile in the brand's light with its initial, not an empty box. */
-[data-slot="home-featured"] [role="region"] button > div:first-child > div {
-  background: linear-gradient(145deg, color-mix(in srgb, var(--brand) 16%, transparent) 0%, color-mix(in srgb, var(--foreground) 5%, transparent) 61.8%, color-mix(in srgb, var(--foreground) 10%, transparent) 100%) !important;
+[data-slot="home-featured-views"] > button {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 13px; border: 0;
+  border-radius: 999px; background: transparent; cursor: pointer;
+  font: 500 13px/1 var(--font-sans); color: var(--muted-foreground);
+  transition: color 160ms ease, background-color 160ms ease;
 }
-[data-slot="home-featured"] [role="region"] button > div:first-child span {
-  font: 600 34px/1 var(--font-display, var(--font-sans)) !important;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent) !important;
+[data-slot="home-featured-views"] > button:hover { color: var(--foreground); }
+[data-slot="home-featured-views"] > button[data-chosen] {
+  color: var(--foreground); background: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 13%, transparent);
 }
+[data-slot="home-featured-query"] {
+  width: 144px; height: 28px; margin-right: 5px; padding: 0 11px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
+  background: var(--background); color: var(--foreground); font: 400 13px/1 var(--font-sans);
+}
+[data-slot="home-featured-query"]::placeholder { color: var(--muted-foreground); }
+[data-slot="home-featured-query"]:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+[data-slot="home-featured-keep"] {
+  position: absolute; right: 8px; top: 8px; display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border: 0; border-radius: 999px; cursor: pointer;
+  background: color-mix(in srgb, var(--background) 80%, transparent); color: var(--muted-foreground);
+  opacity: 0; transition: opacity 160ms ease, color 160ms ease;
+}
+[data-slot="home-featured-keep"]:hover { color: var(--foreground); }
+[data-slot="home-featured-keep"][data-chosen] { opacity: 1; color: var(--foreground); }
+[role="button"]:hover > div > [data-slot="home-featured-keep"], [data-slot="home-featured-keep"]:focus-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="home-featured-views"] > button, [data-slot="home-featured-keep"] { transition: none; }
+}
+@media (max-width: 767px) {
+  [data-slot="home-featured-views"] > button { height: 26px; padding: 0 10px; font-size: 12px; }
+  [data-slot="home-featured-query"] { width: 89px; }
+}
+
+/* The card's cover is drawn in the card itself, so it needs no rule here; its name and who made it sit
+   under it, the name as the page's own size and the maker quieter. */
 [data-slot="home-featured"] [role="region"] button img { object-fit: cover !important; object-position: top center !important; }

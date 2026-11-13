@@ -1,1 +1,1 @@
-export { featuredApps } from "../../shell/featured-apps.mjs";
+export { featuredApps, featuredOnHome } from "../../shell/featured-apps.mjs";
