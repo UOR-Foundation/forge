@@ -18,9 +18,9 @@ import { chatModeCatalog } from "./hologram.chat-mode-data.mjs";
 
 // What choosing each way of asking means, in the words a person would use.
 const MEANS: Record<string, string> = {
-  build: "Makes the app and changes it",
-  ask: "Answers about it, changes nothing",
-  plan: "Thinks it through first, changes nothing",
+  build: "Writes and changes your app",
+  ask: "Answers questions, leaves your app alone",
+  plan: "Lays out the steps, leaves your app alone",
 };
 
 export function ChatModeSelector() {

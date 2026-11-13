@@ -284,9 +284,11 @@ dialog:modal { pointer-events: auto; }
    golden section of the screen: the space above it is to the space below as 1 to phi. Surprise me writes an
    idea into the composer in place of the chips, and the featured apps are on the Apps page. The tab bar is
    55 px, its stops 34 by 89, its icons 21, 21 px from the sides and 13 above the edge. */
-[data-slot="home-narrow"], [data-slot="home-surprise"] { display: none !important; }
+[data-slot="home-narrow"] { display: none !important; }
 @media (max-width: 767px) {
-  [data-slot="home-wide"], [data-slot="home-suggestions"] { display: none !important; }
+  /* On a phone the ideas give way to the one chip that offers another. */
+  [data-slot="home-wide"] { display: none !important; }
+  [data-slot="home-suggestions"] > *:not([data-slot="home-surprise"]) { display: none !important; }
   [data-slot="home-narrow"] { display: inline !important; }
   [data-slot="home-page"] { min-height: 100%; padding-bottom: 0 !important; }
   [data-slot="home-stage"] { flex: 1 1 auto; margin: 0 !important; padding: 0 16px !important; justify-content: flex-start !important; }
@@ -295,7 +297,7 @@ dialog:modal { pointer-events: auto; }
   [data-slot="home-stage"] h1 { font-size: 26px !important; line-height: 34px !important; letter-spacing: -0.02em; }
   [data-slot="home-stage"] h1 + p { margin-top: 8px !important; font-size: 16px !important; line-height: 26px !important; }
   [data-slot="home-stage"] > div > div:first-child { margin-bottom: 21px !important; }
-  [data-slot="home-surprise"] { display: inline-flex !important; height: 34px; margin-top: 21px; padding: 0 13px 0 11px !important; gap: 8px; font-size: 14px !important; }
+  [data-slot="home-surprise"] { height: 34px; padding: 0 13px 0 11px !important; gap: 8px; font-size: 14px !important; }
   [data-slot="home-surprise"] > svg { width: 16px; height: 16px; }
   /* Room for the tab bar under every page but the build screen's. */
   :root:not([data-holo-pane]) #layout-main-content-container { padding-bottom: calc(55px + 21px + env(safe-area-inset-bottom)); }
@@ -458,6 +460,12 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
 }
 [data-slot="home-stage"] h1 {
   font-size: clamp(34px, 4.2vw, 55px) !important; line-height: 1.06 !important; letter-spacing: -0.03em;
+}
+/* The product's name is said in a serif italic, so the line reads as a sentence and the name as a signature.
+   No serif is shipped with the page and nothing is fetched for one, so this is the reader's own serif. */
+[data-slot="home-name"] {
+  font-family: Georgia, "Times New Roman", "Liberation Serif", serif;
+  font-style: italic; font-weight: 400; font-size: 1.06em; letter-spacing: 0;
 }
 [data-slot="home-stage"] > div > div:first-child { margin-bottom: 21px !important; }
 /* The ideas are one line that scrolls, never a block that wraps: the hero keeps its height whatever is

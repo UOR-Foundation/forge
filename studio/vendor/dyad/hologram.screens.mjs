@@ -251,8 +251,13 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     from: `<div className="mt-4 flex flex-wrap justify-center gap-2">`,
     to: `<div className="mt-4 flex flex-wrap justify-center gap-2" data-slot="home-suggestions">`,
   },
-  // Three ideas, and only three: the row is a hint, not a menu, and every load offers a fresh three, so the
-  // chip that asked for another three is one chip too many.
+  {
+    file: "src/pages/home.tsx",
+    from: `    return shuffled.slice(0, 3);`,
+    to: `    return shuffled.slice(0, 2);`,
+  },
+  // Three chips, always: two ideas and "Surprise me", which writes one more into the box. The chip that
+  // asked for another three ideas is gone; a fresh two are offered on every visit.
   {
     file: "src/pages/home.tsx",
     from: `            <button
@@ -265,7 +270,22 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
               {t("moreIdeas")}
             </button>
 `,
-    to: ``,
+    to: `            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-slot="home-surprise"
+              disabled={isCheckingProviders}
+              onClick={() => {
+                const ideas = INSPIRATION_PROMPTS.filter((p) => p.prompt !== inputValue);
+                setInputValue(ideas[Math.floor(Math.random() * ideas.length)].prompt);
+              }}
+              className="rounded-full text-muted-foreground"
+            >
+              <Sparkles aria-hidden="true" />
+              Surprise me
+            </Button>
+`,
   },
   // On a phone the page keeps the inset's 16 px gutter instead of 32 px, so the composer has the room.
   {
@@ -287,7 +307,7 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
             <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
               Describe your idea. Dyad will turn it into a working app.
             </p>`,
-    to: `              Build your ideas with Prism
+    to: `              Build your ideas with <span data-slot="home-name">Prism</span>
             </h1>
             <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
               <span data-slot="home-wide">Describe your idea. Dyad will turn it into a working app.</span>
@@ -299,22 +319,7 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     from: `        <PrivacyBanner />
       </div>
       <FeaturedAppShowcase />`,
-    to: `        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-slot="home-surprise"
-          disabled={isCheckingProviders}
-          onClick={() => {
-            const ideas = INSPIRATION_PROMPTS.filter((p) => p.prompt !== inputValue);
-            setInputValue(ideas[Math.floor(Math.random() * ideas.length)].prompt);
-          }}
-          className="rounded-full text-muted-foreground"
-        >
-          <Sparkles aria-hidden="true" />
-          Surprise me
-        </Button>
-        <PrivacyBanner />
+    to: `        <PrivacyBanner />
       </div>
       <div data-slot="home-featured">
         <FeaturedAppShowcase />

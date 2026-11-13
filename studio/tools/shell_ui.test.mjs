@@ -53,7 +53,7 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
   for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
   assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
-  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "the hero fills the first screen at every size", "one short scroll brings the whole row", "that room's golden section, 610 pixels, centred", "three ideas centred under it on one line", "attach, then the model that will answer beside it", "the same pill as the model, with its name and a chevron", "it holds what a person can start from", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "he hero fills the first screen at every size", "the name in a serif italic", "one short scroll brings the whole row", "that room's golden section, 610 pixels, centred", "three chips centred under it on one line: two ideas", "Surprise me, which writes another into the box", "attach, then the model that will answer beside it", "the same pill as the model, with its name and a chevron", "it holds what a person can start from", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
   // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
@@ -75,6 +75,11 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   // Three ideas, and no fourth chip asking for another three.
   const screens = read("../vendor/dyad/hologram.screens.mjs");
   assert.ok(screens.includes('{t("moreIdeas")}'), "the chip the shell removes is no longer named");
+  assert.ok(screens.includes("return shuffled.slice(0, 2);"), "the row offers other than two ideas");
+  assert.ok(screens.includes('Build your ideas with <span data-slot="home-name">Prism</span>'), "the hero line changed");
+  assert.match(css, /\[data-slot="home-name"\] \{\s*font-family: Georgia[^}]*font-style: italic;/);
+  assert.equal(screens.split('data-slot="home-surprise"').length, 2, "Surprise me is written once, in the row");
+  assert.ok(css.includes('[data-slot="home-suggestions"] > *:not([data-slot="home-surprise"]) { display: none !important; }'), "a phone keeps the ideas beside Surprise me");
   assert.equal(read("../vendor/dyad/src/pages/home.tsx").includes("getRandomPrompts())}"), true);
   assert.ok(screens.includes('to: `import { Sparkles, Zap } from "lucide-react";`'), "the removed chip's icon is still imported");
   // The model sits beside attach, the three ways to ask beside send, and the toggle is drawn from tokens.
