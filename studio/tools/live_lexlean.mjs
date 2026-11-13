@@ -207,7 +207,7 @@ try {
     bare: tagged === "<dyad-spec>" + text + "</dyad-spec>" && prism.parseSpecTag(tagged).spec.title === bare.title && prism.asSpecTurn(text.slice(0, 40)) === "<dyad-spec>" + text.slice(0, 40) && prism.asSpecTurn("Here it is.\n<dyad-spec>{}</dyad-spec>") === "Here it is.\n<dyad-spec>{}</dyad-spec>" && prism.asSpecTurn("I cannot.") === "I cannot.",
     examples: given.examples.length >= 2 && given.examples.length <= 6 && JSON.stringify(given) === JSON.stringify(again) && prism.checkSpec(JSON.parse(JSON.stringify(given))).ok && prism.checkSpec(JSON.parse(JSON.stringify(given))).notes.every((n) => !/Set aside example/.test(n)) && new Set(given.examples.map((e) => e.response)).size >= 2 && prism.withExamples(JSON.parse(prism.SPEC_EXAMPLE)).examples.length === JSON.parse(prism.SPEC_EXAMPLE).examples.length,
     prompt: /Write no "examples": Forge adds them from the rules\./.test(SPEC_RULES),
-    beside: inferenceSource.includes('request: body, stream: true }).bytes;') && inferenceSource.includes('body[Symbol.for("forge.specAsk")] = ask;') && JSON.stringify(Object.assign({ a: 1 }, { [Symbol.for("forge.specAsk")]: { format: {} } })) === '{"a":1}' && inferenceSource.includes('if (format && format.type === "json_schema") j.response_format = format;') && !/enable_thinking/.test(inferenceSource) && hostSource.includes("inference.specAsk(body, { format: prism.SPEC_FORMAT });") && hostSource.includes("t = prism.asSpecTurn(t);") && hostSource.includes("tag.spec = prism.withExamples(tag.spec);"),
+    beside: inferenceSource.includes('request: body, stream: true }).bytes;') && inferenceSource.includes('body[Symbol.for("forge.specAsk")] = ask;') && JSON.stringify(Object.assign({ a: 1 }, { [Symbol.for("forge.specAsk")]: { format: {} } })) === '{"a":1}' && inferenceSource.includes('if (format && format.type === "json_schema") j.response_format = format;') && !/enable_thinking/.test(inferenceSource) && hostSource.includes("inference.specAsk(body, { format: prism.SPEC_FORMAT });") && hostSource.includes("t = prism.asSpecTurn(t);") && hostSource.includes("if (options.draft && tag && tag.spec) tag.spec = prism.withExamples(tag.spec);"),
   };
 } catch (e) { fastTurn = { error: String(e) }; }
 claim("fast turn: the spec's schema admits a spec and nothing else, within the relay's bound", fastTurn.schema === true);
@@ -264,7 +264,7 @@ try {
     card: prism.card({ phase: "checked", spec: check.spec, issues: [], notes: [], vectors: check.vectors }).includes("Proposed by Forge from rule 1"),
     tops: one.properties.length === 2 && !one.properties[0].why && /^Proposed by Forge:/.test(one.properties[1].why) && new Set(one.properties.map((p) => p.kind + JSON.stringify(p.when) + p.then)).size === 2,
     leaves: prism.withGuarantees(full) === full && prism.withGuarantees(broken) === broken,
-    host: hostSource.includes('if (tag && tag.spec && !files.get("prism/spec.json")) tag.spec = prism.withGuarantees(tag.spec);'),
+    host: hostSource.includes('if (options.draft && tag && tag.spec && !files.get("prism/spec.json")) tag.spec = prism.withGuarantees(tag.spec);') && hostSource.includes("source: applied.source, onCommit, draft: true });"),
   };
 } catch (e) { proposed = { error: String(e) }; }
 claim("proposed: a first draft with too few guarantees gets Forge's own from its rules, up to three in all, the same every time, each one true", proposed.count === true && proposed.first === true && proposed.sound === true && proposed.tops === true);

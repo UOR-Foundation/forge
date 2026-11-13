@@ -1330,9 +1330,11 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   // An app's first draft with too few guarantees gets Forge's own, read off its rules, each marked as
   // proposed on the card for the user to agree to or strike. Only the first draft: a guarantee the user
   // has had struck is not proposed again.
-  if (tag && tag.spec && !files.get("prism/spec.json")) tag.spec = prism.withGuarantees(tag.spec);
+  // Both are for a model's draft only (options.draft, set by the chat turn): a spec that arrives any other
+  // way, an import or a module read back, is stored as it was given.
+  if (options.draft && tag && tag.spec && !files.get("prism/spec.json")) tag.spec = prism.withGuarantees(tag.spec);
   // A spec written without examples gets Forge's own, the same from the same rules, stored with it.
-  if (tag && tag.spec) tag.spec = prism.withExamples(tag.spec);
+  if (options.draft && tag && tag.spec) tag.spec = prism.withExamples(tag.spec);
   // What is stored is the spec as the checker accepted it (a rule no request reaches, an unused `invalid`
   // and a guarantee about no request dropped, each named on the card), so the stored file is exactly what
   // the module is rendered from and its address is the seal the app carries.
@@ -1984,7 +1986,7 @@ async function chatTurn(chatId, intent) {
       // A model writes the app's JSON spec and nothing else: LexLean in its turn is dropped before the
       // turn is applied, whichever model wrote it, and the chat says so.
       const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);
-      const spec = (await appAfterTurn(appId, turn, { signal: abort.signal, session: hostedSession, source: applied.source, onCommit })) || await rulesAfterTurn(appId, turn, [], { signal: abort.signal, source: applied.source, onCommit });
+      const spec = (await appAfterTurn(appId, turn, { signal: abort.signal, session: hostedSession, source: applied.source, onCommit })) || await rulesAfterTurn(appId, turn, [], { signal: abort.signal, source: applied.source, onCommit, draft: true });
       hostedSource = spec.source;
       const patchRefusals = [];
       for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
