@@ -243,6 +243,32 @@ claim("draft: an unused `invalid` and guarantees about requests that cannot happ
 claim("draft: a guarantee the rules break is refused in its own words, with the request that shows it", draftRepair.refused === true && draftRepair.asked === true);
 claim("draft: the mended spec is accepted, stored as accepted, and its address is the seal's", draftRepair.accepted === true && draftRepair.sealed === true);
 claim("draft: a refused spec gets up to two repair turns, held to the schema, and what is stored is what was accepted", draftRepair.host === true);
+// A draft as DeepSeek V3.2 wrote them in the benchmark: sound rules, and no guarantee at all.
+let proposed = {};
+try {
+  const bare = { title: "Shipping Tier", purpose: "Decide the shipping tier for an order from its weight in kilograms and its destination.",
+    fields: [{ name: "weight", kind: "number", min: 0, max: 100 }, { name: "destination", kind: "choice", values: ["domestic", "europe", "worldwide"] }],
+    outcomes: ["standard", "express", "freight"],
+    rules: [{ when: [{ field: "weight", op: ">", value: 30 }], then: "freight" }, { when: [{ field: "destination", op: "is", value: "worldwide" }], then: "express" }, { when: [{ field: "weight", op: ">", value: 10 }], then: "express" }],
+    otherwise: "standard", properties: [] };
+  const copy = (v) => JSON.parse(JSON.stringify(v));
+  const given = prism.withGuarantees(copy(bare)), again = prism.withGuarantees(copy(bare)), check = prism.checkSpec(copy(given));
+  const one = prism.withGuarantees({ ...copy(bare), properties: [{ kind: "always", when: [{ field: "weight", op: ">", value: 30 }], then: "freight" }] });
+  const full = { ...copy(bare), properties: [1, 2, 3].map((n) => ({ kind: "never", when: [{ field: "weight", op: "=", value: n }], then: "freight" })) };
+  const broken = { ...copy(bare), properties: [{ kind: "always", when: [{ field: "weight", op: "=", value: 0 }], then: "freight" }] };
+  proposed = {
+    count: given.properties.length === 2 && given.properties.length <= prism.GUARANTEES_WANTED && JSON.stringify(given) === JSON.stringify(again),
+    first: given.properties[0].kind === "always" && given.properties[0].then === "freight" && /^Proposed by Forge from rule 1/.test(given.properties[0].why),
+    // rule 2 (worldwide is express) is not proposed: rule 1 overrides it for a heavy parcel
+    sound: check.ok === true && check.issues.length === 0 && !given.properties.some((p) => p.kind === "always" && p.then === "express" && JSON.stringify(p.when) === JSON.stringify(bare.rules[1].when)),
+    card: prism.card({ phase: "checked", spec: check.spec, issues: [], notes: [], vectors: check.vectors }).includes("Proposed by Forge from rule 1"),
+    tops: one.properties.length === 2 && !one.properties[0].why && /^Proposed by Forge:/.test(one.properties[1].why) && new Set(one.properties.map((p) => p.kind + JSON.stringify(p.when) + p.then)).size === 2,
+    leaves: prism.withGuarantees(full) === full && prism.withGuarantees(broken) === broken,
+    host: hostSource.includes('if (tag && tag.spec && !files.get("prism/spec.json")) tag.spec = prism.withGuarantees(tag.spec);'),
+  };
+} catch (e) { proposed = { error: String(e) }; }
+claim("proposed: a first draft with too few guarantees gets Forge's own from its rules, up to three in all, the same every time, each one true", proposed.count === true && proposed.first === true && proposed.sound === true && proposed.tops === true);
+claim("proposed: each is marked as proposed on the card, and a draft with enough, or one the checker refuses, is left as written", proposed.card === true && proposed.leaves === true && proposed.host === true);
 claim("fast turn: a model that does not reason is offered beside the default, and the relay's list names both", (() => { const toml = fs.readFileSync(path.join(root, "relay/featherless/wrangler.toml"), "utf8"); const offered = [...hostSource.matchAll(/apiName: "([^"]+)", displayName: "[^"]+", description: "[^"]+ on Featherless/g)].map((m) => m[1]); const listed = (/^MODELS = "([^"]+)"$/m.exec(toml) || ["", ""])[1].split(","); return offered.length === 3 && offered[0] === "zai-org/GLM-5.3-Flash" && offered.includes("deepseek-ai/DeepSeek-V3.2") && offered.includes("Qwen/Qwen3-30B-A3B-Instruct-2507") && JSON.stringify(offered) === JSON.stringify(listed) && /^FORWARD_RESPONSE_FORMAT = "1"$/m.test(toml); })());
 claim("fast turn: the schema rides beside the core's request, never in it, and thinking is never asked off", fastTurn.beside === true);
 claim("boundary: LexLean a model writes is dropped before the turn is applied, closed or open, and no model is told a second notation", prism.wroteLexLean("a <prism-lexlean>x") && !prism.wroteLexLean("<dyad-spec>{}</dyad-spec>") && prism.withoutLexLean("a<prism-lexlean>m</prism-lexlean>b<prism-lexlean>open") === "ab" && !SPEC_RULES.includes("app notation") && !SPEC_RULES.includes("<prism-lexlean>") && hostSource.includes("const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);") && hostSource.includes("appAfterTurn(appId, turn,") && !hostSource.includes("lexlean.partialFromTurn(full)"));

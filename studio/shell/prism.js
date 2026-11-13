@@ -108,6 +108,39 @@ export function withExamples(raw) {
 }
 
 /**
+ * A first draft with too few guarantees gets Forge's own, up to three in all. Each is read off the rules
+ * and holds of every request, so it costs nothing to check; what it adds is something for Lean to prove
+ * and for the user to agree to or strike. Each carries why it was proposed, which the card shows.
+ *   1. A rule nothing earlier overrides: its conditions always give its answer.
+ *   2. An answer one choice never gets.
+ * The same spec always gets the same proposals, in the same order. Measured on 2026-11-13 over ten
+ * sentences and three runs: DeepSeek V3.2 wrote 1.6 guarantees a spec and none at all in five of
+ * nineteen; GLM 5.3 Flash wrote 3.8.
+ */
+export const GUARANTEES_WANTED = 3;
+export function withGuarantees(raw, wanted = GUARANTEES_WANTED) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  let checked; try { checked = checkSpec(JSON.parse(JSON.stringify(raw))); } catch { return raw; }
+  if (!checked || !checked.ok || !checked.spec || !checked.authored) return raw;
+  const base = checked.authored, spec = checked.spec, kept = Array.isArray(base.properties) ? base.properties : [];
+  if (spec.properties.length >= wanted) return raw;
+  const key = (p) => p.kind + "|" + p.then + "|" + describeConditions(p.when);
+  const have = new Set(spec.properties.map(key));
+  const candidates = [];
+  (Array.isArray(base.rules) ? base.rules : []).forEach((r, i) => candidates.push({ kind: "always", when: r.when, then: r.then, why: `Proposed by Forge from rule ${i + 1}: no earlier rule overrides it.` }));
+  for (const f of spec.fields) if (f.kind === "choice") for (const v of f.values) for (const o of spec.outcomes) candidates.push({ kind: "never", when: [{ field: f.name, op: "is", value: v }], then: o, why: `Proposed by Forge: no request with ${f.name} ${v} is answered ${o}.` });
+  const added = [];
+  for (const candidate of candidates) {
+    if (spec.properties.length + added.length >= wanted) break;
+    let trial; try { trial = validateSpec({ ...base, properties: [...kept, ...added, candidate] }); } catch (e) { if (e instanceof SpecError) continue; throw e; }
+    const last = trial.properties[trial.properties.length - 1];
+    if (have.has(key(last)) || counterexample(trial, last).request !== null) continue;
+    have.add(key(last)); added.push(candidate);
+  }
+  return added.length ? { ...base, properties: [...kept, ...added] } : raw;
+}
+
+/**
  * What a model is told when the checker refuses its spec: the checker's own words, each with the request
  * that shows the conflict, and what to write back.
  */
