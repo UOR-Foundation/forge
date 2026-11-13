@@ -53,7 +53,7 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
   for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
   assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
-  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "the hero fills the first screen at every size", "one short scroll brings the whole row", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "the hero fills the first screen at every size", "one short scroll brings the whole row", "that room's golden section, 610 pixels, centred", "it holds what a person can start from", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
   // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
@@ -69,6 +69,13 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.match(css, /\[data-slot="home-stage"\] \{\s*flex: 0 0 auto; min-height: calc\(100% - 89px\);/, "the hero no longer fills the first screen with the floor peeking under it");
   assert.ok(css.includes("min-height: calc(100% - 55px)"), "the phone's peek is gone");
   assert.ok(css.includes("padding-bottom: 76px"), "the floor no longer clears the phone's tab bar");
+  // The box is the room's golden section, centred, and the ideas are centred under it.
+  assert.ok(css.includes('[data-testid="home-chat-input-container"] { max-width: 610px !important; margin-inline: auto !important;'));
+  assert.ok(css.includes("justify-content: safe center !important;"), "the ideas are not centred");
+  // Before the first app, the floor holds the gallery's templates rather than nothing.
+  const floor = read("../vendor/dyad/hologram.screens/FeaturedAppShowcase.tsx");
+  assert.ok(floor.includes("useTemplates") && floor.includes("Explore the app gallery"));
+  assert.ok(read("../vendor/dyad/hologram.screens.mjs").includes('"src/components/FeaturedAppShowcase.tsx": "hologram.screens/FeaturedAppShowcase.tsx"'));
   // A card without a cover is still a card: the tile and its initial are drawn, and a real cover fills it.
   assert.match(css, /\[data-slot="home-featured"\] \[role="region"\] button > div:first-child > div \{\s*background: linear-gradient/);
   assert.ok(css.includes('[data-slot="home-featured"] [role="region"] button img { object-fit: cover !important;'));

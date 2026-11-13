@@ -455,10 +455,9 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
 /* The ideas are one line that scrolls, never a block that wraps: the hero keeps its height whatever is
    offered, and the line fades at its end where more ideas follow. */
 [data-slot="home-suggestions"] {
-  margin-top: 21px !important; gap: 8px !important; flex-wrap: nowrap !important; justify-content: flex-start !important;
+  margin: 21px auto 0 !important; gap: 8px !important; flex-wrap: nowrap !important;
+  justify-content: safe center !important;
   overflow-x: auto; scrollbar-width: none; padding-inline: 1px;
-  mask-image: linear-gradient(to right, black 0 calc(100% - 34px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black 0 calc(100% - 34px), transparent 100%);
 }
 [data-slot="home-suggestions"]::-webkit-scrollbar { display: none; }
 [data-slot="home-suggestions"] > button { flex: none; }
@@ -509,19 +508,23 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
   [data-slot="home-featured"] [role="region"] { gap: 8px !important; padding-bottom: 8px !important; }
   [data-slot="home-featured"] [role="region"] > * { width: 144px !important; }
   /* The hero holds the middle of the room above the floor; the floor is the panel just over the tab bar. */
-  [data-slot="home-stage"] { min-height: calc(100% - 55px); padding: 21px 16px !important; justify-content: center !important; }
-  [data-slot="home-stage"]::before, [data-slot="home-stage"]::after { content: none !important; }
+  [data-slot="home-stage"] { min-height: calc(100% - 55px); padding: 21px 16px !important; justify-content: flex-start !important; }
+  [data-slot="home-stage"]::before { content: "" !important; flex: 1 1 0; }
+  [data-slot="home-stage"]::after { content: "" !important; flex: 1.618 1 0; max-height: 144px; }
 }
 /* A workspace, not a page: the hero sits at the golden section of the room above the floor (the space over
-   it is to the space under it as 1 to phi), the composer is a work surface 987 px wide at most (a Fibonacci
-   number, 610 x phi) and 144 tall, and nothing on this screen scrolls. */
+   it is to the space under it as 1 to phi), on a phone as on a desktop. The room is 987 px wide at most (a
+   Fibonacci number, 610 x phi) and the composer is its golden section, 610, centred, with the ideas under
+   it on the same measure. */
 @media (min-width: 768px) {
   [data-slot="home-stage"] { max-width: min(92vw, 987px) !important; justify-content: flex-start !important; }
   [data-slot="home-stage"]::before { content: ""; flex: 1 1 0; }
   /* On a tall window the room under the hero is capped at 233 px, so the hero settles toward the middle
      instead of leaving a void: short windows keep the golden section, tall ones stay composed. */
   [data-slot="home-stage"]::after { content: ""; flex: 1.618 1 0; max-height: 233px; }
-  [data-testid="home-chat-input-container"] { border-radius: 21px !important; }
+  /* The work surface is 987 wide; the input is its golden section, 610, centred, with the ideas under it on
+     the same measure. */
+  [data-testid="home-chat-input-container"] { max-width: 610px !important; margin-inline: auto !important; border-radius: 21px !important; }
   [data-testid="home-chat-input-container"] textarea { min-height: 89px !important; }
 }
 /* The app's own name under its card: quiet, one line, the card's own width. */

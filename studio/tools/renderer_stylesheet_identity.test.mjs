@@ -23,5 +23,5 @@ test('initial stylesheet identity precedes the unchanged host and renderer modul
 test('mandatory acceptance observes duplicate CSS requests and actual styled renderer navigation',()=>{
  const workflow=read('.github/workflows/studio.yml'),browser=read('studio/tools/renderer_stylesheet_identity_browser.mjs');
  assert.ok(workflow.includes('node tools/renderer_stylesheet_identity_browser.mjs'));
- for(const required of ['stylesheetRequests,1','getComputedStyle','What do you want to build?','/settings','serviceWorkers: "block"'])assert.ok(browser.includes(required),required);
+ for(const required of ['stylesheetRequests,1','getComputedStyle','Build your ideas with Prism','/settings','serviceWorkers: "block"'])assert.ok(browser.includes(required),required);
 });

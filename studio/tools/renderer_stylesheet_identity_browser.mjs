@@ -36,7 +36,7 @@ try {
   const tab=await fresh.newPage();tab.on('pageerror',e=>errors.push(e.message));
   tab.on('request',request=>{if(new URL(request.url()).pathname==='/foundry/assets/index.css')stylesheetRequests++;});
   await tab.goto(base);
-  await tab.getByRole('heading',{name:'What do you want to build?',exact:true}).waitFor();
+  await tab.getByRole('heading',{name:'Build your ideas with Prism',exact:true}).waitFor();
   await tab.locator('[role=textbox]').waitFor();
   assert.equal(await tab.locator('h1').evaluate(el=>getComputedStyle(el).fontSize),'48px');
   assert.equal(await tab.locator('link[rel=stylesheet][href="/foundry/assets/index.css"]').count(),1);
