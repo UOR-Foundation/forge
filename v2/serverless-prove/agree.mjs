@@ -13,6 +13,7 @@ import { load, check } from "../in-tab-prove/kernel.mjs";
 import { assemble, decide, diagnose, VERDICT } from "./bind.mjs";
 import { keyOf, sha256, toolchainPreimage, admit } from "./records.mjs";
 import { bundleFaults } from "./faults.mjs";
+import { agreementJSON } from "./evidence-format.mjs";
 
 const here = new URL(".", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
 const read = (p) => readFileSync(join(here, p));
@@ -129,4 +130,4 @@ const otherToolchain = await sha256(toolchainPreimage({ lean: "4.33.1", library:
 await push("record: filed for another toolchain", payment, P, { verdict: "verified" }, { record: { ...honest, key: await keyOf(payment, P, otherToolchain) } });
 await push("record: another project's bundle under the right key", payment, P, { verdict: "verified" }, { record: { key: keyP, theorem: P, bundle: await sha256(bundles.guests) }, bytes: bundles.guests });
 
-writeFileSync(join(here, "evidence", "agreement.json"), JSON.stringify({ toolchain, checker: await sha256(wasm), library: await sha256(library), rows }, null, 1) + "\n");
+writeFileSync(join(here, "evidence", "agreement.json"), agreementJSON({ toolchain, checker: await sha256(wasm), library: await sha256(library), rows }));

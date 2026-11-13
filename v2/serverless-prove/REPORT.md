@@ -243,6 +243,16 @@ of the SDK image's own elaboration (`sha256:48cc5e54…` for the library). `dist
 Authority: `lexlean verify` in the pinned image (the predecessor's runs, `evidence/authority/`). "Lean" is Lean 4.32.1's
 own kernel on the exact bytes the tab's kernel checked (`evidence/lean-kernel.json`, 7.5 to 11.5 s each, natively).
 
+Agreement diagnostic strings normalize build-time home-directory usernames to `<build-user>` via
+`evidence-format.mjs`. On 2026-11-13 the seven recorded panic diagnostics received that display-only
+redaction; their source suffixes, line/column numbers, refusal text, verdicts, timings, theorem names and
+all identity digests are unchanged. No kernel result was regenerated or upgraded by this redaction.
+`node --test v2/serverless-prove/evidence-format.test.mjs` checks the formatter and committed record;
+the existing repository-wide self-contained gate remains unchanged.
+Both tests pass. Replacing the formatter with plain JSON serialization makes its regression fail;
+restoring the original diagnostics makes `node studio/tools/self_contained.mjs` fail. Restoring the
+normalized bytes makes both commands pass again. This checks publication formatting, not new proof evidence.
+
 | Case | Image | Tab | nanoda / Lean on the tab's bytes | Where it is refused |
 | --- | --- | --- | --- | --- |
 | guests: 5 theorems | verified; 2 with no axioms, 3 with `[Quot.sound, propext]` | proved; same axioms | accept / accept | — |
