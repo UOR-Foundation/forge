@@ -51,8 +51,31 @@ lookup, which runs on every decision.
 
 `node studio/tools/proof_reuse_live.mjs` (not part of the gate; sends the fixture's files, unlisted):
 
-LIVE_RESULTS
+Run on 2026-11-13, the parking-fee fixture with three guarantees, one in-memory store, Node 22.21 on
+Windows. One run each; wall times include queueing on the shared verifier.
+
+| Step | Lean runs | Theorems sent | Reused | Wall time | Calls to the verifier |
+| --- | --- | --- | --- | --- | --- |
+| Cold | 1 | 3 | 0 | 105.4 s | profiles 1, draft 1, verify 1, task polls 16 |
+| Unchanged | 0 | 0 | 3 | 1.9 s | attestation lookups 4 |
+| One guarantee edited | 1 | 1 (`inv002Holds`) | 2 | 146.6 s | attestation lookups 4, draft 1, verify 1, task polls 10 |
+
+The unchanged case confirms the assumption the admission rests on: the hosted verifier reports an
+attestation for the SHA-256 of each file it verified. The edited case sent one theorem instead of three
+but took longer than the cold run: on the hosted verifier a run's cost is mostly fixed (queue, Lean start,
+elaborating the model), so leaving theorems out saves Lean work, not wall time, at this size. The large
+saving is when nothing the theorems depend on changed. Neither run needed an axiom correction round, so
+the saving from cached axiom sets was not observed here; the Node suite covers it.
 
 ## Gates
 
-LOCAL_GATES
+`just vv` passed at c5372a3 inside `prismpm-sdk-candidate@sha256:cd3b47d7…`, from a clone on the WSL Linux
+disk, in 2,782 s: fmt-check, model, template-check, lint, the workspace tests (`proof_reuse_fa_85` ok),
+deny and app (`prismpm --project app verify`, attestation `6009c3b3ebea7c54c944d5c4f65437911f6b9f6490870a8fd31735e16e8a8d44`).
+The only later change is this file.
+
+Every Studio Node suite was also run on this branch and on `main` 7b5fdb9. They differ only by
+`proof_reuse` (new, 8 of 8) and `snapshot_bound_builds`, which needed the new module listed in its browser
+fixture and passes 7 of 7. Six suites fail one test each on both, unchanged by this work:
+backlog_workflows, browser_chat_mode_controls, command_ownership_registry, live_main_integration,
+semantic_application_discovery and verified_host_bundle. They are not in `just vv`.
