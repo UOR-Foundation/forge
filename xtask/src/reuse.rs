@@ -183,12 +183,14 @@ mod tests {
         let pages = workflow("pages.yml");
         let pin = workflow("kernel-pin.yml");
         assert!(pages.contains("          name: kernel-holo"), "the page build keeps no holo for the pin");
-        for kept in ["app.holo", "app.json"] {
-            assert!(
-                pages.contains(&format!("verified-page/{kept}' || 'site/{kept}' }}}}")),
-                "the holo artifact does not carry {kept}, which the pin reads"
-            );
-        }
+        assert!(
+            pages.contains(r#"cp "$PAGE/app.holo" "$PAGE/app.json" kernel-proof/"#),
+            "the holo artifact does not carry the holo and the app.json the pin reads"
+        );
+        assert!(
+            pages.contains("PAGE: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}"),
+            "the artifact is gathered from somewhere other than the page this run publishes"
+        );
         assert!(pin.contains("  workflow_run:
     workflows: [pages]"), "the pin no longer follows the page build");
         assert!(

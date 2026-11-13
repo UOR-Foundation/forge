@@ -258,17 +258,27 @@ jobs:
           name: prism-page
           path: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}
           if-no-files-found: error
-      # One proof of one commit. This holo is the one Lean proved here, signed by this run; the pin takes it
-      # from this artifact (kernel-pin.yml) and verifies that signature instead of proving the same model a
-      # second time. A commit whose page was reused carries the holo of the page it reused, which is the
-      # same holo: the page's address covers every file app/ is built from.
-      - name: Keep the kernel's holo, for the pin that names it
+      # One proof of one commit. This holo is the one Lean proved here, signed by this run; whatever else
+      # needs a proved kernel on this commit takes it from this artifact and verifies that signature
+      # instead of proving the same model again (kernel-pin.yml, bootstrap.yml). A commit whose page was
+      # reused carries the holo of the page it reused, which is the same holo: the page's address covers
+      # every file app/ is built from. The attestation rides along when this run is the one that proved it.
+      - name: Gather what this commit's proof produced
+        shell: bash
+        env:
+          PAGE: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}
+        run: |
+          set -euo pipefail
+          mkdir -p kernel-proof
+          cp "$PAGE/app.holo" "$PAGE/app.json" kernel-proof/
+          if [[ -s .prism-proof/attestation ]]; then cp .prism-proof/attestation kernel-proof/attestation; fi
+          ls -la kernel-proof
+      - name: Keep the kernel's holo, for whatever else this commit proves
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: kernel-holo
-          path: |
-            ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page/app.holo' || 'site/app.holo' }}
-            ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page/app.json' || 'site/app.json' }}
+          path: kernel-proof
+          if-no-files-found: error
           if-no-files-found: error
 
   forge:
