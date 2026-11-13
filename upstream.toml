@@ -26,3 +26,12 @@ pull = 615
 fix = "359d7f5bfa8e01272ba6028c30c94459420ebb6a"
 release = { kind = "ghcr", image = "ghcr.io/uor-foundation/prismpm-sdk-candidate" }
 repin = "template-update"
+
+[[patch]]
+id = "prismpm-holo-v5-kappa"
+what = "Holo v5: a holo is a UORC archive named by its κ (PrismPM #663, ADR-017). Foundry pins the first release that carries it; its holo-bound identities (kernel.json digest, kernel-pin, the publication archiveFingerprint, the frame's holo entries, prism-code's spec seal) then move to κ on Foundry #173's branch."
+pinned = "prismpm.lock, .devcontainer/devcontainer.json, template.lock"
+repository = "UOR-Foundation/PrismPM"
+pull = 663
+release = { kind = "ghcr", image = "ghcr.io/uor-foundation/prismpm-sdk-candidate" }
+repin = "template-update"
