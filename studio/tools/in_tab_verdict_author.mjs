@@ -4,7 +4,7 @@
 //   node studio/tools/in_tab_verdict_author.mjs --check  refuses drift in any of them
 //
 // It writes app/src/InTabKernelProtocol.lex.tex, verification/in-tab-kernel-verdict-vectors.json, and the three
-// places app/src/ForgeKernel.lex.tex names the protocol (its import, its dispatch arm, its acceptance vectors).
+// places app/src/ForgeKernel.lex.tex names the protocol (its import, its entry, its acceptance vectors).
 //
 // The expected replies come from `expected` below, a reading of InTabKernel.verdictCode used only to write the
 // corpus. It is not an authority: every vector is restated as a theorem Lean proves by evaluation, and replayed in
@@ -63,8 +63,8 @@ const raw = [
   { name: "raw_notHex", request: "verdict " + "g" + wordsOf(base).map(hexWord).join("").slice(1), response: "malformedVerdictRequest" },
 ];
 // The vectors the guest carries and replays when it is built. Each is a 584-byte request, several times the size of
-// any other protocol's, so the guest carries one per answer; the whole corpus is replayed against the built guest.
-const EMBEDDED = ["proved_byLean", "kernelChecked_withoutLean", "checking_noBytes", "refused_alteredLibrary", "malformed_flagNotBoolean", "raw_tooLarge"];
+// any other protocol's, so the guest carries three: proved, kernel-checked and refused. The whole corpus is replayed against the built guest.
+const EMBEDDED = ["proved_byLean", "kernelChecked_withoutLean", "refused_alteredLibrary"];
 const corpus = { schema: "prism/in-tab-kernel-verdict-vectors/1", words: WORDS, vectors: [...cases, ...raw].map((v) => ({ ...v, embedded: EMBEDDED.includes(v.name) })) };
 if (corpus.vectors.filter((v) => v.embedded).length !== EMBEDDED.length) throw new Error("an embedded vector is not in the corpus");
 
@@ -143,23 +143,33 @@ theorem{
 \\end{lexlean}
 `;
 
-// ---- the kernel: import, dispatch arm, acceptance vectors
+// ---- the kernel: import, entry, acceptance vectors
 const kernelPath = new URL("app/src/ForgeKernel.lex.tex", root);
 let kernel = fs.readFileSync(kernelPath, "utf8");
 const once = (text, find, label) => { if (text.split(find).length !== 2) throw new Error("ForgeKernel: expected exactly one " + label); };
 const IMPORT = "\\importmodule{InTabKernelProtocol}\n";
 if (!kernel.includes(IMPORT)) { once(kernel, "\\importmodule{VersionPreviewProtocol}\n", "preview import"); kernel = kernel.replace("\\importmodule{VersionPreviewProtocol}\n", "\\importmodule{VersionPreviewProtocol}\n" + IMPORT); }
-const ARM_HEAD = `(if (prim equal (sliceOf value 0 8) ${ascii("verdict ")} : Bool) then (InTabKernelProtocol::dispatchVerdict (sliceOf value 8 (prim subtract (Foundation.Bytes::byteLength value) 8 : Nat))) else `;
-const PREVIEW_ARM = `  body: (if (prim equal (sliceOf value 0 8) ${ascii("preview ")} : Bool) then `;
-if (!kernel.includes(ARM_HEAD)) {
-  once(kernel, PREVIEW_ARM, "preview dispatch arm");
-  // The arm wraps the whole existing body, which runs over several lines to the comma before `axioms:`. The body
-  // gains one closing parenthesis there.
-  const start = kernel.indexOf(PREVIEW_ARM), BODY_END = ",\n  axioms: [Quot.sound, propext]\n}";
-  const end = kernel.indexOf(BODY_END, start);
-  if (end < 0 || kernel.slice(start, end).includes("\ndefinition{")) throw new Error("ForgeKernel: the end of dispatch's body was not found");
-  kernel = kernel.slice(0, start) + "  body: " + ARM_HEAD + kernel.slice(start + "  body: ".length, end) + ")" + kernel.slice(end);
+// The existing dispatcher keeps its body, whole and unchanged, under the name dispatchApplication. The guest's entry,
+// dispatch, is a small definition in front of it. Wrapping the body itself in one more arm made Lean elaborate the
+// whole of it again, several seconds on a stage the SDK bounds at 600.
+const ENTRY = `definition{
+  name: dispatch,
+  parameters: [value : Bytes],
+  result: Bytes,
+  body: (if (prim equal (sliceOf value 0 8) ${ascii("verdict ")} : Bool) then (InTabKernelProtocol::dispatchVerdict (sliceOf value 8 (prim subtract (Foundation.Bytes::byteLength value) 8 : Nat))) else (dispatchApplication value)),
+  axioms: [Quot.sound, propext]
 }
+
+`;
+const OLD_HEAD = "definition{\n  name: dispatch,\n  parameters: [value : Bytes],\n  result: Bytes,\n  body: (if (prim equal (sliceOf value 0 8) " + ascii("preview ") + " : Bool) then ";
+if (!kernel.includes("  name: dispatchApplication,")) {
+  once(kernel, OLD_HEAD, "application dispatcher");
+  const start = kernel.indexOf(OLD_HEAD), BODY_END = ",\n  axioms: [Quot.sound, propext]\n}\n\n";
+  const end = kernel.indexOf(BODY_END, start);
+  if (end < 0 || kernel.slice(start, end).includes("\ndefinition{")) throw new Error("ForgeKernel: the end of the dispatcher was not found");
+  kernel = kernel.slice(0, start) + OLD_HEAD.replace("  name: dispatch,", "  name: dispatchApplication,") + kernel.slice(start + OLD_HEAD.length, end + BODY_END.length) + ENTRY + kernel.slice(end + BODY_END.length);
+}
+once(kernel, ENTRY, "verdict entry");
 const vector = (v) => `(record Foundation.View.Text.V1.Model::AcceptanceVector {request := ${ascii(v.request)}, response := ${ascii(v.response)}})`;
 const acceptance = `definition{
   name: verdictAcceptance,
