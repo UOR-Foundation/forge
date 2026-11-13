@@ -311,7 +311,7 @@ export async function paidGenerate(body, onDelta, signal, onReasoning) {
   const run = () => paidGenerateOnce(body, onDelta, signal, onReasoning);
   const first = await navigator.locks.request(GLM_LOCK, { ifAvailable: true }, async (lock) => (lock ? { done: await run() } : null));
   if (first) return first.done;
-  if (onReasoning) onReasoning("Waiting for this browser's other GLM 5.3 Flash request to finish…");
+  if (onReasoning) onReasoning("Waiting for this browser's other cloud request to finish…");
   return navigator.locks.request(GLM_LOCK, signal ? { signal } : {}, run);
 }
 async function paidGenerateOnce(body, onDelta, signal, onReasoning) {

@@ -71,6 +71,13 @@ test("a request over 2 MiB is refused", async () => {
   assert.equal(calls.length, 0);
 });
 
+test("a second offered model is forwarded, and one not offered is refused", () => {
+  const two = env({ MODELS: "zai-org/GLM-5.3-Flash,deepseek-ai/DeepSeek-V3.2" });
+  assert.equal(shape(body({ model: "deepseek-ai/DeepSeek-V3.2" }), two).model, "deepseek-ai/DeepSeek-V3.2");
+  assert.throws(() => shape(body({ model: "deepseek-ai/DeepSeek-V3.2" }), env()), /not offered/);
+  assert.throws(() => shape(body({ model: "Qwen/Qwen3-30B-A3B-Instruct-2507" }), two), /not offered/);
+});
+
 test("the answer's length is capped and unknown fields are dropped", () => {
   const out = shape(body({ max_tokens: 10_000_000, tools: [{}], provider: { x: 1 }, n: 5, temperature: "0.7", user: "someone" }), env());
   assert.equal(out.max_tokens, 32768);

@@ -51,6 +51,16 @@ GLM 5.3 Flash deliberates whether or not the switch is set; with it off and no s
 
 `FORWARD_RESPONSE_FORMAT`, a `[vars]` entry in `wrangler.toml`, forwards `response_format` of type `json_schema` while it is `"1"`: one schema of at most 8,192 bytes, always sent as strict. Forge sends the `prism/spec/1` shape on a new app's first turn and reads a bare JSON object as the spec. Featherless honours it for GLM 5.3 Flash: both runs above returned exactly the schema's keys and the checker accepted both. It does not shorten the reasoning; it removes malformed and repeated specs.
 
+Three models that do not reason before they answer were measured the same way, with the schema, one run each:
+
+| model | first token | total | the checker |
+|---|---|---|---|
+| `deepseek-ai/DeepSeek-V3.2` | 7 s | 24 s | accepted the spec, dropping one rule no request reaches |
+| `Qwen/Qwen3-30B-A3B-Instruct-2507` | 1 s | 24 s | refused it: `invalid`, a reserved word, written as an answer |
+| `google/gemma-4-31B-it` | 1 s | 88 s | refused it, for the same reason |
+
+DeepSeek V3.2 is therefore offered beside GLM 5.3 Flash (`MODELS`, and `FEATHERLESS_MODELS` in `studio/shell/host.js`), and the schema switch is on. One run does not make it the default: that waits for several sentences and runs, counting the guarantees each model writes as well as the time.
+
 Changing it is an edit and `npx wrangler@4 deploy`.
 
 ## Limits

@@ -192,8 +192,14 @@ const LOCAL_MODELS = [{ apiName: MODEL_ID, displayName: "BitNet 2B", description
 // Featherless: open-weight models behind an OpenAI chat endpoint that admits this origin. The key is the
 // visitor's, entered on the provider's settings page and kept on this device; the site carries none.
 const FEATHERLESS = { id: "featherless", name: "Featherless", hasFreeTier: false, websiteUrl: "https://featherless.ai/account/api-keys", gatewayPrefix: "featherless/", type: "cloud" };
-const FEATHERLESS_MODELS = [{ apiName: "zai-org/GLM-5.3-Flash", displayName: "GLM 5.3 Flash", description: "Z.ai's GLM 5.3 Flash on Featherless", contextWindow: 262144 }];
-// Two models are offered: GLM 5.3 Flash in the cloud (Featherless) and BitNet 2B on the device. OpenRouter is
+// The first is a new visitor's default. DeepSeek V3.2 does not reason before it answers: measured through
+// the site relay on 2026-11-13 with the spec's schema, one sentence, one run, it wrote a spec the checker
+// accepted in 24 s, against 47 s for GLM 5.3 Flash, 35 s of that reasoning (relay/featherless/README.md).
+const FEATHERLESS_MODELS = [
+  { apiName: "zai-org/GLM-5.3-Flash", displayName: "GLM 5.3 Flash", description: "Z.ai's GLM 5.3 Flash on Featherless", contextWindow: 262144 },
+  { apiName: "deepseek-ai/DeepSeek-V3.2", displayName: "DeepSeek V3.2", description: "DeepSeek V3.2 on Featherless: answers without reasoning first", contextWindow: 131072 },
+];
+// Three models are offered: GLM 5.3 Flash and DeepSeek V3.2 in the cloud (Featherless) and BitNet 2B on the device. OpenRouter is
 // withdrawn from the picker and Settings for now; its models stay defined here, and the warm-up that answers
 // while the device model loads is unchanged.
 handlers.set("get-language-model-providers", () => [FEATHERLESS, LOCAL]);
