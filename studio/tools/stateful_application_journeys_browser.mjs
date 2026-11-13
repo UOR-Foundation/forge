@@ -1,5 +1,6 @@
 // Durable guest-admitted delivery through actual host, bridge and IndexedDB.
 import assert from "node:assert/strict";
+import {observeReducedMotion} from "./reduced_motion_oracle.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
@@ -78,11 +79,20 @@ try {
   await page.goto(base+'settings');await page.waitForFunction(()=>!!window.__host&&!!window.electron);await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
   await page.getByLabel('Application name').fill('Motion garden');await page.getByRole('button',{name:'Create garden',exact:true}).click();
   await page.getByRole('heading',{name:'Seed',exact:true}).waitFor();
-  // Inspect the painted state after the reduced-motion CSS transitions settle.
-  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-  assert.equal(await page.evaluate(()=>document.querySelector('dialog section').getAnimations({subtree:true}).length),0);
+  const reducedMotionObservation=await page.evaluate(observeReducedMotion);
+  // Exercise the same oracle against real JS and CSS movement, then restore.
+  for(const kind of ['waapi','css']){
+    await page.evaluate(kind=>{
+      const section=document.querySelector('dialog section');
+      if(kind==='waapi')window.__reducedMotionMutant=section.animate([{transform:'translateY(0)'},{transform:'translateY(12px)'}],{duration:3000,iterations:Infinity});
+      else {const style=document.createElement('style');style.textContent='@keyframes foundry-motion-mutant { from { transform: translateY(0); } to { transform: translateY(12px); } } dialog section { animation: foundry-motion-mutant 3s linear infinite !important; }';document.head.append(style);window.__reducedMotionMutant=style;}
+    },kind);
+    try {await assert.rejects(page.evaluate(observeReducedMotion),/Reduced motion: active effect/);}
+    finally {await page.evaluate(()=>{const mutant=window.__reducedMotionMutant;if(mutant instanceof Animation)mutant.cancel();else mutant.remove();delete window.__reducedMotionMutant;});}
+    await page.evaluate(observeReducedMotion);
+  }
   await page.getByRole('button',{name:'Enable sound',exact:true}).click();await page.getByRole('button',{name:'Mute sound',exact:true}).waitFor();
   await page.getByRole('button',{name:'Mute sound',exact:true}).click();await page.getByRole('button',{name:'Enable sound',exact:true}).waitFor();
   await page.getByRole('button',{name:'Close',exact:true}).click();
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({...report,keyboardGallery:true,reloadRecovery:true,reducedMotion:true,explicitAudio:true,firstPixelMs,pageExceptions:errors.length}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({...report,keyboardGallery:true,reloadRecovery:true,reducedMotion:true,reducedMotionObservation,reducedMotionNegativeControls:2,explicitAudio:true,firstPixelMs,pageExceptions:errors.length}));
 } finally { if(browser)await browser.close();await new Promise(resolve=>server.close(resolve)); }

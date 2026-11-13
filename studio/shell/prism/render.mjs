@@ -22,7 +22,12 @@ const camel = (word) => {
   return p[0].toLowerCase() + p.slice(1);
 };
 const hex = (text) => `0x${Buffer.from(typeof text === 'string' ? new TextEncoder().encode(text) : text).toString('hex')}`;
-const quote = (text) => `"${String(text).replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '')}"`;
+/** A LexLean string literal. Text is refused, never altered: validateSpec admits only printable ASCII without a quote or a backslash here. */
+const quote = (text) => {
+  const t = String(text);
+  if (/[^ -~]|["\\]/.test(t)) throw new Error(`render refuses ${JSON.stringify(t)}: a LexLean string here carries printable ASCII without a quote or a backslash`);
+  return `"${t}"`;
+};
 
 /** Every identifier the model uses, derived once so the model, the vectors and SPEC.md agree. */
 export function names(spec) {
@@ -96,7 +101,7 @@ const QP = '[Quot.sound, propext]';
  * `axioms` is the exact set the declaration is expected to need; a verify that
  * observes another set rewrites it (sdk.mjs).
  */
-export function declarations(spec, n = names(spec)) {
+export function declarations(spec, n = names(spec), { specAddress = null } = {}) {
   const out = [];
   const def = (name, parameters, result, body, axioms = null) => out.push({ name, kind: 'definition', parameters, result, body, axioms });
   const NONE = (t) => `(ctor Option.none [${t}])`;
@@ -221,7 +226,7 @@ export function declarations(spec, n = names(spec)) {
     'application',
     [],
     'Foundation.View.Text.V1.Model::TextApplication',
-    `(record Foundation.View.Text.V1.Model::TextApplication {profile := "prismpm/text-application/1", name := ${quote(stem(spec.title))}, cargoName := ${quote(`prism-${spec.name}`)}, cargoVersion := "0.1.0", cargoDescription := ${quote(spec.purpose.slice(0, 200) || spec.title)}, cargoRepository := "https://github.com/UOR-Foundation/PrismPM", cargoHomepage := "https://github.com/UOR-Foundation/PrismPM", libraryRoots := (cons ${quote(root)} (nil String)), acceptanceVectors := ${vectorList}, entryRoot := ${quote(root)}, coreContract := "hologram:guest/core-wasm@1", requestMaximum := (${limits.requestMaximum} : UInt32), responseMaximum := (${limits.responseMaximum} : UInt32), guestAllocationMaximum := (${limits.guestAllocationMaximum} : UInt32), capabilitiesEmpty := true, fatArchive := true, primaryLayer := (0 : UInt8), viewLayer := (1 : UInt8), view := ${view}})`,
+    `(record Foundation.View.Text.V1.Model::TextApplication {profile := "prismpm/text-application/1", name := ${quote(stem(spec.title))}, cargoName := ${quote(`prism-${spec.name}`)}, cargoVersion := "0.1.0", cargoDescription := ${quote(describedBy(spec, specAddress))}, cargoRepository := "https://github.com/UOR-Foundation/PrismPM", cargoHomepage := "https://github.com/UOR-Foundation/PrismPM", libraryRoots := (cons ${quote(root)} (nil String)), acceptanceVectors := ${vectorList}, entryRoot := ${quote(root)}, coreContract := "hologram:guest/core-wasm@1", requestMaximum := (${limits.requestMaximum} : UInt32), responseMaximum := (${limits.responseMaximum} : UInt32), guestAllocationMaximum := (${limits.guestAllocationMaximum} : UInt32), capabilitiesEmpty := true, fatArchive := true, primaryLayer := (0 : UInt8), viewLayer := (1 : UInt8), view := ${view}})`,
   );
 
   return out;
@@ -325,10 +330,27 @@ const moduleText = (name, imports, decls) =>
 const withAxioms = (decls, axioms) => decls.map((d) => (Object.hasOwn(axioms, d.name) ? { ...d, axioms: axioms[d.name] } : d));
 
 /** The app module: everything the guest runs. `axioms` overrides the expected set per declaration name. */
-export function renderModel(spec, { axioms = {} } = {}) {
+export function renderModel(spec, { axioms = {}, specAddress = null } = {}) {
   const n = names(spec);
-  return moduleText(n.module, ['Foundation.Bytes', 'Foundation.View.Text.V1.Model'], withAxioms(declarations(spec, n), axioms));
+  return moduleText(n.module, ['Foundation.Bytes', 'Foundation.View.Text.V1.Model'], withAxioms(declarations(spec, n, { specAddress }), axioms));
 }
+
+/**
+ * The seal: how an application says which spec it was built from. Its purpose,
+ * then the spec's UOR content address in `[prism/spec/1 blake3:<hex>]` — the
+ * same kappa the holo labels its own blobs with, so the spec is named the way
+ * everything else in a holo is named.
+ *
+ * It is the model's `cargoDescription`, so it is inside the holo's model blob,
+ * whose label is that blob's kappa and whose bytes the archive's footer
+ * covers: changing the seal changes the holo, and the integrity check refuses
+ * it. `specAddressOf` reads it back, and an app can be held to its spec with
+ * nothing but the holo and the JSON. A blob of its own, whose label would be
+ * exactly this address, is where the spec itself belongs; that is the Rust
+ * builder's to add.
+ */
+export const SPEC_SEAL_MARK = /\[prism\/spec\/1 (blake3:[0-9a-f]{64})\]/;
+export const describedBy = (spec, specAddress) => (specAddress ? `${spec.purpose || spec.title} [prism/spec/1 ${specAddress}]` : spec.purpose || spec.title);
 
 /** The proofs module, or null when the spec states no property. */
 export function renderProofs(spec, { axioms = {} } = {}) {
@@ -542,7 +564,7 @@ export function renderSpecDocument(spec, status = {}) {
     '',
     '## Files',
     '',
-    `- \`prism/spec.json\` is this spec as data.`,
+    `- \`prism/spec.json\` is this spec as data, the app's one input, in canonical JSON (RFC 8785). The model is rendered from it alone, so the same spec.json always gives the same model.`,
     `- \`src/${n.module}.lex.tex\` is the LexLean model generated from it. It is the single source of the app.`,
     '',
   ];

@@ -8,6 +8,9 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { toRadix } from "./hologram.radix.mjs";
 import { screenSource, unapplied } from "./hologram.screens.mjs";
+import { checkFeaturedAppTypes } from "./hologram.featured-apps.types.mjs";
+
+checkFeaturedAppTypes();
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // Files the shell's build replaces with ours (vite.shell.config.mts resolveId): their errors do not ship.

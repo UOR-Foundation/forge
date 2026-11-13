@@ -49,11 +49,11 @@ test("the look comes from the brand's tokens: no colour of its own, in any theme
 test("studio/experience: centred popups, golden measures, tools on Settings, a quiet Home", () => {
   // The preferences are a LexLean module of their own, outside the kernel's proof inputs.
   const spec = read("../experience/src/FoundryExperience.lex.tex");
-  for (const name of ["oneLook", "popupsCentred", "goldenRatio", "questionAsNotification", "whyHowWhat", "sidebarIsNavigation", "toolsOnSettings", "homeAsksOneThing", "modelMenu", "appsOnDevice"]) assert.ok(spec.includes("name: " + name + ","), name);
+  for (const name of ["oneLook", "popupsCentred", "goldenRatio", "questionAsNotification", "whyHowWhat", "sidebarIsNavigation", "toolsOnSettings", "homeAsksOneThing", "homeIsAWorkspace", "composerRow", "featuredCovers", "modelMenu", "appsOnDevice"]) assert.ok(spec.includes("name: " + name + ","), name);
   assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
   for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
   assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
-  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "no app picker and no mode selector", "in one column at the right", "leads with one sentence that sums every app up", "opens on demand"]) assert.ok(spec.includes(said), said);
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "he hero fills the first screen at every size", "the name in a serif italic", "one short scroll brings the whole row", "that room's golden section, 610 pixels, centred", "three chips centred under it on one line: two ideas", "Surprise me, which writes another into the box", "attach, then the model that will answer beside it", "the same pill as the model, with its name and a chevron", "Search, Featured, My apps and Bookmarked", "kept in this browser alone and never sent anywhere", "white light entering and leaving as a spectrum", "who made it under its name", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right", "leads with one sentence that sums every app up", "opens on demand"]) assert.ok(spec.includes(said), said);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
   // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
@@ -65,6 +65,64 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.ok(css.includes('[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { display: none !important; }'));
   assert.ok(css.includes('#setting-default-chat-mode { display: none !important; }'));
   assert.ok(css.includes('p:has(> [data-slot="home-wide"]) { display: none !important; }'), 'the line under the home question is shown');
+  // Home is a workspace: the floor sits last, the hero takes the room above it and the ideas are one line.
+  assert.match(css, /\[data-slot="home-stage"\] \{\s*flex: 0 0 auto; min-height: calc\(100% - 89px\);/, "the hero no longer fills the first screen with the floor peeking under it");
+  assert.ok(css.includes("min-height: calc(100% - 55px)"), "the phone's peek is gone");
+  assert.ok(css.includes("padding-bottom: 76px"), "the floor no longer clears the phone's tab bar");
+  // The box is the room's golden section, centred, and the ideas are centred under it.
+  assert.ok(css.includes('[data-testid="home-chat-input-container"] { max-width: 610px !important; margin-inline: auto !important;'));
+  assert.ok(css.includes("justify-content: safe center !important;"), "the ideas are not centred");
+  // Three ideas, and no fourth chip asking for another three.
+  const screens = read("../vendor/dyad/hologram.screens.mjs");
+  assert.ok(screens.includes('{t("moreIdeas")}'), "the chip the shell removes is no longer named");
+  assert.ok(screens.includes("return shuffled.slice(0, 2);"), "the row offers other than two ideas");
+  assert.ok(screens.includes('Build your ideas with <span data-slot="home-name">Prism</span>'), "the hero line changed");
+  assert.match(css, /\[data-slot="home-name"\] \{\s*font-family: Georgia[^}]*font-style: italic;/);
+  assert.equal(screens.split('data-slot="home-surprise"').length, 2, "Surprise me is written once, in the row");
+  assert.ok(css.includes('[data-slot="home-suggestions"] > *:not([data-slot="home-surprise"]) { display: none !important; }'), "a phone keeps the ideas beside Surprise me");
+  assert.equal(read("../vendor/dyad/src/pages/home.tsx").includes("getRandomPrompts())}"), true);
+  assert.ok(screens.includes('to: `import { Sparkles, Zap } from "lucide-react";`'), "the removed chip's icon is still imported");
+  // The model sits beside attach, the three ways to ask beside send, and the toggle is drawn from tokens.
+  assert.ok(css.includes('[data-testid="model-picker"] { grid-column: 2; justify-self: start; }'));
+  assert.ok(css.includes('[data-slot="chat-mode"] { grid-row: var(--controls); grid-column: 3; justify-self: end;'));
+  const selector = read("../vendor/dyad/hologram.ChatModeSelector.tsx");
+  assert.ok(selector.includes('data-slot="chat-mode-toggle"') && selector.includes("DropdownMenuTrigger"));
+  assert.ok(selector.includes('aria-hidden="true"') && selector.includes("tabIndex={-1}"), "the toggle is a second voice beside the select");
+  assert.ok(selector.includes("chatModeCatalog.modes.map"), "the toggle names its own modes instead of the catalogue's");
+  // The two controls are one pair: the same pill, the same two-line rows.
+  const model = read("../vendor/dyad/hologram.ModelPicker.tsx");
+  const pill = 'className="inline-flex h-8 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border border-border/70';
+  assert.ok(selector.includes(pill) && model.includes(pill.replace("h-8 cursor-pointer", "h-8 max-w-[240px] cursor-pointer")));
+  assert.ok(selector.includes('className="w-72 p-1.5"') && model.includes('className="w-72 p-1.5"'));
+  // Before the first app, the floor holds the gallery's templates rather than nothing.
+  const floor = read("../vendor/dyad/hologram.screens/FeaturedAppShowcase.tsx");
+  assert.ok(floor.includes("featuredApps") && floor.includes("Browse all"));
+  // Six preset apps, each with a sentence, a hue and a link to fill in; the covers are drawn, never fetched.
+  const preset = read("../shell/featured-apps.mjs");
+  assert.equal(preset.split("    id: ").length - 1, 6, "the floor shows other than six apps");
+  for (const field of ["name:", "by:", "sentence:", "tag:", "idea:", "hue:", "url:"]) assert.ok(preset.includes(field), field);
+  assert.ok(preset.includes("export const featuredOnHome = 4;"), "the floor shows other than four of them");
+  assert.ok(floor.includes("slice(0, featuredOnHome)") && floor.includes('{app.url ? "Published" : "Coming soon"}'));
+  // Four ways to look at the floor, and a star that keeps a card, in this browser alone.
+  for (const label of ["<span>Search</span>", '"featured", "Featured"', '"mine", "My apps"', '"saved", "Bookmarked"']) assert.ok(floor.includes(label), label);
+  assert.ok(floor.includes('const BOOKMARKS = "foundry:bookmarks"') && floor.includes("window.localStorage"));
+  assert.equal(/fetch\(|https?:\/\//.test(floor), false, "the floor reaches the network");
+  assert.match(css, /\[data-slot="home-featured-views"\] \{[^}]*border-radius: 999px;/);
+  // The row fills the floor: even columns, four wide and two narrow, with no card keeping a width of its own.
+  assert.match(css, /\[data-slot="home-featured"\] \[role="region"\] \{\s*display: grid !important; grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
+  assert.ok(css.includes("@media (max-width: 1023px) { [data-slot=\"home-featured\"] [role=\"region\"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }"));
+  assert.equal(/\[role="region"\] > \* \{ width: \d+px/.test(css), false, "a card still keeps a width of its own");
+  assert.ok(css.includes('[data-slot="home-featured-keep"][data-chosen] { opacity: 1;'), "a kept card does not stay lit");
+  assert.equal(/https?:\/\//.test(floor), false, "the floor fetches something");
+  assert.ok(floor.includes("<svg viewBox=\"0 0 288 144\""), "a cover is no longer drawn here");
+  assert.ok(read("../vendor/dyad/hologram.screens.mjs").includes('"src/components/FeaturedAppShowcase.tsx": "hologram.screens/FeaturedAppShowcase.tsx"'));
+  // A card without a cover is still a card: the tile and its initial are drawn, and a real cover fills it.
+  assert.ok(css.includes('[data-slot="home-featured"] [role="region"] button img { object-fit: cover !important;'));
+  assert.ok(css.includes("max-height: 233px"), "the room under the hero is not capped on a tall window");
+  assert.ok(css.includes("flex-wrap: nowrap !important"), "the ideas still wrap into a block");
+  // The floor itself is never hidden (a rule inside it may hide a part of a card, which is not the floor).
+  assert.equal(/\[data-slot="home-featured"\]\s*\{[^}]*display:\s*none/.test(css), false, "the floor is hidden at some size");
+  assert.ok(css.includes("min-width: 768px") && css.includes("max-width: 767px"), "the home rules answer only one width");
   const mode = read('../vendor/dyad/hologram.ChatModeSelector.tsx');
   assert.ok(mode.includes('tabIndex={-1}') && mode.includes('pointer-events-none absolute left-0 top-0 h-px w-px opacity-0'));
 });
