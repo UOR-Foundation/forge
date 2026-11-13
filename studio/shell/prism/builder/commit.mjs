@@ -17,15 +17,17 @@ import { buildApp } from "./build.mjs";
 import { suiteOf } from "../template.mjs";
 
 /** The prompt the builder takes for a spec the studio checked and Lean proved. */
-export function promptOf(spec, { axioms = {}, repository } = {}) {
+export function promptOf(spec, { axioms = {}, repository, parts = null } = {}) {
   // The studio keeps an observed axiom set as the text "[a, b]"; the prompt keeps it as a list.
   const sets = Object.fromEntries(Object.entries(axioms).map(([name, set]) => [name, String(set).replace(/^\[|\]$/g, "").split(",").map((a) => a.trim()).filter(Boolean)]));
-  return { schema: "prism/prompt/1", app: spec, axioms: sets, ...(repository ? { repository } : {}) };
+  // The parts the chat routed the idea onto (prism/builder/route.mjs) come first; the spec, the observed
+  // axioms and the repository are the studio's own and always win.
+  return { ...(parts || {}), schema: "prism/prompt/1", app: spec, axioms: sets, ...(repository ? { repository } : {}) };
 }
 
 /** `commit` is templateCommit's { files, remove }; the result is the same commit with every facet in it. */
-export async function facetCommit(commit, { spec, axioms = {}, repository, lastModified = new Date().toISOString().replace(/\.\d{3}Z$/, "Z") }) {
-  const built = await buildApp(promptOf(spec, { axioms, repository }), { lastModified });
+export async function facetCommit(commit, { spec, axioms = {}, repository, parts = null, lastModified = new Date().toISOString().replace(/\.\d{3}Z$/, "Z") }) {
+  const built = await buildApp(promptOf(spec, { axioms, repository, parts }), { lastModified });
   const suite = suiteOf(spec);
   const owned = (p) => p.startsWith("app/") || ["model/ids.toml", "CONFORMANCE.md", `features/suites/${suite}.feature`, `crates/conformance/tests/${suite}.rs`].includes(p);
   const files = new Map(commit.files.map((f) => [f.path, f.content]));

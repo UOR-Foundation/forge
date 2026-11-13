@@ -49,3 +49,17 @@ byte for byte by the Template gate) through `prism/builder/commit.mjs`. The buil
 app from one `prism/prompt/1` whose app is the spec, and adds every other facet with the claims their
 theorems make. The template instance's own gate then proves the whole model. A builder-generated app
 (the parking-fee fixture) passes `prismpm check` in Foundry's SDK image once relocked for its compiler.
+
+## The chat routes the idea onto every facet
+
+The chat no longer stops at the rules. The model that writes an app's LexLean module also writes the
+rest of its `prism/prompt/1` in a `<prism-prompt>` block (`studio/shell/prism/builder/route.mjs`):
+goal, pattern, stakeholders, concerns, components, threats with controls or accepted risks, ISO/IEC
+25010 quality rows, and journeys. The instructions it gets are generated from the builder's closed sets,
+so the model is never asked for a value the builder refuses. `rulesAfterTurn` stages the parts as
+`prism/prompt.json` in the same source transaction as the rules. The builder then projects every facet
+from the parts and the checked spec, and the rules card shows the full model's counts or the builder's
+refusal (for example a threat with neither a control nor an accepted risk). A publish is refused until
+the facets project, and the published commit carries the routed parts. The builder's model loads only
+when rules are checked, so the shell's first load is unchanged. `node --test tools/*.test.mjs`: 603 pass,
+none fail.

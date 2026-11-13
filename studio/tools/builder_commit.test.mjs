@@ -58,3 +58,36 @@ test("a prompt keeps the axioms the studio observed, as lists", () => {
   assert.deepEqual(p.axioms, { a: ["propext", "Quot.sound"], b: [] });
   assert.equal(p.schema, "prism/prompt/1");
 });
+
+// ---- the idea routed onto every facet (prism/builder/route.mjs)
+const route = await import("../shell/prism/builder/route.mjs");
+const parking = () => validateSpec(JSON.parse(fs.readFileSync(path.join(root, "tools/fixtures/specs/parking-fee.json"), "utf8")).spec);
+
+test("the example the model is shown projects into every facet", async () => {
+  const example = /Example: (<prism-prompt>[\s\S]*<\/prism-prompt>)$/.exec(route.PROMPT_RULES)[1];
+  const { parts } = route.parsePromptTag(example);
+  const facets = await route.facetsOf(parts, parking());
+  assert.ok(facets.ok, facets.issue);
+  assert.ok(facets.summary.stakeholders >= 2, "the driver and the Verifier");
+  assert.match(route.facetLine(facets), /^Full model \(Decision table\): /);
+});
+
+test("an unsound prompt is refused with the builder's reason", async () => {
+  const facets = await route.facetsOf({ threats: [{ name: "Leak", text: "x", stride: "tampering", asset: "answer" }] }, parking());
+  assert.equal(facets.ok, false);
+  assert.match(facets.issue, /needs a control with evidence, or an accepted risk/);
+  assert.deepEqual(route.parsePromptTag("<prism-prompt>{nope</prism-prompt>").error.slice(0, 33), "The app's prompt is not valid JSO");
+  assert.equal(route.parsePromptTag("no block"), null);
+  assert.deepEqual(Object.keys(route.parsePromptTag('<prism-prompt>{"goal":"g","app":{},"axioms":{}}</prism-prompt>').parts), ["goal"], "only prompt parts, never the app");
+});
+
+test("the published commit carries the stakeholders the chat routed", async () => {
+  const spec = parking();
+  const read = async (p) => TEMPLATE[p] ?? (p === "app/lean-toolchain" ? "leanprover/lean4:v4.32.1\n" : "");
+  const args = { spec, axioms: {}, attestation: "a".repeat(64), repository: "owner/prism-parking-fee", tree: Object.keys(TEMPLATE), read, load };
+  const parts = { stakeholders: [{ name: "Garage owner", text: "Sets the tiers.", concerns: [] }] };
+  const full = await facetCommit(await prism.templateCommit(args), { ...args, parts, lastModified: "2026-11-13T00:00:00Z" });
+  const arch = full.files.find((f) => f.path === "app/src/Architecture.lex.tex").content;
+  assert.match(arch, /"Garage owner"/);
+  assert.match(full.files.find((f) => f.path === "app/prompt.json").content, /Garage owner/);
+});

@@ -1238,6 +1238,11 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   let previousCanonicalPath = null;
   try { previousCanonicalPath = `prism/${lexlean.canonicalSource(JSON.parse(files.get("prism/spec.json"))).name}.lex.tex`; } catch {}
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
+  // The rest of the app's prism/prompt/1, when the turn wrote it: the idea routed onto every facet
+  // (prism/builder/route.mjs). It lands with the rules in the one source transaction; a turn that
+  // writes none keeps the parts the app has.
+  const promptTag = prism.parsePromptTag(text);
+  if (promptTag && promptTag.parts) stage("prism/prompt.json", JSON.stringify(promptTag.parts, null, 2) + "\n");
   // A LexLean module, when the model wrote one, carries the rules: the spec is read from it, keeping the
   // screen's words only when their checked interface still belongs to the new module.
   const lex = lexlean.specFromTurn(text);
@@ -1289,7 +1294,12 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
     if (!page.includes("@/lib/prism") && !written.some((p) => p && p.startsWith("src/pages/"))) stage("src/pages/Index.tsx", prism.screenSource());
   }
   const notes = [...(presentationReset ? ["The application interface changed or its previous presentation was invalid; the view and descriptions were reset to the new module."] : []), ...(tag && tag.repaired ? ["Forge repaired the JSON syntax the model wrote. Read the rules before you approve them."] : []), ...(checked.notes || [])];
-  const state = { ...(retained ? before : {}), phase, specKappa, logicKappa, spec: checked.spec || null, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: retained ? before.proof : null, updated: now() };
+  // The full model: the builder projects every facet from the parts and the checked spec, or says why not.
+  let parts = null;
+  try { parts = JSON.parse(files.get("prism/prompt.json") || "null"); } catch {}
+  if (promptTag && promptTag.error) notes.push(promptTag.error);
+  const facets = checked.ok ? await prism.facetsOf(parts, checked.spec) : null;
+  const state = { ...(retained ? before : {}), phase, specKappa, logicKappa, spec: checked.spec || null, prompt: parts, facets, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: retained ? before.proof : null, updated: now() };
   // A semantic proof survives wording changes; a release still identifies the older bytes.
   if (retained && before.phase === "published" && before.specKappa !== specKappa) state.publicationCurrent = false;
   // Compare the captured lifecycle and install its successor in the source transaction.
@@ -1570,9 +1580,9 @@ const prismCode = () => import("./prism-code/src/index.mjs");
 // (prism/builder/commit.mjs) then writes the app as a full Prism model, every facet beside the behavior, so
 // the template's gate proves the whole model; the card files are the app's, which the template's page reads
 // and pins nothing about.
-async function publishCommit(args) {
+async function publishCommit(args, parts = null) {
   const { facetCommit } = await import("./prism/builder/commit.mjs");
-  const commit = await facetCommit(await prism.templateCommit(args), args);
+  const commit = await facetCommit(await prism.templateCommit(args), { ...args, parts });
   const { cardFiles } = await import("./live/card-files.mjs");
   const load = async (p) => { const r = await fetch(new URL(p, BASE)); if (!r.ok) throw new Error(p + " answered " + r.status); return r.text(); };
   const { files } = await cardFiles(args.spec, { load });
@@ -1596,6 +1606,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   const token = settings.githubAccessToken && settings.githubAccessToken.value;
   const refusal = !rules || !rules.spec ? "This app has no rules to build yet. Tell me what it decides, approve the rules, then say publish."
     : rules.phase !== "proved" && rules.phase !== "published" ? (rules.phase === "checked" ? "Reply approve first: Lean proves the rules, then the Prism SDK builds them." : `The rules are ${rules.phase === "proving" ? "being proved by Lean; say publish when it is done" : "not checked yet; ask me to fix them"}.`)
+    : rules.facets && !rules.facets.ok ? `Publishing writes the whole model, and its facets are not projected yet: ${rules.facets.issue} Ask me to fix the app's prompt, then say publish.`
     : !token ? "Publishing builds the app with the Prism SDK on GitHub Actions, in a public repository in your account. Connect GitHub in Settings, under Integrations, then say publish."
     : null;
   if (refusal) { await show(refusal); return finish(); }
@@ -1613,7 +1624,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
     const permission=await authorizeGitHubPublication(request,{signal:abort.signal});
     return bindPublicationSource(permission,rules,()=>rulesOf(appId));
   };
-  const build = buildOnGitHub({ token, spec, source:rules.specKappa, authorize, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: publishCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
+  const build = buildOnGitHub({ token, spec, source:rules.specKappa, authorize, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: (args) => publishCommit(args, rules.prompt || null), open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
     .catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
   const result = await Promise.race([build, stopped]);
   observing = false;

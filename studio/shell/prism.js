@@ -12,6 +12,9 @@ import { toLexLean, draftOf } from "./live/lexlean.mjs";
 import { PROMPT as APP_SHAPE } from "./live/app.mjs";
 import { checkObligations } from "./live/obligations.mjs";
 import { tableKernel } from "./live/table.mjs";
+import { PROMPT_RULES, facetLine, parsePromptTag, facetsOf } from "./prism/builder/route.mjs";
+// The app's prompt parts, read and projected where the rules are (host.js rulesAfterTurn).
+export { parsePromptTag, facetsOf };
 import { KEY_PREFIX, REFUSAL, trustDescriptor, sameVerifier, attests, reuseSentence, addresses, admit, headersOf, record as reuseRecord, theoremsOf, without } from "./prism/proof-reuse.mjs";
 
 // prism-code's checker (prism/spec.mjs, byte for byte) keeps a spec to 24 rules, because its proofs are one
@@ -49,7 +52,7 @@ Every app here is one LexLean module: its inputs, its answers, its rules and its
 - To change the rules, write the whole module again in a new <prism-lexlean> block, starting from the current module when one is given.
 Example: <prism-lexlean>
 ${PARKING_LEXLEAN.trim()}
-</prism-lexlean>` + APP_SHAPE;
+</prism-lexlean>` + PROMPT_RULES + APP_SHAPE;
 
 /** What a model is shown of the app: its current module, in the draft form it writes, or that there is none. */
 export function moduleContext(source) {
@@ -194,10 +197,11 @@ export function shownText(text, card = null) {
   }
   const marks = [...out.matchAll(/\u0000(L?)(\d+)\u0000/g)];
   marks.forEach((m, i) => { out = out.replace(m[0], i === marks.length - 1 ? (card ? "\n\n" + card + "\n\n" : m[1] ? `\n\n_The app, written in ${m[2]} line${m[2] === "1" ? "" : "s"}. Forge is writing its LexLean module from them._\n\n` : `\n\n_The app's LexLean module: ${m[2]} declarations._\n\n`) : ""); });
-  out = out.replace(/<dyad-spec-patch>[\s\S]*?(<\/dyad-spec-patch>|$)/g, "").replace(/\n{3,}/g, "\n\n");
+  // The app's prompt parts are shown through the card's full-model line, not as JSON.
+  out = out.replace(/<dyad-spec-patch>[\s\S]*?(<\/dyad-spec-patch>|$)/g, "").replace(/<prism-prompt>[\s\S]*?(<\/prism-prompt>|$)/g, "").replace(/\n{3,}/g, "\n\n");
   // A tag still arriving (`<pri…`) is not shown until it is whole.
   const tail = /<[a-z-]*$/.exec(out);
-  return tail && ("<prism-lexlean>".startsWith(tail[0]) || "<dyad-spec-patch>".startsWith(tail[0])) ? out.slice(0, tail.index) : out;
+  return tail && ["<prism-lexlean>", "<dyad-spec-patch>", "<prism-prompt>"].some((tag) => tag.startsWith(tail[0])) ? out.slice(0, tail.index) : out;
 }
 // The card stands in its own paragraphs, whatever the model wrote around the tag or the module.
 export const withCard = (text, card) => {
@@ -651,6 +655,8 @@ export function card(state) {
   lines.push(`- Otherwise: **${spec.otherwise}**${spec.otherwiseWhy ? ` *${spec.otherwiseWhy}*` : ""}`, "");
   lines.push(`Request: \`${spec.fields.map((f) => f.name).join(" ")}\` · answers: ${spec.outcomes.join(", ")}, or invalid`);
   if (spec.examples.length) lines.push("", `Examples: ${spec.examples.map((e) => `\`${e.request}\` → ${e.response}`).join(" · ")}`);
+  const facets = facetLine(state.facets);
+  if (facets) lines.push("", facets);
   if (state.notes && state.notes.length) lines.push("", ...state.notes.map((n) => "*" + n + "*"));
   if (state.issues && state.issues.length) lines.push("", "Not checked:", ...state.issues.map((i) => "- " + i), "", "Ask me to fix the rules.");
   else if (state.phase === "checked" && spec.rules.length > PROVE_RULES_MAX) lines.push("", `Checked on every request: ${(state.notes || []).find((n) => /checked by/.test(n)) || ""}`, "", `Lean proving waits: it proves at most ${PROVE_RULES_MAX} rules until LexLean proves them locally (UOR-Foundation/PrismPM#605).`);
