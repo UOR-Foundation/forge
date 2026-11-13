@@ -1,12 +1,12 @@
 {
  "spec": "hologram-forge/kernel/1",
  "application": "Forge kernel",
- "source": "https://raw.githubusercontent.com/UOR-Foundation/foundry/f142e8f562d72d359cd09a0152e52df00c2014b2/studio/shell/kernel/kernel.holo",
- "digest": "blake3:382a23510e7fd6f46be002660f41b0bdeb983fbb458c0674851b8f8ad5321e7f",
+ "source": "https://raw.githubusercontent.com/UOR-Foundation/foundry/324fcd1973b0b27d1254a6a436d5bc2537178623/studio/shell/kernel/kernel.holo",
+ "digest": "blake3:feef17ffacedf07228cd7a8a19d36fe93a5265accd61e7511282319c7f61d599",
  "guest": {
   "path": "kernel/guest.wasm",
-  "sha256": "73c04774b23afc7181d2fef208dfb2e432bca7f94ef5543230d4d6b8b54980c2",
-  "bytes": 68271
+  "sha256": "932fdc36320e8bf211953e3a823de79d3263cd8d3071cb11dae236317d817cb2",
+  "bytes": 69554
  },
  "limits": {
   "request": 32776,
@@ -1232,6 +1232,62 @@
   ],
   [
    "cmVjZW50IC0x",
+   "aW52YWxpZA=="
+  ],
+  [
+   "dGVsZW1ldHJ5IHN0b3JlIG5vIG5v",
+   "YWxsb3c="
+  ],
+  [
+   "dGVsZW1ldHJ5IHNob3cgbm8gbm8=",
+   "YWxsb3c="
+  ],
+  [
+   "dGVsZW1ldHJ5IHNhdmUgbm8gbm8=",
+   "ZGVueQ=="
+  ],
+  [
+   "dGVsZW1ldHJ5IHNhdmUgeWVzIG5v",
+   "YWxsb3c="
+  ],
+  [
+   "dGVsZW1ldHJ5IGZldGNoIHllcyB5ZXM=",
+   "ZGVueQ=="
+  ],
+  [
+   "dGVsZW1ldHJ5IHNlcnZlIHllcyB5ZXM=",
+   "ZGVueQ=="
+  ],
+  [
+   "dGVsZW1ldHJ5IGZyYW1lIHllcyB5ZXM=",
+   "ZGVueQ=="
+  ],
+  [
+   "dGVsZW1ldHJ5IGluZmVyIHllcyBubw==",
+   "ZGVueQ=="
+  ],
+  [
+   "dGVsZW1ldHJ5IGluZmVyIG5vIHllcw==",
+   "YWxsb3c="
+  ],
+  [
+   "dGVsZW1ldHJ5IGJlYWNvbiBubyBubw==",
+   "aW52YWxpZA=="
+  ],
+  [
+   "dGVsZW1ldHJ5IHN0b3JlIG5v",
+   "aW52YWxpZA=="
+  ],
+  [
+   "dGVsZW1ldHJ5IHN0b3JlIG5vIG5vIG5v",
+   "aW52YWxpZA=="
+  ],
+  [
+   "dGVsZW1ldHJ5IHN0b3JlIG1heWJlIG5v",
+   "aW52YWxpZA=="
+  ],
+  [
+   "dGVsZW1ldHJ5",
    "aW52YWxpZA=="
   ]
  ]
