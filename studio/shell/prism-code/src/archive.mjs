@@ -16,7 +16,7 @@
  * Section kinds: 15 application manifest, 8 metadata, 14 extension, 16 content
  * blob. A content blob starts with its 71-byte `blake3:<hex>` label.
  */
-import { fail } from './errors.mjs';
+import { DigestMismatchError, fail } from './errors.mjs';
 import { blake3Hex, kappa } from './blake3.mjs';
 
 export const MAGIC = 'HOLO';
@@ -99,11 +99,24 @@ export function parseArchive(source) {
   const footer = blake3HexOf(bytes.subarray(bodyEnd));
   const fingerprint = blake3Hex(body);
   const labelMismatches = [];
+  // Text a section holds, or a refusal: never a raw decoding error. When the footer
+  // does not match either, the bytes were altered, and that is the reason to name.
+  const text = (slice, check, what) => {
+    try {
+      return decoder.decode(slice);
+    } catch {
+      if (footer !== fingerprint) {
+        throw new DigestMismatchError(`integrity failure: the holo was altered: the footer is not the BLAKE3 of the body, and ${what} is not UTF-8`, { check: 'holo.integrity' });
+      }
+      return fail(check, `${what} is not UTF-8`);
+    }
+  };
 
   let manifest = null;
   let metadata = null;
   const extensions = [];
   const blobs = [];
+  try {
   for (const section of sections) {
     const b = section.body;
     switch (section.kind) {
@@ -114,7 +127,7 @@ export function parseArchive(source) {
         if (b.length !== MANIFEST_LENGTH) fail('archive.manifest', `application manifest is ${b.length} bytes, expected ${MANIFEST_LENGTH}`);
         const nul = b.indexOf(0);
         if (nul !== MANIFEST_PREFIX_LENGTH - 5) fail('archive.manifest', 'application manifest URI has the wrong length');
-        const uri = decoder.decode(b.subarray(0, nul));
+        const uri = text(b.subarray(0, nul), 'archive.manifest', 'the application manifest URI');
         if (uri !== APP_MANIFEST_URI) fail('archive.manifest', `application manifest URI is ${uri}`);
         const labelCount = new DataView(b.buffer, b.byteOffset + nul + 1, 4).getUint32(0, true);
         if (labelCount !== 3) fail('archive.manifest', `application manifest declares ${labelCount} labels, expected 3`);
@@ -132,16 +145,16 @@ export function parseArchive(source) {
       }
       case KIND.METADATA: {
         if (metadata) fail('archive.metadata', 'more than one metadata section');
-        metadata = { text: decoder.decode(b), section: section.index };
+        metadata = { text: text(b, 'archive.metadata', `metadata section ${section.index}`), section: section.index };
         break;
       }
       case KIND.EXTENSION: {
         if (b.length < 2) fail('archive.extension', 'extension shorter than its name length');
         const nameLength = b[0] | (b[1] << 8);
         if (2 + nameLength > b.length) fail('archive.extension', 'extension name overruns the section');
-        const name = decoder.decode(b.subarray(2, 2 + nameLength));
+        const name = text(b.subarray(2, 2 + nameLength), 'archive.extension', `the name of extension section ${section.index}`);
         const payload = b.subarray(2 + nameLength);
-        extensions.push({ name, payload, text: decoder.decode(payload), section: section.index });
+        extensions.push({ name, payload, text: text(payload, 'archive.extension', `extension ${name}`), section: section.index });
         break;
       }
       case KIND.CONTENT_BLOB: {
@@ -160,6 +173,14 @@ export function parseArchive(source) {
     }
   }
   if (!manifest) fail('archive.manifest', 'no application manifest section');
+  } catch (error) {
+    // A section that does not parse in a holo whose footer does not match either was altered:
+    // name the damage first, and keep what broke as the detail.
+    if (footer !== fingerprint && error?.code !== DigestMismatchError.code && !(error instanceof DigestMismatchError)) {
+      throw new DigestMismatchError(`integrity failure: the holo was altered: the footer is not the BLAKE3 of the body (${error.code ?? 'parse'}: ${error.message})`, { check: 'holo.integrity', cause: error });
+    }
+    throw error;
+  }
 
   return {
     bytes,
