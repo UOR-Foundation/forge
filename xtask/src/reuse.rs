@@ -173,6 +173,128 @@ mod tests {
         }
     }
 
+    /// One proof of one commit. The page build proves the kernel in order to publish it and keeps that
+    /// holo; the pin takes it from that run and checks the signed statement over those exact bytes instead
+    /// of proving the same model a second time. Nothing about what is proved moves: the holo pinned is the
+    /// one Lean proved on this commit, the Kernel gate and the kernel's boundary tests still run on it
+    /// before anything is pushed, and a pin started by hand, which has no such run, proves the branch.
+    #[test]
+    fn the_pin_takes_the_proof_the_page_build_made() {
+        let pages = workflow("pages.yml");
+        let pin = workflow("kernel-pin.yml");
+        assert!(
+            pages.contains("          name: kernel-holo"),
+            "the page build keeps no holo for the pin"
+        );
+        assert!(
+            pages.contains(r#"cp "$PAGE/app.holo" "$PAGE/app.json" kernel-proof/"#),
+            "the holo artifact does not carry the holo and the app.json the pin reads"
+        );
+        assert!(
+            pages.contains(
+                "PAGE: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}"
+            ),
+            "the artifact is gathered from somewhere other than the page this run publishes"
+        );
+        assert!(
+            pin.contains(
+                "  workflow_run:
+    workflows: [pages]"
+            ),
+            "the pin no longer follows the page build"
+        );
+        assert!(
+            pin.contains("gh attestation verify .pin/app.holo --repo \"$GITHUB_REPOSITORY\""),
+            "the pin takes a holo without checking the signature over its bytes"
+        );
+        assert!(
+            pin.contains(
+                "      - name: Build and verify the holo through the locked SDK
+        if: github.event_name == 'workflow_dispatch'"
+            ),
+            "the pin proves again although the page build already proved this commit"
+        );
+        // Whatever the holo came from, the gate runs on it whenever the pin would change: the only thing
+        // that excuses it is a pin that already names these bytes, which changes nothing.
+        let gate = pin
+            .split(
+                "      - name: The Kernel gate and the kernel's boundary tests, on the new pin
+",
+            )
+            .nth(1)
+            .expect("the pin runs the Kernel gate");
+        assert_eq!(
+            gate.lines().next().unwrap_or_default(),
+            "        if: steps.holo.outputs.current != 'true'",
+            "the Kernel gate on the pinned holo answers to something other than the pin changing"
+        );
+    }
+
+    /// Forge's bundle is what the renderer's own files compile to, so its address is those files and
+    /// nothing else: a stylesheet or a shell script leaves it alone. The compile is skipped only for a
+    /// bundle already compiled from exactly those bytes, and the dependency trees are addressed by the
+    /// lockfiles that name every byte in them.
+    #[test]
+    fn the_renderer_is_addressed_by_what_it_is_built_from() {
+        let pages = workflow("pages.yml");
+        let bundle = "key: forge-bundle-v1-${{ hashFiles('studio/vendor/dyad/**', '!studio/vendor/dyad/node_modules/**', '!studio/vendor/dyad/dist/**') }}";
+        assert!(
+            pages.contains(bundle),
+            "the bundle's address changed: say here what it is built from"
+        );
+        assert!(
+            pages.contains("key: forge-modules-v1-${{ hashFiles('studio/runtime/package-lock.json', 'studio/vendor/dyad/package-lock.json') }}"),
+            "the dependency trees' address changed"
+        );
+        for guarded in [
+            "if: steps.forge-reuse.outputs.cache-hit != 'true' && steps.bundle.outputs.cache-hit != 'true'",
+            "if: steps.forge-reuse.outputs.cache-hit != 'true' && steps.modules.outputs.cache-hit != 'true'",
+        ] {
+            assert!(pages.contains(guarded), "work is done again although its address was found: {guarded}");
+        }
+        // What the bundle is staged by is not addressed: the closure check reads the staged bytes.
+        assert!(
+            pages.contains("        run: python3 scripts/stamp_shell.py"),
+            "the bundle is no longer staged beside the shell on every build"
+        );
+    }
+
+    /// The live check reads the deployed site, which is the page's address and Forge's; with the same
+    /// browser it has nothing new to see, so it is kept by those three and skipped in full on a hit.
+    #[test]
+    fn the_live_check_is_addressed_by_what_it_reads() {
+        let pages = workflow("pages.yml");
+        let key = "key: live-seen-v1-playwright-1.56.1-${{ needs.build.outputs.address }}-${{ needs.forge.outputs.address }}";
+        assert_eq!(
+            pages.matches(key).count(),
+            2,
+            "the live check is restored and saved under one address"
+        );
+        assert!(pages.contains("      address: ${{ steps.address.outputs.key }}"));
+        assert!(pages.contains("      address: ${{ steps.forge-address.outputs.key }}"));
+        let live = pages
+            .split(
+                "
+  live:
+",
+            )
+            .nth(1)
+            .expect("the live job");
+        for step in live.split("      - name: ").skip(1) {
+            let first = step.lines().next().unwrap_or_default();
+            // The checkout brings the scripts the check runs; the restore is the check for the address.
+            if first.starts_with("This exact site")
+                || first.starts_with("Check out the deployed revision")
+            {
+                continue;
+            }
+            assert!(
+                step.contains("steps.seen.outputs.cache-hit != 'true'"),
+                "a step of the live check runs although the site was checked before: {first}"
+            );
+        }
+    }
+
     /// The Prism page's address leaves the other workflows out, and may: its build reads none of them.
     /// A key that omits an input is wrong, so the omission is held to the build itself. If the build
     /// job, or a script it runs, comes to read another workflow, this fails until the key names it.
