@@ -1,0 +1,129 @@
+\begin{lexlean}{InTabKernelProtocol}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{InTabKernel}
+\importmodule{CompositionProtocol}
+\importmodule{WorkProtocol}
+\title{Boolean}
+\begin{semanticmodule}
+definition{
+  name: verdictEvidence,
+  parameters: [words : (List Nat)],
+  result: InTabKernel::Evidence,
+  body: (record InTabKernel::Evidence {hasBytes := (WorkProtocol::word words 1), libraryPinned := 1, libraryDerived := (if (((WorkProtocol::word words 2) =? (WorkProtocol::word words 10)) && (((WorkProtocol::word words 3) =? (WorkProtocol::word words 11)) && (((WorkProtocol::word words 4) =? (WorkProtocol::word words 12)) && (((WorkProtocol::word words 5) =? (WorkProtocol::word words 13)) && (((WorkProtocol::word words 6) =? (WorkProtocol::word words 14)) && (((WorkProtocol::word words 7) =? (WorkProtocol::word words 15)) && (((WorkProtocol::word words 8) =? (WorkProtocol::word words 16)) && (((WorkProtocol::word words 9) =? (WorkProtocol::word words 17)) && true)))))))) then 1 else 0), bundleNamed := 1, bundleDerived := (if (((WorkProtocol::word words 18) =? (WorkProtocol::word words 26)) && (((WorkProtocol::word words 19) =? (WorkProtocol::word words 27)) && (((WorkProtocol::word words 20) =? (WorkProtocol::word words 28)) && (((WorkProtocol::word words 21) =? (WorkProtocol::word words 29)) && (((WorkProtocol::word words 22) =? (WorkProtocol::word words 30)) && (((WorkProtocol::word words 23) =? (WorkProtocol::word words 31)) && (((WorkProtocol::word words 24) =? (WorkProtocol::word words 32)) && (((WorkProtocol::word words 25) =? (WorkProtocol::word words 33)) && true)))))))) then 1 else 0), kernelPinned := 1, kernelDerived := (if (((WorkProtocol::word words 34) =? (WorkProtocol::word words 42)) && (((WorkProtocol::word words 35) =? (WorkProtocol::word words 43)) && (((WorkProtocol::word words 36) =? (WorkProtocol::word words 44)) && (((WorkProtocol::word words 37) =? (WorkProtocol::word words 45)) && (((WorkProtocol::word words 38) =? (WorkProtocol::word words 46)) && (((WorkProtocol::word words 39) =? (WorkProtocol::word words 47)) && (((WorkProtocol::word words 40) =? (WorkProtocol::word words 48)) && (((WorkProtocol::word words 41) =? (WorkProtocol::word words 49)) && true)))))))) then 1 else 0), specStatement := 1, checkedStatement := (if (((WorkProtocol::word words 50) =? (WorkProtocol::word words 58)) && (((WorkProtocol::word words 51) =? (WorkProtocol::word words 59)) && (((WorkProtocol::word words 52) =? (WorkProtocol::word words 60)) && (((WorkProtocol::word words 53) =? (WorkProtocol::word words 61)) && (((WorkProtocol::word words 54) =? (WorkProtocol::word words 62)) && (((WorkProtocol::word words 55) =? (WorkProtocol::word words 63)) && (((WorkProtocol::word words 56) =? (WorkProtocol::word words 64)) && (((WorkProtocol::word words 57) =? (WorkProtocol::word words 65)) && true)))))))) then 1 else 0), axiomsDeclared := (WorkProtocol::word words 66), axiomsObserved := (WorkProtocol::word words 67), leanRan := (WorkProtocol::word words 68), leanAccepted := (WorkProtocol::word words 69), secondRan := (WorkProtocol::word words 70), secondAccepted := (WorkProtocol::word words 71), serverSays := 0})
+}
+
+definition{
+  name: verdictEncode,
+  parameters: [code : Nat],
+  result: Bytes,
+  body: (prim append 0x6f6b20 (prim append (WorkProtocol::hexWord 1) (prim append (WorkProtocol::hexWord code) (WorkProtocol::hexWord (InTabKernel::wordOf code)) : Bytes) : Bytes) : Bytes)
+}
+
+definition{
+  name: dispatchVerdictWords,
+  parameters: [words : (List Nat)],
+  result: Bytes,
+  body: (if ((((prim length words : Nat) =? 72) && ((WorkProtocol::word words 0) =? 1)) && (((WorkProtocol::word words 1) <=? 1) && (((WorkProtocol::word words 68) <=? 1) && (((WorkProtocol::word words 69) <=? 1) && (((WorkProtocol::word words 70) <=? 1) && (((WorkProtocol::word words 71) <=? 1) && true)))))) then (verdictEncode (InTabKernel::verdictCode (verdictEvidence words))) else 0x6d616c666f726d65645665726469637452657175657374)
+}
+
+definition{
+  name: dispatchVerdict,
+  parameters: [bytes : Bytes],
+  result: Bytes,
+  body: (if (576 <? (prim length bytes : Nat)) then 0x7665726469637452657175657374546f6f4c61726765 else (let decoded : CompositionProtocol::DecodedWords := (CompositionProtocol::decodeWords bytes 0 72 (nil Nat)); (if (project decoded valid) then (dispatchVerdictWords (project decoded value)) else 0x6d616c666f726d65645665726469637452657175657374))),
+  axioms: [Quot.sound, propext]
+}
+
+inductive{
+  name: VerdictWireError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: malformedVerdictRequest, fields: []},
+    {name: verdictRequestTooLarge, fields: []},
+    {name: verdictRuntimeFailed, fields: []},
+    {name: invalidVerdictResponse, fields: []}
+  ]
+}
+
+definition{
+  name: verdictWireBoundary,
+  parameters: [],
+  result: String,
+  body: "Requests use verdict-space then exactly 72 lowercase little-endian uint32 hex words: version 1; a has-bytes flag; the pinned and the derived address of the library, of the bundle and of the kernel, then the spec statement's and the checked statement's address, eight words each; the declared and the observed axiom set; and four flags: Lean's kernel ran, it accepted, the second kernel ran, it accepted. The payload is exactly 576 ASCII bytes. An address is all 256 bits; the guest compares the two of a pair, so the caller never states that they agree. An axiom set is a bit set over propext, Classical.choice and Quot.sound, with 8 set when any other axiom was observed. Replies use ok-space then three words: version 1, the verdict code and the word shown. No field carries what a server said. Typed errors retain their exact spelling. The codec captures inputs before awaiting guest readiness, bounds output to 27 bytes, and refuses a reply of any other shape."
+}
+
+theorem{
+  name: verdictWire_proved_byLean,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 1 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 5 (cons 5 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6f6b20303130303030303030303030303030303030303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: verdictWire_kernelChecked_withoutLean,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 1 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 5 (cons 5 (cons 0 (cons 0 (cons 1 (cons 1 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6f6b20303130303030303030313030303030303031303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: verdictWire_checking_noBytes,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 0 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 5 (cons 5 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6f6b20303130303030303030323030303030303032303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: verdictWire_refused_alteredLibrary,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 1 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 145 (cons 146 (cons 147 (cons 148 (cons 149 (cons 150 (cons 151 (cons 152 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 5 (cons 5 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6f6b20303130303030303030333030303030303033303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: verdictWire_refused_anotherKernel,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 1 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 145 (cons 146 (cons 147 (cons 148 (cons 149 (cons 150 (cons 151 (cons 152 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 5 (cons 5 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6f6b20303130303030303030333030303030303033303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: verdictWire_refused_anotherStatement,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 1 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 145 (cons 146 (cons 147 (cons 148 (cons 149 (cons 150 (cons 151 (cons 152 (cons 5 (cons 5 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6f6b20303130303030303030333030303030303033303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: verdictWire_refused_axiomOutsideTheAllowed,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 1 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 8 (cons 8 (cons 1 (cons 1 (cons 0 (cons 0 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6f6b20303130303030303030333030303030303033303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: verdictWire_refused_kernelsDisagree,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 1 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 5 (cons 5 (cons 1 (cons 1 (cons 1 (cons 0 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6f6b20303130303030303030333030303030303033303030303030),
+  proof: reflexivity{},
+  axioms: []
+}
+
+theorem{
+  name: verdictWire_malformed_flagNotBoolean,
+  parameters: [],
+  statement: ((dispatchVerdictWords (cons 1 (cons 1 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 17 (cons 18 (cons 19 (cons 20 (cons 21 (cons 22 (cons 23 (cons 24 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 33 (cons 34 (cons 35 (cons 36 (cons 37 (cons 38 (cons 39 (cons 40 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 49 (cons 50 (cons 51 (cons 52 (cons 53 (cons 54 (cons 55 (cons 56 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 65 (cons 66 (cons 67 (cons 68 (cons 69 (cons 70 (cons 71 (cons 72 (cons 5 (cons 5 (cons 2 (cons 1 (cons 0 (cons 0 (nil Nat)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) = 0x6d616c666f726d65645665726469637452657175657374),
+  proof: reflexivity{},
+  axioms: []
+}
+\end{semanticmodule}
+\end{lexlean}

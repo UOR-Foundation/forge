@@ -693,3 +693,9 @@ id = "FA-85"
 level = "build"
 suite = "proof-reuse"
 statement = "A theorem Lean proved on the same declarations is reused instead of proved again, and only changed theorems go to Lean"
+
+[[id]]
+id = "FA-86"
+level = "build"
+suite = "in-tab-kernel-verdict"
+statement = "A proof verdict is decided by the Prism guest from addresses the tab derived and the result of a kernel run in the tab, never from a server reply"

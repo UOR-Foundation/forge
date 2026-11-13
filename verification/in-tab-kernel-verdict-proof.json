@@ -1,0 +1,18 @@
+{
+ "draft": "prism-app/69ffc04941e54aa359f9157fcddce04dbe5868a4bdf0f95c221e23c25e4b0983",
+ "body": {
+  "attestation_id": "11d8806e3a86e6c65ce3591adbbb3414c48c12175dabf03d05a37d59a576bd5e",
+  "build_id": "46b1c8a0be6365da8fb8f6638bc64a71b3336c578e3ce02bf277812bbd193219",
+  "keyid": "533449506003ca0c42744122318b69f5be32d74a2781e72b5c62855cac53bb54",
+  "modules": [
+   "CompositionProtocol",
+   "FeatureComposition",
+   "InTabKernel",
+   "InTabKernelProtocol",
+   "WorkOwnership",
+   "WorkProtocol"
+  ],
+  "semantic_id": "9af674ccb269115f1b5fddd271311265e6dd05d1c79b26aef83fb8c17d391da4",
+  "source_id": "370d6d8a0e1bbe2ab41d1804f66d0f315ce81da91d5a2181fc32706034ef7385"
+ }
+}

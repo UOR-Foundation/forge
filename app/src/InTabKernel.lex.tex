@@ -7,50 +7,50 @@ structure{
   name: Evidence,
   type_parameters: [],
   parameters: [],
-  fields: [{name: hasBytes, type: Nat}, {name: libraryPinned, type: Nat}, {name: libraryDerived, type: Nat}, {name: bundleNamed, type: Nat}, {name: bundleDerived, type: Nat}, {name: kernelPinned, type: Nat}, {name: kernelDerived, type: Nat}, {name: specStatement, type: Nat}, {name: checkedStatement, type: Nat}, {name: axiomsDeclared, type: Nat}, {name: axiomsObserved, type: Nat}, {name: leanRan, type: Nat}, {name: leanAccepted, type: Nat}, {name: secondRan, type: Nat}, {name: secondAccepted, type: Nat}, {name: serverSays, type: Nat}]
+  fields: [
+    {name: hasBytes, type: Nat},
+    {name: libraryPinned, type: Nat},
+    {name: libraryDerived, type: Nat},
+    {name: bundleNamed, type: Nat},
+    {name: bundleDerived, type: Nat},
+    {name: kernelPinned, type: Nat},
+    {name: kernelDerived, type: Nat},
+    {name: specStatement, type: Nat},
+    {name: checkedStatement, type: Nat},
+    {name: axiomsDeclared, type: Nat},
+    {name: axiomsObserved, type: Nat},
+    {name: leanRan, type: Nat},
+    {name: leanAccepted, type: Nat},
+    {name: secondRan, type: Nat},
+    {name: secondAccepted, type: Nat},
+    {name: serverSays, type: Nat}
+  ]
 }
 
 structure{
   name: Stored,
   type_parameters: [],
   parameters: [],
-  fields: [{name: present, type: Nat}, {name: storedKey, type: Nat}, {name: computedKey, type: Nat}, {name: storedKernel, type: Nat}, {name: kernelPinned, type: Nat}, {name: storedBytes, type: Nat}, {name: derivedBytes, type: Nat}]
+  fields: [
+    {name: present, type: Nat},
+    {name: storedKey, type: Nat},
+    {name: computedKey, type: Nat},
+    {name: storedKernel, type: Nat},
+    {name: kernelPinned, type: Nat},
+    {name: storedBytes, type: Nat},
+    {name: derivedBytes, type: Nat}
+  ]
 }
 
-definition{
-  name: codeProved,
-  parameters: [],
-  result: Nat,
-  body: 0
-}
+definition{name: codeProved, parameters: [], result: Nat, body: 0}
 
-definition{
-  name: codeKernelChecked,
-  parameters: [],
-  result: Nat,
-  body: 1
-}
+definition{name: codeKernelChecked, parameters: [], result: Nat, body: 1}
 
-definition{
-  name: codePending,
-  parameters: [],
-  result: Nat,
-  body: 2
-}
+definition{name: codePending, parameters: [], result: Nat, body: 2}
 
-definition{
-  name: codeRefused,
-  parameters: [],
-  result: Nat,
-  body: 3
-}
+definition{name: codeRefused, parameters: [], result: Nat, body: 3}
 
-definition{
-  name: allowedAxiomsBound,
-  parameters: [],
-  result: Nat,
-  body: 8
-}
+definition{name: allowedAxiomsBound, parameters: [], result: Nat, body: 8}
 
 definition{
   name: mayRunKernel,
@@ -80,33 +80,13 @@ definition{
   body: ((code =? (codeProved)) || (code =? (codeKernelChecked)))
 }
 
-definition{
-  name: wordProved,
-  parameters: [],
-  result: Nat,
-  body: 0
-}
+definition{name: wordProved, parameters: [], result: Nat, body: 0}
 
-definition{
-  name: wordKernelChecked,
-  parameters: [],
-  result: Nat,
-  body: 1
-}
+definition{name: wordKernelChecked, parameters: [], result: Nat, body: 1}
 
-definition{
-  name: wordChecking,
-  parameters: [],
-  result: Nat,
-  body: 2
-}
+definition{name: wordChecking, parameters: [], result: Nat, body: 2}
 
-definition{
-  name: wordRefused,
-  parameters: [],
-  result: Nat,
-  body: 3
-}
+definition{name: wordRefused, parameters: [], result: Nat, body: 3}
 
 definition{
   name: wordOf,
@@ -133,7 +113,20 @@ theorem{
   name: noAcceptanceWithoutAKernelInTheTab,
   parameters: [e : Evidence],
   statement: ((breaksKernelGate e) = false),
-  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksKernelGate, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      accepted,
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksKernelGate,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -148,7 +141,20 @@ theorem{
   name: noAcceptanceUnderAnotherKernel,
   parameters: [e : Evidence],
   statement: ((breaksKernelIdentity e) = false),
-  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksKernelIdentity, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      accepted,
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksKernelIdentity,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -163,7 +169,20 @@ theorem{
   name: noAcceptanceWithOtherAxioms,
   parameters: [e : Evidence],
   statement: ((breaksAxiomsExact e) = false),
-  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksAxiomsExact, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      accepted,
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksAxiomsExact,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -178,7 +197,20 @@ theorem{
   name: noAcceptanceOutsideTheAllowedAxioms,
   parameters: [e : Evidence],
   statement: ((breaksAxiomsAllowed e) = false),
-  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksAxiomsAllowed, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      accepted,
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksAxiomsAllowed,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -208,7 +240,20 @@ theorem{
   name: noAcceptanceOfAlteredBytes,
   parameters: [e : Evidence],
   statement: ((breaksAddress e) = false),
-  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksAddress, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      accepted,
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksAddress,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -253,7 +298,19 @@ theorem{
   name: provedOnlyForTheSpecStatement,
   parameters: [e : Evidence],
   statement: ((breaksProvedStatement e) = false),
-  proof: linear_arithmetic{definitions: [allowedAxiomsBound, axiomsAdmitted, breaksProvedStatement, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksProvedStatement,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -268,7 +325,19 @@ theorem{
   name: provedNeedsLeanInTheTab,
   parameters: [e : Evidence],
   statement: ((breaksProvedNeedsLean e) = false),
-  proof: linear_arithmetic{definitions: [allowedAxiomsBound, axiomsAdmitted, breaksProvedNeedsLean, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksProvedNeedsLean,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -283,7 +352,19 @@ theorem{
   name: withoutLeanNeverProved,
   parameters: [e : Evidence],
   statement: ((breaksFallback e) = false),
-  proof: linear_arithmetic{definitions: [allowedAxiomsBound, axiomsAdmitted, breaksFallback, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksFallback,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Quot.sound, propext]
 }
 
@@ -298,7 +379,20 @@ theorem{
   name: kernelsThatDisagreeRefuse,
   parameters: [e : Evidence],
   statement: ((breaksDisagreement e) = false),
-  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksDisagreement, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      accepted,
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksDisagreement,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -320,7 +414,20 @@ theorem{
   name: noVerdictFromTheServer,
   parameters: [e : Evidence, f : Evidence],
   statement: ((breaksServerVerdict e f) = false),
-  proof: linear_arithmetic{definitions: [allowedAxiomsBound, axiomsAdmitted, breaksServerVerdict, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, sameInTab, verdictCode]},
+  proof: linear_arithmetic{
+    definitions: [
+      allowedAxiomsBound,
+      axiomsAdmitted,
+      breaksServerVerdict,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      mayRunKernel,
+      sameInTab,
+      verdictCode
+    ]
+  },
   axioms: [Classical.choice, Quot.sound, propext]
 }
 
@@ -335,7 +442,20 @@ theorem{
   name: onlyProvedReadsProved,
   parameters: [code : Nat],
   statement: ((breaksWord code) = false),
-  proof: linear_arithmetic{definitions: [breaksWord, codeKernelChecked, codePending, codeProved, codeRefused, wordChecking, wordKernelChecked, wordOf, wordProved, wordRefused]},
+  proof: linear_arithmetic{
+    definitions: [
+      breaksWord,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      wordChecking,
+      wordKernelChecked,
+      wordOf,
+      wordProved,
+      wordRefused
+    ]
+  },
   axioms: [Quot.sound, propext]
 }
 
@@ -350,7 +470,20 @@ theorem{
   name: kernelCheckedNeverReadsProved,
   parameters: [code : Nat],
   statement: ((breaksWeaker code) = false),
-  proof: linear_arithmetic{definitions: [breaksWeaker, codeKernelChecked, codePending, codeProved, codeRefused, wordChecking, wordKernelChecked, wordOf, wordProved, wordRefused]},
+  proof: linear_arithmetic{
+    definitions: [
+      breaksWeaker,
+      codeKernelChecked,
+      codePending,
+      codeProved,
+      codeRefused,
+      wordChecking,
+      wordKernelChecked,
+      wordOf,
+      wordProved,
+      wordRefused
+    ]
+  },
   axioms: [Quot.sound, propext]
 }
 \end{semanticmodule}

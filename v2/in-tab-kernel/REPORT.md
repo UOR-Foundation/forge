@@ -97,10 +97,11 @@ address and the kernel judges every declaration.
 
 ## The spec
 
-`app/src/InTabKernel.lex.tex`: the verdict, the axiom rule, address binding, reuse, the two words and the fallback.
-Lean proved its 14 theorems on the hosted verifier, profile `spec` (attestation `918674e4…`,
-`evidence/spec-verify.json`). The module is not yet an entrypoint of `app/lexlean.toml`, so `just vv` does not read
-it; that is Phase 2.
+`app/src/InTabKernel.lex.tex`: the verdict, the axiom rule, address binding, reuse, the two words and the fallback, 15
+theorems. `app/src/InTabKernelProtocol.lex.tex` is its wire, and `ForgeKernel.dispatch` answers `verdict` requests
+with it, so the app's own guest decides the verdict (capability FA-86). Lean proved both modules on the hosted
+verifier. The guest has not been built from them locally: `prismpm verify` timed out in the SDK image, and CI's
+`just vv` is the authority. The record is `verification/in-tab-kernel-verdict.md`.
 
 ## Not established
 
