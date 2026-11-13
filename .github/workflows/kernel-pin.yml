@@ -13,11 +13,13 @@
 name: kernel pin
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "prismpm.lock"
+  # One proof of one commit: the page build (pages.yml) proves the kernel to publish it, and the pin takes
+  # that holo from its run. A pin started by hand for a branch has no such run, so it proves the branch
+  # itself. Nothing about what is proved changes: the holo pinned here is the one Lean proved on this
+  # commit, and this job verifies the signature over those exact bytes before it pins them.
+  workflow_run:
+    workflows: [pages]
+    types: [completed]
   workflow_dispatch:
     inputs:
       ref:
@@ -29,20 +31,25 @@ permissions:
   contents: read
 
 concurrency:
-  group: kernel-pin-${{ inputs.ref || github.ref_name }}
+  group: kernel-pin-${{ inputs.ref || github.event.workflow_run.head_branch || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   pin:
     name: pin the kernel the shell runs to the one app/ builds
-    if: github.repository != 'UOR-Foundation/template'
+    if: >-
+      github.repository != 'UOR-Foundation/template'
+      && (github.event_name == 'workflow_dispatch'
+        || (github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: write
       actions: write
+      attestations: read
     env:
-      REF: ${{ inputs.ref || github.ref_name }}
+      REF: ${{ inputs.ref || github.event.workflow_run.head_branch }}
     steps:
       - name: Check out the branch to pin
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -53,7 +60,29 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
+      # The page build of this commit proved this holo and signed it. Taking it is not trust in a cache: the
+      # bytes are checked against the signed statement GitHub keeps for the run that built them, and the
+      # Kernel gate and the kernel's boundary tests below still run on them before anything is pushed.
+      - name: Take the holo this commit's page build proved, and check its signature
+        if: github.event_name != 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          mkdir -p .pin
+          gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name kernel-holo --dir .pin
+          test -s .pin/app.holo
+          gh attestation verify .pin/app.holo --repo "$GITHUB_REPOSITORY"
+          fingerprint=$(node -e 'const a=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")); process.stdout.write(a.attestations.build.id)' .pin/app.json)
+          [[ $fingerprint =~ ^[0-9a-f]{64}$ ]]
+          {
+            echo "HOLO_PATH=.pin/app.holo"
+            echo "HOLO_FINGERPRINT=$fingerprint"
+          } >>"$GITHUB_ENV"
       - name: Build and verify the holo through the locked SDK
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -84,12 +113,17 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          holos=(app/.prism/build/*/*.holo)
-          if [[ ${#holos[@]} -ne 1 ]]; then
-            printf 'expected one holo, found %d\n' "${#holos[@]}" >&2
-            exit 64
+          if [[ -n "${HOLO_PATH:-}" ]]; then
+            holos=("$HOLO_PATH")
+            fingerprint=$HOLO_FINGERPRINT
+          else
+            holos=(app/.prism/build/*/*.holo)
+            if [[ ${#holos[@]} -ne 1 ]]; then
+              printf 'expected one holo, found %d\n' "${#holos[@]}" >&2
+              exit 64
+            fi
+            fingerprint=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).archive_fingerprint)' "$(dirname "${holos[0]}")/application/holo-identities.json")
           fi
-          fingerprint=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).archive_fingerprint)' "$(dirname "${holos[0]}")/application/holo-identities.json")
           pinned=$(sed -n 2p studio/KERNEL_REV)
           {
             echo "path=${holos[0]}"

@@ -292,6 +292,9 @@ model does not sanction.
 | `FK-22` | `build` | The kernel never allows model thinking on a first attempt |
 | `FK-23` | `build` | The budget from Enter to a checked app is never above 30 s |
 | `FK-24` | `build` | The budget from an edit to the screen is never above two frames, 33 ms |
+| `FK-25` | `build` | The kernel never lets a telemetry record reach the network or an app's frame |
+| `FK-26` | `build` | The kernel never lets a telemetry record be saved unless the user asked |
+| `FK-27` | `build` | The kernel never lets a telemetry record reach a model that is not on the device |
 
 ## github-publication-permission
 
@@ -533,6 +536,32 @@ model does not sanction.
 | ID | Level | Statement |
 | --- | --- | --- |
 | `FA-56` | `build` | Only superseded pull-request Studio runs are cancelled while every main and release run retains its full acceptance boundary |
+
+## telemetry
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `TL-01` | `build` | A journey's first moment, once recorded, never moves |
+| `TL-02` | `build` | A journey's end is never recorded before its start, so no KPI span is negative |
+| `TL-03` | `build` | The worst preview update is never below an update the turn made |
+| `TL-04` | `build` | The worst preview update never falls during a turn |
+| `TL-05` | `build` | An edit's time to screen is counted only from an edit that started |
+| `TL-06` | `build` | The worst edit to screen never falls during a turn |
+| `TL-07` | `build` | A turn within budget is never counted as over |
+| `TL-08` | `build` | A turn over budget is always counted as over |
+| `TL-09` | `build` | The loop never suggests anything without a turn over budget |
+| `TL-10` | `build` | The loop never suggests anything unless most observed turns are over budget |
+| `TL-11` | `build` | The loop never suggests anything for a KPI with no budget |
+| `TL-12` | `build` | A budgeted KPI over budget in most turns always gets a suggestion |
+| `TL-13` | `build` | A time under the kernel's threshold is never judged over |
+| `TL-14` | `build` | A time at or over the kernel's threshold is never judged within |
+| `TL-15` | `build` | The loop never suggests switching to the model already in use |
+| `TL-16` | `build` | The loop never suggests a model switch on fewer than five reads of either model |
+| `TL-17` | `build` | The loop never suggests a model switch while Enter to Checked is within budget |
+| `TL-18` | `build` | Only the user's approval adopts a suggestion |
+| `TL-19` | `build` | Approving with no suggestion pending adopts nothing |
+| `TL-20` | `build` | An adopted change is never called an improvement unless the KPI got faster |
+| `TL-21` | `build` | The device never keeps more than 512 turns |
 
 ## verified-host-bundle
 

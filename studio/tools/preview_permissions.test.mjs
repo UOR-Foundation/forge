@@ -4,7 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import {invokeHost} from "../shell/host-boundary.mjs";
 import {describePreview,previewPermissionRecord,authorizePreview,mountPreviewPermissions} from "../shell/preview-permissions.mjs";
-const request={id:"preview-id",source:"blake3:"+"a".repeat(64),endpoints:["https://esm.sh","https://cdn.tailwindcss.com"]};
+const request={id:"preview-id",source:"sha256:"+"a".repeat(64),endpoints:["https://esm.sh","https://cdn.tailwindcss.com"]};
 const code=c=>e=>e.code===c;
 function dom(){const nodes=[];class Element extends EventTarget{constructor(tag){super();this.tag=tag;this.style={};this.children=[];nodes.push(this);}append(...c){this.children.push(...c);}setAttribute(){}remove(){this.removed=true;}showModal(){}focus(){doc.activeElement=this;}click(){this.dispatchEvent(new Event("click"));}}const doc={createElement:t=>new Element(t),body:new Element("body"),activeElement:{focus(){}}};return{document:doc,nodes,button:label=>nodes.find(n=>!n.removed&&n.tag==="button"&&n.textContent===label)};}
 test("preview disclosure bounds identities and exact HTTPS origins",()=>{

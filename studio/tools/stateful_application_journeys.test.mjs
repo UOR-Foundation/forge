@@ -7,7 +7,7 @@ import {interactionPreset,readInteractionDocument,interactionModule,interactionD
 import {createInteractionAudio} from '../shell/interaction-ui.mjs';
 import {assertCanonicalGeneration} from '../shell/canonical-generation.mjs';
 import {stageInteraction} from '../shell/interaction-state.mjs';
-const enc=new TextEncoder(),id='blake3:'+'a'.repeat(64),derive=async()=>id;
+const enc=new TextEncoder(),id='sha256:'+'a'.repeat(64),derive=async()=>id;
 const reply=output=>enc.encode('ok '+output.map(n=>{const b=new Uint8Array(4);new DataView(b.buffer).setUint32(0,n,true);return Buffer.from(b).toString('hex');}).join(''));
 const command={event:0,audioGranted:false,reducedMotion:true,reset:false};
 const fixture=()=>interactionPreset('garden');
@@ -25,7 +25,7 @@ test('application admission and transition always execute the generated guest',a
  await assert.rejects(stageInteraction({dispatch:async()=>enc.encode('unknownInteractionEvent')},derive,fixture(),result.state,{...command,event:4}),{code:'unknownInteractionEvent'});
 });
 test('stored semantic identity requires explicit reset after changed models',async()=>{
- let calls=0;const guest={dispatch:async()=>{calls++;return reply([0,0,2,0,0]);}},old={profile:'foundry/interaction-state/1',model:'blake3:'+'b'.repeat(64),state:1,revision:1};
+ let calls=0;const guest={dispatch:async()=>{calls++;return reply([0,0,2,0,0]);}},old={profile:'foundry/interaction-state/1',model:'sha256:'+'b'.repeat(64),state:1,revision:1};
  await assert.rejects(stageInteraction(guest,derive,fixture(),old,command),{code:'interactionStateStale'});assert.equal(calls,0);
  const restored=await stageInteraction(guest,derive,fixture(),old,{...command,reset:true});assert.equal(restored.state.state,0);assert.equal(restored.state.model,id);
  await assert.rejects(stageInteraction(guest,derive,fixture(),old,{...command,reset:true,event:1}),{code:'invalidInteractionApplication'});

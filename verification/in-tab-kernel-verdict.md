@@ -14,11 +14,11 @@ Lean proved the model and the protocol on the hosted verifier, profile `prism-ap
 
 In the locked SDK image, `lexlean fmt --check --all` and `lexlean lock --check` pass on all 24 modules.
 
-The corpus has 19 vectors: 16 typed and three raw. The six-test Node suite passes, the 119-test Rust conformance suite passes, and `check-model` and `cargo fmt --check` pass. On Linux the 608-test Studio suite passes but for `home_card_keyboard`, whose `happy-dom` dependency is not installed here.
+The corpus has 19 vectors: 16 typed and three raw. The six-test Node suite passes, the 144-test Rust conformance suite passes, and `check-model` and `cargo fmt --check` pass. On Linux the 636-test Studio suite passes but for `home_card_keyboard`, whose `happy-dom` dependency is not installed here.
 
 Seven planted codec defects were each refused (`node studio/tools/in_tab_kernel_verdict_defects.mjs`): a reply whose word is not its code believed; an extra field ignored; an axiom outside the admitted three dropped; an address cut to 128 bits; the request read after the guest is ready; a flag other than 0 or 1 sent; a guest fault read as proved. Restoring the codec restores the suite. Two rules no test could fail, a reply-length bound and a bytes check, were removed: the two exact reply shapes already imply both.
 
-Five existing suites pinned the kernel's acceptance root as `previewAcceptance`; it is now `verdictAcceptance`, which ends in `previewAcceptance`. The count of acceptance requests in the model moves from 307 to 326.
+Five existing suites pinned the kernel's acceptance root as `previewAcceptance`; it is now `verdictAcceptance`, which ends in `previewAcceptance`. The count of acceptance requests in the model moves from 321 to 340.
 
 ## Open qualification
 

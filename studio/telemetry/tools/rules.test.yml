@@ -1,0 +1,25 @@
+# promtool test rules: the alert fires exactly where the kernel says "over": at budget + 1 ms.
+rule_files:
+  - prism.rules.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'prism_kpi_seconds{kpi="update"}'
+        values: '0.015999 0.016'
+      - series: 'prism_kpi_threshold_seconds{kpi="update"}'
+        values: '0.016 0.016'
+      - series: 'prism_preview_reloads_total'
+        values: '0 0'
+    alert_rule_test:
+      - eval_time: 0m
+        alertname: PrismKpiOverBudget
+        exp_alerts: []
+      - eval_time: 1m
+        alertname: PrismKpiOverBudget
+        exp_alerts:
+          - exp_labels: { severity: warning, kpi: update }
+            exp_annotations: { summary: "Prism KPI update is over its kernel budget" }
+      - eval_time: 1m
+        alertname: PrismPreviewReloaded
+        exp_alerts: []

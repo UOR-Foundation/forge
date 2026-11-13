@@ -4,7 +4,7 @@ import {test} from 'node:test';
 import {captureRestoreChat,messageSourceVersion,prepareMessageRestoration} from '../shell/message-restoration.mjs';
 import {emptyChatQueue} from '../shell/chat-queue-store.mjs';
 import {commitPreparedProject} from '../shell/project-edit.mjs';
-const a='blake3:'+'a'.repeat(64),b='blake3:'+'b'.repeat(64),c='blake3:'+'c'.repeat(64);
+const a='sha256:'+'a'.repeat(64),b='sha256:'+'b'.repeat(64),c='sha256:'+'c'.repeat(64);
 const initial=()=>({id:1,appId:2,title:'Conversation',initialCommitHash:a,chatMode:'build',modelSelection:{provider:'local',name:'model'},referencedApps:[3],messages:[{id:1,role:'user',content:'first',createdAt:'earlier'},{id:2,role:'assistant',content:'answer',commitHash:b,sourceCommitHash:a,createdAt:'earlier',usingFreeAgentModeQuota:true,chatTurnIntentId:'live-dedupe'},{id:3,role:'user',content:'restore boundary',createdAt:'later'},{id:4,role:'assistant',content:'last answer',sourceCommitHash:c,createdAt:'later'}]});
 // Ordering/rollback fixture. Browser acceptance uses actual IndexedDB.
 function database(chat=initial()){

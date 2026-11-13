@@ -143,6 +143,7 @@ Foundry is a Prism app: its decisions are FK requirements in `app/src/ForgeKerne
 | Motion: at most 200 ms, none when reduced motion is asked | `motion MS REDUCED`: `allow` or `deny` | FK-18, FK-19 | the Experience gate, for every duration in `appearance.css` |
 | Tap targets at least 44 px | `target PX`: `ok` or `small` | FK-20 | the Experience gate, for the touch hit area |
 | "This week" on the Apps page: seven days | `recent SECONDS`: `yes` or `no` | FK-21 | the Apps page, for each date |
+| Where a build-telemetry record may go | `telemetry EFFECT ASKED DEVICE`: `allow` or `deny` | FK-25 never to the network or an app's frame, FK-26 never saved unless the user asked, FK-27 never to a model that is not on the device | the telemetry's own flows (`studio/shell/telemetry`) |
 
 Where the build journey stood on 2026-11-12, by the owner's measurements on the deployed site with GLM 5.3 Flash: `preview` 1.3 s (within); `declaration` 99 to 290 s (over); `pixel` 31 to 64 ms (within); `update` 4.8 to 8.5 ms (within); `edit` 16 to 25 ms, rarely 34 to 37 (over when it is); `checked` 35 to 70 ms (within); `built` 167 to 196 s (over). Both misses that matter are the model reasoning before it writes, which is what FK-22 turns off.
 
@@ -151,6 +152,9 @@ FK-22 to FK-24 were proved by Lean in the kernel pin run that built the kernel t
 What FK-22's switch did, measured through the deployed relay on 2026-11-12 with GLM 5.3 Flash: with the switch alone the model still reasoned, and Featherless returned its whole answer in the reasoning channel with an empty answer (five requests of five). With the switch and an instruction not to reason, it planned in the answer instead: no declaration in 326 s. The switch is no longer sent, and the relay was rolled back. FK-22 stays proved and unused; removing it is a kernel change of its own.
 
 What did shorten the journey is the app notation (`shell/live/notation.mjs`): a model writes a few lines, and Forge expands them into the canonical LexLean module. Four real builds through the relay, default thinking, the instructions this branch ships: first line of the app after 17.8, 19.1, 24.1 and 31.5 s; the whole app written after 24.7, 24.8, 25.7 and 35.0 s; all four read and passed the hosted checker. The same request in full LexLean wrote no declaration in 300 s. These are times to the model's text over a direct request, not to pixels in the app: the in-app journey was not timed.
+
+
+Build telemetry (`studio/telemetry/DESIGN.md`) measures the KPIs above on the user's device and asks the kernel for these budgets; it keeps no number of its own.
 
 What stays outside the kernel, and why:
 

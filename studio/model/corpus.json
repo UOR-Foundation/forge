@@ -3,7 +3,7 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "empty",
   "label": "a",
   "entries": [],
@@ -13,8 +13,8 @@
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -22,24 +22,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "one file",
   "label": "hello",
   "entries": [
    {
     "path": "src/main.tsx",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 120
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"src/main.tsx\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",120]],\"name\":\"hello\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"src/main.tsx\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",120]],\"name\":\"hello\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -47,29 +47,29 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "two files sorted",
   "label": "two",
   "entries": [
    {
     "path": "src/App.tsx",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 512
    },
    {
     "path": "src/main.tsx",
-    "kappa": "blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+    "kappa": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
     "bytes": 120
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"src/App.tsx\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",512],[\"src/main.tsx\",\"blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",120]],\"name\":\"two\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"src/App.tsx\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",512],[\"src/main.tsx\",\"sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",120]],\"name\":\"two\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -77,24 +77,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "with parent",
   "label": "child",
   "entries": [
    {
     "path": "index.html",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 44
    }
   ],
-  "parent": "blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
-  "preimage": "{\"entries\":[[\"index.html\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",44]],\"name\":\"child\",\"parent\":\"blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\"}",
+  "parent": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+  "preimage": "{\"entries\":[[\"index.html\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",44]],\"name\":\"child\",\"parent\":\"sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -102,24 +102,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "quotes in path",
   "label": "say \"hi\"",
   "entries": [
    {
     "path": "a \"b\".ts",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 1
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"a \\\"b\\\".ts\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",1]],\"name\":\"say \\\"hi\\\"\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"a \\\"b\\\".ts\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",1]],\"name\":\"say \\\"hi\\\"\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -127,24 +127,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "backslash in path",
   "label": "win",
   "entries": [
    {
     "path": "src\\App.tsx",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 2
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"src\\\\App.tsx\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",2]],\"name\":\"win\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"src\\\\App.tsx\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",2]],\"name\":\"win\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -152,24 +152,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "newline in label",
   "label": "line\nbreak",
   "entries": [
    {
     "path": "x",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 3
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"x\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",3]],\"name\":\"line\\nbreak\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"x\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",3]],\"name\":\"line\\nbreak\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -177,24 +177,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "return in label",
   "label": "cr\rlf",
   "entries": [
    {
     "path": "x",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 3
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"x\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",3]],\"name\":\"cr\\rlf\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"x\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",3]],\"name\":\"cr\\rlf\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -202,24 +202,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "unicode",
   "label": "émoji 🚀",
   "entries": [
    {
     "path": "ünïcode/ファイル.ts",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 99
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"ünïcode/ファイル.ts\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",99]],\"name\":\"émoji 🚀\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"ünïcode/ファイル.ts\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",99]],\"name\":\"émoji 🚀\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -227,24 +227,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "zero bytes",
   "label": "z",
   "entries": [
    {
     "path": "empty",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 0
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"empty\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",0]],\"name\":\"z\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"empty\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",0]],\"name\":\"z\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -252,24 +252,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "large bytes",
   "label": "big",
   "entries": [
    {
     "path": "blob.bin",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 18446744073709551615
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"blob.bin\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",18446744073709551615]],\"name\":\"big\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"blob.bin\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",18446744073709551615]],\"name\":\"big\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -277,7 +277,7 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "granted origin",
   "label": "g",
   "entries": [],
@@ -289,8 +289,8 @@
   "origin": "https://esm.sh",
   "decision": "Accept",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -298,7 +298,7 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "second grant matches",
   "label": "g2",
   "entries": [],
@@ -311,8 +311,8 @@
   "origin": "https://esm.sh",
   "decision": "Accept",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -320,7 +320,7 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "no grants",
   "label": "n",
   "entries": [],
@@ -330,8 +330,8 @@
   "origin": "https://example.com",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -339,7 +339,7 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "prefix is not equality",
   "label": "p",
   "entries": [],
@@ -351,8 +351,8 @@
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -360,24 +360,24 @@
   "refs": [],
   "branch": "main",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "tampered",
   "label": "t",
   "entries": [
    {
     "path": "x",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
     "bytes": 1
    }
   ],
   "parent": "",
-  "preimage": "{\"entries\":[[\"x\",\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",1]],\"name\":\"t\",\"parent\":\"\"}",
+  "preimage": "{\"entries\":[[\"x\",\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",1]],\"name\":\"t\",\"parent\":\"\"}",
   "endpoints": [],
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Refuse"
   }
  },
@@ -385,12 +385,12 @@
   "refs": [
    {
     "branch": "main",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
    }
   ],
   "branch": "main",
-  "head": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "head": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "head of main",
   "label": "h",
   "entries": [],
@@ -400,8 +400,8 @@
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -409,16 +409,16 @@
   "refs": [
    {
     "branch": "main",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
    },
    {
     "branch": "draft",
-    "kappa": "blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+    "kappa": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
    }
   ],
   "branch": "draft",
-  "head": "blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "head": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "head of other branch",
   "label": "h2",
   "entries": [],
@@ -428,8 +428,8 @@
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -437,16 +437,16 @@
   "refs": [
    {
     "branch": "main",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
    },
    {
     "branch": "main",
-    "kappa": "blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+    "kappa": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
    }
   ],
   "branch": "main",
-  "head": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "head": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "first ref wins",
   "label": "h3",
   "entries": [],
@@ -456,8 +456,8 @@
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  },
@@ -465,12 +465,12 @@
   "refs": [
    {
     "branch": "main",
-    "kappa": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    "kappa": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
    }
   ],
   "branch": "draft",
   "head": null,
-  "previewPath": "/p/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
+  "previewPath": "/p/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/",
   "name": "no such branch",
   "label": "h4",
   "entries": [],
@@ -480,8 +480,8 @@
   "origin": "https://esm.sh",
   "decision": "Refuse",
   "restore": {
-   "derived": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "expected": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "derived": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "expected": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "decision": "Accept"
   }
  }

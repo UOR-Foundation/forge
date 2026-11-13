@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {test} from 'node:test';
 import {compareWorkingFiles,lineChanges,readWorkingTree} from '../shell/working-tree.mjs';
-import {blake3} from '../../try/vendor/prism-code/src/blake3.mjs';
-const enc=new TextEncoder(),derive=async bytes=>'blake3:'+Buffer.from(blake3(bytes)).toString('hex');
+import { kappa } from '../shell/address.mjs';
+const enc=new TextEncoder(),derive=async bytes=>kappa(bytes);
 async function fixture(){const text=enc.encode('before\n'),file=await derive(text),bytes=enc.encode(JSON.stringify({name:'app',parent:'',entries:[['a.txt',file,text.length]]})),reference=await derive(bytes),objects=new Map([[file,text],[reference,bytes]]);return {reference,file,objects,capture:async()=>({reference,files:[['a.txt','after\n']]}),boundary:{derive,readObject:async key=>objects.get(key),admit:async()=>true}};}
 test('working tree distinguishes additions deletions modifications and empty file presence',()=>{
  assert.deepEqual(compareWorkingFiles([['modify','a\nb\n'],['empty','']],[['modify','a\nx\n'],['gone','old']]),[{path:'empty',status:'added',oldContent:'',newContent:'',additions:0,deletions:0},{path:'gone',status:'deleted',oldContent:'old',newContent:'',additions:0,deletions:1},{path:'modify',status:'modified',oldContent:'a\nx\n',newContent:'a\nb\n',additions:1,deletions:1}]);assert.deepEqual(compareWorkingFiles([['same','unchanged']],[['same','unchanged']]),[]);
