@@ -109,3 +109,46 @@ node --test studio/tools/rules_transaction.test.mjs. The restored combined
 Shell source parsing passes. model-write and full just vv could not run locally
 because cargo, just and prismpm are unavailable; generated evidence was not
 hand-edited to substitute for that gate.
+
+## Checker-defaulted specification names
+
+This corrects the existing captured rules transaction; it adds no capability,
+SDK behavior, identity migration or UI change. The candidate is based on
+`ea24748d2bca448bf08d1ccb5e92c3faed1e9a7a`, retaining the rollback of the device
+identity migration and IndexedDB version 2. The checker already supplies a
+name for missing, null, false, zero and empty values. The stored authoring
+JSON must carry that same name before canonical rendering. The default is
+written after the original fields so those values cannot overwrite it, while
+valid explicit names and every other original field remain intact.
+
+`node --test --test-reporter=tap studio/tools/spec_name_storage.test.mjs`
+executes the production `rulesAfterTurn` body with the real checker, renderer
+and canonical spec-address reader. Only transaction and lifecycle effects are
+controlled. It checks a single captured-source transaction containing JSON,
+the correctly named canonical module, generated runtime and source-bound
+rules status. It also checks rename cleanup, unchanged unrelated files,
+invalid-spec behavior, semantic proof retention and stale publication bytes.
+The proof record in this test is only a lifecycle fixture.
+
+Before the correction, the six behavioral controls passed three and failed
+three: null was stored instead of `fee-tier-from`, the empty string bypassed
+normalization, and matching-proof normalization retained the wrong stored
+name. After correction, all nine controls pass with no skip, cancellation or
+todo. Three in-memory mutations of the exact production adapter each fail the
+same stored-name assertion: removing normalization, restoring the incorrect
+spread order, and bypassing normalization for an empty string. The mutation
+runner requires each replacement to match exactly once, and checks the
+specific assertion failure rather than accepting any exception.
+
+The existing Rust FA-24 gate requires the new test file and exactly 42 passing
+Node controls, with no skipped or omitted results. The Studio `live_lexlean`
+gate also executes the nine-control file and requires its complete TAP counts,
+replacing the synthetic spread-expression/source-substring assertion.
+The directly invoked FA-24 Node command passes all 42 controls; 44 adjacent
+canonical-edit/build/module, presentation, application-shape and generation
+controls also pass. These are local adapter checks, not a browser storage or
+full acceptance result. The complete `live_lexlean.mjs --check` gate, shell
+parser, changed-file Node syntax checks and `git diff --check` pass as well.
+Full exact-head `just vv` inside the locked SDK and
+Studio browser qualification remain required in CI. No Rust compiler, Lean,
+model writer or SDK process was run for this local correction.
