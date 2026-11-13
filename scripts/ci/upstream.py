@@ -113,13 +113,16 @@ def issue(title, body):
     return True
 
 
-def template_update(image, action):
-    """Dispatch template-update.yml: it reads both platform locks from `image` and opens the re-pin."""
+def template_update(image, action, standards=""):
+    """Dispatch template-update.yml: it reads both platform locks from `image` and opens the re-pin.
+    `standards` is the sha256 of the SDK's standards.lock a person reviewed (the row's `standards`);
+    without it the template refuses an SDK whose standards differ."""
     lock = json.loads((ROOT / "template.lock").read_text())
     run("gh", "workflow", "run", "template-update.yml", "--ref", "main",
         "-f", f"sdk-image={image}",
         "-f", f"action-reference={action}",
-        "-f", f"template-revision={lock['template_revision']}")
+        "-f", f"template-revision={lock['template_revision']}",
+        "-f", f"standards-sha256={standards}")
 
 
 def pinned_action():
@@ -146,7 +149,7 @@ def adopt(patch, act):
             f"{patch['what']}\n\nupstream.yml dispatched template-update.yml with `{image}`, the "
             f"PrismPM action commit the workflows use and the template revision template.lock pins; "
             f"its pull request carries the pin."):
-        template_update(image, pinned_action())
+        template_update(image, pinned_action(), patch.get("standards", ""))
 
 
 def main():

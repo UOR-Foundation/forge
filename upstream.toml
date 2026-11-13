@@ -8,6 +8,9 @@
 # dispatched the same way. Delete the row when the re-pin lands.
 #
 #   image     the patched SDK image that carries the fix until a release does
+#   standards the sha256 of that image's standards.lock, written only after a
+#             person reviewed the standards change; template-update.yml then
+#             carries it into the pin (without it the template refuses).
 #   fix       the upstream commit that carries the fix, once merged; until then
 #             `pull` is followed to its merge commit.
 #   release   how a release is found:
@@ -21,6 +24,7 @@ id = "prismpm-sdk-view-closure"
 what = "The SDK is ghcr.io/afflom/prismpm-sdk-patched (prism-devrel's sdk-patch.yml): the pinned candidate plus prismpm with the browser closure v2 fix. Without it prismpm verify ends PP5004 (application regeneration artifact closure differs) for any model with a Design facet, Foundry's own included."
 pinned = "prismpm.lock, .devcontainer/devcontainer.json, template.lock"
 image = "ghcr.io/afflom/prismpm-sdk-patched@sha256:3dfa5f7284ace57c08bfe8d2effe2e08ab41da1a53f5820d48cccd498bd528c3"
+standards = "c7a9312edbb964ed6f275fdf7f4c25a759676a2fd695ef9df0e84dec4ef414f7"
 repository = "UOR-Foundation/PrismPM"
 pull = 615
 fix = "359d7f5bfa8e01272ba6028c30c94459420ebb6a"
