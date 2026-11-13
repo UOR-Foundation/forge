@@ -44,7 +44,8 @@ try {
   const previewId=new URL(allowed.value.appUrl).pathname.split("/").filter(Boolean).pop();
   const initial=await page.evaluate(id=>window.__host.get("refs","capabilities:"+id),previewId);
   assert.deepEqual(initial.network.endpoints,["https://esm.sh","https://cdn.tailwindcss.com"]);assert.equal(initial.previewConsent.id,previewId);
-  await page.reload();await page.waitForFunction(()=>!!window.__host&&!!window.__preview);
+  // The tools are on the Settings page.
+  await page.goto(base+"settings");await page.waitForFunction(()=>!!window.__host&&!!window.__preview);
   await page.getByRole("button",{name:"Preview permissions",exact:true}).click();
   const permissions=page.getByRole("dialog",{name:"Stored preview permissions"});await permissions.getByRole("button",{name:"Revoke preview"}).waitFor();
   await page.evaluate(url=>{const frame=document.createElement("iframe");frame.id="permission-test-frame";frame.src=url;document.body.append(frame);},allowed.value.appUrl);

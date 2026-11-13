@@ -42,20 +42,31 @@ test("open requests and the sidebar tools are covered, by the ids and labels the
 test("the look comes from the brand's tokens: no colour of its own, in any theme", () => {
   const withoutMarks = section.replace(/url\("data:image\/svg\+xml[^"]*"\)/g, "");
   assert.equal(/#[0-9a-fA-F]{3,8}\b/.test(withoutMarks.replace(/#foundry-[a-z-]+/g, "")), false, "a literal colour is written in the section");
-  for (const token of ["--popover", "--popover-foreground", "--muted-foreground", "--sidebar-foreground", "--sidebar-accent", "--font-sans", "--font-mono", "--ring"]) assert.ok(section.includes("var(" + token + ")"), token);
+  for (const token of ["--popover", "--popover-foreground", "--muted-foreground", "--card", "--card-foreground", "--font-sans", "--font-mono", "--ring"]) assert.ok(section.includes("var(" + token + ")"), token);
   assert.ok(section.includes("@media (pointer: coarse)") && section.includes("prefers-reduced-motion"));
 });
 
-test("FoundrySpecification.foundrySurfaceExperienceBoundary: centred popups, golden measures, marks alone when collapsed", () => {
-  const spec = read("../../app/src/FoundrySpecification.lex.tex");
-  assert.ok(spec.includes("name: foundrySurfaceExperienceBoundary,"));
-  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "its mark alone, with no letters", "in one column at the right"]) assert.ok(spec.includes(said), said);
+test("studio/experience: centred popups, golden measures, tools on Settings, a quiet Home", () => {
+  // The preferences are a LexLean module of their own, outside the kernel's proof inputs.
+  const spec = read("../experience/src/FoundryExperience.lex.tex");
+  for (const name of ["oneLook", "popupsCentred", "goldenRatio", "questionAsNotification", "whyHowWhat", "sidebarIsNavigation", "toolsOnSettings", "homeAsksOneThing", "modelMenu"]) assert.ok(spec.includes("name: " + name + ","), name);
+  assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
+  for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
+  assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
   // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
   for (const measure of ['550px', 'max-height: 61.8vh', 'padding: 21px', 'border-radius: 13px', 'gap: 13px 8px', 'width: 34px; height: 34px', 'font: 600 16px/1.3', 'font: 400 13px/1.618', 'min-height: 34px', 'min-height: 44px']) assert.ok(section.includes(measure), measure);
-  // a collapsed sidebar shows marks alone, by the dock's own width
-  assert.match(css, /#foundry-shell-actions \{ container-type: inline-size; \}\s*@container \(max-width: 89px\) \{\s*#foundry-shell-actions > button \{[^}]*font-size: 0 !important;/);
+  // the tools are a card of Settings, first in its column; the sidebar is 233 px; Home shows no app picker
+  assert.ok(read('../shell/shell-action-dock.mjs').includes("document.querySelectorAll('div:has(> #general-settings)')"));
+  assert.match(css, /#foundry-shell-actions { order: -1; }/);
+  assert.ok(css.includes('[data-slot="sidebar-wrapper"] { --sidebar-width: 233px !important; }'));
+  assert.ok(css.includes('[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { display: none !important; }'));
+  assert.ok(css.includes('#setting-default-chat-mode { display: none !important; }'));
+  assert.ok(css.includes('p:has(> [data-slot="home-wide"]) { display: none !important; }'), 'the line under the home question is shown');
+  const mode = read('../vendor/dyad/hologram.ChatModeSelector.tsx');
+  assert.ok(mode.includes('tabIndex={-1}') && mode.includes('pointer-events-none absolute left-0 top-0 h-px w-px opacity-0'));
 });
 
 test("each approval explains why, then how, then what, in plain words, and still states what must be disclosed", () => {

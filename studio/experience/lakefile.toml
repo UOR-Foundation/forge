@@ -1,0 +1,6 @@
+name = "FoundryExperience"
+version = "0.1.0"
+defaultTargets = ["FoundryExperience"]
+
+[[lean_lib]]
+name = "FoundryExperience"

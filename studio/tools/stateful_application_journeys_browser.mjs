@@ -30,7 +30,7 @@ try {
   await page.goto(base); await page.waitForFunction(() => !!window.__host && !!window.__prism && !!window.electron);
 
   const started=Date.now();
-  await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
+  await page.goto(base+'settings');await page.waitForFunction(()=>!!window.__host&&!!window.electron);await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
   await page.getByLabel('Application name').fill('Journey gallery');
   await page.getByRole('button',{name:'Create gallery',exact:true}).click();
   await page.getByRole('heading',{name:'Open landscape',exact:true}).waitFor();
@@ -40,7 +40,7 @@ try {
   const firstPixelMs=Date.now()-started;
   await page.getByRole('button',{name:'Close',exact:true}).click();
   await page.reload();await page.waitForFunction(()=>!!window.__host&&!!window.electron);
-  await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
+  await page.goto(base+'settings');await page.waitForFunction(()=>!!window.__host&&!!window.electron);await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
   await page.getByRole('dialog').getByRole('button',{name:'Journey gallery',exact:true}).click();
   await page.getByRole('heading',{name:'Night sky',exact:true}).waitFor();
   await page.getByRole('button',{name:'Close',exact:true}).click();
@@ -75,7 +75,7 @@ try {
     return {guestDomains:true,unrelatedEdit:true,staleModel:true,explicitReset:true,canonicalReadOnly:true,concurrentWinner:1,rollback:true,audioPeakHz:frequency,unconsentedSamplesSilent:true,deletion:true};
   });
   await page.emulateMedia({reducedMotion:'reduce'});
-  await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
+  await page.goto(base+'settings');await page.waitForFunction(()=>!!window.__host&&!!window.electron);await page.getByRole('button',{name:'Interactive apps',exact:true}).click();
   await page.getByLabel('Application name').fill('Motion garden');await page.getByRole('button',{name:'Create garden',exact:true}).click();
   await page.getByRole('heading',{name:'Seed',exact:true}).waitFor();
   // Inspect the painted state after the reduced-motion CSS transitions settle.

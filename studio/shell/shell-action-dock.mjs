@@ -1,4 +1,5 @@
-// FoundrySpecification.sidebarToolAccessBoundary: the sidebar owns layout, never effects.
+// FoundrySpecification.sidebarToolAccessBoundary: the tools live on the Settings page, as its last card; the
+// page owns layout, never effects.
 const docks=new WeakMap();
 export function createShellActionDock(document,window){
  const entries=new Map(),dock=document.createElement('div');
@@ -8,7 +9,7 @@ export function createShellActionDock(document,window){
  const visible=node=>{const r=node.getBoundingClientRect();return r.width>0&&r.height>0&&r.right>0&&r.bottom>0&&r.left<window.innerWidth&&r.top<window.innerHeight;};
  const reconcile=()=>{
   pending=false;
-  const target=[...document.querySelectorAll('[data-slot="sidebar-content"]')].filter(visible).at(-1);
+  const target=[...document.querySelectorAll('div:has(> #general-settings)')].filter(visible).at(-1);
   if(!target){if(dock.parentNode)dock.remove();return;}
   if(dock.parentNode!==target)target.append(dock);
   for(const entry of entries.values())if(entry.parentNode!==dock)dock.append(entry);

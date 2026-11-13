@@ -172,4 +172,60 @@ mod tests {
             assert_eq!(reuse_is_declared(plant), Err(*trigger));
         }
     }
+
+    /// The Prism page's address leaves the other workflows out, and may: its build reads none of them.
+    /// A key that omits an input is wrong, so the omission is held to the build itself. If the build
+    /// job, or a script it runs, comes to read another workflow, this fails until the key names it.
+    #[test]
+    fn the_page_address_omits_only_workflows_its_build_does_not_read() {
+        let pages = workflow("pages.yml");
+        assert!(
+            pages.contains(
+                "hashFiles('**', '!studio/**', '!v2/**', '!.git/**', '!.github/workflows/**', '.github/workflows/pages.yml')"
+            ),
+            "the page address changed: say here what its build reads"
+        );
+        let build = pages
+            .split("\n  build:\n")
+            .nth(1)
+            .and_then(|rest| rest.split("\n  forge:\n").next())
+            .expect("the build job, before the forge job");
+        // What a step reads is in what it runs, not in a comment beside it.
+        let build: String = build
+            .lines()
+            .filter(|line| !line.trim_start().starts_with('#'))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let mut read = vec![("pages.yml: build".to_owned(), build.clone())];
+        for script in build
+            .split(|c: char| c.is_whitespace() || c == '"' || c == '\'')
+            .filter(|word| word.starts_with("bootstrap/") && word.contains('.'))
+        {
+            let source = std::fs::read_to_string(root.join(script))
+                .unwrap_or_else(|_| panic!("{script} is run by the page build and must exist"));
+            read.push((script.to_owned(), source));
+        }
+        assert!(
+            read.len() > 5,
+            "the scripts the page build runs were not found"
+        );
+        for (name, _) in workflows() {
+            if name == "pages.yml" {
+                continue;
+            }
+            for (reader, source) in &read {
+                assert!(
+                    !source.contains(&name),
+                    "{reader} names {name}: the page address must then include it"
+                );
+            }
+        }
+        for (reader, source) in &read[1..] {
+            assert!(
+                !source.contains(".github/workflows"),
+                "{reader} reads the workflows directory: the page address must then include it"
+            );
+        }
+    }
 }
