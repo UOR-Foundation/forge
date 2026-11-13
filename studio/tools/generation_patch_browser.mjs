@@ -4,10 +4,10 @@ import fs from "node:fs";
 import http from "node:http";
 import { chromium } from "../vendor/dyad/node_modules/playwright-core/index.mjs";
 const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
-const apply = host.slice(host.indexOf("async function applyDyadTags("), host.indexOf("window.__chat ="));
+const apply = host.slice(host.indexOf("async function applyPrismTags("), host.indexOf("window.__chat ="));
 const rules = host.slice(host.indexOf("async function rulesAfterTurn("), host.indexOf("// Lean proves"));
 const proof = host.slice(host.indexOf("async function proveRules("), host.indexOf('// "approve"'));
-const hostModule = `import { sameRuleReservation } from "/rules-source.mjs";\nimport { retiredApplicationPaths, isStatefulModule } from "/application-shape.mjs";\nconst appShape = {SOURCE_PATH:"prism/App.lex.tex",isAppShape:isStatefulModule};\nimport { copyGenerationInput, assertCanonicalGeneration } from "/canonical-generation.mjs";\nimport * as lexlean from "/live/lexlean.mjs";\nexport function hostAdapters(env) { const { coreReady, dbReady, core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, prism, live, rulesOf, rulesSnapshotOf, saveRules, nextPhase, now, enc, put, refreshLive, forgetApplicationFrames } = env; ${apply}\n${rules}\n${proof}\nreturn { applyDyadTags, rulesAfterTurn, proveRules }; }`;
+const hostModule = `import { sameRuleReservation } from "/rules-source.mjs";\nimport { retiredApplicationPaths, isStatefulModule } from "/application-shape.mjs";\nconst appShape = {SOURCE_PATH:"prism/App.lex.tex",isAppShape:isStatefulModule};\nimport { copyGenerationInput, assertCanonicalGeneration } from "/canonical-generation.mjs";\nimport * as lexlean from "/live/lexlean.mjs";\nexport function hostAdapters(env) { const { coreReady, dbReady, core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, prism, live, rulesOf, rulesSnapshotOf, saveRules, nextPhase, now, enc, put, refreshLive, forgetApplicationFrames } = env; ${apply}\n${rules}\n${proof}\nreturn { applyPrismTags, rulesAfterTurn, proveRules }; }`;
 const sources = new Map([
   ["/browser-chat-modes.mjs", fs.readFileSync(new URL("../shell/browser-chat-modes.mjs", import.meta.url))],
   ["/chat-mode-catalog.mjs", fs.readFileSync(new URL("../shell/chat-mode-catalog.mjs", import.meta.url))],
@@ -47,7 +47,7 @@ try {
     const firstBody = await get("objects", applied.oid); check(kappa(firstBody) === applied.oid, "snapshot identity wrong");
     const second = await seed(), source = await captureProjectSource(db, second.app.id);
     const adapters = hostAdapters({ forgetApplicationFrames(){}, coreReady: Promise.resolve(), dbReady: Promise.resolve(db), core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, live: { logicOf: spec => spec, kappaOfValue: spec => JSON.stringify(spec) }, rulesOf: async () => null, rulesSnapshotOf: async () => ({ state: null, expected: undefined }), saveRules: async () => true, nextPhase: async () => "checked", now: () => new Date().toISOString(), enc: new TextEncoder(), prism: { parseSpecTag: () => ({ spec: { example: true } }), checkSpec: () => ({ ok: true, module: "checked module", spec: {}, issues: [], vectors: 1 }), screenSource: () => "screen", card: () => "checked" } });
-    const empty = await adapters.applyDyadTags(second.app.id, tags({}), { source });
+    const empty = await adapters.applyPrismTags(second.app.id, tags({}), { source });
     await put("files", `${second.app.id}:b`, "intervening"); const beforeStale = await snapshot();
     let refused = false; try { await adapters.rulesAfterTurn(second.app.id, "spec", [], { source: empty.source }); } catch (e) { refused = e.code === "projectEditConflict"; }
     check(refused && await snapshot() === beforeStale, "no-op batch lost source binding before rules");

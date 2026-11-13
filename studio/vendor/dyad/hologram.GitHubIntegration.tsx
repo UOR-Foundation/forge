@@ -1,7 +1,7 @@
-// dyad-prism (ours, not Dyad's; see VENDORED.md): Settings → Integrations → GitHub, replacing Dyad's at build
+// dyad-prism (ours, not upstream's; see VENDORED.md): Settings → Integrations → GitHub, replacing upstream's at build
 // time through `resolveId` in vite.shell.config.mts. Publishing builds an app with the Prism SDK on GitHub
 // Actions, in a repository made from UOR-Foundation/template under the visitor's account (shell/host.js).
-// Dyad connects GitHub with the device flow, which GitHub serves to apps and not to web pages, so here the
+// Upstream connects GitHub with the device flow, which GitHub serves to apps and not to web pages, so here the
 // visitor pastes a token. It is checked against GitHub once, kept in this browser's settings like a model key,
 // and sent only to api.github.com.
 import { useState } from "react";

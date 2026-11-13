@@ -49,24 +49,24 @@ try {
         patch({renames:[{from:"src/App.tsx",to:path}]})
       ]) {
         const before = await snapshot(); let refused = false;
-        try { await window.__chat.applyDyadTags(appId,candidate,{allowCanonical:true,rulesUpdate:{state:{phase:"proved"}}}); }
+        try { await window.__chat.applyPrismTags(appId,candidate,{allowCanonical:true,rulesUpdate:{state:{phase:"proved"}}}); }
         catch(error) { refused = error.code === "canonicalGenerationRefused"; }
         check(refused && before === await snapshot(), "owned batch changed storage: " + path); refusals++;
       }
     }
     const before = (await versions()).length;
-    await window.__chat.applyDyadTags(appId,patch({writes:[{path:"notes.txt",content:"ordinary"}]}));
+    await window.__chat.applyPrismTags(appId,patch({writes:[{path:"notes.txt",content:"ordinary"}]}));
     check(await get("notes.txt") === "ordinary" && (await versions()).length === before + 1, "ordinary generation failed");
     const cancel = new AbortController(); cancel.abort(); let cancelled = false;
     const saved = await snapshot();
-    try { await window.__chat.applyDyadTags(appId,patch({writes:[{path:"notes.txt",content:"cancelled"}]}),{signal:cancel.signal}); }
+    try { await window.__chat.applyPrismTags(appId,patch({writes:[{path:"notes.txt",content:"cancelled"}]}),{signal:cancel.signal}); }
     catch(error) { cancelled = error.code === "generationCancelled"; }
     check(cancelled && saved === await snapshot(), "cancelled generation changed storage");
     const changed = {...fixture,title:"Canonical command remains available"};
     await call("edit-app-file",{appId,filePath:"prism/spec.json",content:JSON.stringify(changed)});
     check(JSON.parse(await get("prism/spec.json")).title === changed.title, "canonical command refused");
     const plain = await call("create-app",{name:"ordinary-generation",initialChatMode:"build"});
-    await window.__chat.applyDyadTags(plain.app.id,patch({writes:[{path:"src/lib/prism.ts",content:"export const ordinary = true;"}]}));
+    await window.__chat.applyPrismTags(plain.app.id,patch({writes:[{path:"src/lib/prism.ts",content:"export const ordinary = true;"}]}));
     check(await window.__host.get("files",plain.app.id+":src/lib/prism.ts") === "export const ordinary = true;", "nonmodel generation refused");
     return {actualHost:true,refusals,ordinaryAtomic:true,cancelled:true,canonicalEdit:true,nonmodel:true};
   }, fixture);

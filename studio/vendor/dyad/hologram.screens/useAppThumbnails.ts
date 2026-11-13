@@ -82,7 +82,7 @@ function useCards(appIds: number[]): Map<number, AppCard> {
   return useMemo(() => new Map(isError ? [] : (data ?? [])), [data, isError]);
 }
 
-/** Dyad's signature: `Map<appId, thumbnailUrl>`, for every screen that only shows the picture. */
+/** Upstream's signature: `Map<appId, thumbnailUrl>`, for every screen that only shows the picture. */
 export function useAppThumbnails(appIds: number[]): Map<number, string | null> {
   const cards = useCards(appIds);
   return useMemo(

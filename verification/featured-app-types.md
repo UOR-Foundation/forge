@@ -33,9 +33,9 @@ ambient wildcard module or second handwritten card interface was introduced.
 ## Qualified checks, 2026-11-13
 
 - The original full projected typecheck was red as shown above. After repair it
-  exited 0: no errors added to Dyad's own 28 diagnostics, and every UI call
+  exited 0: no errors added to upstream's own 28 diagnostics, and every UI call
   rewritten for Radix. This is the existing relative typecheck, not a claim that
-  upstream Dyad has no diagnostics.
+  upstream has no diagnostics.
 - The new suite first failed because its generator was absent. Its CI wiring
   controls then failed with the five declaration controls green, because the
   mandatory steps and production freshness call had not yet been added.
