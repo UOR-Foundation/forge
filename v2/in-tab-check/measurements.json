@@ -1,0 +1,42 @@
+{
+ "date": "2026-11-12",
+ "page": "bench.html, served by serve.mjs on localhost; 12 runs of each measure",
+ "browser": "Claude desktop in-app browser, Chrome 156.0.8078.75, Windows 11, 24 logical cores",
+ "conditions": "one desktop machine that was also compiling Rust for other sessions throughout; times are therefore pessimistic and noisy",
+ "unit": "milliseconds unless named",
+ "full": {
+  "checker": "sha256:c02e19eaa7fc399b423851f82bfe0f041472f88308cb248739d5397e88e3cf37",
+  "bytes": { "raw": 47353315, "gzip": 7108691, "brotli": 4835339 },
+  "firstVisit": { "fetchCheckerLocalhost": 401, "toReady": 1708, "hash": 107, "compile": 30, "instantiate": 12, "version": 27, "warm": 948, "firstCheck": 237 },
+  "laterStarts": { "n": 11, "toReady": { "median": 942.3, "worst": 1127.7 }, "readFromCacheApi": { "median": 31.7, "worst": 43.8 }, "hash": { "median": 45.3, "worst": 58.1 }, "compile": { "median": 30, "worst": 40.6 }, "instantiate": { "median": 9.4, "worst": 14.1 }, "warm": { "median": 806.4, "worst": 947.2 }, "firstCheck": { "median": 67.1, "worst": 84.3 } },
+  "editedPasses": { "pageRoundTrip": { "median": 46.4, "worst": 55.9 }, "check": { "median": 44.3, "worst": 53.1 }, "data": { "median": 1.1, "worst": 2.2 }, "key": { "median": 0.2, "worst": 0.3 } },
+  "editedRefusedSyntax": { "pageRoundTrip": { "median": 31.4, "worst": 37.8 } },
+  "editedRefusedType": { "pageRoundTrip": { "median": 44.5, "worst": 88.3 } },
+  "editedTwoModules": { "pageRoundTrip": { "median": 56.2, "worst": 91.9 } },
+  "unchangedAgain": { "median": 0.6, "worst": 0.7 },
+  "checksPerSecondOneWorker": 23,
+  "linearMemoryMB": 214
+ },
+ "lean": {
+  "checker": "sha256:11b9a6caf12347ddcdfec1107d9ca362d411eb092112b9bb71f8028c84541798",
+  "bytes": { "raw": 15146666, "gzip": 3499274, "brotli": 2382926 },
+  "firstVisit": { "fetchCheckerLocalhost": 893, "toReady": 1211, "hash": 39, "compile": 29, "instantiate": 22, "version": 43, "warm": 0.6, "firstCheck": 335 },
+  "laterStarts": { "n": 11, "toReady": { "median": 91.1, "worst": 117 }, "readFromCacheApi": { "median": 17, "worst": 22.8 }, "hash": { "median": 17.7, "worst": 30.4 }, "compile": { "median": 16.5, "worst": 19.3 }, "instantiate": { "median": 6.1, "worst": 9.5 }, "warm": { "median": 0.1, "worst": 0.3 }, "firstCheck": { "median": 110, "worst": 172 } },
+  "editedPasses": { "pageRoundTrip": { "median": 50.4, "worst": 61.7 }, "check": { "median": 47.6, "worst": 58.7 }, "data": { "median": 1.5, "worst": 2.4 }, "key": { "median": 0.2, "worst": 0.2 } },
+  "editedRefusedSyntax": { "pageRoundTrip": { "median": 36.7, "worst": 39.2 } },
+  "editedRefusedType": { "pageRoundTrip": { "median": 36.6, "worst": 38.1 } },
+  "editedTwoModules": { "pageRoundTrip": { "median": 64.5, "worst": 95.3 } },
+  "unchangedAgain": { "median": 0.7, "worst": 1.6 },
+  "checksPerSecondOneWorker": 21,
+  "linearMemoryMB": 90,
+  "parallelWorkers": { "note": "one run of 3 s per row; earlier rows' workers were left idle, not stopped", "1": { "perSecond": 13, "median": 72, "worst": 127 }, "4": { "perSecond": 82, "median": 41, "worst": 304 }, "8": { "perSecond": 109, "median": 62, "worst": 264 }, "16": { "perSecond": 273, "median": 50, "worst": 1155 } }
+ },
+ "both": {
+  "pack": { "raw": 253612, "gzip": 20299 },
+  "scripts": { "client.mjs": { "raw": 3183, "gzip": 1364 }, "worker.mjs": { "raw": 1494, "gzip": 693 }, "checker.mjs": { "raw": 10399, "gzip": 3767 }, "wasi.mjs": { "raw": 12969, "gzip": 4243 } },
+  "workerNetwork": { "crossOrigin": "refused: Failed to fetch", "sameOrigin": "refused: Failed to fetch" },
+  "memoryOfTheWholeAgent": "not read: performance.measureUserAgentSpecificMemory is not available in this browser",
+  "scopeAllInNode": "a passing check of the whole library every time took 126 to 316 ms against 35 to 57 ms for the author's modules and their imports"
+ },
+ "hostedRouteForComparison": { "source": "v2/hosted-check/REPORT.md", "pressToVerdict": { "median": "563 to 988", "worst": "1121 to 1718" } }
+}
