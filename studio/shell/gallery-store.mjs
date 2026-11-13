@@ -6,7 +6,7 @@ export const galleryFailure=code=>Object.assign(new Error(CODES.includes(code)?c
 const fail=code=>{throw galleryFailure(code);};
 const plain=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const exact=(v,keys)=>plain(v)&&Object.keys(v).sort().join('|')===[...keys].sort().join('|');
-const reference=v=>typeof v==='string'&&/^blake3:[0-9a-f]{64}$/.test(v);
+const reference=v=>typeof v==='string'&&/^sha256:[0-9a-f]{64}$/.test(v);
 const validSource=s=>exact(s,['name','reference','files','dependencies'])&&typeof s.name==='string'&&s.name.length>0&&reference(s.reference)&&Array.isArray(s.files)&&s.files.every((row,i)=>Array.isArray(row)&&row.length===2&&row.every(v=>typeof v==='string')&&row[0].length>0&&(i===0||s.files[i-1][0]<row[0]))&&Array.isArray(s.dependencies)&&s.dependencies.length<=128&&s.dependencies.every(v=>typeof v==='string'&&v.length<=256);
 const picture=v=>v===null||(v instanceof Blob&&v.type==='image/webp'&&v.size>0&&v.size<=MAX_PICTURE);
 const card=v=>v===null||(exact(v,['description','tag'])&&typeof v.description==='string'&&typeof v.tag==='string'&&checkCard(v).length===0);

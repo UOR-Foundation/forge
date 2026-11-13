@@ -3,7 +3,7 @@ import {test} from 'node:test';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {captureGalleryCommand,publishGallery,readGallery} from '../shell/gallery-store.mjs';
-const source=()=>({name:'Gallery',reference:'blake3:'+'a'.repeat(64),files:[['src/a','one']],dependencies:[]});
+const source=()=>({name:'Gallery',reference:'sha256:'+'a'.repeat(64),files:[['src/a','one']],dependencies:[]});
 const card={description:'Make images smaller without losing quality by comparing formats side by side as you go.',tag:'Creative'};
 test('gallery commands detach source files dependencies and card before readiness',()=>{
  const s=source(),p={card:{...card}},c=captureGalleryCommand(1,s,p);s.files[0][1]='changed';s.dependencies.push('other');p.card.description='changed';assert.equal(c.source.files[0][1],'one');assert.deepEqual(c.source.dependencies,[]);assert.deepEqual(c.patch.card,card);

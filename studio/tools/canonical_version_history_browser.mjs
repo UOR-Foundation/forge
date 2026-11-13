@@ -34,7 +34,7 @@ try {
     await call('edit-app-file',{appId,filePath:'history-note.txt',content:'First version 😀'});
     await call('edit-app-file',{appId,filePath:'history-note.txt',content:'Second version\r\n'});
     const versions=await call('list-versions',{appId});check(versions.length>=3&&versions.every(v=>/^[0-9a-f]{64}$/.test(v.oid)),'renderer aliases missing');const versionId=versions[0].oid;
-    const canonical=await window.__host.get('refs',`${appId}:main`);check(canonical==='blake3:'+versionId,'canonical identity changed');
+    const canonical=await window.__host.get('refs',`${appId}:main`);check(canonical==='sha256:'+versionId,'canonical identity changed');
     await Promise.all([call('set-version-favorite',{appId,versionId,isFavorite:true}),call('set-version-note',{appId,versionId,note:'A retained note 😀'})]);
     const updated=(await call('list-versions',{appId}))[0];check(updated.isFavorite&&updated.note==='A retained note 😀','concurrent metadata lost');
     const delta=await call('get-version-changes',{appId,versionId});const file=delta.find(x=>x.path==='history-note.txt');check(file?.type==='modified'&&file.oldContent==='First version 😀'&&file.newContent==='Second version\r\n','verified diff differs');

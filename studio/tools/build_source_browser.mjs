@@ -9,7 +9,7 @@ const sources = new Map([
   ["/chat-contracts.mjs", fs.readFileSync(new URL("../shell/chat-contracts.mjs", import.meta.url))],
 
   ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
-  ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
+  ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/address.mjs", fs.readFileSync(new URL("../shell/address.mjs", import.meta.url))], ["/prism-code/src/sha256.mjs", fs.readFileSync(new URL("../shell/prism-code/src/sha256.mjs", import.meta.url))]]);
 for (const name of ["build-source", "project-lifecycle", "project-edit", "project-creation", "generation-patch", "snapshot-restore", "storage-request"]) sources.set(`/${name}.mjs`, fs.readFileSync(new URL(`../shell/${name}.mjs`, import.meta.url)));
 for (const name of ["application-shape.mjs", "hosted-source-permission.mjs", "approval-queue.mjs", "live/app.mjs", "live/notation.mjs", "live/v2/interp.mjs", "live/v2/render.mjs", "live/v2/check.mjs", "canonical-build.mjs", "prism.js", "prism/spec.mjs", "prism/spec-file.mjs", "prism/render.mjs", "prism/proof-reuse.mjs", "prism/template.mjs", "prism/sha256.mjs", "live/lexlean.mjs", "live/obligations.mjs", "live/table.mjs", "prism-code/src/blake3.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
 const server = http.createServer((req, res) => {
@@ -26,7 +26,7 @@ try {
     const { captureBuildSource, assertBuildSourceCurrent } = await import("/build-source.mjs");
     const { prepareNewProject, createStoredProject } = await import("/project-creation.mjs");
     const { editStoredProject } = await import("/project-edit.mjs"); const { deleteStoredProject } = await import("/project-lifecycle.mjs");
-    const { storageRequest } = await import("/storage-request.mjs"); const { kappa } = await import("/blake3.mjs");
+    const { storageRequest } = await import("/storage-request.mjs"); const { kappa } = await import("/address.mjs");
     const check = (ok, why) => { if (!ok) throw Error(why); };
     const stores = ["apps", "chats", "files", "objects", "refs", "versions"];
     const db = await new Promise((resolve, reject) => { const q = indexedDB.open("build-source", 1); q.onupgradeneeded = () => stores.forEach(s => q.result.createObjectStore(s)); q.onsuccess = () => resolve(q.result); q.onerror = () => reject(q.error); });

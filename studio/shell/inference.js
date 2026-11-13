@@ -2,16 +2,18 @@ import {readUserSettings,replaceUserSettings,changeUserSettings} from "./setting
 import {deviceProviderCredential,deviceInferenceRoute} from './private-provider-credentials.mjs';
 import { authorizeInference } from "./inference-consent.mjs";
 import { cloudCompletion } from "./inference-effects.mjs";
+import { kappa as kappaOf } from "./address.mjs";
+import { migrateDatabase, MIGRATION_KEY } from "./kappa-migration.mjs";
 // Inference on the page, shared by the landing page (shell.js) and the builder's host (host.js).
 // Adapters only: the rules are in core.wasm, generated from the Lean verified model (the route table,
 // the preimages, the OpenAI wire, the OpenRouter request); the engine is Hologram Q's snapshot under
-// q/; addresses are BLAKE3 from the holospaces wasm; seals live in the device store. No server is
+// q/; addresses are κ (sha256, address.mjs); seals live in the device store. No server is
 // contacted except Hugging Face, once, for the model's blocks, and OpenRouter with the visitor's own
 // key on the paid route.
 
 const BASE = new URL("./", import.meta.url);
 const enc = new TextEncoder();
-export const short = (k) => (k ? String(k).replace(/^blake3:/, "").replace("did:holo:sha256:", "").slice(0, 12) + "…" : "");
+export const short = (k) => (k ? String(k).replace(/^sha256:/, "").replace("did:holo:sha256:", "").slice(0, 12) + "…" : "");
 
 // ---- the verified core, through its JSON ABI
 let core = null, coreLoading = null;
@@ -42,33 +44,38 @@ export function coreReady() {
 export let VIEW = null;
 export async function viewReady() { if (VIEW) return VIEW; const inline = document.getElementById("view"); VIEW = inline ? JSON.parse(inline.textContent) : (await coreReady()).run({ op: "view" }); return VIEW; }
 
-// ---- BLAKE3 addresses from the holospaces wasm (the same κ every daemon computes)
-let kappaFn = null;
-export async function kappaReady() {
-  if (kappaFn) return kappaFn;
-  const mod = await import(new URL("q/pkg/holospaces_web.js", BASE).href);
-  if (typeof mod.default === "function") { try { await mod.default(); } catch (e) {} }
-  kappaFn = (bytes) => String(mod.kappa(bytes));
-  return kappaFn;
-}
-export async function kappa(bytes) { return (await kappaReady())(bytes); }
+// ---- κ: every address Foundry mints is the UORC object address, sha256:<hex> (address.mjs)
+export async function kappaReady() { return kappaOf; }
+export async function kappa(bytes) { return kappaOf(bytes); }
 
 // ---- the device store: one database for the builder and the seals. Seals are rows keyed by κ,
 // indexed by kind and by memo prompt κ; the builder's own stores sit beside them.
-export const DB = "hologram-forge", DB_VERSION = 2;
+export const DB = "hologram-forge", DB_VERSION = 3;
 export const STORES = ["settings", "apps", "chats", "files", "objects", "refs", "versions", "audit"];
-let dbHandle = null;
+let dbHandle = null, dbOpening = null;
 export function db() {
   if (dbHandle) return Promise.resolve(dbHandle);
-  return new Promise((resolve, reject) => {
+  return (dbOpening ??= new Promise((resolve, reject) => {
     const req = indexedDB.open(DB, DB_VERSION);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const d = req.result;
       for (const s of STORES) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s);
       if (!d.objectStoreNames.contains("seals")) { const s = d.createObjectStore("seals", { keyPath: "id" }); s.createIndex("kind", "kind"); s.createIndex("promptKappa", "promptKappa"); }
+      // Version 2 addressed by BLAKE3; the move to κ runs once the core can spell snapshots.
+      if (event.oldVersion > 0 && event.oldVersion < 3) req.transaction.objectStore("refs").put(true, MIGRATION_KEY);
     };
-    req.onsuccess = () => resolve((dbHandle = req.result)); req.onerror = () => reject(req.error);
-  });
+    req.onsuccess = () => {
+      const d = req.result;
+      const pending = d.transaction("refs").objectStore("refs").get(MIGRATION_KEY);
+      pending.onerror = () => reject(pending.error);
+      pending.onsuccess = () => {
+        if (pending.result !== true) { resolve((dbHandle = d)); return; }
+        coreReady().then((core) => migrateDatabase(d, { derive: kappaOf, spell: (project, parent) => core.run({ op: "preimage", project, parent }).bytes }))
+          .then(() => resolve((dbHandle = d)), reject);
+      };
+    };
+    req.onerror = () => reject(req.error);
+  }));
 }
 export async function sealPut(kind, value, extra = {}) {
   const bytes = enc.encode(typeof value === "string" ? value : JSON.stringify(value));
