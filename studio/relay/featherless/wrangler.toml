@@ -10,7 +10,7 @@ preview_urls = false
 # The pages that may use the relay, exactly as a browser sends Origin.
 ALLOWED_ORIGINS = "https://uor-foundation.github.io"
 # The models Forge offers through the site's key (FEATHERLESS_MODELS in studio/shell/host.js).
-MODELS = "zai-org/GLM-5.3-Flash,deepseek-ai/DeepSeek-V3.2"
+MODELS = "zai-org/GLM-5.3-Flash,deepseek-ai/DeepSeek-V3.2,Qwen/Qwen3-30B-A3B-Instruct-2507"
 # The most a single answer may write (Forge asks for 32,768: GLM reasons before it answers).
 MAX_TOKENS = "32768"
 

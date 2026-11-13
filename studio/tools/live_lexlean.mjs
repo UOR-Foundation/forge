@@ -213,7 +213,37 @@ try {
 claim("fast turn: the spec's schema admits a spec and nothing else, within the relay's bound", fastTurn.schema === true);
 claim("fast turn: one bare JSON object is read as the spec, whole or still streaming, and prose is left alone", fastTurn.bare === true);
 claim("fast turn: a spec written without examples gets Forge's own, the same every time, and they pass", fastTurn.examples === true && fastTurn.prompt === true);
-claim("fast turn: a model that does not reason is offered beside the default, and the relay's list names both", (() => { const toml = fs.readFileSync(path.join(root, "relay/featherless/wrangler.toml"), "utf8"); const offered = [...hostSource.matchAll(/apiName: "([^"]+)", displayName: "[^"]+", description: "[^"]+ on Featherless/g)].map((m) => m[1]); const listed = (/^MODELS = "([^"]+)"$/m.exec(toml) || ["", ""])[1].split(","); return offered.length === 2 && offered[0] === "zai-org/GLM-5.3-Flash" && offered.includes("deepseek-ai/DeepSeek-V3.2") && JSON.stringify(offered) === JSON.stringify(listed) && /^FORWARD_RESPONSE_FORMAT = "1"$/m.test(toml); })());
+// What Qwen3 30B wrote for the shipping sentence on 2026-11-13, through the site relay: `invalid` listed and
+// never answered, two guarantees about weights that cannot be asked, and one its own rules break.
+let draftRepair = {};
+try {
+  const qwen = { title: "Shipping Tier", purpose: "Decide the shipping tier for an order from its weight in kilograms and its destination.",
+    fields: [{ name: "weight", kind: "number", min: 0, max: 100 }, { name: "destination", kind: "choice", values: ["domestic", "europe", "worldwide"] }],
+    outcomes: ["standard", "express", "premium", "invalid"],
+    rules: [{ when: [{ field: "weight", op: ">=", value: 10 }], then: "premium" }, { when: [{ field: "destination", op: "is", value: "worldwide" }], then: "express" }, { when: [{ field: "destination", op: "is", value: "europe" }, { field: "weight", op: ">", value: 5 }], then: "express" }, { when: [{ field: "destination", op: "is", value: "domestic" }, { field: "weight", op: ">", value: 2 }], then: "express" }],
+    otherwise: "standard",
+    properties: [{ kind: "never", when: [{ field: "weight", op: "<", value: 0 }], then: "standard" }, { kind: "never", when: [{ field: "weight", op: ">", value: 100 }], then: "standard" }, { kind: "always", when: [{ field: "weight", op: "=", value: 0 }], then: "standard" }] };
+  const copy = (v) => JSON.parse(JSON.stringify(v));
+  const first = prism.checkSpec(copy(qwen)), ask = prism.specRepairPrompt(first.issues);
+  const mended = copy(qwen); mended.properties[2] = { kind: "always", when: [{ field: "weight", op: "=", value: 0 }, { field: "destination", op: "is", value: "domestic" }], then: "standard" };
+  const second = prism.checkSpec(copy(mended)), third = prism.checkSpec(copy(second.authored));
+  const used = copy(qwen); used.rules[0].then = "invalid";
+  const { readSpecFile: read } = await import(new URL("../shell/prism/spec-file.mjs", import.meta.url));
+  draftRepair = {
+    cleaned: first.notes.some((n) => /Dropped `invalid` from the answers/.test(n)) && first.notes.some((n) => /Dropped 2 guarantees about requests that cannot happen/.test(n)),
+    refused: first.ok === false && first.issues.length === 1 && /always standard when weight equals 0/.test(first.issues[0]) && first.issues[0].includes("`0 worldwide` answers express"),
+    asked: ask.includes(first.issues[0]) && /Write the whole spec again with that fixed and nothing else changed/.test(ask),
+    accepted: second.ok === true && !second.authored.outcomes.includes("invalid") && second.authored.properties.length === 1 && second.authored.rules.length === 4,
+    sealed: read(second.authored).specAddress === read(second.spec).specAddress && third.ok === true && third.notes.length === 0 && JSON.stringify(third.authored) === JSON.stringify(second.authored),
+    answeredInvalid: prism.checkSpec(used).ok === false,
+    host: hostSource.includes("if (accepted && accepted.ok && accepted.authored) tag.spec = accepted.authored;") && hostSource.includes("const repairedSpec = async (genBody) => {") && hostSource.includes("for (let round = 0; round < 2; round++) {") && (hostSource.match(/await repairedSpec\(/g) || []).length === 2 && hostSource.includes("{ role: \"user\", content: prism.specRepairPrompt(verdict.issues) }] }, { format: prism.SPEC_FORMAT });"),
+  };
+} catch (e) { draftRepair = { error: String(e) }; }
+claim("draft: an unused `invalid` and guarantees about requests that cannot happen are dropped and named", draftRepair.cleaned === true && draftRepair.answeredInvalid === true);
+claim("draft: a guarantee the rules break is refused in its own words, with the request that shows it", draftRepair.refused === true && draftRepair.asked === true);
+claim("draft: the mended spec is accepted, stored as accepted, and its address is the seal's", draftRepair.accepted === true && draftRepair.sealed === true);
+claim("draft: a refused spec gets up to two repair turns, held to the schema, and what is stored is what was accepted", draftRepair.host === true);
+claim("fast turn: a model that does not reason is offered beside the default, and the relay's list names both", (() => { const toml = fs.readFileSync(path.join(root, "relay/featherless/wrangler.toml"), "utf8"); const offered = [...hostSource.matchAll(/apiName: "([^"]+)", displayName: "[^"]+", description: "[^"]+ on Featherless/g)].map((m) => m[1]); const listed = (/^MODELS = "([^"]+)"$/m.exec(toml) || ["", ""])[1].split(","); return offered.length === 3 && offered[0] === "zai-org/GLM-5.3-Flash" && offered.includes("deepseek-ai/DeepSeek-V3.2") && offered.includes("Qwen/Qwen3-30B-A3B-Instruct-2507") && JSON.stringify(offered) === JSON.stringify(listed) && /^FORWARD_RESPONSE_FORMAT = "1"$/m.test(toml); })());
 claim("fast turn: the schema rides beside the core's request, never in it, and thinking is never asked off", fastTurn.beside === true);
 claim("boundary: LexLean a model writes is dropped before the turn is applied, closed or open, and no model is told a second notation", prism.wroteLexLean("a <prism-lexlean>x") && !prism.wroteLexLean("<dyad-spec>{}</dyad-spec>") && prism.withoutLexLean("a<prism-lexlean>m</prism-lexlean>b<prism-lexlean>open") === "ab" && !SPEC_RULES.includes("app notation") && !SPEC_RULES.includes("<prism-lexlean>") && hostSource.includes("const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);") && hostSource.includes("appAfterTurn(appId, turn,") && !hostSource.includes("lexlean.partialFromTurn(full)"));
 const bare = source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");

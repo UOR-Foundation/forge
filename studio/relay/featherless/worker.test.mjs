@@ -75,7 +75,7 @@ test("a second offered model is forwarded, and one not offered is refused", () =
   const two = env({ MODELS: "zai-org/GLM-5.3-Flash,deepseek-ai/DeepSeek-V3.2" });
   assert.equal(shape(body({ model: "deepseek-ai/DeepSeek-V3.2" }), two).model, "deepseek-ai/DeepSeek-V3.2");
   assert.throws(() => shape(body({ model: "deepseek-ai/DeepSeek-V3.2" }), env()), /not offered/);
-  assert.throws(() => shape(body({ model: "Qwen/Qwen3-30B-A3B-Instruct-2507" }), two), /not offered/);
+  assert.throws(() => shape(body({ model: "google/gemma-4-31B-it" }), two), /not offered/);
 });
 
 test("the answer's length is capped and unknown fields are dropped", () => {
