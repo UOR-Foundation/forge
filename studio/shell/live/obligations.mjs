@@ -11,8 +11,8 @@
 const cache = new Map(); // key -> null (holds) | witness point
 export const cacheStats = () => ({ size: cache.size });
 
-// Keys are UOR content addresses: κ (sha256) of the obligation's canonical bytes, as everywhere in Foundry.
-import { kappa } from "../address.mjs";
+// Keys are UOR content addresses: BLAKE3 of the obligation's canonical bytes, as everywhere in Foundry.
+import { kappa } from "../prism-code/src/blake3.mjs";
 const enc = new TextEncoder();
 const kappaOfText = (s) => kappa(enc.encode(s));
 

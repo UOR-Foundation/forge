@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { commitPreparedProject } from "../shell/project-edit.mjs";
 import { applyStoredProjectPatch } from "../shell/generation-patch.mjs";
-const oid = "sha256:" + "a".repeat(64), nextOid = "sha256:" + "b".repeat(64);
+const oid = "blake3:" + "a".repeat(64), nextOid = "blake3:" + "b".repeat(64);
 const before = { phase: "proving", specKappa: oid, logicKappa: "same", proof: null };
 const source = { name: "app", reference: oid, files: [["prism/spec.json", "old"]], dependencies: [] };
 // Deterministic transaction scheduler, not a substitute for the real IndexedDB CI controls.

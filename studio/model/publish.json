@@ -2,11 +2,11 @@
  {
   "name": "attested and matching",
   "application": "scaffold",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Accept",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -17,16 +17,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "closure drift",
   "application": "scaffold",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "0000000000000000000000000000000000000000000000000000000000000000",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Refuse",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -37,16 +37,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "no attestation",
   "application": "scaffold",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": null,
-  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Refuse",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -57,16 +57,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "no attestation and drift",
   "application": "scaffold",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "0000000000000000000000000000000000000000000000000000000000000000",
   "attestation": null,
-  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Refuse",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -77,16 +77,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "quotes in the name",
   "application": "say \"hi\"",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"say \\\"hi\\\"\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"say \\\"hi\\\"\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Accept",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -97,16 +97,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "backslash in the name",
   "application": "a\\b",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"a\\\\b\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"a\\\\b\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Accept",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -117,16 +117,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "newline in the name",
   "application": "line\nbreak",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"line\\nbreak\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"line\\nbreak\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Accept",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -137,16 +137,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "tab in the name",
   "application": "tab\there",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"tab\\there\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"tab\\there\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Accept",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -157,16 +157,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "unicode name",
   "application": "émoji 🚀",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"émoji 🚀\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"émoji 🚀\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Accept",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -177,16 +177,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "empty name",
   "application": "",
-  "version": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "version": "blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
+  "preimage": "{\"application\":\"\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\"}",
   "decision": "Accept",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -197,7 +197,7 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "empty version",
@@ -217,16 +217,16 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  },
  {
   "name": "other version",
   "application": "scaffold",
-  "version": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+  "version": "blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
   "closure": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "built": "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13",
   "attestation": "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441",
-  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\"}",
+  "preimage": "{\"application\":\"scaffold\",\"attestation\":\"7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441\",\"closure\":\"79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13\",\"schema\":\"hologram-forge/published/1\",\"version\":\"blake3:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\"}",
   "decision": "Accept",
   "sourceManifest": "{\"files\":[{\"kind\":\"lexlean-build-manifest\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-coverage\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"lean4-prod-kernel-ir\",\"sha256\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\"},{\"kind\":\"model-document\",\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}],\"semantic_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"source_id\":\"f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877\",\"version\":4}",
   "sourceInputs": {
@@ -237,6 +237,6 @@
    "semanticId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877",
    "sourceId": "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
   },
-  "holoPath": "/holo/sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
+  "holoPath": "/holo/blake3:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1/"
  }
 ]

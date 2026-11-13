@@ -397,38 +397,18 @@ theorem{
 }
 
 definition{
-  name: sameInTab,
-  parameters: [e : Evidence, f : Evidence],
-  result: Bool,
-  body: ((((((project e hasBytes) =? (project f hasBytes)) && ((project e libraryPinned) =? (project f libraryPinned))) && (((project e libraryDerived) =? (project f libraryDerived)) && ((project e bundleNamed) =? (project f bundleNamed)))) && ((((project e bundleDerived) =? (project f bundleDerived)) && ((project e kernelPinned) =? (project f kernelPinned))) && (((project e kernelDerived) =? (project f kernelDerived)) && ((project e specStatement) =? (project f specStatement))))) && (((((project e checkedStatement) =? (project f checkedStatement)) && ((project e axiomsDeclared) =? (project f axiomsDeclared))) && (((project e axiomsObserved) =? (project f axiomsObserved)) && ((project e leanRan) =? (project f leanRan)))) && ((((project e leanAccepted) =? (project f leanAccepted)) && ((project e secondRan) =? (project f secondRan))) && ((project e secondAccepted) =? (project f secondAccepted)))))
-}
-
-definition{
-  name: breaksServerVerdict,
-  parameters: [e : Evidence, f : Evidence],
-  result: Bool,
-  body: ((sameInTab e f) && (not ((verdictCode e) =? (verdictCode f))))
+  name: withServerSaying,
+  parameters: [e : Evidence, said : Nat],
+  result: Evidence,
+  body: (record Evidence {hasBytes := (project e hasBytes), libraryPinned := (project e libraryPinned), libraryDerived := (project e libraryDerived), bundleNamed := (project e bundleNamed), bundleDerived := (project e bundleDerived), kernelPinned := (project e kernelPinned), kernelDerived := (project e kernelDerived), specStatement := (project e specStatement), checkedStatement := (project e checkedStatement), axiomsDeclared := (project e axiomsDeclared), axiomsObserved := (project e axiomsObserved), leanRan := (project e leanRan), leanAccepted := (project e leanAccepted), secondRan := (project e secondRan), secondAccepted := (project e secondAccepted), serverSays := said})
 }
 
 theorem{
   name: noVerdictFromTheServer,
-  parameters: [e : Evidence, f : Evidence],
-  statement: ((breaksServerVerdict e f) = false),
-  proof: linear_arithmetic{
-    definitions: [
-      allowedAxiomsBound,
-      axiomsAdmitted,
-      breaksServerVerdict,
-      codeKernelChecked,
-      codePending,
-      codeProved,
-      codeRefused,
-      mayRunKernel,
-      sameInTab,
-      verdictCode
-    ]
-  },
-  axioms: [Classical.choice, Quot.sound, propext]
+  parameters: [e : Evidence, said : Nat],
+  statement: ((verdictCode (withServerSaying e said)) = (verdictCode e)),
+  proof: reflexivity{},
+  axioms: []
 }
 
 definition{

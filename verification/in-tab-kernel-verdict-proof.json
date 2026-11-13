@@ -1,8 +1,8 @@
 {
- "draft": "prism-app/69ffc04941e54aa359f9157fcddce04dbe5868a4bdf0f95c221e23c25e4b0983",
+ "draft": "prism-app/454defb87f9bc268a0e76d3ce5ac622aff4dd8f75079a5e7d7a8182642f220b9",
  "body": {
-  "attestation_id": "11d8806e3a86e6c65ce3591adbbb3414c48c12175dabf03d05a37d59a576bd5e",
-  "build_id": "46b1c8a0be6365da8fb8f6638bc64a71b3336c578e3ce02bf277812bbd193219",
+  "attestation_id": "071f5c38f04bfaaa7c42b160df70f0316899c1b83386547af8746d97c2a183c3",
+  "build_id": "39fe63f9caa6b5b87e58bb0d3de96f43355a4168da413b39486caa84f037c5d8",
   "keyid": "533449506003ca0c42744122318b69f5be32d74a2781e72b5c62855cac53bb54",
   "modules": [
    "CompositionProtocol",
@@ -12,7 +12,7 @@
    "WorkOwnership",
    "WorkProtocol"
   ],
-  "semantic_id": "9af674ccb269115f1b5fddd271311265e6dd05d1c79b26aef83fb8c17d391da4",
-  "source_id": "370d6d8a0e1bbe2ab41d1804f66d0f315ce81da91d5a2181fc32706034ef7385"
+  "semantic_id": "86f852d15a07e3ae3ca41ffe0d3aa1230f71a72a7744b565efdd3c9505d9e103",
+  "source_id": "b17d50d8fc25ded26567207b066da9d4d08544c7b20d475935f907f33d08284e"
  }
 }

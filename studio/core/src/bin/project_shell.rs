@@ -130,7 +130,7 @@ fn openapi() -> String {
         created: "1757500000".to_owned(),
         model: "webgpu:BitNet".to_owned(),
         text: "Hello.".to_owned(),
-        fingerprint: "sha256:e41292a4…;sha256:9c0d…".to_owned(),
+        fingerprint: "blake3:e41292a4…;blake3:9c0d…".to_owned(),
         receipt: "did:holo:sha256:…".to_owned(),
     };
     let parse = |bytes: String| serde_json::from_str::<serde_json::Value>(&bytes).expect("encoder emits JSON");
@@ -316,7 +316,7 @@ import {{ install, stored, installed }} from "./holo.js";
 import {{ coreReady }} from "./inference.js";
 const V = JSON.parse(document.getElementById("view").textContent);
 const status = document.getElementById("status"), list = document.getElementById("apps");
-const short = (k) => k.replace(/^sha256:/, "").slice(0, 12) + "…";
+const short = (k) => k.replace(/^blake3:/, "").slice(0, 12) + "…";
 const wanted = (location.pathname.match(/\/holo\/([^/]+)\//) || [])[1] || null;
 async function show() {{
   const rows = await installed();

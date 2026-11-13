@@ -4,7 +4,7 @@ import {invokeHost} from "../shell/host-boundary.mjs";
 import {test} from "node:test";
 import {copyEventCommand,prepareEventJournal,stageEventDelivery,acknowledgeEventDelivery} from "../shell/event-delivery.mjs";
 const input=JSON.parse(fs.readFileSync(new URL("../../verification/event-wire-vectors.json",import.meta.url))).vectors[0].input;
-const source="sha256:"+"a".repeat(64);
+const source="blake3:"+"a".repeat(64);
 const guest={dispatch:async()=>new TextEncoder().encode("ok 03000000")};
 const configured=async()=> (await prepareEventJournal(input,source,null,guest)).state;
 const code=c=>e=>e.code===c;
@@ -20,7 +20,7 @@ test("delivery uses stored context and commits only guest-admitted next sequence
 });
 test("source changes reconfiguration pending work and queue bounds refuse",async()=>{
  const state=await configured(),queued=(await stageEventDelivery(state,input.envelope,source,guest)).state;
- await assert.rejects(stageEventDelivery(state,input.envelope,"sha256:"+"b".repeat(64),guest),code("eventDeliverySourceChanged"));
+ await assert.rejects(stageEventDelivery(state,input.envelope,"blake3:"+"b".repeat(64),guest),code("eventDeliverySourceChanged"));
  await assert.rejects(prepareEventJournal({...input,generation:4},source,queued,guest),code("eventDeliveryPending"));
  await assert.rejects(prepareEventJournal(input,source,state,guest),code("eventDeliveryConflict"));
  await assert.rejects(stageEventDelivery({...state,pending:Array(256).fill(input.envelope)},input.envelope,source,guest),code("eventDeliveryLimitExceeded"));

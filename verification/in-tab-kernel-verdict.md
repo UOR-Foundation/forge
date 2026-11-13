@@ -2,7 +2,7 @@
 
 Authority: `InTabKernel.verdictCode`, `InTabKernel.wordOf`, `InTabKernelProtocol.dispatchVerdict` and `InTabKernelProtocol.verdictWireBoundary`.
 
-A verdict is decided from what the tab derived and what its own kernels answered. The request carries the pinned and the derived address of the library, of the bundle and of the kernel, the spec statement's and the checked statement's address, the declared and the observed axiom set, and four flags: Lean's kernel ran, it accepted, the second kernel ran, it accepted. The guest compares each pair of addresses; the caller cannot state that they agree. `proved` needs Lean's kernel to have run in the tab and accepted. Without it, an accepting second kernel reads `kernel-checked`. Kernels that disagree refuse. No field carries what a server said, and `InTabKernel.noVerdictFromTheServer` proves the verdict does not depend on one.
+A verdict is decided from what the tab derived and what its own kernels answered. The request carries the pinned and the derived address of the library, of the bundle and of the kernel, the spec statement's and the checked statement's address, the declared and the observed axiom set, and four flags: Lean's kernel ran, it accepted, the second kernel ran, it accepted. The guest compares each pair of addresses; the caller cannot state that they agree. `proved` needs Lean's kernel to have run in the tab and accepted. Without it, an accepting second kernel reads `kernel-checked`. Kernels that disagree refuse. No field carries what a server said, and `InTabKernel.noVerdictFromTheServer` proves that changing it alone cannot change the verdict.
 
 The protocol has exactly 72 request words and three response words, in bounded lowercase little-endian hexadecimal. The JavaScript codec (`studio/shell/in-tab-verdict-codec.mjs`) writes requests and reads replies; it implements no rule of the model. `studio/tools/in_tab_verdict_author.mjs` writes the protocol module, the corpus and the kernel's three references to them, and `--check` refuses drift.
 
@@ -10,15 +10,19 @@ The protocol has exactly 72 request words and three response words, in bounded l
 
 The FA-86 ID, scenario and failing test preceded the implementation (`just new-capability`; the test panicked "FA-86 is registered and not built").
 
-Lean proved the model and the protocol on the hosted verifier, profile `prism-app`: six modules, attestation `11d8806e3a86e6c65ce3591adbbb3414c48c12175dabf03d05a37d59a576bd5e` (`in-tab-kernel-verdict-proof.json`). That covers the model's 15 theorems and nine wire theorems, each a corpus vector Lean evaluates. The hosted verifier is a diagnostic; it does not replace the locked SDK.
+Lean proved the model and the protocol on the hosted verifier, profile `prism-app`: six modules, attestation `071f5c38f04bfaaa7c42b160df70f0316899c1b83386547af8746d97c2a183c3` (`in-tab-kernel-verdict-proof.json`). That covers the model's 15 theorems and nine wire theorems, each a corpus vector Lean evaluates. The hosted verifier is a diagnostic; it does not replace the locked SDK.
 
 In the locked SDK image, `lexlean fmt --check --all` and `lexlean lock --check` pass on all 24 modules.
 
-The corpus has 19 vectors: 16 typed and three raw. The guest carries six of them as acceptance vectors, one per answer; a request is 584 bytes, and with all 19 embedded the SDK's Lean stage ran past its limit in CI (`PP5007: application-lean timed out`, run 43501078726). The six-test Node suite passes, the 144-test Rust conformance suite passes, and `check-model` and `cargo fmt --check` pass. On Linux the 636-test Studio suite passes but for `home_card_keyboard`, whose `happy-dom` dependency is not installed here.
+The corpus has 19 vectors: 16 typed and three raw. The guest carries six of them as acceptance vectors, one per answer; a request is 584 bytes. The six-test Node suite passes, the 150-test Rust conformance suite passes, and `check-model` and `cargo fmt --check` pass. On Linux the 636-test Studio suite passes but for `home_card_keyboard`, whose `happy-dom` dependency is not installed here.
 
 Seven planted codec defects were each refused (`node studio/tools/in_tab_kernel_verdict_defects.mjs`): a reply whose word is not its code believed; an extra field ignored; an axiom outside the admitted three dropped; an address cut to 128 bits; the request read after the guest is ready; a flag other than 0 or 1 sent; a guest fault read as proved. Restoring the codec restores the suite. Two rules no test could fail, a reply-length bound and a bytes check, were removed: the two exact reply shapes already imply both.
 
 Five existing suites pinned the kernel's acceptance root as `previewAcceptance`; it is now `verdictAcceptance`, which ends in `previewAcceptance`. The count of acceptance requests in the model moves from 321 to 327.
+
+## The Lean stage's limit
+
+The SDK builds the app's Lean within 600 seconds (`application-lean`). CI ran past it twice with this capability (`PP5007`, runs 43501078726 and 43506802819); embedding fewer vectors did not change that. Timed module by module in a 6 GB container here, the whole build is about 221 seconds, of which `EventProtocol` is 129, and `InTabKernel` was 24: 18 of them one theorem, `noVerdictFromTheServer`, stated over two arbitrary evidence records. It now states the same fact over one: replacing only what a server said leaves the verdict as it was (`withServerSaying`), which Lean proves by unfolding with no axiom. `InTabKernel` builds in 2.2 seconds. CI's runners are slower than this machine, and main is already near the limit without this capability.
 
 ## Open qualification
 

@@ -2,7 +2,7 @@
 import { prepareSnapshot } from "./snapshot-restore.mjs";
 import { prepareNewProject, prepareExistingProject } from "./project-creation.mjs";
 import { snapshotDependencies } from "./project-lifecycle.mjs";
-const MiB = 1024 * 1024, ADDRESS = /^sha256:[0-9a-f]{64}$/;
+const MiB = 1024 * 1024, ADDRESS = /^blake3:[0-9a-f]{64}$/;
 const messages = {
   invalidProjectImport: "Invalid project export",
   projectImportLimitExceeded: "Project export exceeds its import limit",

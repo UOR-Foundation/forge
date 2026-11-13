@@ -17,7 +17,7 @@ export function snapshotDependencies(files) {
     });
     if (new Set(requested).size !== requested.length) throw Error();
     if (!requested.length) return [];
-    return stageGenerationPatch({ name: "snapshot", reference: "sha256:" + "0".repeat(64), files: [], dependencies: [] }, { writes: [], deletes: [], renames: [], deps: requested }).dependencies;
+    return stageGenerationPatch({ name: "snapshot", reference: "blake3:" + "0".repeat(64), files: [], dependencies: [] }, { writes: [], deletes: [], renames: [], deps: requested }).dependencies;
   } catch { throw fail("invalidProjectLifecycle"); }
 }
 export async function renameStoredProject(db, input, boundary) {

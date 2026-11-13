@@ -3,7 +3,7 @@ import {prepareSnapshot} from './snapshot-restore.mjs';
 const messages={invalidVersionHistory:'Invalid version request',versionHistoryMissing:'The project or version no longer exists',versionHistoryStorageFailed:'Version history storage failed',versionHistoryStateInvalid:'Stored version history is invalid'};
 export const versionHistoryFailure=code=>Object.assign(new Error(messages[code]||messages.versionHistoryStorageFailed),{code});
 const id=n=>{if(!Number.isSafeInteger(n)||n<1)throw versionHistoryFailure('invalidVersionHistory');return n;};
-export function versionAddress(value){if(typeof value!=='string')throw versionHistoryFailure('invalidVersionHistory');if(/^[0-9a-fA-F]{64}$/.test(value))return 'sha256:'+value.toLowerCase();if(/^sha256:[0-9a-f]{64}$/.test(value))return value;throw versionHistoryFailure('invalidVersionHistory');}
+export function versionAddress(value){if(typeof value!=='string')throw versionHistoryFailure('invalidVersionHistory');if(/^[0-9a-fA-F]{64}$/.test(value))return 'blake3:'+value.toLowerCase();if(/^blake3:[0-9a-f]{64}$/.test(value))return value;throw versionHistoryFailure('invalidVersionHistory');}
 export const versionAlias=value=>versionAddress(value).slice(7);
 export function versionRows(raw){
  try{if(!Array.isArray(raw))throw Error();return raw.map(row=>{if(!row||versionAddress(row.oid)!==row.oid||typeof row.message!=='string'||!Number.isFinite(row.timestamp)||row.timestamp<0||typeof row.isFavorite!=='boolean'||!(row.note===null||typeof row.note==='string'&&row.note.length<=10000)||!(row.dbTimestamp===undefined||row.dbTimestamp===null||typeof row.dbTimestamp==='string'))throw Error();return {...structuredClone(row),oid:versionAlias(row.oid)};});}catch{throw versionHistoryFailure('versionHistoryStateInvalid');}
