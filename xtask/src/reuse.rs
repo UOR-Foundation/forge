@@ -182,31 +182,45 @@ mod tests {
     fn the_pin_takes_the_proof_the_page_build_made() {
         let pages = workflow("pages.yml");
         let pin = workflow("kernel-pin.yml");
-        assert!(pages.contains("          name: kernel-holo"), "the page build keeps no holo for the pin");
+        assert!(
+            pages.contains("          name: kernel-holo"),
+            "the page build keeps no holo for the pin"
+        );
         assert!(
             pages.contains(r#"cp "$PAGE/app.holo" "$PAGE/app.json" kernel-proof/"#),
             "the holo artifact does not carry the holo and the app.json the pin reads"
         );
         assert!(
-            pages.contains("PAGE: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}"),
+            pages.contains(
+                "PAGE: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}"
+            ),
             "the artifact is gathered from somewhere other than the page this run publishes"
         );
-        assert!(pin.contains("  workflow_run:
-    workflows: [pages]"), "the pin no longer follows the page build");
+        assert!(
+            pin.contains(
+                "  workflow_run:
+    workflows: [pages]"
+            ),
+            "the pin no longer follows the page build"
+        );
         assert!(
             pin.contains("gh attestation verify .pin/app.holo --repo \"$GITHUB_REPOSITORY\""),
             "the pin takes a holo without checking the signature over its bytes"
         );
         assert!(
-            pin.contains("      - name: Build and verify the holo through the locked SDK
-        if: github.event_name == 'workflow_dispatch'"),
+            pin.contains(
+                "      - name: Build and verify the holo through the locked SDK
+        if: github.event_name == 'workflow_dispatch'"
+            ),
             "the pin proves again although the page build already proved this commit"
         );
         // Whatever the holo came from, the gate runs on it whenever the pin would change: the only thing
         // that excuses it is a pin that already names these bytes, which changes nothing.
         let gate = pin
-            .split("      - name: The Kernel gate and the kernel's boundary tests, on the new pin
-")
+            .split(
+                "      - name: The Kernel gate and the kernel's boundary tests, on the new pin
+",
+            )
             .nth(1)
             .expect("the pin runs the Kernel gate");
         assert_eq!(
@@ -224,7 +238,10 @@ mod tests {
     fn the_renderer_is_addressed_by_what_it_is_built_from() {
         let pages = workflow("pages.yml");
         let bundle = "key: forge-bundle-v1-${{ hashFiles('studio/vendor/dyad/**', '!studio/vendor/dyad/node_modules/**', '!studio/vendor/dyad/dist/**') }}";
-        assert!(pages.contains(bundle), "the bundle's address changed: say here what it is built from");
+        assert!(
+            pages.contains(bundle),
+            "the bundle's address changed: say here what it is built from"
+        );
         assert!(
             pages.contains("key: forge-modules-v1-${{ hashFiles('studio/runtime/package-lock.json', 'studio/vendor/dyad/package-lock.json') }}"),
             "the dependency trees' address changed"
@@ -256,15 +273,19 @@ mod tests {
         assert!(pages.contains("      address: ${{ steps.address.outputs.key }}"));
         assert!(pages.contains("      address: ${{ steps.forge-address.outputs.key }}"));
         let live = pages
-            .split("
+            .split(
+                "
   live:
-")
+",
+            )
             .nth(1)
             .expect("the live job");
         for step in live.split("      - name: ").skip(1) {
             let first = step.lines().next().unwrap_or_default();
             // The checkout brings the scripts the check runs; the restore is the check for the address.
-            if first.starts_with("This exact site") || first.starts_with("Check out the deployed revision") {
+            if first.starts_with("This exact site")
+                || first.starts_with("Check out the deployed revision")
+            {
                 continue;
             }
             assert!(
