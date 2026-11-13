@@ -26,6 +26,8 @@ const RAW = {
 const specOf = (raw) => { const r = prism.checkSpec(structuredClone(raw)); assert.ok(r.ok, (r.issues || []).join("; ")); return r.spec; };
 const SPEC = specOf(RAW);
 const PROFILE_ID = "a".repeat(64);
+const TRUST = { schema: "lexlean-mcp/proof-reuse-trust/1", epoch: "e".repeat(64), toolchain: { lean: "1".repeat(64), lake: "2".repeat(64), leanchecker: "3".repeat(64), lexlean: "4".repeat(64), compilerSemantics: "5".repeat(64) } };
+const identity = () => ({ server: "https://mcp.uor.foundation/", profile: "prism-app", profileId: PROFILE_ID, trust: structuredClone(TRUST) });
 
 // A stateful app's module, as the LexLean-module path sends it: definitions and two theorems in one file.
 const MODULE = (limit = 3) => [
@@ -44,7 +46,7 @@ const moduleFiles = (source) => async () => ({ files: [{ path: "src/Library.lex.
 const observed = /definition\{\s*name: (\w+),/.exec(renderModel(SPEC))[1];
 
 function fakeVerifier({ profileId = PROFILE_ID } = {}) {
-  const v = { calls: [], verifies: [], attested: new Set(), drafts: new Map(), forget: false, n: 0 };
+  const v = { calls: [], verifies: [], attested: new Set(), drafts: new Map(), forget: false, n: 0, trust: structuredClone(TRUST), evidence: new Map() };
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: "2.0", id, result }), { headers: { "content-type": "application/json" } });
   v.fetch = async (url, init) => {
     if (String(url).startsWith("file:")) return new Response(fs.readFileSync(fileURLToPath(url), "utf8"));
@@ -52,8 +54,11 @@ function fakeVerifier({ profileId = PROFILE_ID } = {}) {
     assert.equal(method, "tools/call");
     const { name, arguments: args } = params;
     v.calls.push(name);
-    if (name === "lexlean_profiles") return reply(id, { structuredContent: { profiles: [{ id: profileId }] } });
-    if (name === "lexlean_attestation") return reply(id, { structuredContent: { found: !v.forget && v.attested.has(args.value) } });
+    if (name === "lexlean_profiles") return reply(id, { structuredContent: { profiles: [{ id: profileId, name: "prism-app", proof_reuse: v.trust }] } });
+    if (name === "lexlean_attestation") {
+      const evidence = v.evidence.get(args.value);
+      return reply(id, { structuredContent: { found: !v.forget && !!evidence, ...evidence } });
+    }
     if (name === "lexlean_draft_write") { const draft = "spec/" + (await sha256(JSON.stringify(args.files))); v.drafts.set(draft, args.files); return reply(id, { structuredContent: { draft } }); }
     if (name === "lexlean_verify") {
       const files = v.drafts.get(args.project);
@@ -63,7 +68,11 @@ function fakeVerifier({ profileId = PROFILE_ID } = {}) {
       const body = block.includes("axioms: [propext]")
         ? { attestation_id: (++v.n).toString(16).padStart(64, "0"), modules: args.files.map((p) => p.replace(/^src\//, "").replace(/\.lex\.tex$/, "").split("/").join(".")) }
         : { diagnostics: [{ message: `\`Spec.${observed}\` violates its exact axiom policy: observed [propext]` }] };
-      if (body.attestation_id) for (const f of files) v.attested.add(await sha256(f.content));
+      if (body.attestation_id) {
+        const digests = await Promise.all(files.map((f) => sha256(f.content)));
+        for (const digest of digests) v.attested.add(digest);
+        v.evidence.set(body.attestation_id, { attestation_id: body.attestation_id, status: "verified", files: digests, proof_reuse: structuredClone(v.trust) });
+      }
       return reply(id, { taskId: "t" + v.verifies.length, status: "completed", result: { structuredContent: { state: body.attestation_id ? "verified" : "failed" }, content: [{ text: JSON.stringify(body) }] } });
     }
     throw new Error("unexpected tool " + name);
@@ -148,7 +157,7 @@ test("in a LexLean module, editing one theorem re-proves it alone; editing a def
 });
 
 test("addresses ignore axioms and layout, and move with the verifier, the library and any reached byte", async () => {
-  const id = { server: "https://mcp.uor.foundation/", profile: "prism-app", profileId: PROFILE_ID };
+  const id = identity();
   const { files, entrypoints } = await moduleFiles(MODULE())();
   const base = await addresses({ files, entrypoints, verifier: id });
   assert.equal(new Set(Object.values(base)).size, 2);
@@ -176,11 +185,11 @@ test("a record is refused unless its address, verifier, bytes and attestation al
   await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
   const { files, entrypoints } = await moduleFiles(MODULE())();
   const authors = files.filter((f) => entrypoints.includes(f.path));
-  const verifier = { server: "https://mcp.uor.foundation/", profile: "prism-app", profileId: PROFILE_ID };
+  const verifier = identity();
   const address = await addresses({ files, entrypoints, verifier });
   const theorem = theoremsOf(authors).find((t) => t.name === "bumpBounded");
   const entry = store.m.get(KEY_PREFIX + address[theorem.id]);
-  const found = async (d) => v.attested.has(d);
+  const found = async (id) => ({ found: !v.forget, ...v.evidence.get(id) });
   const check = (e, more = {}) => admit({ entry: e, theorem, address: address[theorem.id], verifier, headers: headersOf(authors), found, ...more });
   assert.deepEqual(await check(entry), { admitted: true });
   assert.equal((await check(null)).refusal, REFUSAL.absent);
@@ -239,4 +248,96 @@ test("the host proves both kinds of app with a store over its refs records", asy
   assert.deepEqual(touched.slice(0, 2), [["get", "refs", "x"], ["put", "refs", "y", 1]]);
   const app = host.slice(host.indexOf("async function proveApp("));
   assert.match(app.slice(0, app.indexOf("\n}\n")), /prism\.proveFiles\([\s\S]*?store: \{ get: \(key\) => get\("refs", key\), put: \(key, value\) => put\("refs", key, value\) \}/);
+});
+
+
+test("an unsupported or malformed service trust descriptor falls back to full proving without storing records", async () => {
+  for (const trust of [undefined, null, {}, { ...TRUST, epoch: "" }, { ...TRUST, toolchain: {} }]) {
+    const v = fakeVerifier(), store = memoryStore();
+    v.trust = trust;
+    const first = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    const again = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    assert.equal(first.ok, true); assert.equal(again.ok, true);
+    assert.equal(v.verifies.length, 2);
+    assert.equal(again.record.reused, 0);
+    assert.equal(store.m.size, 0, "unbound evidence is not filed for later reuse");
+    assert.ok(again.record.theorems.every((t) => t.refusal === REFUSAL.trustUnavailable));
+  }
+});
+
+test("same-profile toolchain upgrades and trust epoch rotation invalidate reuse in a long-lived tab", async () => {
+  for (const changed of ["epoch", ...Object.keys(TRUST.toolchain)]) {
+    const v = fakeVerifier(), store = memoryStore();
+    await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    if (changed === "epoch") v.trust.epoch = "f".repeat(64); else v.trust.toolchain[changed] = "f".repeat(64);
+    const again = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    assert.equal(again.ok, true); assert.equal(again.record.reused, 0, changed);
+    assert.equal(v.verifies.length, 2, changed);
+  }
+});
+
+test("retired SDK Lean executable addresses cannot authorize reuse", async () => {
+  for (const lean of ["e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550", "79fb1d26fa5a39385d59fdc48a711a14b0710ca6480271acce99b4d177cea085"]) {
+    const v = fakeVerifier(), store = memoryStore(); v.trust.toolchain.lean = lean;
+    await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    const again = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    assert.equal(again.record.reused, 0); assert.equal(store.m.size, 0);
+  }
+});
+
+test("bare found, wrong attestation, incomplete files, failed status and old trust evidence never authorize reuse", async () => {
+  for (const plant of [
+    (e) => ({ found: true }),
+    (e) => ({ ...e, attestation_id: "0".repeat(64) }),
+    (e) => ({ ...e, files: [] }),
+    (e) => ({ ...e, status: "failed" }),
+    (e) => ({ ...e, proof_reuse: { ...e.proof_reuse, epoch: "0".repeat(64) } }),
+  ]) {
+    const v = fakeVerifier(), store = memoryStore();
+    await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    for (const [id, e] of v.evidence) v.evidence.set(id, plant(e));
+    const again = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    assert.equal(again.ok, true); assert.equal(again.record.reused, 0);
+    assert.equal(v.verifies.length, 2);
+  }
+});
+
+test("legacy and forged-policy records are invalidated even when copied to the new address", async () => {
+  for (const change of [(e) => ({ ...e, schema: "prism/proof-reuse/1" }), (e) => ({ ...e, policyEpoch: "retired" }), (e) => ({ ...e, trust: { ...TRUST, epoch: "0".repeat(64) } })]) {
+    const v = fakeVerifier(), store = memoryStore();
+    await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    for (const [key, e] of store.m) store.m.set(key, change(e));
+    const again = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+    assert.equal(again.record.reused, 0); assert.equal(v.verifies.length, 2);
+  }
+});
+
+test("an epoch change while admitting cached records reruns the full proof", async () => {
+  const v = fakeVerifier(), store = memoryStore();
+  await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+  const original = v.fetch;
+  let rotated = false;
+  v.fetch = async (url, init) => {
+    const result = await original(url, init);
+    if (init && JSON.parse(init.body).params.name === "lexlean_attestation" && !rotated) { v.trust.epoch = "f".repeat(64); rotated = true; }
+    return result;
+  };
+  const again = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+  assert.equal(again.ok, true); assert.equal(again.record.reused, 0); assert.equal(v.verifies.length, 2);
+  assert.deepEqual(theoremsSent(v.verifies.at(-1)), ["bumpBounded", "capSmall"]);
+});
+
+test("a proof completed by a different toolchain is not relabelled or mixed with earlier reused proofs", async () => {
+  const v = fakeVerifier(), store = memoryStore();
+  await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+  const original = v.fetch;
+  let rotated = false;
+  v.fetch = async (url, init) => {
+    if (init && JSON.parse(init.body).params.name === "lexlean_verify" && !rotated) { v.trust.epoch = "f".repeat(64); rotated = true; }
+    return original(url, init);
+  };
+  const edited = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE(4)), { store }));
+  assert.equal(edited.ok, true); assert.equal(edited.record.reused, 0);
+  assert.deepEqual(theoremsSent(v.verifies.at(-1)), ["bumpBounded", "capSmall"]);
+  for (const record of store.m.values()) assert.equal(record.trust.epoch, TRUST.epoch, "changed toolchain never stamped on prior records");
 });
