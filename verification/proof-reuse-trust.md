@@ -2,7 +2,7 @@
 
 Authority: `FoundrySpecification.proofReuseBoundary` and `ProofReuseRefusal`.
 This tightens the existing FA-85 capability; its register ID and statement are unchanged.
-The scenario and failing controls were committed before the implementation (`71120c5`).
+The scenario and failing controls were committed before the implementation (`0bd1d24`).
 
 ## Scope and current behavior
 
@@ -60,7 +60,9 @@ verification descriptor). Any absent, malformed, mismatched or retired field pre
 
 The client still trusts this HTTPS service to report its identity and evidence honestly. These
 checks are not signature verification, an independent kernel check, a linearizable revocation
-protocol, or a proof of service soundness. The final descriptor read establishes an observed current
+protocol, or a proof of service soundness. Cached axiom-map validation and extraction are unchanged;
+this patch does not establish that all cached metadata is authenticated. With the current unsupported
+service contract, no cached axiom map is imported. The final descriptor read establishes an observed current
 epoch; a service that reuses epochs after rollback would violate this contract.
 
 ## Observed SDK and gateway constraints, 2026-11-13
