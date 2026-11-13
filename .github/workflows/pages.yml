@@ -258,6 +258,18 @@ jobs:
           name: prism-page
           path: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}
           if-no-files-found: error
+      # One proof of one commit. This holo is the one Lean proved here, signed by this run; the pin takes it
+      # from this artifact (kernel-pin.yml) and verifies that signature instead of proving the same model a
+      # second time. A commit whose page was reused carries the holo of the page it reused, which is the
+      # same holo: the page's address covers every file app/ is built from.
+      - name: Keep the kernel's holo, for the pin that names it
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: kernel-holo
+          path: |
+            ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page/app.holo' || 'site/app.holo' }}
+            ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page/app.json' || 'site/app.json' }}
+          if-no-files-found: error
 
   forge:
     name: build Forge (studio/), the app builder at the site's root

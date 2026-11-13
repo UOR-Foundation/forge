@@ -173,6 +173,47 @@ mod tests {
         }
     }
 
+    /// One proof of one commit. The page build proves the kernel in order to publish it and keeps that
+    /// holo; the pin takes it from that run and checks the signed statement over those exact bytes instead
+    /// of proving the same model a second time. Nothing about what is proved moves: the holo pinned is the
+    /// one Lean proved on this commit, the Kernel gate and the kernel's boundary tests still run on it
+    /// before anything is pushed, and a pin started by hand, which has no such run, proves the branch.
+    #[test]
+    fn the_pin_takes_the_proof_the_page_build_made() {
+        let pages = workflow("pages.yml");
+        let pin = workflow("kernel-pin.yml");
+        assert!(pages.contains("          name: kernel-holo"), "the page build keeps no holo for the pin");
+        for kept in ["app.holo", "app.json"] {
+            assert!(
+                pages.contains(&format!("verified-page/{kept}' || 'site/{kept}' }}}}")),
+                "the holo artifact does not carry {kept}, which the pin reads"
+            );
+        }
+        assert!(pin.contains("  workflow_run:
+    workflows: [pages]"), "the pin no longer follows the page build");
+        assert!(
+            pin.contains("gh attestation verify .pin/app.holo --repo \"$GITHUB_REPOSITORY\""),
+            "the pin takes a holo without checking the signature over its bytes"
+        );
+        assert!(
+            pin.contains("      - name: Build and verify the holo through the locked SDK
+        if: github.event_name == 'workflow_dispatch'"),
+            "the pin proves again although the page build already proved this commit"
+        );
+        // Whatever the holo came from, the gate runs on it whenever the pin would change: the only thing
+        // that excuses it is a pin that already names these bytes, which changes nothing.
+        let gate = pin
+            .split("      - name: The Kernel gate and the kernel's boundary tests, on the new pin
+")
+            .nth(1)
+            .expect("the pin runs the Kernel gate");
+        assert_eq!(
+            gate.lines().next().unwrap_or_default(),
+            "        if: steps.holo.outputs.current != 'true'",
+            "the Kernel gate on the pinned holo answers to something other than the pin changing"
+        );
+    }
+
     /// Forge's bundle is what the renderer's own files compile to, so its address is those files and
     /// nothing else: a stylesheet or a shell script leaves it alone. The compile is skipped only for a
     /// bundle already compiled from exactly those bytes, and the dependency trees are addressed by the
