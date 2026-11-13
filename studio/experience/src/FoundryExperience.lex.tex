@@ -65,5 +65,12 @@ definition{
   result: String,
   body: "The model menu lists each model on two lines, its name over a few words on what choosing it means, with a tag saying where it runs, Cloud or Local, each with its mark, in one column at the right."
 }
+
+definition{
+  name: appsOnDevice,
+  parameters: [],
+  result: String,
+  body: "The record of what apps do on this device leads with one sentence that sums every app up: how many opened, how many reached the internet and how many were stopped. Each app is then one line, its name and what it reached, that opens to each site it was allowed or stopped from reaching, how often and when, the space it takes and when it last opened; a dot says the same at a glance. It says app, site, opened, reached, allowed and stopped, never the network terms behind them. The explanation answers why, then how, then what without naming them, and how fast builds are is one line that opens on demand."
+}
 \end{semanticmodule}
 \end{lexlean}

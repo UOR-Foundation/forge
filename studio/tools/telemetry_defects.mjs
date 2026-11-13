@@ -44,6 +44,18 @@ const DEFECTS = [
     name: "adapter: export ignores whether the user asked", file: "../shell/telemetry/telemetry.mjs",
     plant: replace(`await flow("save", userAct === true);`, `await flow("save", true);`),
   },
+  {
+    name: "model: standing forgets an app stopped from opening, so it shows as all clear", file: "../shell/telemetry/data/Telemetry.json",
+    plant: editData((data) => { const d = declaration(data, "standing"); d.body.condition = d.body.condition.left; }),
+  },
+  {
+    name: "adapter: a refused site is counted as allowed", file: "../shell/telemetry/telemetry.mjs",
+    plant: replace("const kind = NET[d && d.kind],", `const kind = NET[d && d.kind === "blocked" ? "allowed" : d && d.kind],`),
+  },
+  {
+    name: "worker: an app's own page is handed what other apps reached", file: "../shell/sw.template.js",
+    plant: replace("!/^(p|holo|app)\\//.test(new URL(c.url).pathname.slice(BASE.length))", "true"),
+  },
 ];
 
 mkdirSync(here("../telemetry/out"), { recursive: true });

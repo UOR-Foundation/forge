@@ -14,6 +14,8 @@ import { memoryBackend } from "../shell/telemetry/store.mjs";
 import { createProbe, CAPACITY } from "../shell/telemetry/probe.mjs";
 import { seconds } from "../shell/telemetry/prometheus.mjs";
 import { fixtureTurns } from "./fixtures/telemetry_turns.mjs";
+import { fixtureApps } from "./fixtures/telemetry_apps.mjs";
+import { APP_WORDS, SITE_WORDS, APPS_SUMMARY } from "../shell/telemetry/words.mjs";
 import { scan } from "./telemetry_egress.mjs";
 
 // The kernel the shell runs: studio/shell/kernel, loaded exactly as kernel_boundary.test.mjs loads it.
@@ -58,7 +60,9 @@ test("the model's codes are the ones the shell, the fixtures and the words name"
   assert.deepEqual(Object.keys(KIND), ["enter", "token", "frame", "declaration", "pixel", "update", "edit", "editScreen", "complete", "checked", "reload", "read", "refused", "reused", "rechecked"]);
   assert.deepEqual(Object.keys(KPI), ["preview", "declaration", "pixel", "update", "edit", "checked", "built", "reloads", "think", "lead", "write", "firstTry", "repaired", "refused", "reused", "rechecked"]);
   assert.deepEqual(Object.keys(LOOP), ["offer", "approve", "dismiss"]);
-  assert.equal(model.theorems.length, 21);
+  assert.deepEqual(model.NET, { opened: 0, notOpened: 1, allowed: 2, blocked: 3 });
+  assert.deepEqual(model.STANDING, { quiet: 0, reaches: 1, blocked: 2 });
+  assert.equal(model.theorems.length, 28);
 });
 
 test("the data form the tab runs is the one read from the checked source", () => {
@@ -224,6 +228,149 @@ test("erase leaves nothing", async () => {
   assert.equal(r.models.length, 0);
 });
 
+// ---- what each app reached (TL-22 to TL-28)
+const NOW = Date.UTC(2026, 10, 13, 12) * 1000;
+const noted = async (t = make()) => { for (const n of fixtureApps(NOW)) await t.noteApp(n); return t; };
+const byName = (apps) => Object.fromEntries(apps.map((a) => [a.name, a]));
+const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'\\])\/\/[^\n]*/g, "$1");
+
+test("per app: every kernel decision is counted under the app it belongs to, its builds as one app", async () => {
+  const apps = byName(await (await noted()).apps());
+  assert.deepEqual(Object.keys(apps), ["Weather now", "Budget planner", "Grocery list", "Field notes"], "stopped first, then the latest");
+  const g = apps["Grocery list"];
+  assert.equal(g.id, "app:1", "three preview addresses, one app");
+  assert.deepEqual([g.opened, g.notOpened, g.allowed, g.blocked, g.size, g.standing], [12, 0, 24, 0, 184_320, "reaches"]);
+  assert.equal(g.sites.length, 2);
+  for (const s of g.sites) assert.deepEqual([s.allowed, s.blocked, s.standing], [12, 0, "reaches"]);
+  const w = apps["Weather now"];
+  assert.equal(w.standing, "blocked");
+  assert.deepEqual(w.sites.map((s) => [s.site, s.allowed, s.blocked, s.standing]), [["https://api.open-meteo.com", 0, 3, "blocked"], ["https://esm.sh", 3, 0, "reaches"]], "a stopped site is listed first");
+  const b = apps["Budget planner"];
+  assert.deepEqual([b.standing, b.notOpened, b.opened], ["blocked", 1, 0]);
+  const f = apps["Field notes"];
+  assert.deepEqual([f.standing, f.installed, f.sites.length, f.id], ["quiet", true, 0, "holo:notes"]);
+  assert.ok(Object.values(apps).every((a) => a.last <= NOW && a.last > 0));
+});
+
+test("the standing is the model's: refused anything is never all clear, never allowed is never reaching (TL-22 to TL-24)", () => {
+  const app = (o) => ({ ...model.appEmpty(), ...o });
+  assert.equal(model.standing(app({})), model.STANDING.quiet);
+  assert.equal(model.standing(app({ opened: 3 })), model.STANDING.quiet);
+  assert.equal(model.standing(app({ allowed: 1 })), model.STANDING.reaches);
+  assert.equal(model.standing(app({ allowed: 9, blocked: 1 })), model.STANDING.blocked);
+  assert.equal(model.standing(app({ notOpened: 1 })), model.STANDING.blocked);
+  assert.equal(model.reachStanding({ allowed: 5, blocked: 0, last: 1 }), model.STANDING.reaches);
+  assert.equal(model.reachStanding({ allowed: 5, blocked: 1, last: 1 }), model.STANDING.blocked);
+});
+
+test("the fold: a refusal is never an allowance, each is counted once, last seen never moves back (TL-25 to TL-27)", () => {
+  let a = model.appEmpty();
+  a = model.appStep(a, { kind: model.NET.opened, at: 50, value: 700 });
+  a = model.appStep(a, { kind: model.NET.blocked, at: 60 });
+  a = model.appStep(a, { kind: model.NET.allowed, at: 40 });
+  a = model.appStep(a, { kind: model.NET.opened, at: 30, value: 900 });
+  assert.deepEqual(a, { opened: 2, notOpened: 0, allowed: 1, blocked: 1, size: 900, last: 60 });
+  let r = model.reachEmpty();
+  r = model.reachStep(r, { kind: model.NET.blocked, at: 9 });
+  r = model.reachStep(r, { kind: model.NET.allowed, at: 3 });
+  assert.deepEqual(r, { allowed: 1, blocked: 1, last: 9 });
+});
+
+test("a later note names the app it was named for, across reloads of the host", async () => {
+  const backend = memoryBackend(), t = createTelemetry({ model, backend, ask });
+  await t.noteApp({ id: "p:one", key: "app:7", name: "Recipes", decisions: [{ kind: "opened", at: 10, value: 5 }] });
+  const again = createTelemetry({ model, backend, ask });
+  await again.noteApp({ id: "p:one", decisions: [{ kind: "allowed", at: 11, site: "https://esm.sh" }] });
+  const [only] = await again.apps();
+  assert.deepEqual([only.id, only.name, only.opened, only.allowed], ["app:7", "Recipes", 1, 1]);
+});
+
+test("typed refusals for notes: an unknown kind, a site where none belongs or none where one does, no decision", async () => {
+  const backend = memoryBackend(), t = createTelemetry({ model, backend, ask });
+  for (const bad of [
+    { id: "p:x", decisions: [] }, { id: "", decisions: [{ kind: "opened", at: 1 }] }, { id: "p:x", decisions: [{ kind: "fetched", at: 1 }] },
+    { id: "p:x", decisions: [{ kind: "allowed", at: 1 }] }, { id: "p:x", decisions: [{ kind: "opened", at: 1, site: "https://esm.sh" }] },
+    { id: "p:x", decisions: [{ kind: "blocked", at: -1, site: "https://esm.sh" }] },
+  ]) await assert.rejects(t.noteApp(bad), { code: "telemetry.badDecision" }, JSON.stringify(bad));
+  assert.equal((await backend.allApps()).length, 0);
+});
+
+test("a kernel that refuses to store or show an app's record stops it: nothing is kept or shown", async () => {
+  const backend = memoryBackend();
+  const t = createTelemetry({ model, backend, ask: async (line) => (line.startsWith("telemetry store") ? "deny" : ask(line)) });
+  await assert.rejects(t.noteApp(fixtureApps(NOW)[0]), { code: "telemetry.flowRefused" });
+  assert.equal((await backend.allApps()).length, 0);
+  const shown = createTelemetry({ model, backend, ask: async (line) => (line.startsWith("telemetry show") ? "deny" : ask(line)) });
+  await shown.noteApp(fixtureApps(NOW)[0]);
+  await assert.rejects(shown.apps(), { code: "telemetry.flowRefused" });
+});
+
+test("retention: at most 256 apps and 34 sites an app, the least recently seen go first (TL-28)", async () => {
+  const t = make();
+  for (let i = 0; i < 300; i++) await t.noteApp({ id: "p:" + i, decisions: [{ kind: "opened", at: 1000 + i }] });
+  const apps = await t.apps();
+  assert.equal(apps.length, model.appKeepLimit);
+  assert.equal(Math.min(...apps.map((a) => a.last)), 1000 + 300 - 256);
+  const sites = Array.from({ length: 40 }, (_, i) => ({ kind: "allowed", at: 2000 + i, site: "https://s" + i + ".example" }));
+  await t.noteApp({ id: "p:many", decisions: sites });
+  const many = (await t.apps()).find((a) => a.id === "p:many");
+  assert.equal(many.sites.length, model.siteKeepLimit);
+  assert.ok(!many.sites.some((s) => s.site === "https://s0.example"), "the oldest site went first");
+  assert.equal(many.allowed, 40, "the app's totals keep every decision");
+});
+
+test("notes that arrive together are each counted: none overwrites another", async () => {
+  const t = make();
+  await Promise.all(Array.from({ length: 20 }, (_, i) => t.noteApp({ id: "p:same", decisions: [{ kind: "opened", at: 1 + i }] })));
+  assert.equal((await t.apps())[0].opened, 20);
+});
+
+test("erase leaves no app", async () => {
+  const t = await noted();
+  await t.erase();
+  assert.deepEqual(await t.apps(), []);
+});
+
+test("the worker hands over only the kernel's decisions, in the model's words, to a page of the shell", () => {
+  const sw = fs.readFileSync(new URL("../shell/sw.template.js", import.meta.url), "utf8");
+  const note = sw.slice(sw.indexOf("async function noteGate("), sw.indexOf("// The policy for one untrusted document"));
+  assert.ok(note.length > 100);
+  assert.ok(note.includes('page.postMessage({ type: "telemetry/gate"'));
+  assert.ok(note.includes("!/^(p|holo|app)\\//.test("), "never to an app's own page");
+  assert.doesNotMatch(note, /fetch\(|postMessage\([^)]*"\*"/);
+  // Each gate decision is noted where it is made: serving, each granted site, each request of a controlled frame.
+  const at = ['decisions.push({ kind: "notOpened"', 'decisions.push({ kind: yes ? "allowed" : "blocked"', 'noteGate(who.kind, who.id, [{ kind: allowed ? "allowed" : "blocked"', '[{ kind: "opened", at: nowMicros(), value: size }'];
+  for (const s of at) assert.ok(sw.includes(s), s);
+  const kinds = new Set([...sw.matchAll(/kind: (?:\w+ \? )?"(\w+)"(?: : "(\w+)")?/g)].flatMap((m) => m.slice(1).filter(Boolean)));
+  assert.deepEqual([...kinds].sort(), Object.keys(model.NET).sort(), "the worker speaks the model's names");
+  const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
+  assert.ok(host.includes('d.type !== "telemetry/gate"') && host.includes("telemetry.noteApp("));
+});
+
+test("the apps view in plain words: no network terms on screen, and a sentence that sums every app up", async () => {
+  const shown = ["../shell/telemetry/panel.mjs", "../shell/telemetry/words.mjs"].map((p) => strip(fs.readFileSync(new URL(p, import.meta.url), "utf8"))).join("\n");
+  const strings = [...shown.replace(/const STYLE = `[\s\S]*?`;/, "").matchAll(/"([^"\n]*)"|`([^`]*)`/g)].map((m) => m[1] ?? m[2]).join(" ").toLowerCase();
+  for (const word of ["egress", "ingress", "origin", "kappa", "endpoint", "telemetry", "csp", "kernel decision"]) assert.ok(!new RegExp("\\b" + word + "\\b").test(strings), word);
+  const apps = await (await noted()).apps();
+  assert.equal(APPS_SUMMARY(apps), "4 apps opened on this device. 2 reached the internet, and 2 were stopped at least once.");
+  assert.equal(APPS_SUMMARY([]), "No app has opened on this device yet. Build or open one, and what it reaches shows here.");
+  const w = byName(apps);
+  assert.equal(APP_WORDS[w["Weather now"].standing](w["Weather now"]), "Stopped from reaching 1 site");
+  assert.equal(APP_WORDS[w["Budget planner"].standing](w["Budget planner"]), "Stopped from opening once");
+  assert.equal(APP_WORDS[w["Grocery list"].standing](w["Grocery list"]), "Reaches 2 sites, all allowed");
+  assert.equal(APP_WORDS[w["Field notes"].standing](w["Field notes"]), "Reaches nothing outside this device");
+  assert.equal(SITE_WORDS.blocked(w["Weather now"].sites[0]), "Stopped 3 times");
+  for (const s of Object.keys(model.STANDING)) assert.equal(typeof APP_WORDS[s], "function", s);
+});
+
+test("the panel takes its look from the brand's tokens: no colour of its own", () => {
+  const panel = fs.readFileSync(new URL("../shell/telemetry/panel.mjs", import.meta.url), "utf8");
+  const start = panel.indexOf("const STYLE = `"), style = panel.slice(start, panel.indexOf("`;", start));
+  assert.ok(style.length > 100);
+  assert.doesNotMatch(style.replace(/#\$\{ID\}/g, ""), /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+  for (const token of ["--success", "--destructive", "--muted-foreground", "--popover-foreground"]) assert.ok(style.includes("var(" + token + ")"), token);
+});
+
 test("seconds are written exactly, never through a float", () => {
   assert.equal(seconds(0), "0");
   assert.equal(seconds(1), "0.000001");
@@ -297,6 +444,8 @@ test("zero egress at run time: recording, reporting, the loop, every export and 
     const t = make();
     for (const f of fixtureTurns(KIND)) await t.record(f);
     await t.report(); await t.adopt("declaration"); await t.dismiss("built");
+    for (const n of fixtureApps()) await t.noteApp(n);
+    await t.apps();
     await t.exportSnapshot({ userAct: true }); await t.exportHistory({ userAct: true }); await t.exportTurns({ userAct: true });
     await t.erase();
   } finally {

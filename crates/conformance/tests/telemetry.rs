@@ -282,3 +282,80 @@ fn telemetry_tl_21() {
         "statement: ((breaksKept count) = false),",
     );
 }
+
+/// `TL-22`: An app the kernel refused anything is never shown as all clear
+#[test]
+fn telemetry_tl_22() {
+    pinned(
+        "breaksRefusalHidden",
+        "(((0 <? (project app blocked)) || (0 <? (project app notOpened))) && (not ((Telemetry::standing app) =? (Telemetry::standingBlocked))))",
+        "refusedIsShown",
+        "statement: ((breaksRefusalHidden app) = false),",
+    );
+}
+
+/// `TL-23`: An app is never shown as reaching a site it was never allowed to reach
+#[test]
+fn telemetry_tl_23() {
+    pinned(
+        "breaksReachUnallowed",
+        "(((project app allowed) =? 0) && ((Telemetry::standing app) =? (Telemetry::standingReaches)))",
+        "reachNeedsAllowance",
+        "statement: ((breaksReachUnallowed app) = false),",
+    );
+}
+
+/// `TL-24`: A refused site is never shown as only allowed
+#[test]
+fn telemetry_tl_24() {
+    pinned(
+        "breaksSiteRefusalHidden",
+        "((0 <? (project reach blocked)) && (not ((Telemetry::reachStanding reach) =? (Telemetry::standingBlocked))))",
+        "refusedSiteIsShown",
+        "statement: ((breaksSiteRefusalHidden reach) = false),",
+    );
+}
+
+/// `TL-25`: A refusal is never counted as allowed, and an allowance never as a refusal
+#[test]
+fn telemetry_tl_25() {
+    pinned(
+        "breaksMiscounted",
+        "((((project decision kind) =? (Telemetry::netBlocked)) && (not ((Telemetry::tally count decision (Telemetry::netAllowed)) =? count))) || (((project decision kind) =? (Telemetry::netAllowed)) && (not ((Telemetry::tally count decision (Telemetry::netBlocked)) =? count))))",
+        "refusalNeverAllowed",
+        "statement: ((breaksMiscounted count decision) = false),",
+    );
+}
+
+/// `TL-26`: Every allowance and every refusal is counted once
+#[test]
+fn telemetry_tl_26() {
+    pinned(
+        "breaksUncounted",
+        "((((project decision kind) =? (Telemetry::netAllowed)) && (not ((Telemetry::tally count decision (Telemetry::netAllowed)) =? (count + 1)))) || (((project decision kind) =? (Telemetry::netBlocked)) && (not ((Telemetry::tally count decision (Telemetry::netBlocked)) =? (count + 1)))))",
+        "decisionCountedOnce",
+        "statement: ((breaksUncounted count decision) = false),",
+    );
+}
+
+/// `TL-27`: The time an app or a site was last seen never moves back
+#[test]
+fn telemetry_tl_27() {
+    pinned(
+        "breaksLastBack",
+        "((Telemetry::latest last decision) <? last)",
+        "lastNeverMovesBack",
+        "statement: ((breaksLastBack last decision) = false),",
+    );
+}
+
+/// `TL-28`: The device never keeps more than 256 apps
+#[test]
+fn telemetry_tl_28() {
+    pinned(
+        "breaksAppsKept",
+        "((Telemetry::appKeepLimit) <? (Telemetry::appsKept count))",
+        "appsKeptIsBounded",
+        "statement: ((breaksAppsKept count) = false),",
+    );
+}
