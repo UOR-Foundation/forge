@@ -50,6 +50,8 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    outputs:
+      address: ${{ steps.address.outputs.key }}
     steps:
       - name: Check out the exact event revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -256,12 +258,35 @@ jobs:
           name: prism-page
           path: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}
           if-no-files-found: error
+      # One proof of one commit. This holo is the one Lean proved here, signed by this run; whatever else
+      # needs a proved kernel on this commit takes it from this artifact and verifies that signature
+      # instead of proving the same model again (kernel-pin.yml, bootstrap.yml). A commit whose page was
+      # reused carries the holo of the page it reused, which is the same holo: the page's address covers
+      # every file app/ is built from. The attestation rides along when this run is the one that proved it.
+      - name: Gather what this commit's proof produced
+        shell: bash
+        env:
+          PAGE: ${{ steps.reuse.outputs.cache-hit == 'true' && 'verified-page' || 'site' }}
+        run: |
+          set -euo pipefail
+          mkdir -p kernel-proof
+          cp "$PAGE/app.holo" "$PAGE/app.json" kernel-proof/
+          if [[ -s .prism-proof/attestation ]]; then cp .prism-proof/attestation kernel-proof/attestation; fi
+          ls -la kernel-proof
+      - name: Keep the kernel's holo, for whatever else this commit proves
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: kernel-holo
+          path: kernel-proof
+          if-no-files-found: error
 
   forge:
     name: build Forge (studio/), the app builder at the site's root
     if: github.repository != 'UOR-Foundation/template'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    outputs:
+      address: ${{ steps.forge-address.outputs.key }}
     defaults:
       run:
         working-directory: studio
@@ -305,12 +330,40 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: studio/vendor/dyad/package-lock.json
+      # The lockfile names every dependency byte, so the unpacked tree is addressed by the lockfile alone:
+      # npm ci then has nothing to do. The store setup-node keeps is the tarballs, not this tree.
+      - name: The locked dependency trees, at the address of the lockfiles that name them
+        id: modules
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            studio/runtime/node_modules
+            studio/vendor/dyad/node_modules
+          key: forge-modules-v1-${{ hashFiles('studio/runtime/package-lock.json', 'studio/vendor/dyad/package-lock.json') }}
       - name: Install the locked browser compiler archive
-        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        if: steps.forge-reuse.outputs.cache-hit != 'true' && steps.modules.outputs.cache-hit != 'true'
         run: npm ci --prefix runtime --ignore-scripts --no-audit --no-fund
-      - name: The vendored renderer, built beside the shell as the homepage (no Electron, no src/pro)
+      # The bundle is what the renderer's own files compile to: its address is those files and the lockfile,
+      # nothing else. A change to the shell's stylesheet or scripts leaves it alone, and the build below is
+      # skipped for a bundle already compiled from these exact bytes. stamp_shell.py always runs: it stages
+      # the bundle beside the shell, which the closure check then verifies byte for byte.
+      - name: The renderer's bundle already compiled from these files, if there is one
+        id: bundle
         if: steps.forge-reuse.outputs.cache-hit != 'true'
-        run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --prefer-offline --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir && python3 ../../scripts/stamp_shell.py
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: studio/vendor/dyad/dist
+          key: forge-bundle-v1-${{ hashFiles('studio/vendor/dyad/**', '!studio/vendor/dyad/node_modules/**', '!studio/vendor/dyad/dist/**') }}
+      - name: The vendored renderer's dependencies
+        if: steps.forge-reuse.outputs.cache-hit != 'true' && steps.modules.outputs.cache-hit != 'true'
+        run: cd vendor/dyad && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --prefer-offline --ignore-scripts --engine-strict=false --force --no-audit --no-fund --loglevel=error
+      - name: The vendored renderer, built beside the shell as the homepage (no Electron, no src/pro)
+        if: steps.forge-reuse.outputs.cache-hit != 'true' && steps.bundle.outputs.cache-hit != 'true'
+        run: cd vendor/dyad && npx vite build --config vite.shell.config.mts --base /foundry/ --outDir dist --emptyOutDir
+      - name: The bundle staged beside the shell, with the scaffold and the editor's locked bytes
+        if: steps.forge-reuse.outputs.cache-hit != 'true'
+        run: python3 scripts/stamp_shell.py
       - name: The lane, which projects the page from the verified core and builds the wasm the page loads
         if: steps.forge-reuse.outputs.cache-hit != 'true'
         run: ./scripts/lane.sh
@@ -475,7 +528,7 @@ jobs:
     # every app fixture streams, edits and undoes within its budgets); a miss reports, it never holds a
     # deploy back. The same check runs on every pull request that changes Forge (forge-perf.yml).
     name: every Prism app previews live within its budgets, on the deployed site
-    needs: [deploy]
+    needs: [build, forge, deploy]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -489,19 +542,48 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      # What this check reads is the deployed site, and the deployed site is those two addresses: the page's
+      # and Forge's. The same two with the same browser have nothing new to show, so the check is kept by
+      # that address and a deploy of unchanged bytes costs nothing. A miss runs it in full.
+      - name: This exact site, in this exact browser, already previewed live
+        id: seen
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: studio/live-seen
+          key: live-seen-v1-playwright-1.56.1-${{ needs.build.outputs.address }}-${{ needs.forge.outputs.address }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.seen.outputs.cache-hit != 'true'
         with:
           node-version: "24"
+      - name: The browser, kept by its version
+        if: steps.seen.outputs.cache-hit != 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.1-chromium-${{ runner.os }}-${{ runner.arch }}
       - name: The browser
+        if: steps.seen.outputs.cache-hit != 'true'
         run: |
           npm install --no-audit --no-fund --global playwright@1.56.1
           playwright install --with-deps chromium
       - name: Every Prism app previews live within its budgets
+        if: steps.seen.outputs.cache-hit != 'true'
         run: |
           export PLAYWRIGHT_MODULE="$(npm root --global)/playwright/index.mjs"
           bash scripts/live_e2e_all.sh "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" "$RUNNER_TEMP/live-e2e"
+      - name: Keep that these bytes previewed live
+        if: steps.seen.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p live-seen
+          echo "${{ needs.build.outputs.address }} ${{ needs.forge.outputs.address }}" >live-seen/address
+      - name: Keep that under its address
+        if: steps.seen.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: studio/live-seen
+          key: live-seen-v1-playwright-1.56.1-${{ needs.build.outputs.address }}-${{ needs.forge.outputs.address }}
       - name: Keep what the check saw
-        if: always()
+        if: always() && steps.seen.outputs.cache-hit != 'true' 
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: live-e2e
