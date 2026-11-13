@@ -618,5 +618,77 @@ theorem{
   },
   axioms: [Quot.sound, propext]
 }
+
+definition{
+  name: breaksTelemetryEgress,
+  parameters: [request : ForgeKernel::TelemetryRequest],
+  result: Bool,
+  body: ((((ForgeKernel::telemetryAllows request) =? 1) && (not ((project request effect) <=? (ForgeKernel::telemetrySave)))) && (not (((project request effect) =? (ForgeKernel::telemetryInfer)) && ((project request device) =? 1))))
+}
+
+theorem{
+  name: telemetryEgressHolds,
+  parameters: [request : ForgeKernel::TelemetryRequest],
+  statement: ((breaksTelemetryEgress request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::telemetryAllows,
+      ForgeKernel::telemetryInfer,
+      ForgeKernel::telemetrySave,
+      ForgeKernel::telemetryShow,
+      ForgeKernel::telemetryStore,
+      breaksTelemetryEgress
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksTelemetryUnasked,
+  parameters: [request : ForgeKernel::TelemetryRequest],
+  result: Bool,
+  body: ((((project request effect) =? (ForgeKernel::telemetrySave)) && (not ((project request asked) =? 1))) && ((ForgeKernel::telemetryAllows request) =? 1))
+}
+
+theorem{
+  name: telemetryUnaskedHolds,
+  parameters: [request : ForgeKernel::TelemetryRequest],
+  statement: ((breaksTelemetryUnasked request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::telemetryAllows,
+      ForgeKernel::telemetryInfer,
+      ForgeKernel::telemetrySave,
+      ForgeKernel::telemetryShow,
+      ForgeKernel::telemetryStore,
+      breaksTelemetryUnasked
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksTelemetryOffDevice,
+  parameters: [request : ForgeKernel::TelemetryRequest],
+  result: Bool,
+  body: ((((project request effect) =? (ForgeKernel::telemetryInfer)) && (not ((project request device) =? 1))) && ((ForgeKernel::telemetryAllows request) =? 1))
+}
+
+theorem{
+  name: telemetryOffDeviceHolds,
+  parameters: [request : ForgeKernel::TelemetryRequest],
+  statement: ((breaksTelemetryOffDevice request) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      ForgeKernel::telemetryAllows,
+      ForgeKernel::telemetryInfer,
+      ForgeKernel::telemetrySave,
+      ForgeKernel::telemetryShow,
+      ForgeKernel::telemetryStore,
+      breaksTelemetryOffDevice
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
 \end{semanticmodule}
 \end{lexlean}

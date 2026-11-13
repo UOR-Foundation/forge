@@ -1,0 +1,416 @@
+\begin{lexlean}{TelemetryProofs}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{Telemetry}
+\title{Boolean}
+\begin{semanticmodule}
+definition{
+  name: breaksMarkMoves,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat, was : Nat],
+  result: Bool,
+  body: (((current =? was) && (not (current =? 0))) && (not ((Telemetry::firstMark current hit gate at) =? was)))
+}
+
+theorem{
+  name: markNeverMoves,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat, was : Nat],
+  statement: ((breaksMarkMoves current hit gate at was) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::firstMark, breaksMarkMoves]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksMarkBeforeStart,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat],
+  result: Bool,
+  body: (((current =? 0) && (not ((Telemetry::firstMark current hit gate at) =? 0))) && ((gate =? 0) || (not (gate <=? (Telemetry::firstMark current hit gate at)))))
+}
+
+theorem{
+  name: markNeverBeforeItsStart,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat],
+  statement: ((breaksMarkBeforeStart current hit gate at) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::firstMark, breaksMarkBeforeStart]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksWorstMissesUpdate,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  result: Bool,
+  body: (((project event kind) =? (Telemetry::kindUpdate)) && ((Telemetry::nextUpdateWorst state event) <? (project event value)))
+}
+
+theorem{
+  name: worstCoversEveryUpdate,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  statement: ((breaksWorstMissesUpdate state event) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::nextUpdateWorst, breaksWorstMissesUpdate]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksWorstFalls,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  result: Bool,
+  body: ((Telemetry::nextUpdateWorst state event) <? (project state updateWorst))
+}
+
+theorem{
+  name: worstNeverFalls,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  statement: ((breaksWorstFalls state event) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::nextUpdateWorst, breaksWorstFalls]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksEditWithoutStart,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  result: Bool,
+  body: (((Telemetry::closesEdit state event) =? 1) && ((project state editMark) =? 0))
+}
+
+theorem{
+  name: editTimedFromItsEdit,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  statement: ((breaksEditWithoutStart state event) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::closesEdit, breaksEditWithoutStart]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksEditWorstFalls,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  result: Bool,
+  body: ((Telemetry::nextEditWorst state event) <? (project state editWorst))
+}
+
+theorem{
+  name: editWorstNeverFalls,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  statement: ((breaksEditWorstFalls state event) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::nextEditWorst, breaksEditWorstFalls]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksOverMiscounted,
+  parameters: [observation : Telemetry::Observation, value : Nat, budget : Nat, over : Nat],
+  result: Bool,
+  body: (((((project observation over) =? over) && ((project observation kpi) <=? (Telemetry::kpiReloads))) && ((Telemetry::overCode (project observation kpi) value budget) =? 0)) && (not ((Telemetry::observeOver observation value budget) =? over)))
+}
+
+theorem{
+  name: overCountedOnlyWhenOver,
+  parameters: [observation : Telemetry::Observation, value : Nat, budget : Nat, over : Nat],
+  statement: ((breaksOverMiscounted observation value budget over) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::kpiReloads, Telemetry::observeOver, breaksOverMiscounted]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksOverMissed,
+  parameters: [observation : Telemetry::Observation, value : Nat, budget : Nat, over : Nat],
+  result: Bool,
+  body: (((((project observation over) =? over) && ((project observation kpi) <=? (Telemetry::kpiReloads))) && ((Telemetry::overCode (project observation kpi) value budget) =? 1)) && (not ((Telemetry::observeOver observation value budget) =? (over + 1))))
+}
+
+theorem{
+  name: overCountsEveryOver,
+  parameters: [observation : Telemetry::Observation, value : Nat, budget : Nat, over : Nat],
+  statement: ((breaksOverMissed observation value budget over) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::kpiReloads, Telemetry::observeOver, breaksOverMissed]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksNoOver,
+  parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
+  result: Bool,
+  body: (((project observation over) =? 0) && (not ((Telemetry::lever observation stages) =? 0)))
+}
+
+theorem{
+  name: noSuggestionWithoutOver,
+  parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
+  statement: ((breaksNoOver observation stages) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::lever, Telemetry::leverNone, Telemetry::persistent, breaksNoOver]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksMinority,
+  parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
+  result: Bool,
+  body: ((((project observation over) + (project observation over)) <=? (project observation turns)) && (not ((Telemetry::lever observation stages) =? 0)))
+}
+
+theorem{
+  name: noSuggestionFromMinority,
+  parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
+  statement: ((breaksMinority observation stages) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::lever, Telemetry::leverNone, Telemetry::persistent, breaksMinority]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksUnbudgeted,
+  parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
+  result: Bool,
+  body: (((Telemetry::kpiReloads) <? (project observation kpi)) && (not ((Telemetry::lever observation stages) =? 0)))
+}
+
+theorem{
+  name: noSuggestionWithoutBudget,
+  parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
+  statement: ((breaksUnbudgeted observation stages) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      Telemetry::kpiBuilt,
+      Telemetry::kpiChecked,
+      Telemetry::kpiDeclaration,
+      Telemetry::kpiEdit,
+      Telemetry::kpiPixel,
+      Telemetry::kpiPreview,
+      Telemetry::kpiReloads,
+      Telemetry::kpiUpdate,
+      Telemetry::largestStage,
+      Telemetry::lever,
+      Telemetry::leverCoalesce,
+      Telemetry::leverDeclarationsFirst,
+      Telemetry::leverEditPath,
+      Telemetry::leverNone,
+      Telemetry::leverProjectEarly,
+      Telemetry::leverReasoning,
+      Telemetry::leverReloadTrigger,
+      Telemetry::leverReuseChecks,
+      Telemetry::leverShorterModule,
+      Telemetry::leverWarmFrame,
+      Telemetry::persistent,
+      breaksUnbudgeted
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksSilent,
+  parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
+  result: Bool,
+  body: (((Telemetry::persistent observation) && ((project observation kpi) <=? (Telemetry::kpiReloads))) && ((Telemetry::lever observation stages) =? 0))
+}
+
+theorem{
+  name: persistentOverIsSuggested,
+  parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
+  statement: ((breaksSilent observation stages) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      Telemetry::kpiBuilt,
+      Telemetry::kpiChecked,
+      Telemetry::kpiDeclaration,
+      Telemetry::kpiEdit,
+      Telemetry::kpiPixel,
+      Telemetry::kpiPreview,
+      Telemetry::kpiReloads,
+      Telemetry::kpiUpdate,
+      Telemetry::largestStage,
+      Telemetry::lever,
+      Telemetry::leverCoalesce,
+      Telemetry::leverDeclarationsFirst,
+      Telemetry::leverEditPath,
+      Telemetry::leverNone,
+      Telemetry::leverProjectEarly,
+      Telemetry::leverReasoning,
+      Telemetry::leverReloadTrigger,
+      Telemetry::leverReuseChecks,
+      Telemetry::leverShorterModule,
+      Telemetry::leverWarmFrame,
+      Telemetry::persistent,
+      breaksSilent
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksWithinTime,
+  parameters: [code : Nat, value : Nat, budget : Nat],
+  result: Bool,
+  body: (((not (code =? (Telemetry::kpiReloads))) && (value <? (Telemetry::budgetMicros budget))) && ((Telemetry::overCode code value budget) =? 1))
+}
+
+theorem{
+  name: withinBudgetNeverOver,
+  parameters: [code : Nat, value : Nat, budget : Nat],
+  statement: ((breaksWithinTime code value budget) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::kpiReloads, Telemetry::overCode, breaksWithinTime]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksOverTime,
+  parameters: [code : Nat, value : Nat, budget : Nat],
+  result: Bool,
+  body: (((not (code =? (Telemetry::kpiReloads))) && ((Telemetry::budgetMicros budget) <=? value)) && ((Telemetry::overCode code value budget) =? 0))
+}
+
+theorem{
+  name: overBudgetNeverWithin,
+  parameters: [code : Nat, value : Nat, budget : Nat],
+  statement: ((breaksOverTime code value budget) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::kpiReloads, Telemetry::overCode, breaksOverTime]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksSwitchSelf,
+  parameters: [
+    current : Telemetry::ModelStat,
+    other : Telemetry::ModelStat,
+    built : Telemetry::Observation
+  ],
+  result: Bool,
+  body: (((project other model) =? (project current model)) && (not ((Telemetry::switchTo current other built) =? 0)))
+}
+
+theorem{
+  name: neverSwitchToCurrent,
+  parameters: [
+    current : Telemetry::ModelStat,
+    other : Telemetry::ModelStat,
+    built : Telemetry::Observation
+  ],
+  statement: ((breaksSwitchSelf current other built) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::switchTo, breaksSwitchSelf]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksSwitchSamples,
+  parameters: [
+    current : Telemetry::ModelStat,
+    other : Telemetry::ModelStat,
+    built : Telemetry::Observation
+  ],
+  result: Bool,
+  body: ((((project other reads) <? 5) || ((project current reads) <? 5)) && (not ((Telemetry::switchTo current other built) =? 0)))
+}
+
+theorem{
+  name: switchNeedsSamples,
+  parameters: [
+    current : Telemetry::ModelStat,
+    other : Telemetry::ModelStat,
+    built : Telemetry::Observation
+  ],
+  statement: ((breaksSwitchSamples current other built) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::switchSamples, Telemetry::switchTo, breaksSwitchSamples]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksSwitchOver,
+  parameters: [
+    current : Telemetry::ModelStat,
+    other : Telemetry::ModelStat,
+    built : Telemetry::Observation
+  ],
+  result: Bool,
+  body: (((project built over) =? 0) && (not ((Telemetry::switchTo current other built) =? 0)))
+}
+
+theorem{
+  name: switchNeedsOver,
+  parameters: [
+    current : Telemetry::ModelStat,
+    other : Telemetry::ModelStat,
+    built : Telemetry::Observation
+  ],
+  statement: ((breaksSwitchOver current other built) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::persistent, Telemetry::switchTo, breaksSwitchOver]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksAdvisory,
+  parameters: [loop : Telemetry::Loop, event : Nat, offered : Nat, mean : Nat, applied : Nat],
+  result: Bool,
+  body: ((((project loop applied) =? applied) && (not (event =? (Telemetry::loopApprove)))) && (not ((Telemetry::loopApplied loop event) =? applied)))
+}
+
+theorem{
+  name: onlyApprovalChangesAnything,
+  parameters: [loop : Telemetry::Loop, event : Nat, offered : Nat, mean : Nat, applied : Nat],
+  statement: ((breaksAdvisory loop event offered mean applied) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::loopApplied, Telemetry::loopApprove, breaksAdvisory]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksApproveEmpty,
+  parameters: [loop : Telemetry::Loop, event : Nat, offered : Nat, mean : Nat, applied : Nat],
+  result: Bool,
+  body: (((((project loop applied) =? applied) && ((project loop pending) =? 0)) && (event =? (Telemetry::loopApprove))) && (not ((Telemetry::loopApplied loop event) =? applied)))
+}
+
+theorem{
+  name: approvalNeedsSuggestion,
+  parameters: [loop : Telemetry::Loop, event : Nat, offered : Nat, mean : Nat, applied : Nat],
+  statement: ((breaksApproveEmpty loop event offered mean applied) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::loopApplied, Telemetry::loopApprove, breaksApproveEmpty]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksImproved,
+  parameters: [before : Nat, after : Nat],
+  result: Bool,
+  body: ((before <=? after) && ((Telemetry::assess before after) =? 1))
+}
+
+theorem{
+  name: improvedOnlyWhenFaster,
+  parameters: [before : Nat, after : Nat],
+  statement: ((breaksImproved before after) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::assess, breaksImproved]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksKept,
+  parameters: [count : Nat],
+  result: Bool,
+  body: ((Telemetry::keepLimit) <? (Telemetry::kept count))
+}
+
+theorem{
+  name: keptIsBounded,
+  parameters: [count : Nat],
+  statement: ((breaksKept count) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::keepLimit, Telemetry::kept, breaksKept]},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}

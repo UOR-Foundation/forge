@@ -1,0 +1,9 @@
+{
+ "draft": "spec/6428c9cdf7b90a1addac823f2d7d1a5ff169857e9a1d91cfec1733fd079a3209",
+ "profile": "spec",
+ "checked": true,
+ "files": {
+  "src/Telemetry.lex.tex": "bb3867474faa969faa5df2b3d22870f741c70af93bec3be0fde8cc64f6eaf45a",
+  "src/TelemetryProofs.lex.tex": "9d4f99c26db5135d6ab2ca6223d53bfb9c65b71961aa0068b1f781c4aa6ee507"
+ }
+}

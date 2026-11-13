@@ -1,0 +1,113 @@
+# Build telemetry (studio/telemetry, studio/shell/telemetry): the Telemetry model's proofs, and the tests that hold
+# the tab's data form, its adapters and its zero-egress gate to it. Project content, not universal policy.
+#
+# Lean proves the model (TL-01 to TL-21) in the locked SDK image, as `just app` proves the kernel. The kernel's own
+# telemetry decision (FK-25 to FK-27) is proved by `just app` and pinned into the shell by kernel-pin.yml; the tests
+# here ask that pinned kernel, so they pass once the pin on this branch names a kernel that knows `telemetry`.
+#
+# Reuse: a pull request or a merge queue run reuses the proof kept for byte-identical proof inputs, and main
+# always proves in full. The key names every input the proof reads: the model's two sources, the project's
+# config, lock, lakefile, manifest and toolchain, and prismpm.lock (which selects the SDK image, so the Lean
+# toolchain and LexLean). It is checked on read: the kept inputs digest is re-derived from the files here and
+# must equal the one stored beside the attestation, else the proof runs in full.
+name: telemetry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "studio/telemetry/**"
+      - "studio/shell/telemetry/**"
+      - "studio/tools/telemetry*"
+      - "studio/tools/fixtures/telemetry_turns.mjs"
+      - "studio/shell/kernel/**"
+      - "prismpm.lock"
+      - ".github/workflows/telemetry.yml"
+  pull_request:
+    paths:
+      - "studio/telemetry/**"
+      - "studio/shell/telemetry/**"
+      - "studio/tools/telemetry*"
+      - "studio/tools/fixtures/telemetry_turns.mjs"
+      - "studio/shell/kernel/**"
+      - "prismpm.lock"
+      - ".github/workflows/telemetry.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telemetry-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prove:
+    name: Lean proves the Telemetry model, and the tab's data form is that model
+    if: github.repository != 'UOR-Foundation/template'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the exact event revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: The inputs of the proof, as one digest
+        id: inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest=$(cd studio/telemetry && sha256sum src/*.lex.tex lexlean.toml lexlean.lock lean-toolchain lakefile.toml lake-manifest.json ../../prismpm.lock | sha256sum | cut -d' ' -f1)
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+      - name: The proof of these exact inputs, kept by an earlier run
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: .telemetry-proof
+          key: telemetry-proof-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('studio/telemetry/src/*.lex.tex', 'studio/telemetry/lexlean.toml', 'studio/telemetry/lexlean.lock', 'studio/telemetry/lean-toolchain', 'studio/telemetry/lakefile.toml', 'studio/telemetry/lake-manifest.json', 'prismpm.lock') }}
+      - name: Lean verifies every theorem through the locked SDK
+        shell: bash
+        env:
+          DIGEST: ${{ steps.inputs.outputs.digest }}
+        run: |
+          set -euo pipefail
+          # Reuse only on a pull request or a merge queue run, and only when the stored digest is re-derived equal.
+          if [[ ${{ github.event_name }} == pull_request && -s .telemetry-proof/attestation && "$(cat .telemetry-proof/inputs 2>/dev/null)" == "$DIGEST" ]]; then
+            echo "the proof of these exact inputs is reused, attestation $(cat .telemetry-proof/attestation); main proves in full"
+            exit 0
+          fi
+          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
+          if [[ ! $image =~ ^[a-z0-9.-]+(:[0-9]{1,5})?/[a-z0-9./_-]+@sha256:[0-9a-f]{64}$ ]]; then
+            printf '%s\n' 'prismpm.lock does not select an immutable SDK image' >&2
+            exit 64
+          fi
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,exec,nosuid,size=2g \
+            --volume "$PWD:$PWD" \
+            --workdir "$PWD/studio/telemetry" \
+            --env HOME=/tmp/prismpm-home \
+            --env PRISMPM_EPHEMERAL_HOME=1 \
+            "$image" sh -c 'lexlean fmt --check --all && lexlean lock --check && lexlean check --all && lexlean verify --all' | tee .telemetry-verify.log
+          attestation=$(ls studio/telemetry/.lexlean/verified | head -1)
+          test -n "$attestation"
+          mkdir -p .telemetry-proof
+          printf '%s\n' "$attestation" >.telemetry-proof/attestation
+          printf '%s\n' "$DIGEST" >.telemetry-proof/inputs
+      - name: The proofs state the claims their conformance rows make (TL-01 to TL-21)
+        run: |
+          grep -c '^  statement: ' studio/telemetry/src/TelemetryProofs.lex.tex | grep -qx 21
+      - name: The conformance test and claims list are what the proofs generator writes
+        run: |
+          node studio/telemetry/tools/proofs.mjs
+          git checkout -- studio/telemetry/src/TelemetryProofs.lex.tex
+          git diff --exit-code -- studio/telemetry/claims.json crates/conformance/tests/telemetry.rs
+      - name: Telemetry holds to the model and the pinned kernel
+        run: node --test studio/tools/telemetry.test.mjs
+      - name: Nothing in the telemetry can reach the network
+        run: node studio/tools/telemetry_egress.mjs
+      - name: Each planted defect fails the gates, and the restored files pass
+        run: node studio/tools/telemetry_defects.mjs

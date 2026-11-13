@@ -1,0 +1,149 @@
+[
+ {
+  "id": "TL-01",
+  "statement": "A journey's first moment, once recorded, never moves",
+  "theorem": "markNeverMoves",
+  "breaks": "breaksMarkMoves",
+  "body": "(((current =? was) && (not (current =? 0))) && (not ((Telemetry::firstMark current hit gate at) =? was)))"
+ },
+ {
+  "id": "TL-02",
+  "statement": "A journey's end is never recorded before its start, so no KPI span is negative",
+  "theorem": "markNeverBeforeItsStart",
+  "breaks": "breaksMarkBeforeStart",
+  "body": "(((current =? 0) && (not ((Telemetry::firstMark current hit gate at) =? 0))) && ((gate =? 0) || (not (gate <=? (Telemetry::firstMark current hit gate at)))))"
+ },
+ {
+  "id": "TL-03",
+  "statement": "The worst preview update is never below an update the turn made",
+  "theorem": "worstCoversEveryUpdate",
+  "breaks": "breaksWorstMissesUpdate",
+  "body": "(((project event kind) =? (Telemetry::kindUpdate)) && ((Telemetry::nextUpdateWorst state event) <? (project event value)))"
+ },
+ {
+  "id": "TL-04",
+  "statement": "The worst preview update never falls during a turn",
+  "theorem": "worstNeverFalls",
+  "breaks": "breaksWorstFalls",
+  "body": "((Telemetry::nextUpdateWorst state event) <? (project state updateWorst))"
+ },
+ {
+  "id": "TL-05",
+  "statement": "An edit's time to screen is counted only from an edit that started",
+  "theorem": "editTimedFromItsEdit",
+  "breaks": "breaksEditWithoutStart",
+  "body": "(((Telemetry::closesEdit state event) =? 1) && ((project state editMark) =? 0))"
+ },
+ {
+  "id": "TL-06",
+  "statement": "The worst edit to screen never falls during a turn",
+  "theorem": "editWorstNeverFalls",
+  "breaks": "breaksEditWorstFalls",
+  "body": "((Telemetry::nextEditWorst state event) <? (project state editWorst))"
+ },
+ {
+  "id": "TL-07",
+  "statement": "A turn within budget is never counted as over",
+  "theorem": "overCountedOnlyWhenOver",
+  "breaks": "breaksOverMiscounted",
+  "body": "(((((project observation over) =? over) && ((project observation kpi) <=? (Telemetry::kpiReloads))) && ((Telemetry::overCode (project observation kpi) value budget) =? 0)) && (not ((Telemetry::observeOver observation value budget) =? over)))"
+ },
+ {
+  "id": "TL-08",
+  "statement": "A turn over budget is always counted as over",
+  "theorem": "overCountsEveryOver",
+  "breaks": "breaksOverMissed",
+  "body": "(((((project observation over) =? over) && ((project observation kpi) <=? (Telemetry::kpiReloads))) && ((Telemetry::overCode (project observation kpi) value budget) =? 1)) && (not ((Telemetry::observeOver observation value budget) =? (over + 1))))"
+ },
+ {
+  "id": "TL-09",
+  "statement": "The loop never suggests anything without a turn over budget",
+  "theorem": "noSuggestionWithoutOver",
+  "breaks": "breaksNoOver",
+  "body": "(((project observation over) =? 0) && (not ((Telemetry::lever observation stages) =? 0)))"
+ },
+ {
+  "id": "TL-10",
+  "statement": "The loop never suggests anything unless most observed turns are over budget",
+  "theorem": "noSuggestionFromMinority",
+  "breaks": "breaksMinority",
+  "body": "((((project observation over) + (project observation over)) <=? (project observation turns)) && (not ((Telemetry::lever observation stages) =? 0)))"
+ },
+ {
+  "id": "TL-11",
+  "statement": "The loop never suggests anything for a KPI with no budget",
+  "theorem": "noSuggestionWithoutBudget",
+  "breaks": "breaksUnbudgeted",
+  "body": "(((Telemetry::kpiReloads) <? (project observation kpi)) && (not ((Telemetry::lever observation stages) =? 0)))"
+ },
+ {
+  "id": "TL-12",
+  "statement": "A budgeted KPI over budget in most turns always gets a suggestion",
+  "theorem": "persistentOverIsSuggested",
+  "breaks": "breaksSilent",
+  "body": "(((Telemetry::persistent observation) && ((project observation kpi) <=? (Telemetry::kpiReloads))) && ((Telemetry::lever observation stages) =? 0))"
+ },
+ {
+  "id": "TL-13",
+  "statement": "A time under the kernel's threshold is never judged over",
+  "theorem": "withinBudgetNeverOver",
+  "breaks": "breaksWithinTime",
+  "body": "(((not (code =? (Telemetry::kpiReloads))) && (value <? (Telemetry::budgetMicros budget))) && ((Telemetry::overCode code value budget) =? 1))"
+ },
+ {
+  "id": "TL-14",
+  "statement": "A time at or over the kernel's threshold is never judged within",
+  "theorem": "overBudgetNeverWithin",
+  "breaks": "breaksOverTime",
+  "body": "(((not (code =? (Telemetry::kpiReloads))) && ((Telemetry::budgetMicros budget) <=? value)) && ((Telemetry::overCode code value budget) =? 0))"
+ },
+ {
+  "id": "TL-15",
+  "statement": "The loop never suggests switching to the model already in use",
+  "theorem": "neverSwitchToCurrent",
+  "breaks": "breaksSwitchSelf",
+  "body": "(((project other model) =? (project current model)) && (not ((Telemetry::switchTo current other built) =? 0)))"
+ },
+ {
+  "id": "TL-16",
+  "statement": "The loop never suggests a model switch on fewer than five reads of either model",
+  "theorem": "switchNeedsSamples",
+  "breaks": "breaksSwitchSamples",
+  "body": "((((project other reads) <? 5) || ((project current reads) <? 5)) && (not ((Telemetry::switchTo current other built) =? 0)))"
+ },
+ {
+  "id": "TL-17",
+  "statement": "The loop never suggests a model switch while Enter to Checked is within budget",
+  "theorem": "switchNeedsOver",
+  "breaks": "breaksSwitchOver",
+  "body": "(((project built over) =? 0) && (not ((Telemetry::switchTo current other built) =? 0)))"
+ },
+ {
+  "id": "TL-18",
+  "statement": "Only the user's approval adopts a suggestion",
+  "theorem": "onlyApprovalChangesAnything",
+  "breaks": "breaksAdvisory",
+  "body": "((((project loop applied) =? applied) && (not (event =? (Telemetry::loopApprove)))) && (not ((Telemetry::loopApplied loop event) =? applied)))"
+ },
+ {
+  "id": "TL-19",
+  "statement": "Approving with no suggestion pending adopts nothing",
+  "theorem": "approvalNeedsSuggestion",
+  "breaks": "breaksApproveEmpty",
+  "body": "(((((project loop applied) =? applied) && ((project loop pending) =? 0)) && (event =? (Telemetry::loopApprove))) && (not ((Telemetry::loopApplied loop event) =? applied)))"
+ },
+ {
+  "id": "TL-20",
+  "statement": "An adopted change is never called an improvement unless the KPI got faster",
+  "theorem": "improvedOnlyWhenFaster",
+  "breaks": "breaksImproved",
+  "body": "((before <=? after) && ((Telemetry::assess before after) =? 1))"
+ },
+ {
+  "id": "TL-21",
+  "statement": "The device never keeps more than 512 turns",
+  "theorem": "keptIsBounded",
+  "breaks": "breaksKept",
+  "body": "((Telemetry::keepLimit) <? (Telemetry::kept count))"
+ }
+]
