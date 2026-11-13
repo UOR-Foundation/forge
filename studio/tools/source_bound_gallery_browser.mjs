@@ -33,7 +33,8 @@ try {
  const call=(channel,input)=>page.evaluate(({channel,input})=>window.electron.ipcRenderer.invoke(channel,input),{channel,input});
  const make=async name=>(await call('create-app',{name,initialChatMode:'build'})).app.id;
  const id=await make('source-bound-gallery');
- const prepare=async(p,id)=>p.evaluate(async id=>{window.galleryId=id;window.gallerySource=await window.sourceModule.captureProjectSource(window.database,id);const c=document.createElement('canvas');c.width=20;c.height=10;const g=c.getContext('2d');g.fillStyle='#236abc';g.fillRect(0,0,20,10);window.galleryPicture=await new Promise(r=>c.toBlob(r,'image/webp'));window.galleryCard={description:'Make images smaller without losing quality by comparing formats side by side as you go.',tag:'Creative'};},id);
+ const card={description:'Make images smaller without losing quality by comparing formats side by side as you go.',tag:'Creative'};
+ const prepare=async(p,id)=>p.evaluate(async({id,card})=>{window.galleryId=id;window.gallerySource=await window.sourceModule.captureProjectSource(window.database,id);const c=document.createElement('canvas');c.width=20;c.height=10;const g=c.getContext('2d');g.fillStyle='#236abc';g.fillRect(0,0,20,10);window.galleryPicture=await new Promise(r=>c.toBlob(r,'image/webp'));window.galleryCard=card;},{id,card});
  await prepare(page,id);await prepare(peer,id);
  await Promise.all([page.evaluate(()=>gallery.publishGallery(database,galleryId,gallerySource,{picture:galleryPicture,version:'first'})),peer.evaluate(()=>gallery.publishGallery(database,galleryId,gallerySource,{card:galleryCard}))]);
  const both=await page.evaluate(async()=>{const r=await gallery.readGallery(database,galleryId);return {picture:r.picture instanceof Blob,card:r.card,revision:r.revision};});assert.equal(both.picture,true);assert.equal(both.revision,2);assert.equal(both.card.tag,'Creative');
@@ -45,16 +46,34 @@ try {
  await prepare(page,id);await page.evaluate(()=>gallery.publishGallery(database,galleryId,gallerySource,{card:galleryCard}));
  assert.equal(await page.evaluate(async()=>(await gallery.readGallery(database,galleryId)).picture),null);
  await page.evaluate(()=>gallery.publishGallery(database,galleryId,gallerySource,{picture:galleryPicture,version:'new'}));
- // A renderer reload displays only checked media, then an ordinary edit invalidates it.
- await page.goto(base);await page.waitForFunction(()=>!!window.electron);
- const tile=page.getByTestId('app-showcase-card-source-bound-gallery');await tile.waitFor();await tile.locator('img').waitFor();assert.ok((await tile.innerText()).includes('Make images smaller'));
+ // Home defaults to Featured on every mount; own media belongs to the explicit My apps view.
+ const selectMyApps=async()=>{
+  const floor=page.getByTestId('featured-app-showcase');
+  await floor.getByRole('button',{name:'My apps',exact:true}).click();
+  const tile=floor.getByTestId('app-showcase-card-source-bound-gallery');
+  await tile.waitFor();return tile;
+ };
+ // Home shows only a picture and owner, and the supported Apps route is a table. Card text is
+ // checked through the real renderer adapter here, not claimed as visible description coverage.
+ const rendererCard=()=>page.evaluate(async id=>(await window.__gallery.read(id))?.card??null,id);
+ await page.goto(base);await page.waitForFunction(()=>!!window.electron&&!!window.__gallery);
+ const tile=await selectMyApps();await tile.scrollIntoViewIfNeeded();await tile.locator('img').waitFor();
+ assert.equal(await tile.locator('img').evaluate(async image=>{await image.decode();return image.naturalWidth;}),20);
+ assert.deepEqual(await rendererCard(),card);
  await call('edit-app-file',{appId:id,filePath:'notes.txt',content:'another source'});await tile.locator('img').waitFor({state:'hidden'});
- // A forged legacy cache entry never restores a current gallery image.
+ assert.equal(await rendererCard(),null);
+ // A forged legacy cache entry never restores a current gallery image or card.
  await page.evaluate(async({base,id})=>{const cache=await caches.open('covers');await cache.put(new URL('covers/'+id+'.json',base),new Response(JSON.stringify({description:'UNBOUND_LEGACY_DESCRIPTION',tag:'Tools'})));}, {base,id});
- await page.reload();await tile.waitFor();assert.ok(!(await tile.innerText()).includes('UNBOUND_LEGACY_DESCRIPTION'));assert.equal(await tile.locator('img').count(),0);
+ await page.reload();await selectMyApps();assert.ok(!(await tile.innerText()).includes('UNBOUND_LEGACY_DESCRIPTION'));assert.equal(await tile.locator('img').count(),0);
+ assert.equal(await rendererCard(),null);
  await initialize(page);await prepare(page,id);
  const corruption=await page.evaluate(async()=>{await gallery.publishGallery(database,galleryId,gallerySource,{card:galleryCard});const before=await window.__host.get('refs',`gallery:${galleryId}`);await window.__host.put('refs',`gallery:${galleryId}`,{...before,picture:'PRIVATE_CORRUPTION'});let code;try{await gallery.readGallery(database,galleryId);}catch(e){code={code:e.code,message:e.message};}await window.__host.put('refs',`gallery:${galleryId}`,before);return code;});assert.deepEqual(corruption,{code:'galleryStateInvalid',message:'galleryStateInvalid'});
+ assert.deepEqual(await rendererCard(),card);
+ await page.reload();await selectMyApps();assert.equal(await tile.locator('img').count(),0);
+ assert.deepEqual(await rendererCard(),card);
+ // Restore the module bindings for the storage/deletion checks after the renderer reload.
+ await initialize(page);await prepare(page,id);
  await call('delete-app',{appId:id});
  const deleted=await page.evaluate(async()=>{let code;try{await gallery.publishGallery(database,galleryId,gallerySource,{picture:galleryPicture,version:'late'});}catch(e){code=e.code;}return {code,record:await window.__host.get('refs',`gallery:${galleryId}`),read:await gallery.readGallery(database,galleryId)};});assert.deepEqual(deleted,{code:'gallerySourceChanged',record:undefined,read:null});
- assert.deepEqual(errors,[]);console.log(JSON.stringify({actualHost:true,actualIndexedDB:true,twoWindows:true,atomicFieldMerge:true,lateAbort:true,sourceChangeRefused:true,inputCaptured:true,staleFieldsDiscarded:true,rendererCheckedMedia:true,legacyCacheIgnored:true,corruptionRefused:true,deletionPreventsResurrection:true,pageExceptions:0}));
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({actualHost:true,actualIndexedDB:true,twoWindows:true,atomicFieldMerge:true,lateAbort:true,sourceChangeRefused:true,inputCaptured:true,staleFieldsDiscarded:true,rendererCheckedMedia:true,rendererCardAdapterFreshness:true,visibleDescriptionChecked:false,legacyCacheIgnored:true,corruptionRefused:true,deletionPreventsResurrection:true,pageExceptions:0}));
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}

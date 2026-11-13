@@ -38,12 +38,20 @@ try {
   await tab.goto(base);
   await tab.getByRole('heading',{name:'Build your ideas with Prism',exact:true}).waitFor();
   await tab.locator('[role=textbox]').waitFor();
-  assert.equal(await tab.locator('h1').evaluate(el=>getComputedStyle(el).fontSize),'48px');
+  // The Home heading uses clamp(34px, 4.2vw, 55px), including both clamp transitions.
+  const headlineSizes = [];
+  for (const [width, fontSize] of [[390, '34px'], [809, '34px'], [810, '34.02px'], [1280, '53.76px'], [1309, '54.978px'], [1310, '55px'], [1440, '55px']]) {
+    await tab.setViewportSize({ width, height: 900 });
+    const actual = await tab.locator('[data-slot="home-stage"] h1').evaluate(el=>getComputedStyle(el).fontSize);
+    assert.equal(actual, fontSize, `Home heading at ${width}px must follow clamp(34px, 4.2vw, 55px)`);
+    headlineSizes.push({ width, fontSize: actual });
+  }
+  await tab.setViewportSize({ width: 1280, height: 900 });
   assert.equal(await tab.locator('link[rel=stylesheet][href="/foundry/assets/index.css"]').count(),1);
   assert.equal(stylesheetRequests,1,'home must reuse initial renderer stylesheet');
   await tab.getByRole('link',{name:'Settings',exact:true}).click();
   await tab.waitForURL('**/settings');
   assert.equal(await tab.locator('body').evaluate(el=>getComputedStyle(el).fontFamily.includes('Geist')),true);
   assert.equal(stylesheetRequests,1,'settings must retain the initial stylesheet');
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({actualRenderer:true,home:true,settings:true,stylesheetRequests,pageExceptions:0}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({actualRenderer:true,home:true,headlineSizes,settings:true,stylesheetRequests,pageExceptions:0}));
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
