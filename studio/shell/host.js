@@ -32,6 +32,7 @@ import { frameHtml, FONTS } from "./live/frame-html.mjs";
 import { applyOps, createEditor, PatchError } from "./live/edit.mjs";
 import { buildOnGitHub } from "./github-build.js";
 import * as covers from "./covers.mjs";
+import { createProbe, K } from "./telemetry/probe.mjs";
 
 const BASE = new URL("./", import.meta.url); // the shell's directory, wherever it is served
 const listeners = new Map();
@@ -383,8 +384,51 @@ function machineOf(appId) {
   if (!machines.has(key)) machines.set(key, { revision: 0, state: { appId, revision: 0, previewReloadEpoch: 0, phase: "idle", operation: null, startedAt: null, url: null, operationError: null, exit: null, capabilities: caps("idle"), invocationRef: null, lastSettlement: null } });
   return machines.get(key);
 }
+// ---- build telemetry (shell/telemetry, studio/telemetry/src): the turn's moments are marked here, in the
+// live frame's messages and in publish, kept in this browser's IndexedDB, and never sent. Each mark is four
+// numbers into a preallocated ring (well under a microsecond); the record is written once, at idle, after
+// the turn. Where a record may go is the kernel's decision (`telemetry EFFECT ASKED DEVICE`, FK-25 to FK-27).
+// The live frame's paint is timed when its message arrives here: the frame posts it on the animation frame
+// that paints, so the reading is the paint plus one message hop.
+const probe = createProbe();
+const tm = { turn: null, model: null, token: false, declaration: false, frame: false, complete: false, repaired: false, editOpen: false };
+const tmMark = (kind, value = 0) => probe.mark(K[kind], value);
+const tmOnce = (kind) => { if (tm.turn && !tm[kind]) { tm[kind] = true; tmMark(kind); } };
+function tmStart(chatId) {
+  probe.drain();
+  Object.assign(tm, { turn: chatId, model: null, token: false, declaration: false, frame: false, complete: false, repaired: false });
+  tmMark("enter");
+}
+let telemetryReady = null;
+const telemetryOf = () => telemetryReady ??= (async () => {
+  const [{ createTelemetry }, { fromData }, { indexedDbBackend }] = await Promise.all([import("./telemetry/telemetry.mjs"), import("./telemetry/model.mjs"), import("./telemetry/store.mjs")]);
+  const read = async (name) => (await fetch(new URL("./telemetry/data/" + name + ".json", import.meta.url))).json();
+  const names = await read("modules");
+  const model = fromData(Object.fromEntries(await Promise.all(names.map(async (n) => [n, await read(n)]))));
+  return { model, telemetry: createTelemetry({ model, backend: indexedDbBackend(), ask: (line) => window.__forgeKernel.ask(line) }) };
+})();
+const tmIdle = (fn) => (self.requestIdleCallback ? requestIdleCallback(fn, { timeout: 5000 }) : setTimeout(fn, 500));
+// An approval or a publish is not a build turn: its Enter is forgotten.
+const tmCancel = (chatId) => { if (tm.turn === chatId) { tm.turn = null; probe.drain(); } };
+// The turn's events become one record at idle; a refusal or a failure costs the turn nothing.
+function tmFlush() {
+  const { events, dropped } = probe.drain(), modelName = tm.model || "unknown";
+  tm.turn = null;
+  if (!events.length) return;
+  tmIdle(() => telemetryOf().then(({ telemetry }) => telemetry.record({ events, dropped, model: modelName })).catch((e) => console.warn("[telemetry]", (e && e.code) || e)));
+}
+async function openTelemetry() {
+  const [{ openPanel }, t] = await Promise.all([import("./telemetry/panel.mjs"), telemetryOf()]);
+  openPanel(t);
+}
+addEventListener("keydown", (e) => { if (e.ctrlKey && e.altKey && (e.key === "t" || e.key === "T")) { e.preventDefault(); openTelemetry().catch(() => {}); } });
+const tmHash = () => { if (location.hash === "#telemetry") openTelemetry().catch(() => {}); };
+addEventListener("hashchange", tmHash);
+addEventListener("load", tmHash, { once: true });
+
 function publish(appId, patch) {
   const m = machineOf(appId);
+  if (tm.turn && patch.previewReloadEpoch > (m.state.previewReloadEpoch || 0)) tmMark("reload");
   m.revision += 1;
   m.state = { ...m.state, ...patch, revision: m.revision, capabilities: caps(patch.phase || m.state.phase) };
   emit("distributed-machine:snapshot", { protocolVersion: 1, machineId: "app_run", encodedKey: { appId }, actorInstanceId: "web-app_run-" + appId, revision: m.revision, encodedState: m.state });
@@ -597,12 +641,21 @@ window.addEventListener("message", (e) => {
   const m = e.data;
   if (!m || typeof m.type !== "string" || !m.type.startsWith("live/") || !isLiveFrame(e.source)) return;
   // The frame reads its app from the address (a string); the host keys apps as the store does (a number).
+  if (m.type === "live/hello" && tm.turn) tmOnce("frame");
   if (m.type === "live/hello") { const app = /^[0-9]+$/.test(String(m.app)) ? Number(m.app) : m.app; liveWindows.set(e.source, app); if (appApps.has(app)) appFramesReady().then((frames) => (frames.has(app) ? frames.resend(app) : refreshPreview(app))).catch(() => {}); else if (liveLatest.has(app)) sendLive(app); else refreshPreview(app); return; }
-  if (m.type === "live/painted") { if (m.changed) { liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift(); } return; }
+  if (m.type === "live/painted") {
+    if (m.changed) {
+      liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift();
+      if (tm.turn) { tmMark("update", Math.round((m.work || 0) * 1000)); tmMark("pixel"); }
+      if (tm.editOpen) { tm.editOpen = false; tmMark("editScreen"); if (!tm.turn) tmFlush(); }
+    }
+    return;
+  }
   // Everything else acts on an app: the one this frame was shown, never the one the message names.
   const appId = liveWindows.get(e.source);
   if (!appId) return;
   if (m.type === "live/intent") { if (appApps.has(appId)) appFramesReady().then((frames) => frames.intent(appId, m)).catch(() => {}); return; }
+  if (m.type === "live/patch" && Array.isArray(m.ops)) { tm.editOpen = true; tmMark("edit"); }
   if (m.type === "live/patch" && Array.isArray(m.ops)) patchSpec(appId, m.ops, { author: "user", key: m.key || null }).catch(() => {});
   else if (m.type === "live/undo" || m.type === "live/redo") stepSpec(appId, m.type === "live/undo" ? "undo" : "redo").catch(() => {});
   else if (m.type === "live/point") { if (livePointed.get(appId)?.key === m.key) livePointed.delete(appId); else livePointed.set(appId, { key: m.key, kind: m.kind, edit: m.edit || {}, text: String(m.text || "").slice(0, 200) }); }
@@ -1310,6 +1363,7 @@ async function chatTurn(chatId, intent) {
   // Only Featherless is offered as a cloud model now; a selection left on OpenRouter answers on the device.
   const paid = chosen.provider === "featherless" && chosen.name;
   const model = paid ? chosen.provider + "/" + chosen.name.replace(/^(openrouter|featherless)\//, "") : MODEL_ID;
+  if (tm.turn === chatId) tm.model = model;
   // T2: the user message, accepted
   const messages = await messagesOf(chatId);
   const userId = messages.length ? Math.max(...messages.map((x) => x.id)) + 1 : 1;
@@ -1317,6 +1371,8 @@ async function chatTurn(chatId, intent) {
   await saveMessages(chatId, messages);
   publishChat(chatId, { phase: "streaming", lastAcceptance: { intentId: intent.intentId, acceptance: "message-accepted", acceptedMessageId: userId } });
   emit("chat:stream:start", { chatId, invocationRef: ref });
+  if (prism.isApproval(intent.prompt)) tmCancel(chatId);
+  if (prism.isPublish(intent.prompt)) tmCancel(chatId);
   if (prism.isApproval(intent.prompt)) return approveTurn(chatId, appId, messages, userId, ref, intent.intentId);
   if (prism.isPublish(intent.prompt)) return publishTurn(chatId, appId, messages, userId, ref, intent.intentId);
   // An app's first build turn opens the live frame now, while the model thinks, not when the spec's tag
@@ -1366,6 +1422,10 @@ async function chatTurn(chatId, intent) {
     let lastSave = 0;
     const onText = async (t) => {
       full = t;
+      if (tm.turn === chatId) {
+        if (!tm.token && t && !t.startsWith("<think>")) tmOnce("token");
+        if (!tm.complete && (t.includes("\\end{semanticmodule}") || t.includes("</prism-lexlean>") || t.includes("</dyad-spec>"))) tmOnce("complete");
+      }
       // The chat shows the answer without the module's text (prism.shownText); `full` keeps it for reading.
       const shown = prism.shownText(full);
       let lcp = 0; while (lcp < lastSent.length && lcp < shown.length && lastSent[lcp] === shown[lcp]) lcp++;
@@ -1375,7 +1435,7 @@ async function chatTurn(chatId, intent) {
       // The rules as far as the model has written them go to the live frame now, not after the turn.
       if (full.includes("<dyad-spec>")) {
         const raw = live.partialSpec(full);
-        if (raw) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } pushLive(appId, raw, "draft"); }
+        if (raw) { if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); } tmOnce("declaration"); pushLive(appId, raw, "draft"); }
       } else if (full.includes("<prism-lexlean>")) {
         // A canonical LexLean module is the source: whatever declarations are whole are projected now.
         // The frame opens on the tag, not on the first whole declaration (thousands of characters
@@ -1383,8 +1443,8 @@ async function chatTurn(chatId, intent) {
         if (!liveShown.has(appId)) { liveShown.add(appId); showLive(appId).catch(() => liveShown.delete(appId)); }
         // The app shape is run; the decision shape is read and projected.
         const writing = appShape.moduleFromTurn(full);
-        if (writing && appShape.isAppShape(writing.text)) pushApp(appId, writing.text);
-        else { const part = lexlean.partialFromTurn(full); if (part) pushLive(appId, part.spec, "draft"); }
+        if (writing && appShape.isAppShape(writing.text)) { tmOnce("declaration"); pushApp(appId, writing.text); }
+        else { const part = lexlean.partialFromTurn(full); if (part) { tmOnce("declaration"); pushLive(appId, part.spec, "draft"); } }
       }
       if (Date.now() - lastSave > 150) { messages[messages.length - 1].content = shown; await saveMessages(chatId, messages); lastSave = Date.now(); }
     };
@@ -1404,6 +1464,7 @@ async function chatTurn(chatId, intent) {
       if (wrote && appShape.isAppShape(wrote.text)) {
         const verdict = await checkAppModule(wrote.text).catch(() => null);
         if (verdict && !verdict.ok) {
+          if (tm.turn === chatId) { tm.repaired = true; tmMark("refused"); }
           const ask = { ...genBody, messages: [...genBody.messages, { role: "assistant", content: before }, { role: "user", content: appShape.repairPrompt(verdict.issues) }] };
           const { text } = await paidGenerate(ask, (t) => onTextSoon(before + "\n\n" + t), abort.signal);
           settleText();
@@ -1417,7 +1478,7 @@ async function chatTurn(chatId, intent) {
         settleText();
         return text;
       });
-      if (next !== before) await onText(next);
+      if (next !== before) { if (tm.turn === chatId) { tm.repaired = true; tmMark("refused"); } await onText(next); }
     };
     // Warm up: the local model is chosen but not resident yet; a held key (the visitor's, or the
     // site's) answers through OpenRouter meanwhile, and the local model starts loading for the next turn.
@@ -1496,6 +1557,13 @@ async function chatTurn(chatId, intent) {
     // A turn that wrote a stateful app ends as one; any other ends as a decision, bound to the same source and signal.
     const spec = (await appAfterTurn(appId, full, { signal: abort.signal, source: applied.source, onCommit })) || await rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit });
     if (refusedCode) spec.card = (spec.card ? spec.card + "\n\n" : "") + prism.CODE_REFUSED;
+    if (tm.turn === chatId && tm.complete) {
+      // Checked is the phase the turn left the app in: the kernel's answer to the check just made.
+      let phase = null;
+      try { phase = JSON.parse(await get("files", appId + ":" + appShape.STATE_PATH) || "null")?.phase ?? (await rulesOf(appId))?.phase ?? null; } catch (e) {}
+      tmMark("rechecked");
+      if (phase && phase !== "drafting") { tmMark("read", tm.repaired ? 2 : 1); tmMark("checked"); } else tmMark("refused");
+    }
     for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {
       assertGenerationActive(abort.signal);
       let ops; try { ops = JSON.parse(match[1]); } catch {}
@@ -1531,6 +1599,7 @@ async function chatTurn(chatId, intent) {
   publishChat(chatId, { phase: "finalizing", error, lastCompletion: completion });
   publishChat(chatId, { phase: outcome === "errored" ? "errored" : "idle", invocationRef: null, queuePaused: false, queuePauseReason: null });
   emit("chat:stream:end", { chatId });
+  if (tm.turn === chatId) tmFlush();
 }
 const chatSubscribe = ({ machineId, encodedKey }) => { const m = chatMachineOf(encodedKey.chatId); return { protocolVersion: 1, machineId, encodedKey, actorInstanceId: "web-chat_stream-" + encodedKey.chatId, revision: m.revision, encodedState: m.state }; };
 function chatDispatch({ encodedKey, messageId, expectedActorInstanceId, encodedEvent }) {
@@ -1541,6 +1610,7 @@ function chatDispatch({ encodedKey, messageId, expectedActorInstanceId, encodedE
   if (type === "SUBMIT") {
     const intent = encodedEvent.intent;
     if (m.state.phase === "admitting" || m.state.phase === "streaming") return { kind: "ignored", actorInstanceId: aid, revision: m.revision, transactionSequence: m.revision, messageId, reason: "not-active" };
+    tmStart(chatId);
     publishChat(chatId, { phase: "admitting", invocationRef: intent.invocationRef, error: null, queuePaused: false, queuePauseReason: null });
     chatTurn(chatId, intent).catch((e) => { console.error("[host] chat turn", e); publishChat(chatId, { phase: "errored", invocationRef: null, error: String((e && e.message) || e) }); });
     return applied();

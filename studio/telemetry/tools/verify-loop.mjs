@@ -2,7 +2,7 @@
 // theorem. When the only refusal is LLV7005 (a theorem's declared axiom set differs from the set Lean
 // observed), the declaration's axiom list is set to the observed set and verify runs again; any other
 // refusal stops the loop. Each round is logged to out/verify-rounds.log.
-// Run (Windows): node v2/telemetry/tools/verify-loop.mjs
+// Run (Windows): node studio/telemetry/tools/verify-loop.mjs
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -13,7 +13,7 @@ mkdirSync(here + "out", { recursive: true });
 const log = (line) => { appendFileSync(here + "out/verify-rounds.log", line + "\n"); console.log(line); };
 for (let round = 1; round <= 20; round++) {
   const t0 = Date.now();
-  const r = spawnSync("wsl", ["-d", "Ubuntu", "--", "bash", wslPath + "sdk.sh", "lexlean fmt --all >/dev/null && lexlean lock >/dev/null && lexlean --diagnostic-format json verify --all; ls .lexlean/verified 2>/dev/null"], { encoding: "utf8", env: { ...process.env, MSYS_NO_PATHCONV: "1" }, maxBuffer: 1 << 26 });
+  const r = spawnSync("wsl", ["-d", "Ubuntu", "--", "bash", wslPath + "tools/sdk.sh", "lexlean fmt --all >/dev/null && lexlean lock >/dev/null && lexlean --diagnostic-format json verify --all; ls .lexlean/verified 2>/dev/null"], { encoding: "utf8", env: { ...process.env, MSYS_NO_PATHCONV: "1" }, maxBuffer: 1 << 26 });
   const out = (r.stdout + r.stderr).replaceAll("\0", "");
   let result = null;
   for (const line of out.split("\n")) { try { const j = JSON.parse(line); if (j.spec === "lexlean/command-result/1") result = j; } catch {} }

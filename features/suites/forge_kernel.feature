@@ -148,3 +148,21 @@ Feature: forge_kernel
     Given the model in app/src/ForgeKernel.lex.tex
     When the Lean kernel checks editBudgetBoundHolds during prismpm verify
     Then no request meets breaksEditBudgetBound
+
+  @FK-25 @build
+  Scenario: The kernel never lets a telemetry record reach the network or an app's frame
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks telemetryEgressHolds during prismpm verify
+    Then no request meets breaksTelemetryEgress
+
+  @FK-26 @build
+  Scenario: The kernel never lets a telemetry record be saved unless the user asked
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks telemetryUnaskedHolds during prismpm verify
+    Then no request meets breaksTelemetryUnasked
+
+  @FK-27 @build
+  Scenario: The kernel never lets a telemetry record reach a model that is not on the device
+    Given the model in app/src/ForgeKernel.lex.tex
+    When the Lean kernel checks telemetryOffDeviceHolds during prismpm verify
+    Then no request meets breaksTelemetryOffDevice

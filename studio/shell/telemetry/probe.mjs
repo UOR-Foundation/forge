@@ -12,15 +12,19 @@
 // is counted in `dropped`, never written over an earlier one, so a span is never computed from a stale
 // event. Nothing here can reach the network: this file imports nothing and calls no I/O.
 //
-// Capacity is 1,024 events a turn. The model's list functions run in an interpreter that recurses once
-// per event, and in Node that overflows between 1,000 and 2,000 events; a turn records about 130 (the
-// replay) to a few hundred (one paint per change). A turn that fills the ring says so in `dropped`.
+// Capacity is 16,384 events a turn (512 KB); a replayed turn records about 130, a long one a few
+// thousand. A turn that fills the ring says so in `dropped`.
+
+// The Telemetry model's event kinds, in its code order (Telemetry.lex.tex, kind…). Held to the model by
+// telemetry.test.mjs, so a name here can never mean another code there.
+export const KINDS = ["enter", "token", "frame", "declaration", "pixel", "update", "edit", "editScreen", "complete", "checked", "reload", "read", "refused", "reused", "rechecked"];
+export const K = Object.freeze(Object.fromEntries(KINDS.map((k, i) => [k, i])));
 
 export const now = () => Math.round((performance.timeOrigin + performance.now()) * 1000);
 
 const FIELDS = 4;
 
-export const CAPACITY = 1024;
+export const CAPACITY = 16384;
 
 export function createProbe(capacity = CAPACITY) {
   const ring = new Float64Array(capacity * FIELDS);

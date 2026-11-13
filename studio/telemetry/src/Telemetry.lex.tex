@@ -87,20 +87,6 @@ definition{name: leverShorterModule, parameters: [], result: Nat, body: 8}
 
 definition{name: leverReloadTrigger, parameters: [], result: Nat, body: 9}
 
-definition{name: effectStore, parameters: [], result: Nat, body: 0}
-
-definition{name: effectShow, parameters: [], result: Nat, body: 1}
-
-definition{name: effectSave, parameters: [], result: Nat, body: 2}
-
-definition{name: effectFetch, parameters: [], result: Nat, body: 3}
-
-definition{name: effectInfer, parameters: [], result: Nat, body: 4}
-
-definition{name: effectServe, parameters: [], result: Nat, body: 5}
-
-definition{name: effectFrame, parameters: [], result: Nat, body: 6}
-
 definition{name: loopOffer, parameters: [], result: Nat, body: 0}
 
 definition{name: loopApprove, parameters: [], result: Nat, body: 1}
@@ -122,6 +108,32 @@ structure{
     {name: at, type: Nat},
     {name: value, type: Nat},
     {name: model, type: Nat}
+  ]
+}
+
+structure{
+  name: State,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: enter, type: Nat},
+    {name: token, type: Nat},
+    {name: frame, type: Nat},
+    {name: declaration, type: Nat},
+    {name: pixel, type: Nat},
+    {name: complete, type: Nat},
+    {name: checked, type: Nat},
+    {name: updates, type: Nat},
+    {name: updateWorst, type: Nat},
+    {name: editMark, type: Nat},
+    {name: edits, type: Nat},
+    {name: editWorst, type: Nat},
+    {name: reloads, type: Nat},
+    {name: firstTry, type: Nat},
+    {name: repaired, type: Nat},
+    {name: refused, type: Nat},
+    {name: reused, type: Nat},
+    {name: rechecked, type: Nat}
   ]
 }
 
@@ -166,80 +178,150 @@ structure{
 }
 
 definition{
-  name: firstAt,
-  parameters: [events : (List Event), kind : Nat, after : Nat],
+  name: hits,
+  parameters: [event : Event, kind : Nat],
+  result: Nat,
+  body: (if ((project event kind) =? kind) then 1 else 0)
+}
+
+definition{
+  name: firstMark,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat],
+  result: Nat,
+  body: (if (not (current =? 0)) then current else (if (((hit =? 1) && (not (gate =? 0))) && (gate <=? (at + 1))) then (at + 1) else 0))
+}
+
+definition{
+  name: nextEnter,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (firstMark (project state enter) (hits event (kindEnter)) 1 (project event at))
+}
+
+definition{
+  name: nextToken,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (firstMark (project state token) (hits event (kindToken)) (project state enter) (project event at))
+}
+
+definition{
+  name: nextFrame,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (firstMark (project state frame) (hits event (kindFrame)) (project state enter) (project event at))
+}
+
+definition{
+  name: nextDeclaration,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (firstMark (project state declaration) (hits event (kindDeclaration)) (project state enter) (project event at))
+}
+
+definition{
+  name: nextPixel,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (firstMark (project state pixel) (hits event (kindPixel)) (project state declaration) (project event at))
+}
+
+definition{
+  name: nextComplete,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (firstMark (project state complete) (hits event (kindComplete)) (project state enter) (project event at))
+}
+
+definition{
+  name: nextChecked,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (firstMark (project state checked) (hits event (kindChecked)) (project state complete) (project event at))
+}
+
+definition{
+  name: nextUpdateWorst,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (if (((project event kind) =? (kindUpdate)) && ((project state updateWorst) <? (project event value))) then (project event value) else (project state updateWorst))
+}
+
+definition{
+  name: nextEditMark,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (if ((project event kind) =? (kindEdit)) then ((project event at) + 1) else (if ((project event kind) =? (kindEditScreen)) then 0 else (project state editMark)))
+}
+
+definition{
+  name: closesEdit,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (if (((project event kind) =? (kindEditScreen)) && (not ((project state editMark) =? 0))) then 1 else 0)
+}
+
+definition{
+  name: editTime,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (prim subtract ((project event at) + 1) (project state editMark) : Nat)
+}
+
+definition{
+  name: nextEditWorst,
+  parameters: [state : State, event : Event],
+  result: Nat,
+  body: (if (((closesEdit state event) =? 1) && ((project state editWorst) <? (editTime state event))) then (editTime state event) else (project state editWorst))
+}
+
+definition{
+  name: readAt,
+  parameters: [event : Event, attempt : Nat],
+  result: Nat,
+  body: (if (((project event kind) =? (kindRead)) && ((project event value) =? attempt)) then 1 else 0)
+}
+
+definition{
+  name: step,
+  parameters: [state : State, event : Event],
+  result: State,
+  body: (record State {enter := (nextEnter state event), token := (nextToken state event), frame := (nextFrame state event), declaration := (nextDeclaration state event), pixel := (nextPixel state event), complete := (nextComplete state event), checked := (nextChecked state event), updates := ((project state updates) + (hits event (kindUpdate))), updateWorst := (nextUpdateWorst state event), editMark := (nextEditMark state event), edits := ((project state edits) + (closesEdit state event)), editWorst := (nextEditWorst state event), reloads := ((project state reloads) + (hits event (kindReload))), firstTry := ((project state firstTry) + (readAt event 1)), repaired := ((project state repaired) + (readAt event 2)), refused := ((project state refused) + (hits event (kindRefused))), reused := ((project state reused) + (hits event (kindReused))), rechecked := ((project state rechecked) + (hits event (kindRechecked)))})
+}
+
+definition{
+  name: empty,
+  parameters: [],
+  result: State,
+  body: (record State {enter := 0, token := 0, frame := 0, declaration := 0, pixel := 0, complete := 0, checked := 0, updates := 0, updateWorst := 0, editMark := 0, edits := 0, editWorst := 0, reloads := 0, firstTry := 0, repaired := 0, refused := 0, reused := 0, rechecked := 0})
+}
+
+definition{
+  name: spanOf,
+  parameters: [start : Nat, finish : Nat],
   result: (Option Nat),
-  body: (match events
-    | List.nil => (ctor Option.none [Nat])
-    | List.cons head rest => (if (((project head kind) =? kind) && (after <=? (project head at))) then (ctor Option.some [Nat] (project head at)) else (firstAt rest kind after))),
-  recursive_argument: events
+  body: (if (((not (start =? 0)) && (not (finish =? 0))) && (start <=? finish)) then (ctor Option.some [Nat] (prim subtract finish start : Nat)) else (ctor Option.none [Nat]))
 }
 
 definition{
-  name: span,
-  parameters: [events : (List Event), start : Nat, finish : Nat],
+  name: whenTurn,
+  parameters: [state : State, value : Nat],
   result: (Option Nat),
-  body: (match (firstAt events start 0)
-    | Option.none => (ctor Option.none [Nat])
-    | Option.some t => (match (firstAt events finish t)
-      | Option.none => (ctor Option.none [Nat])
-      | Option.some u => (ctor Option.some [Nat] (prim subtract u t : Nat))))
+  body: (if ((project state enter) =? 0) then (ctor Option.none [Nat]) else (ctor Option.some [Nat] value))
 }
 
 definition{
-  name: countKind,
-  parameters: [events : (List Event), kind : Nat],
-  result: Nat,
-  body: (match events
-    | List.nil => 0
-    | List.cons head rest => (if ((project head kind) =? kind) then ((countKind rest kind) + 1) else (countKind rest kind))),
-  recursive_argument: events
-}
-
-definition{
-  name: countValue,
-  parameters: [events : (List Event), kind : Nat, value : Nat],
-  result: Nat,
-  body: (match events
-    | List.nil => 0
-    | List.cons head rest => (if (((project head kind) =? kind) && ((project head value) =? value)) then ((countValue rest kind value) + 1) else (countValue rest kind value))),
-  recursive_argument: events
-}
-
-definition{
-  name: maxValue,
-  parameters: [events : (List Event), kind : Nat, best : Nat],
-  result: Nat,
-  body: (match events
-    | List.nil => best
-    | List.cons head rest => (maxValue rest kind (if (((project head kind) =? kind) && (best <? (project head value))) then (project head value) else best))),
-  recursive_argument: events
-}
-
-definition{
-  name: editWorst,
-  parameters: [events : (List Event), pending : (Option Nat), worst : Nat],
-  result: Nat,
-  body: (match events
-    | List.nil => worst
-    | List.cons head rest => (if ((project head kind) =? (kindEdit)) then (editWorst rest (ctor Option.some [Nat] (project head at)) worst) else (if ((project head kind) =? (kindEditScreen)) then (match pending
-      | Option.none => (editWorst rest (ctor Option.none [Nat]) worst)
-      | Option.some t => (editWorst rest (ctor Option.none [Nat]) (if (worst <? (prim subtract (project head at) t : Nat)) then (prim subtract (project head at) t : Nat) else worst))) else (editWorst rest pending worst)))),
-  recursive_argument: events
-}
-
-definition{
-  name: present,
-  parameters: [events : (List Event), kind : Nat, value : Nat],
+  name: whenSeen,
+  parameters: [count : Nat, value : Nat],
   result: (Option Nat),
-  body: (if ((countKind events kind) =? 0) then (ctor Option.none [Nat]) else (ctor Option.some [Nat] value))
+  body: (if (count =? 0) then (ctor Option.none [Nat]) else (ctor Option.some [Nat] value))
 }
 
 definition{
   name: kpiOf,
-  parameters: [events : (List Event), code : Nat],
+  parameters: [state : State, code : Nat],
   result: (Option Nat),
-  body: (if (code =? (kpiPreview)) then (span events (kindEnter) (kindFrame)) else (if (code =? (kpiDeclaration)) then (span events (kindEnter) (kindDeclaration)) else (if (code =? (kpiPixel)) then (span events (kindDeclaration) (kindPixel)) else (if (code =? (kpiUpdate)) then (present events (kindUpdate) (maxValue events (kindUpdate) 0)) else (if (code =? (kpiEdit)) then (present events (kindEditScreen) (editWorst events (ctor Option.none [Nat]) 0)) else (if (code =? (kpiChecked)) then (span events (kindComplete) (kindChecked)) else (if (code =? (kpiBuilt)) then (span events (kindEnter) (kindChecked)) else (if (code =? (kpiReloads)) then (present events (kindEnter) (countKind events (kindReload))) else (if (code =? (kpiThink)) then (span events (kindEnter) (kindToken)) else (if (code =? (kpiLead)) then (span events (kindToken) (kindDeclaration)) else (if (code =? (kpiWrite)) then (span events (kindDeclaration) (kindComplete)) else (if (code =? (kpiFirstTry)) then (present events (kindEnter) (countValue events (kindRead) 1)) else (if (code =? (kpiRepaired)) then (present events (kindEnter) (countValue events (kindRead) 2)) else (if (code =? (kpiRefused)) then (present events (kindEnter) (countKind events (kindRefused))) else (if (code =? (kpiReused)) then (present events (kindEnter) (countKind events (kindReused))) else (if (code =? (kpiRechecked)) then (present events (kindEnter) (countKind events (kindRechecked))) else (ctor Option.none [Nat])))))))))))))))))
+  body: (if (code =? (kpiPreview)) then (spanOf (project state enter) (project state frame)) else (if (code =? (kpiDeclaration)) then (spanOf (project state enter) (project state declaration)) else (if (code =? (kpiPixel)) then (spanOf (project state declaration) (project state pixel)) else (if (code =? (kpiUpdate)) then (whenSeen (project state updates) (project state updateWorst)) else (if (code =? (kpiEdit)) then (whenSeen (project state edits) (project state editWorst)) else (if (code =? (kpiChecked)) then (spanOf (project state complete) (project state checked)) else (if (code =? (kpiBuilt)) then (spanOf (project state enter) (project state checked)) else (if (code =? (kpiReloads)) then (whenTurn state (project state reloads)) else (if (code =? (kpiThink)) then (spanOf (project state enter) (project state token)) else (if (code =? (kpiLead)) then (spanOf (project state token) (project state declaration)) else (if (code =? (kpiWrite)) then (spanOf (project state declaration) (project state complete)) else (if (code =? (kpiFirstTry)) then (whenTurn state (project state firstTry)) else (if (code =? (kpiRepaired)) then (whenTurn state (project state repaired)) else (if (code =? (kpiRefused)) then (whenTurn state (project state refused)) else (if (code =? (kpiReused)) then (whenTurn state (project state reused)) else (if (code =? (kpiRechecked)) then (whenTurn state (project state rechecked)) else (ctor Option.none [Nat])))))))))))))))))
 }
 
 definition{name: budgeted, parameters: [code : Nat], result: Bool, body: (code <=? (kpiReloads))}
@@ -259,50 +341,31 @@ definition{
 }
 
 definition{
-  name: countOver,
-  parameters: [values : (List Nat), code : Nat, budget : Nat],
-  result: Nat,
-  body: (match values
-    | List.nil => 0
-    | List.cons head rest => ((countOver rest code budget) + (overCode code head budget))),
-  recursive_argument: values
-}
-
-definition{
-  name: worstOf,
-  parameters: [values : (List Nat), best : Nat],
-  result: Nat,
-  body: (match values
-    | List.nil => best
-    | List.cons head rest => (worstOf rest (if (best <? head) then head else best))),
-  recursive_argument: values
-}
-
-definition{
-  name: totalOf,
-  parameters: [values : (List Nat)],
-  result: Nat,
-  body: (match values | List.nil => 0 | List.cons head rest => (head + (totalOf rest))),
-  recursive_argument: values
-}
-
-definition{
-  name: lastOf,
-  parameters: [values : (List Nat)],
-  result: Nat,
-  body: (match values
-    | List.nil => 0
-    | List.cons head rest => (match rest
-      | List.nil => head
-      | List.cons next more => (lastOf rest))),
-  recursive_argument: values
-}
-
-definition{
-  name: observe,
-  parameters: [code : Nat, values : (List Nat), budget : Nat],
+  name: observeStart,
+  parameters: [code : Nat],
   result: Observation,
-  body: (record Observation {kpi := code, turns := (prim length values : Nat), over := (if (budgeted code) then (countOver values code budget) else 0), worst := (worstOf values 0), total := (totalOf values), last := (lastOf values)})
+  body: (record Observation {kpi := code, turns := 0, over := 0, worst := 0, total := 0, last := 0})
+}
+
+definition{
+  name: observeOver,
+  parameters: [observation : Observation, value : Nat, budget : Nat],
+  result: Nat,
+  body: (if ((project observation kpi) <=? (kpiReloads)) then ((project observation over) + (overCode (project observation kpi) value budget)) else 0)
+}
+
+definition{
+  name: observeWorst,
+  parameters: [observation : Observation, value : Nat],
+  result: Nat,
+  body: (if ((project observation worst) <? value) then value else (project observation worst))
+}
+
+definition{
+  name: observeStep,
+  parameters: [observation : Observation, value : Nat, budget : Nat],
+  result: Observation,
+  body: (record Observation {kpi := (project observation kpi), turns := ((project observation turns) + 1), over := (observeOver observation value budget), worst := (observeWorst observation value), total := ((project observation total) + value), last := value})
 }
 
 definition{
@@ -348,19 +411,29 @@ definition{
 }
 
 definition{
-  name: bestSwitch,
+  name: pickBetter,
   parameters: [
-    current : ModelStat,
-    others : (List ModelStat),
-    built : Observation,
     best : Nat,
-    bestRate : Nat
+    bestRate : Nat,
+    current : ModelStat,
+    other : ModelStat,
+    built : Observation
   ],
   result: Nat,
-  body: (match others
-    | List.nil => best
-    | List.cons head rest => (if ((0 <? (switchTo current head built)) && (bestRate <? (firstTryPermille head))) then (bestSwitch current rest built (switchTo current head built) (firstTryPermille head)) else (bestSwitch current rest built best bestRate))),
-  recursive_argument: others
+  body: (if ((0 <? (switchTo current other built)) && (bestRate <? (firstTryPermille other))) then (switchTo current other built) else best)
+}
+
+definition{
+  name: pickRate,
+  parameters: [
+    best : Nat,
+    bestRate : Nat,
+    current : ModelStat,
+    other : ModelStat,
+    built : Observation
+  ],
+  result: Nat,
+  body: (if ((0 <? (switchTo current other built)) && (bestRate <? (firstTryPermille other))) then (firstTryPermille other) else bestRate)
 }
 
 definition{
@@ -396,13 +469,6 @@ definition{
   parameters: [before : Nat, after : Nat],
   result: Nat,
   body: (if ((prim multiply after 100 : Nat) <? (prim multiply before 95 : Nat)) then 1 else (if ((prim multiply before 105 : Nat) <? (prim multiply after 100 : Nat)) then 2 else 0))
-}
-
-definition{
-  name: flowAllows,
-  parameters: [effect : Nat, userAct : Nat, onDevice : Nat],
-  result: Nat,
-  body: (if (effect =? (effectStore)) then 1 else (if (effect =? (effectShow)) then 1 else (if (effect =? (effectSave)) then (if (userAct =? 1) then 1 else 0) else (if (effect =? (effectInfer)) then (if (onDevice =? 1) then 1 else 0) else 0))))
 }
 
 definition{

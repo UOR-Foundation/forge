@@ -143,12 +143,16 @@ Foundry is a Prism app: its decisions are FK requirements in `app/src/ForgeKerne
 | Motion: at most 200 ms, none when reduced motion is asked | `motion MS REDUCED`: `allow` or `deny` | FK-18, FK-19 | the Experience gate, for every duration in `appearance.css` |
 | Tap targets at least 44 px | `target PX`: `ok` or `small` | FK-20 | the Experience gate, for the touch hit area |
 | "This week" on the Apps page: seven days | `recent SECONDS`: `yes` or `no` | FK-21 | the Apps page, for each date |
+| Where a build-telemetry record may go | `telemetry EFFECT ASKED DEVICE`: `allow` or `deny` | FK-25 never to the network or an app's frame, FK-26 never saved unless the user asked, FK-27 never to a model that is not on the device | the telemetry's own flows (`studio/shell/telemetry`) |
 
 Where the build journey stood on 2026-11-12, by the owner's measurements on the deployed site with GLM 5.3 Flash: `preview` 1.3 s (within); `declaration` 99 to 290 s (over); `pixel` 31 to 64 ms (within); `update` 4.8 to 8.5 ms (within); `edit` 16 to 25 ms, rarely 34 to 37 (over when it is); `checked` 35 to 70 ms (within); `built` 167 to 196 s (over). Both misses that matter are the model reasoning before it writes, which is what FK-22 turns off.
 
 FK-22 to FK-24 were proved by Lean in the kernel pin run that built the kernel this branch pins (blake3:2562a0ed, attestation `655c6d4b…`), and the pinned guest replays all 174 vectors, the twenty new ones among them.
 
 Not established about FK-22: that GLM 5.3 Flash honours the switch on Featherless, how long a first declaration then takes, and how often a module written without reasoning reads at the first try. The relay must be redeployed before the switch reaches Featherless at all; until then it is dropped and nothing changes.
+
+
+Build telemetry (`studio/telemetry/DESIGN.md`) measures the KPIs above on the user's device and asks the kernel for these budgets; it keeps no number of its own.
 
 What stays outside the kernel, and why:
 

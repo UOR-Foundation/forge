@@ -405,6 +405,27 @@ Verified: proved by Lean for every request (FK-22, theorem `firstThinkHolds`).
 - **WHEN** the request is `think 1`
 - **THEN** the answer SHALL be `allow`
 
+### Requirement: Where a telemetry record may go
+
+A request `telemetry EFFECT ASKED DEVICE` asks whether a build-telemetry record may flow into EFFECT: `store` (this browser's storage), `show` (the user's screen), `save` (a file the user saves), `fetch`, `infer` (a model), `serve` or `frame` (an app's preview). ASKED is `yes` when the user asked for this flow, DEVICE is `yes` when the model runs on the device. The app SHALL answer `allow` only for store, show, save when asked, and infer on the device, and `deny` for anything else.
+
+Verified: proved by Lean for every request (FK-25, theorem `telemetryEgressHolds`; FK-26, `telemetryUnaskedHolds`; FK-27, `telemetryOffDeviceHolds`).
+
+#### Scenario: A record never reaches the network
+
+- **WHEN** the request is `telemetry fetch yes yes`
+- **THEN** the answer SHALL be `deny`
+
+#### Scenario: A file is saved only when the user asks
+
+- **WHEN** the request is `telemetry save no no`
+- **THEN** the answer SHALL be `deny`
+
+#### Scenario: Records are kept on the device
+
+- **WHEN** the request is `telemetry store no no`
+- **THEN** the answer SHALL be `allow`
+
 ## Out of scope
 
 - It decides the build phase and whether an effect is admitted. It performs no effect: storage, network, inference and the screen belong to the runner that asks it.

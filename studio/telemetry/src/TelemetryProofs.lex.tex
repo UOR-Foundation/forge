@@ -5,6 +5,130 @@
 \title{Boolean}
 \begin{semanticmodule}
 definition{
+  name: breaksMarkMoves,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat, was : Nat],
+  result: Bool,
+  body: (((current =? was) && (not (current =? 0))) && (not ((Telemetry::firstMark current hit gate at) =? was)))
+}
+
+theorem{
+  name: markNeverMoves,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat, was : Nat],
+  statement: ((breaksMarkMoves current hit gate at was) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::firstMark, breaksMarkMoves]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksMarkBeforeStart,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat],
+  result: Bool,
+  body: (((current =? 0) && (not ((Telemetry::firstMark current hit gate at) =? 0))) && ((gate =? 0) || (not (gate <=? (Telemetry::firstMark current hit gate at)))))
+}
+
+theorem{
+  name: markNeverBeforeItsStart,
+  parameters: [current : Nat, hit : Nat, gate : Nat, at : Nat],
+  statement: ((breaksMarkBeforeStart current hit gate at) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::firstMark, breaksMarkBeforeStart]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksWorstMissesUpdate,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  result: Bool,
+  body: (((project event kind) =? (Telemetry::kindUpdate)) && ((Telemetry::nextUpdateWorst state event) <? (project event value)))
+}
+
+theorem{
+  name: worstCoversEveryUpdate,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  statement: ((breaksWorstMissesUpdate state event) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::nextUpdateWorst, breaksWorstMissesUpdate]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksWorstFalls,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  result: Bool,
+  body: ((Telemetry::nextUpdateWorst state event) <? (project state updateWorst))
+}
+
+theorem{
+  name: worstNeverFalls,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  statement: ((breaksWorstFalls state event) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::nextUpdateWorst, breaksWorstFalls]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksEditWithoutStart,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  result: Bool,
+  body: (((Telemetry::closesEdit state event) =? 1) && ((project state editMark) =? 0))
+}
+
+theorem{
+  name: editTimedFromItsEdit,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  statement: ((breaksEditWithoutStart state event) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::closesEdit, breaksEditWithoutStart]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksEditWorstFalls,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  result: Bool,
+  body: ((Telemetry::nextEditWorst state event) <? (project state editWorst))
+}
+
+theorem{
+  name: editWorstNeverFalls,
+  parameters: [state : Telemetry::State, event : Telemetry::Event],
+  statement: ((breaksEditWorstFalls state event) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::nextEditWorst, breaksEditWorstFalls]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksOverMiscounted,
+  parameters: [observation : Telemetry::Observation, value : Nat, budget : Nat, over : Nat],
+  result: Bool,
+  body: (((((project observation over) =? over) && ((project observation kpi) <=? (Telemetry::kpiReloads))) && ((Telemetry::overCode (project observation kpi) value budget) =? 0)) && (not ((Telemetry::observeOver observation value budget) =? over)))
+}
+
+theorem{
+  name: overCountedOnlyWhenOver,
+  parameters: [observation : Telemetry::Observation, value : Nat, budget : Nat, over : Nat],
+  statement: ((breaksOverMiscounted observation value budget over) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::kpiReloads, Telemetry::observeOver, breaksOverMiscounted]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksOverMissed,
+  parameters: [observation : Telemetry::Observation, value : Nat, budget : Nat, over : Nat],
+  result: Bool,
+  body: (((((project observation over) =? over) && ((project observation kpi) <=? (Telemetry::kpiReloads))) && ((Telemetry::overCode (project observation kpi) value budget) =? 1)) && (not ((Telemetry::observeOver observation value budget) =? (over + 1))))
+}
+
+theorem{
+  name: overCountsEveryOver,
+  parameters: [observation : Telemetry::Observation, value : Nat, budget : Nat, over : Nat],
+  statement: ((breaksOverMissed observation value budget over) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::kpiReloads, Telemetry::observeOver, breaksOverMissed]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
   name: breaksNoOver,
   parameters: [observation : Telemetry::Observation, stages : Telemetry::Stages],
   result: Bool,
@@ -237,13 +361,7 @@ theorem{
   parameters: [loop : Telemetry::Loop, event : Nat, offered : Nat, mean : Nat, applied : Nat],
   statement: ((breaksAdvisory loop event offered mean applied) = false),
   proof: linear_arithmetic{
-    definitions: [
-      Telemetry::loopApplied,
-      Telemetry::loopApprove,
-      Telemetry::loopDismiss,
-      Telemetry::loopOffer,
-      breaksAdvisory
-    ]
+    definitions: [Telemetry::loopApplied, Telemetry::loopApprove, breaksAdvisory]
   },
   axioms: [Quot.sound, propext]
 }
@@ -260,13 +378,7 @@ theorem{
   parameters: [loop : Telemetry::Loop, event : Nat, offered : Nat, mean : Nat, applied : Nat],
   statement: ((breaksApproveEmpty loop event offered mean applied) = false),
   proof: linear_arithmetic{
-    definitions: [
-      Telemetry::loopApplied,
-      Telemetry::loopApprove,
-      Telemetry::loopDismiss,
-      Telemetry::loopOffer,
-      breaksApproveEmpty
-    ]
+    definitions: [Telemetry::loopApplied, Telemetry::loopApprove, breaksApproveEmpty]
   },
   axioms: [Quot.sound, propext]
 }
@@ -283,54 +395,6 @@ theorem{
   parameters: [before : Nat, after : Nat],
   statement: ((breaksImproved before after) = false),
   proof: linear_arithmetic{definitions: [Telemetry::assess, breaksImproved]},
-  axioms: [Quot.sound, propext]
-}
-
-definition{
-  name: breaksEgress,
-  parameters: [effect : Nat, userAct : Nat, onDevice : Nat],
-  result: Bool,
-  body: ((((Telemetry::flowAllows effect userAct onDevice) =? 1) && (not (effect <=? (Telemetry::effectSave)))) && (not ((effect =? (Telemetry::effectInfer)) && (onDevice =? 1))))
-}
-
-theorem{
-  name: zeroEgress,
-  parameters: [effect : Nat, userAct : Nat, onDevice : Nat],
-  statement: ((breaksEgress effect userAct onDevice) = false),
-  proof: linear_arithmetic{
-    definitions: [
-      Telemetry::effectInfer,
-      Telemetry::effectSave,
-      Telemetry::effectShow,
-      Telemetry::effectStore,
-      Telemetry::flowAllows,
-      breaksEgress
-    ]
-  },
-  axioms: [Classical.choice, Quot.sound, propext]
-}
-
-definition{
-  name: breaksSaveUnasked,
-  parameters: [userAct : Nat, onDevice : Nat],
-  result: Bool,
-  body: ((not (userAct =? 1)) && ((Telemetry::flowAllows (Telemetry::effectSave) userAct onDevice) =? 1))
-}
-
-theorem{
-  name: saveOnlyWhenAsked,
-  parameters: [userAct : Nat, onDevice : Nat],
-  statement: ((breaksSaveUnasked userAct onDevice) = false),
-  proof: linear_arithmetic{
-    definitions: [
-      Telemetry::effectInfer,
-      Telemetry::effectSave,
-      Telemetry::effectShow,
-      Telemetry::effectStore,
-      Telemetry::flowAllows,
-      breaksSaveUnasked
-    ]
-  },
   axioms: [Quot.sound, propext]
 }
 
