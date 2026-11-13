@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {test} from 'node:test';
 import {readLexLean,readDraftLexLean,draftOf,toLexLean,specFromTurn} from '../shell/live/lexlean.mjs';
-import {SPEC_RULES,moduleContext,shownText,withCard} from '../shell/prism.js';
+import {SPEC_RULES,MODULE_EXAMPLE,moduleContext,shownText,withCard} from '../shell/prism.js';
 import {assertGenerationActive} from '../shell/generation-patch.mjs';
 const source=fs.readFileSync(new URL('./fixtures/live/verdant.lex.tex',import.meta.url),'utf8');
 const host=()=>fs.readFileSync(new URL('../shell/host.js',import.meta.url),'utf8');
 const refused=text=>assert.throws(()=>readDraftLexLean(text),{code:'invalidCanonicalModule',message:'The canonical decision module is invalid or unsupported'});
 test('draft expression formatting reconstructs exactly through the strict canonical reader',()=>{
  const draft=draftOf(source);assert.notEqual(draft,source);assert.throws(()=>readLexLean(draft),{code:'invalidCanonicalModule'});assert.equal(toLexLean(readDraftLexLean(draft)),source);assert.equal(toLexLean(readDraftLexLean(source)),source);
- const example=SPEC_RULES.match(/Example: <prism-lexlean>([\s\S]*?)<\/prism-lexlean>/)[1];const result=specFromTurn('<prism-lexlean>'+example+'</prism-lexlean>');assert.equal(result.name,'ParkingFee');assert.deepEqual(readLexLean(result.source),result.spec);assert.ok(moduleContext(result.source).includes(draftOf(result.source).split('theorem{')[0].trim().slice(0,80)));
+ const example=MODULE_EXAMPLE;const result=specFromTurn('<prism-lexlean>'+example+'</prism-lexlean>');assert.equal(result.name,'ParkingFee');assert.deepEqual(readLexLean(result.source),result.spec);assert.ok(moduleContext(result.source).includes(draftOf(result.source).split('theorem{')[0].trim().slice(0,80)));
 });
 test('draft reconstruction cannot erase unknown declarations constraints fields or resource limits',()=>{
  const draft=draftOf(source);
@@ -42,8 +42,8 @@ test('cancellation between accepted live operations stops retries without erasin
  const apply=async()=>{calls++;if(calls===1)return {ok:false,issues:['batch refused']};controller.abort();return {ok:true,changed:1,source:'s1',card:'accepted'};};
  await assert.rejects(()=>run('<dyad-spec-patch>[{"op":"set"},{"op":"set"}]</dyad-spec-patch>',spec,apply,controller,assertGenerationActive,1,()=>{}),{code:'generationCancelled'});assert.equal(calls,2);assert.equal(spec.source,'s1');assert.equal(spec.changed,1);
 });
-test('generation context meters the canonical module and theme and cannot apply model-written files',()=>{
- const text=host();assert.ok(text.includes('content: chatExecutionPrompt(execution,prism.SPEC_RULES) + "\\n\\n" + await themeLibrary("resolve",{appId})'));assert.ok(text.includes('prism.moduleContext(moduleNow ? moduleNow[1] : null)'));assert.ok(text.includes('writes: [], deletes: [], renames: [], deps: []'));assert.ok(!text.includes('buildSystemPrompt('));assert.ok(text.lastIndexOf('if (refusedCode)')>text.indexOf('    for (const match of full.matchAll(/<dyad-spec-patch>'));assert.ok(text.includes('await settleText();'));assert.ok(text.includes('await textWork;'));assert.ok(text.includes('const history = chat ? await messagesOf(chatId) : [];'));
+test('generation context meters the app spec and theme and cannot apply model-written files',()=>{
+ const text=host();assert.ok(text.includes('content: chatExecutionPrompt(execution,prism.SPEC_RULES) + "\\n\\n" + await themeLibrary("resolve",{appId})'));assert.ok(text.includes('prism.specContext(new Map(projectSource.files).get("prism/spec.json"))'));assert.ok(text.includes('writes: [], deletes: [], renames: [], deps: []'));assert.ok(!text.includes('buildSystemPrompt('));assert.ok(text.lastIndexOf('if (refusedCode)')>text.indexOf('    for (const match of full.matchAll(/<dyad-spec-patch>'));assert.ok(text.includes('await settleText();'));assert.ok(text.includes('await textWork;'));assert.ok(text.includes('const history = chat ? await messagesOf(chatId) : [];'));
  const workflow=fs.readFileSync(new URL('../../.github/workflows/forge-perf.yml',import.meta.url),'utf8');assert.ok(workflow.includes('${GITHUB_WORKSPACE}/studio/vendor/dyad/node_modules/playwright-core/index.mjs'));assert.ok(!workflow.includes('npm root --global'));
  assert.ok(fs.statSync(new URL('../scripts/live_e2e_all.sh',import.meta.url)).mode & 0o111,'mandatory every-app replay must be executable');
  assert.ok(fs.readFileSync(new URL('../../app/src/FoundrySpecification.lex.tex',import.meta.url),'utf8').includes('name: liveMainIntegrationBoundary,'));assert.ok(fs.readFileSync(new URL('../../.github/workflows/studio.yml',import.meta.url),'utf8').includes('node tools/live_main_integration_browser.mjs'));
