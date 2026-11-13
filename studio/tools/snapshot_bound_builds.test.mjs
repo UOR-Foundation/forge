@@ -4,7 +4,7 @@ import vm from "node:vm";
 import { test } from "node:test";
 import { spawnSync } from "node:child_process";
 import { verifyCapturedSource, sameBuildSource, requiresRulePublication } from "../shell/build-source.mjs";
-const source = { name: "Example", reference: "sha256:" + "a".repeat(64), files: [["b", "\ufeff\u00e9"], ["a", "exact\r\n"]], dependencies: [] };
+const source = { name: "Example", reference: "blake3:" + "a".repeat(64), files: [["b", "\ufeff\u00e9"], ["a", "exact\r\n"]], dependencies: [] };
 const snapshot = () => ({ name: source.name, oid: source.reference, files: structuredClone(source.files) });
 const host = fs.readFileSync(new URL("../shell/host.js", import.meta.url), "utf8");
 test("verified source retains exact text and permits only ordering differences", () => {

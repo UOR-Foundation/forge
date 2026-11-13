@@ -3,7 +3,7 @@ import { test } from "node:test";
 import fs from "node:fs";
 import { normalizeProjectImport, prepareProjectImport } from "../shell/project-import.mjs";
 import { prepareNewProject, prepareExistingProject } from "../shell/project-creation.mjs";
-import { kappa } from "../shell/address.mjs";
+import { kappa } from "../../try/vendor/prism-code/src/blake3.mjs";
 const core = { run: ({ project, parent }) => ({ bytes: JSON.stringify({ entries: project.entries.map(e => [e.path, e.kappa, e.bytes]), name: project.label, parent }) }) };
 const boundary = { core, derive: kappa, admit: () => true };
 const doc = (files = { "a.txt": "\uFEFF😀\r\n" }) => ({ schema: "hologram-forge/export/1", apps: [{ app: { name: "Example" }, files, chats: [] }], objects: {} });
@@ -40,10 +40,10 @@ test("corrupt missing mismatched source and invalid history refuse the entire im
   d = await sealed(); delete d.objects[d.apps[0].main]; await refuse(prepareProjectImport(d, boundary), "projectImportMissingObject");
   d = await sealed(); d.apps[0].files["a.txt"] = "wrong"; await refuse(prepareProjectImport(d, boundary), "projectImportSourceMismatch");
   d = await sealed(); d.apps[0].app.name = "wrong"; await refuse(prepareProjectImport(d, boundary), "projectImportSourceMismatch");
-  d = await sealed(); d.apps[0].versions = [{ oid: "sha256:" + "0".repeat(64) }]; await refuse(prepareProjectImport(d, boundary), "projectImportMissingObject");
+  d = await sealed(); d.apps[0].versions = [{ oid: "blake3:" + "0".repeat(64) }]; await refuse(prepareProjectImport(d, boundary), "projectImportMissingObject");
   d = await sealed(); await refuse(prepareProjectImport(d, { ...boundary, admit: () => false }), "snapshotCoreRefused");
   // A deliberately dishonest identity oracle makes a parent cycle constructible.
-  const cyclic = doc(), key = "sha256:" + "0".repeat(64); cyclic.apps[0].files = {}; cyclic.apps[0].main = key;
+  const cyclic = doc(), key = "blake3:" + "0".repeat(64); cyclic.apps[0].files = {}; cyclic.apps[0].main = key;
   cyclic.objects[key] = Buffer.from(JSON.stringify({ entries: [], name: "Example", parent: key })).toString("base64");
   await refuse(prepareProjectImport(cyclic, { ...boundary, derive: () => key }), "projectImportHistoryInvalid");
 });

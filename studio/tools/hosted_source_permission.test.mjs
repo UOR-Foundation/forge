@@ -30,7 +30,7 @@ function service() {
  return {fetch,requests};
 }
 const rpc=(name,args)=>({method:'POST',body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})});
-function session(boundary={}) {const controller=new AbortController();let current=true;const scope=createHostedSourceSession({appId:7,turnId:'turn-one',source:'sha256:'+'a'.repeat(64),signal:controller.signal,assertCurrent:async()=>current},{...options,...boundary});return {scope,controller,change:()=>{current=false;}};}
+function session(boundary={}) {const controller=new AbortController();let current=true;const scope=createHostedSourceSession({appId:7,turnId:'turn-one',source:'blake3:'+'a'.repeat(64),signal:controller.signal,assertCurrent:async()=>current},{...options,...boundary});return {scope,controller,change:()=>{current=false;}};}
 
 test('no default hosted source transmission occurs without permission', async () => {
  let calls=0;await assert.rejects(dataForm('private source',async()=>{calls++;throw Error('network');}),code('hostedSourcePermissionUnavailable'));assert.equal(calls,0);

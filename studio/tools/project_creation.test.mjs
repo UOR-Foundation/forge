@@ -4,7 +4,7 @@ import { test } from "node:test";
 import fs from "node:fs";
 import vm from "node:vm";
 import { prepareNewProject, loadProjectScaffold } from "../shell/project-creation.mjs";
-import { kappa } from "../shell/address.mjs";
+import { kappa } from "../../try/vendor/prism-code/src/blake3.mjs";
 const core = { run: ({ project, parent }) => ({ bytes: JSON.stringify({ entries: project.entries.map(e => [e.path, e.kappa, e.bytes]), name: project.label, parent }) }) };
 const prepare = (files, extra = {}) => prepareNewProject({ name: "Example", files, initialChatMode: "build" }, { core, derive: kappa, ...extra });
 const fail = (p, code) => assert.rejects(p, e => e.code === code && !e.message.includes("secret"));

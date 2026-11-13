@@ -7,8 +7,8 @@ const exact=(x,keys)=>{if(!x||typeof x!=='object'||Array.isArray(x)||Object.keys
 const address=x=>{if(!Array.isArray(x)||x.length!==8)fail();return x.map(uint);};
 const stateWords=x=>{exact(x,stateFields);return [uint(x.revision),uint(x.active),uint(x.owner),...address(x.origin),...address(x.current)];};
 const hex=words=>{const bytes=new Uint8Array(words.length*4),view=new DataView(bytes.buffer);words.forEach((n,i)=>view.setUint32(i*4,uint(n),true));return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');};
-export function previewAddressWords(value){if(typeof value!=='string'||!/^sha256:[0-9a-f]{64}$/.test(value))fail();const bytes=Uint8Array.from(value.slice(7).match(/../g),s=>parseInt(s,16)),view=new DataView(bytes.buffer);return Array.from({length:8},(_,i)=>view.getUint32(i*4,true));}
-export function previewAddressIdentity(value){return 'sha256:'+hex(address(value));}
+export function previewAddressWords(value){if(typeof value!=='string'||!/^blake3:[0-9a-f]{64}$/.test(value))fail();const bytes=Uint8Array.from(value.slice(7).match(/../g),s=>parseInt(s,16)),view=new DataView(bytes.buffer);return Array.from({length:8},(_,i)=>view.getUint32(i*4,true));}
+export function previewAddressIdentity(value){return 'blake3:'+hex(address(value));}
 export function encodePreviewRequest(raw){try{const input=structuredClone(raw);exact(input,['state','expectedRevision','command']);exact(input.command,commandFields);return new TextEncoder().encode('preview '+hex([1,...stateWords(input.state),uint(input.expectedRevision),uint(input.command.kind),uint(input.command.owner),...address(input.command.target)]));}catch{fail();}}
 export function capturePreviewState(raw){const state=structuredClone(raw);stateWords(state);if(state.active>1||(state.active?state.owner===0:state.owner!==0||state.origin.some(Boolean)||state.current.some(Boolean)))fail();return state;}
 export function decodePreviewResponse(raw){

@@ -9,7 +9,7 @@ const sources = new Map([
   ["/chat-contracts.mjs", fs.readFileSync(new URL("../shell/chat-contracts.mjs", import.meta.url))],
 
   ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
-  ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/address.mjs", fs.readFileSync(new URL("../shell/address.mjs", import.meta.url))], ["/prism-code/src/sha256.mjs", fs.readFileSync(new URL("../shell/prism-code/src/sha256.mjs", import.meta.url))]]);
+  ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
 for (const name of ["project-lifecycle", "project-edit", "project-creation", "generation-patch", "snapshot-restore", "storage-request"]) sources.set(`/${name}.mjs`, fs.readFileSync(new URL(`../shell/${name}.mjs`, import.meta.url)));
 const server = http.createServer((req, res) => { const bytes = sources.get(req.url); res.setHeader("content-type", bytes ? "text/javascript" : "text/html"); res.end(bytes || "<!doctype html><title>Lifecycle acceptance</title>"); });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -21,7 +21,7 @@ try {
     const { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteStoredChat, updateStoredChat } = await import("/project-lifecycle.mjs");
     const { prepareNewProject, createStoredProject, createStoredChat } = await import("/project-creation.mjs");
     const { editStoredProject } = await import("/project-edit.mjs");
-    const { storageRequest } = await import("/storage-request.mjs"); const { kappa } = await import("/address.mjs");
+    const { storageRequest } = await import("/storage-request.mjs"); const { kappa } = await import("/blake3.mjs");
     const check = (ok, why) => { if (!ok) throw Error(why); };
     const stores = ["apps", "chats", "files", "objects", "refs", "versions"];
     const db = await new Promise((resolve, reject) => { const q = indexedDB.open("project-lifecycle", 1); q.onupgradeneeded = () => stores.forEach(s => q.result.createObjectStore(s)); q.onsuccess = () => resolve(q.result); q.onerror = () => reject(q.error); });
@@ -55,7 +55,7 @@ try {
       const delayed = { ...boundary, derive: async bytes => { if (first) { first = false; begin(); await gate; } return kappa(bytes); } };
       const pending = operation === "rename" ? renameStoredProject(db, { appId: id, appName: "Late" }, delayed) : restoreStoredProject(db, id, changed, delayed, operation === "revert");
       await started;
-      if (operation === "reference") await put("refs", `${id}:main`, "sha256:" + "f".repeat(64));
+      if (operation === "reference") await put("refs", `${id}:main`, "blake3:" + "f".repeat(64));
       else await editStoredProject(db, { appId: id, filePath: "a.txt", content: operation }, boundary);
       const before = await snapshot(); release();
       let code; try { await pending; } catch (e) { code = e.code; }

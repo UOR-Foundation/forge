@@ -54,7 +54,7 @@ fn preimage_and_decisions_match_the_rule_on_every_case() {
         let refs: Vec<Ref> = case["refs"].as_array().unwrap().iter().map(|r| Ref { branch: r["branch"].as_str().unwrap().to_owned(), kappa: r["kappa"].as_str().unwrap().to_owned() }).collect();
         let head = headOf(&refs, case["branch"].as_str().unwrap().to_owned());
         assert_eq!(head.as_deref(), case["head"].as_str(), "head differs on case {name}");
-        assert_eq!(previewPath("sha256:".to_owned() + &"a1".repeat(32)), case["previewPath"].as_str().unwrap(), "preview path differs on case {name}");
+        assert_eq!(previewPath("blake3:".to_owned() + &"a1".repeat(32)), case["previewPath"].as_str().unwrap(), "preview path differs on case {name}");
     }
     println!("corpus: {} cases byte identical", cases.len());
 }

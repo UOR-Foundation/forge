@@ -45,7 +45,7 @@ def decision(closure, built, attestation):
 C1 = "79ae578ade8c74b59d33d820a969389b79c8d952f5660447a0fb6c98bbdf8d13"
 C2 = "0" * 64
 A1 = "7e9073ade09e6293a001bc106a2b8fb48f073b988b3755f1ce0d0713e652e441"
-K1 = "sha256:" + "a1" * 32
+K1 = "blake3:" + "a1" * 32
 H = "f52017c1dfe6c21e11b9eddfa99cacde3ca16a5892a69faab30cea40ea18d877"
 
 cases = []
@@ -73,7 +73,7 @@ case("tab in the name", application="tab\there")
 case("unicode name", application="émoji 🚀")
 case("empty name", application="")
 case("empty version", version="")
-case("other version", version="sha256:" + "b2" * 32)
+case("other version", version="blake3:" + "b2" * 32)
 
 out = root / "model" / "publish.json"
 io.open(out, "w", encoding="utf-8", newline="\n").write(json.dumps(cases, indent=1, ensure_ascii=False) + "\n")

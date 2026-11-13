@@ -10,7 +10,7 @@ const messages={invalidStoredPreview:'Stored version preview is invalid',preview
 export const previewFailure=code=>Object.assign(new Error(messages[code]||'Version preview operation refused'),{code});
 const copy=x=>{try{return structuredClone(x);}catch{throw previewFailure('invalidPreviewCommand');}};
 const exact=(x,keys)=>x&&typeof x==='object'&&!Array.isArray(x)&&Object.keys(x).sort().join()===keys.split(',').sort().join();
-const identity=x=>typeof x==='string'&&/^sha256:[a-f0-9]{64}$/.test(x);
+const identity=x=>typeof x==='string'&&/^blake3:[a-f0-9]{64}$/.test(x);
 const id=x=>{if(!Number.isSafeInteger(x)||x<1)throw previewFailure('invalidPreviewCommand');return x;};
 const zero=()=>Array(8).fill(0);
 const result=(changed,notification=null)=>({repositoryOutcome:changed?'target-applied':'unchanged',notification,runtimeAction:changed?'restart':'none',affectedChatId:null,createdChatId:null});

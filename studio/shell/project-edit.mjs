@@ -13,7 +13,7 @@ export function captureProjectSource(db, appId) {
       t = db.transaction(["apps", "files", "refs"], "readonly");
       t.onabort = () => reject(failure("projectEditStorageFailed")); t.onerror = () => refuse("projectEditStorageFailed");
       t.oncomplete = () => {
-        if (!app || typeof app.name !== "string" || typeof reference !== "string" || !/^sha256:[0-9a-f]{64}$/.test(reference) || !dependencyShape(app.extraDeps || [])) reject(failure("projectEditStateInvalid"));
+        if (!app || typeof app.name !== "string" || typeof reference !== "string" || !/^blake3:[0-9a-f]{64}$/.test(reference) || !dependencyShape(app.extraDeps || [])) reject(failure("projectEditStateInvalid"));
         else resolve({ name: app.name, reference, files, dependencies: structuredClone(app.extraDeps || []), ...(applicationState === undefined ? {} : {applicationState}) });
       };
       const aq = t.objectStore("apps").get(appId), rq = t.objectStore("refs").get(`${appId}:main`);
