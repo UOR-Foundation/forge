@@ -393,6 +393,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-72` | `build` | Generated modules retain presentation only when the canonical application interface remains compatible |
 
+## pages-source-binding
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-90` | `build` | Kernel adoption binds signed producer bytes to current source inputs and Pages live evidence binds the deployed artifact throughout observation |
+
 ## portable-build-permission
 
 | ID | Level | Statement |

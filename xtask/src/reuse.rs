@@ -187,7 +187,9 @@ mod tests {
             "the page build keeps no holo for the pin"
         );
         assert!(
-            pages.contains(r#"cp "$PAGE/app.holo" "$PAGE/app.json" "$PAGE/producer.json" kernel-proof/"#),
+            pages.contains(
+                r#"cp "$PAGE/app.holo" "$PAGE/app.json" "$PAGE/producer.json" kernel-proof/"#
+            ),
             "the holo artifact does not carry the original signed producer manifest"
         );
         assert!(
@@ -321,7 +323,10 @@ mod tests {
         let pages = workflow("pages.yml");
         let key = "key: live-seen-v2-playwright-1.56.1-${{ steps.artifact-identity.outputs.digest }}-${{ hashFiles('src/studio/tools/live_e2e.mjs', 'src/studio/scripts/live_e2e_all.sh', 'src/studio/tools/pages_live_identity.mjs', 'src/studio/tools/fixtures/**') }}";
         assert_eq!(pages.matches(key).count(), 2);
-        assert!(!pages.contains("\n  live:\n"), "observation releases the deployment lock");
+        assert!(
+            !pages.contains("\n  live:\n"),
+            "observation releases the deployment lock"
+        );
         let live = pages
             .split("      # Observation stays in this job")
             .nth(1)
