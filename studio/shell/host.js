@@ -1318,6 +1318,8 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
     const named = prism.checkSpec(JSON.parse(JSON.stringify(tag.spec)));
     if (named.ok && typeof named.spec?.name === "string") tag.spec = { name: named.spec.name, ...tag.spec };
   }
+  // A spec written without examples gets Forge's own, the same from the same rules, stored with it.
+  if (tag && tag.spec) tag.spec = prism.withExamples(tag.spec);
   if (tag && tag.spec) stage("prism/spec.json", JSON.stringify(tag.spec, null, 2) + "\n");
   // Every app's rules have a canonical LexLean source, whatever wrote them (a module, the on-device
   // model's JSON, a click or an agent's patch): the same meaning is always the same module bytes. It is
@@ -1777,6 +1779,11 @@ async function chatTurn(chatId, intent) {
     // Featherless's GLM reasons for some 14,000 tokens before it writes, inside the same budget, so it gets
     // the most Featherless allows (32,768); 16,384 left a page cut off mid file.
     const body = { model, messages: request, max_tokens: !paid ? 2048 : provider === "featherless" ? 32768 : 16384, temperature: "0.7" };
+    // A turn that writes the spec asks Featherless for no thinking, and a new app's first turn for an answer
+    // held to the spec's schema. The site relay forwards each only while its own switch is on; until then
+    // the request is the one it was. A stateful app's turn asks for neither.
+    const specTurn = paid && provider === "featherless" && execution.sourceEffects && !(moduleNow && appShape.isAppShape(moduleNow[1]));
+    if (specTurn) inference.specAsk(body, { thinkingOff: true, format: new Map(projectSource.files).get("prism/spec.json") ? null : prism.SPEC_FORMAT });
     const hit = await lookup(body);
     const route = await routeOf(hit, body);
     // The View's no-key word names OpenRouter; a Featherless model is told about its own key.
@@ -1785,6 +1792,8 @@ async function chatTurn(chatId, intent) {
     let lastSave = 0;
     const onText = async (t) => {
       assertGenerationActive(abort.signal);
+      // One bare JSON object is the spec, as a provider holding the schema returns it.
+      t = prism.asSpecTurn(t);
       full = t;
       if (tm.turn === chatId) {
         if (!tm.token && t && !t.startsWith("<think>")) tmOnce("token");

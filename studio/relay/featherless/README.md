@@ -36,7 +36,14 @@ site's key failures kept private. For a local run in Cloudflare's runtime, put
 
 The model, the messages, a bounded `max_tokens`, `temperature`, `top_p` and `stop`. Everything else is dropped. A change to `worker.mjs` reaches visitors only after `npx wrangler@4 deploy`.
 
-`chat_template_kwargs.enable_thinking` is deliberately not forwarded. It was, for about three hours on 2026-11-12: with it set to `false`, Featherless returned GLM 5.3 Flash's whole answer in the reasoning channel and an empty answer, in every one of five requests. The worker was rolled back to the version before it.
+`chat_template_kwargs.enable_thinking` is not forwarded as deployed. It was, for about three hours on 2026-11-12: with it set to `false`, Featherless returned GLM 5.3 Flash's whole answer in the reasoning channel and an empty answer, in every one of five requests. The worker was rolled back to the version before it.
+
+Two more fields are forwarded only while a switch in `wrangler.toml` is `"1"`, each in one exact form:
+
+- `FORWARD_THINKING_OFF`: `chat_template_kwargs: {"enable_thinking": false}`, and nothing else in it. Forge now reads an answer that arrives only in the reasoning channel as the answer, which is what the 2026-11-12 run returned, so the switch can be turned on to measure the spec turn without thinking. If an answer comes back empty in Forge, turn it off: no change to Forge is needed either way.
+- `FORWARD_RESPONSE_FORMAT`: `response_format` of type `json_schema`, one schema of at most 8,192 bytes, always sent as strict. Forge sends the `prism/spec/1` shape on a new app's first turn and reads a bare JSON object as the spec. Whether Featherless honours it for GLM 5.3 Flash has not been measured; if it refuses the request, turn it off.
+
+Each switch is a `[vars]` entry, so changing one is an edit and `npx wrangler@4 deploy`.
 
 ## Limits
 

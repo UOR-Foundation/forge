@@ -45,6 +45,7 @@ function cors(origin) {
 const json = (body, status, headers = {}) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers } });
 
+const MAX_SCHEMA = 8192;
 // The request as Featherless will see it: an offered model, well-formed messages, a bounded answer.
 export function shape(body, env) {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new Refusal(400, "the request is not a JSON object");
@@ -65,6 +66,18 @@ export function shape(body, env) {
   }
   if (Array.isArray(body.stop) && body.stop.length <= 4 && body.stop.every((s) => typeof s === "string" && s.length <= 64)) out.stop = body.stop;
   if (out.stream) out.stream_options = { include_usage: true };
+  // Two fields a spec turn asks for. Each is forwarded only while its switch is on, and only in the one
+  // form Forge sends, so the relay still forwards nothing it has not named.
+  // Thinking off: with it Featherless has returned GLM's answer in the reasoning channel and an empty
+  // answer. Forge reads an answer that arrives only there (studio/shell/inference-effects.mjs), so the
+  // switch may be turned on to measure it, and off again without a change to Forge.
+  if (env.FORWARD_THINKING_OFF === "1" && body.chat_template_kwargs && typeof body.chat_template_kwargs === "object" && body.chat_template_kwargs.enable_thinking === false) out.chat_template_kwargs = { enable_thinking: false };
+  // A response schema: the answer is one JSON object of that shape. Bounded, and one schema, not a list.
+  if (env.FORWARD_RESPONSE_FORMAT === "1") {
+    const f = body.response_format, js = f && typeof f === "object" && f.type === "json_schema" ? f.json_schema : null;
+    if (js && typeof js === "object" && !Array.isArray(js) && typeof js.name === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(js.name) && js.schema && typeof js.schema === "object" && !Array.isArray(js.schema) && JSON.stringify(js.schema).length <= MAX_SCHEMA)
+      out.response_format = { type: "json_schema", json_schema: { name: js.name, schema: js.schema, strict: true } };
+  }
   return out;
 }
 

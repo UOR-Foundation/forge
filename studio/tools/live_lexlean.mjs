@@ -187,6 +187,33 @@ try {
     && hostSource.includes("if (named.ok && typeof named.spec?.name === \"string\") tag.spec = { name: named.spec.name, ...tag.spec };");
 } catch (e) {}
 claim("name: a spec written without a name is stored with the checker's name, renders its module, and keeps its address", namedSpec);
+// The fast spec turn: what Forge asks of the provider, and what it reads back.
+let fastTurn = {};
+try {
+  const bare = JSON.parse(prism.SPEC_EXAMPLE); delete bare.examples; delete bare.name;
+  const text = JSON.stringify(bare), tagged = prism.asSpecTurn(text), given = prism.withExamples(bare), again = prism.withExamples(JSON.parse(JSON.stringify(bare)));
+  const inferenceSource = fs.readFileSync(path.join(root, "shell/inference.js"), "utf8");
+  const shapeOk = (schema, v) => {
+    if (schema.enum) return schema.enum.includes(v);
+    if (schema.anyOf) return schema.anyOf.some((x) => shapeOk(x, v));
+    if (schema.type === "integer") return Number.isInteger(v);
+    if (schema.type === "string") return typeof v === "string" && (!schema.pattern || new RegExp(schema.pattern).test(v));
+    if (schema.type === "array") return Array.isArray(v) && v.length >= (schema.minItems || 0) && v.length <= (schema.maxItems ?? Infinity) && v.every((x) => shapeOk(schema.items, x));
+    if (schema.type === "object") return !!v && typeof v === "object" && !Array.isArray(v) && (schema.required || []).every((k) => k in v) && Object.keys(v).every((k) => k in schema.properties && shapeOk(schema.properties[k], v[k]));
+    return false;
+  };
+  fastTurn = {
+    schema: shapeOk(prism.SPEC_SCHEMA, bare) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, files: [] }) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, rules: [] }) && JSON.stringify(prism.SPEC_SCHEMA).length <= 8192 && prism.SPEC_FORMAT.json_schema.schema === prism.SPEC_SCHEMA,
+    bare: tagged === "<dyad-spec>" + text + "</dyad-spec>" && prism.parseSpecTag(tagged).spec.title === bare.title && prism.asSpecTurn(text.slice(0, 40)) === "<dyad-spec>" + text.slice(0, 40) && prism.asSpecTurn("Here it is.\n<dyad-spec>{}</dyad-spec>") === "Here it is.\n<dyad-spec>{}</dyad-spec>" && prism.asSpecTurn("I cannot.") === "I cannot.",
+    examples: given.examples.length >= 2 && given.examples.length <= 6 && JSON.stringify(given) === JSON.stringify(again) && prism.checkSpec(JSON.parse(JSON.stringify(given))).ok && prism.checkSpec(JSON.parse(JSON.stringify(given))).notes.every((n) => !/Set aside example/.test(n)) && new Set(given.examples.map((e) => e.response)).size >= 2 && prism.withExamples(JSON.parse(prism.SPEC_EXAMPLE)).examples.length === JSON.parse(prism.SPEC_EXAMPLE).examples.length,
+    prompt: /Write no "examples": Forge adds them from the rules\./.test(SPEC_RULES),
+    beside: inferenceSource.includes('request: body, stream: true }).bytes;') && inferenceSource.includes('body[Symbol.for("forge.specAsk")] = ask;') && JSON.stringify(Object.assign({ a: 1 }, { [Symbol.for("forge.specAsk")]: { thinkingOff: true } })) === '{"a":1}' && inferenceSource.includes("if (thinkingOff) j.chat_template_kwargs = { enable_thinking: false };") && hostSource.includes("inference.specAsk(body, { thinkingOff: true, format:") && hostSource.includes("t = prism.asSpecTurn(t);") && hostSource.includes("tag.spec = prism.withExamples(tag.spec);"),
+  };
+} catch (e) { fastTurn = { error: String(e) }; }
+claim("fast turn: the spec's schema admits a spec and nothing else, within the relay's bound", fastTurn.schema === true);
+claim("fast turn: one bare JSON object is read as the spec, whole or still streaming, and prose is left alone", fastTurn.bare === true);
+claim("fast turn: a spec written without examples gets Forge's own, the same every time, and they pass", fastTurn.examples === true && fastTurn.prompt === true);
+claim("fast turn: thinking off and the schema ride beside the core's request, never in it", fastTurn.beside === true);
 claim("boundary: LexLean a model writes is dropped before the turn is applied, closed or open, and no model is told a second notation", prism.wroteLexLean("a <prism-lexlean>x") && !prism.wroteLexLean("<dyad-spec>{}</dyad-spec>") && prism.withoutLexLean("a<prism-lexlean>m</prism-lexlean>b<prism-lexlean>open") === "ab" && !SPEC_RULES.includes("app notation") && !SPEC_RULES.includes("<prism-lexlean>") && hostSource.includes("const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);") && hostSource.includes("appAfterTurn(appId, turn,") && !hostSource.includes("lexlean.partialFromTurn(full)"));
 const bare = source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
 let bareSpec = null;

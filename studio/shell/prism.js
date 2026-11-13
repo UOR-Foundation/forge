@@ -55,7 +55,7 @@ export const SPEC_EXAMPLE = JSON.stringify(PARKING);
 export const MODULE_EXAMPLE = draftOf(toLexLean(PARKING)).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "").trim() + "\n";
 export const SPEC_RULES = `# You write the app's spec as JSON, and nothing else
 Every app here is one JSON spec: its inputs, its answers, its rules and its guarantees. Forge writes the app's LexLean module, its code and its screen from the spec, the same every time, and Lean proves the guarantees. You never write code, files or dependencies: Forge does not apply them. You never write LexLean. To build or change an app, write its spec; to change only one part, write a patch. If a request decides nothing, say in one sentence what the app could decide, and write that spec.
-- Write one <dyad-spec> block holding the whole spec as one JSON object, and no other text inside it. Keys: "title"; "purpose" (one sentence); "fields" (1 to 8, in the order a request gives them; each {"name": a lower-case word, "kind": "number" with whole "min" and "max", or "choice" with "values", two to 32 lower-case words}); "outcomes" (the answer words, lower case; "invalid" is reserved); "rules" (1 to 24, in order, the first that matches decides; each {"when": [{"field", "op", "value"}], "then": an outcome}); "otherwise" (the outcome when no rule matches); "properties" (what must never or always happen, each a guarantee Lean proves for every request: {"kind": "never" or "always", "when": [...], "then": an outcome}); "examples" (a few requests with their answers: {"request": "the field values separated by spaces", "response"}).
+- Write one <dyad-spec> block holding the whole spec as one JSON object, and no other text inside it. Keys: "title"; "purpose" (one sentence); "fields" (1 to 8, in the order a request gives them; each {"name": a lower-case word, "kind": "number" with whole "min" and "max", or "choice" with "values", two to 32 lower-case words}); "outcomes" (the answer words, lower case; "invalid" is reserved); "rules" (1 to 24, in order, the first that matches decides; each {"when": [{"field", "op", "value"}], "then": an outcome}); "otherwise" (the outcome when no rule matches); "properties" (what must never or always happen, each a guarantee Lean proves for every request: {"kind": "never" or "always", "when": [...], "then": an outcome}). Write no "examples": Forge adds them from the rules.
 - A condition's "op" is "is" or "is not" for a choice field, with one of its values; and "<", "<=", ">", ">=", "=" or "!=" for a number field, with a whole number or another number field as {"field": "<name>"}. All of a rule's conditions must hold. Numbers are whole, never fractions.
 - Write the spec at once. Do not deliberate, and do not draft the spec or try examples in your reasoning: Forge checks the spec the moment it is written, against every request, and reports any conflict.
 - State the guarantees the request implies: what must never be answered, and what must always be.
@@ -63,6 +63,49 @@ Every app here is one JSON spec: its inputs, its answers, its rules and its guar
 - To change the rules, write the whole spec again in a new <dyad-spec> block, starting from the current spec when one is given.
 - An app that must keep what it is given between requests (a list that grows, entries that are kept) cannot be written yet. Say so in one sentence, and write the spec of what it could decide.
 Example: <dyad-spec>${SPEC_EXAMPLE}</dyad-spec>`;
+
+// ---- the shape a model's first spec is held to, where the provider can hold it
+// prism/spec/1 as a JSON schema, for a provider that constrains its answer to one: the answer is then one
+// JSON object of this shape, with no tag around it and nothing to repair. What a schema cannot say (a
+// rule naming a field that exists, an answer among the outcomes) the checker still checks.
+const WORD = { type: "string", pattern: "^[a-z][a-z0-9_]*$" };
+const CONDITION = { type: "object", properties: { field: WORD, op: { enum: ["is", "is not", "<", "<=", ">", ">=", "=", "!="] }, value: { anyOf: [{ type: "integer" }, { type: "string" }, { type: "object", properties: { field: WORD }, required: ["field"], additionalProperties: false }] } }, required: ["field", "op", "value"], additionalProperties: false };
+export const SPEC_SCHEMA = { type: "object", properties: {
+  title: { type: "string" }, purpose: { type: "string" },
+  fields: { type: "array", minItems: 1, maxItems: 8, items: { type: "object", properties: { name: WORD, kind: { enum: ["number", "choice"] }, min: { type: "integer" }, max: { type: "integer" }, values: { type: "array", minItems: 2, maxItems: 32, items: WORD } }, required: ["name", "kind"], additionalProperties: false } },
+  outcomes: { type: "array", minItems: 1, items: WORD },
+  rules: { type: "array", minItems: 1, maxItems: 24, items: { type: "object", properties: { when: { type: "array", minItems: 1, items: CONDITION }, then: WORD }, required: ["when", "then"], additionalProperties: false } },
+  otherwise: WORD,
+  properties: { type: "array", items: { type: "object", properties: { kind: { enum: ["never", "always"] }, when: { type: "array", minItems: 1, items: CONDITION }, then: WORD }, required: ["kind", "when", "then"], additionalProperties: false } },
+}, required: ["title", "purpose", "fields", "outcomes", "rules", "otherwise", "properties"], additionalProperties: false };
+export const SPEC_FORMAT = { type: "json_schema", json_schema: { name: "prism_spec_1", schema: SPEC_SCHEMA, strict: true } };
+/**
+ * A turn as the rest of Forge reads it: an answer that is one bare JSON object, which is what a
+ * provider holding the schema returns, is the spec, so it is given its tag, closed once it is whole.
+ */
+export function asSpecTurn(text) {
+  const t = String(text || ""), body = t.trimStart();
+  if (!body.startsWith("{") || t.includes("<dyad-spec")) return t;
+  let whole = false; try { const v = JSON.parse(body); whole = !!v && typeof v === "object" && !Array.isArray(v); } catch {}
+  return "<dyad-spec>" + body.trimEnd() + (whole ? "</dyad-spec>" : "");
+}
+/**
+ * A model's spec with Forge's own examples, when it wrote none: the first request each rule decides, and
+ * one that falls to otherwise, at most six. The same spec always gets the same examples, and they are
+ * stored with it, so they are part of what its address names.
+ */
+export function withExamples(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || (Array.isArray(raw.examples) && raw.examples.length)) return raw;
+  let checked; try { checked = checkSpec(JSON.parse(JSON.stringify(raw))); } catch { return raw; }
+  if (!checked || !checked.ok || !checked.spec) return raw;
+  const seen = new Set(), examples = [];
+  for (const v of acceptanceVectors(checked.spec)) {
+    if (!/^decided by /.test(v.why || "") || v.response === "invalid" || seen.has(v.why)) continue;
+    seen.add(v.why); examples.push({ request: v.request, response: v.response });
+    if (examples.length >= 6) break;
+  }
+  return examples.length ? { ...raw, examples } : raw;
+}
 
 // ---- the one thing a model may write
 // Every model, on the device or in the cloud, writes the app's JSON spec and nothing else. LexLean a
