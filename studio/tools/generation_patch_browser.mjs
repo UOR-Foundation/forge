@@ -117,7 +117,7 @@ try {
       nextPhase: async (phase, event) => event === "reword" ? phase : event === "attest" ? "proved" : event === "check" ? "checked" : "drafting",
       now: () => "now", enc: new TextEncoder(), put: async () => {}, refreshLive: async () => {},
       prism: {
-        parseSpecTag: () => ({ spec: { name: "demo", title: "new" } }),
+        parseSpecTag: () => ({ spec: { name: "demo", title: "new" } }), parsePromptTag: () => null, facetsOf: async () => null,
         checkSpec: spec => ({ ok: true, module: "module", spec, issues: [] }), card: state => state.phase,
         prove: async () => ({ ok: true, record: { id: "settled" } }),
       }, ...overrides,
