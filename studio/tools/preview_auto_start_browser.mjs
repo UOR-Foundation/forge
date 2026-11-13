@@ -35,7 +35,7 @@ try {
   const made=await call('create-app',{name:'preview-auto-start',initialChatMode:'ask'}),appId=made.app.id,chatId=made.chatId;
   await call('set-user-settings',{selectedModel:{provider:'featherless',name:'zai-org/GLM-5.3-Flash'},providerSettings:{featherless:{apiKey:{value:'preview-start-fixture'}}}});
   await page.goto(base+'chat?id='+chatId+'&appId='+appId);
-  const mode=page.getByRole('combobox',{name:'Chat mode',exact:true}),preview=page.getByRole('dialog',{name:'Review preview permissions',exact:true});
+  const mode=page.getByRole('button',{name:'Chat mode: Chat',exact:true}),preview=page.getByRole('dialog',{name:'Review preview permissions',exact:true});
   const state=async()=>(await call('distributed-machine:subscribe',{protocolVersion:1,machineId:'app_run',encodedKey:{appId}})).encodedState;
   const decline=async(expectedCount)=>{try{await preview.waitFor();}catch(e){console.log(JSON.stringify({state:await state(),errors,body:(await page.locator('body').innerText()).slice(-3500)}));throw e;}await preview.getByRole('button',{name:"Don't allow",exact:true}).click();const deadline=Date.now()+10000;while((await state()).phase!=='errored'){assert.equal(await page.evaluate(()=>window.__previewPromptCount),expectedCount,'decline must not authorize another automatic preview');assert.ok(Date.now()<deadline);await new Promise(r=>setTimeout(r,20));}};
   await decline(1);assert.equal(await page.evaluate(()=>window.__previewPromptCount),1,'decline must not authorize another automatic preview');

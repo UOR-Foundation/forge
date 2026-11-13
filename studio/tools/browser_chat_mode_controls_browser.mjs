@@ -37,15 +37,33 @@ try {
   await page.goto(base); await page.waitForFunction(() => !!navigator.serviceWorker.controller && !!window.__host && !!window.__prism && !!window.electron);
   const call=(tab,channel,input)=>tab.evaluate(({channel,input})=>window.electron.ipcRenderer.invoke(channel,input),{channel,input});
   const get=(tab,store,key)=>tab.evaluate(({store,key})=>window.__host.get(store,key),{store,key});
-  const mode=page.getByRole('combobox',{name:'Chat mode',exact:true});assert.equal(await mode.count(),1,'the browser must expose its canonical mode control');
+  const mode=page.locator('[data-slot="chat-mode-toggle"]'),mirror=page.getByTestId('chat-mode-selector');
+  assert.equal(await mode.count(),1,'one mode trigger');
+  assert.equal(await page.getByRole('combobox',{name:'Chat mode',exact:true}).count(),0,'no duplicate exposed select');
+  assert.equal(await mirror.evaluate(el=>el.hidden&&el.getAttribute('aria-hidden')==='true'&&el.tabIndex===-1),true);
+  const tabToMode=async()=>{for(let i=0;i<80;i++){await page.keyboard.press('Tab');if(await mode.evaluate(el=>el===document.activeElement))return;}assert.fail('Tab cannot reach mode trigger');};
+  const chooseMode=async(value,openKey='Enter')=>{
+    await mode.focus();await mode.press(openKey);const menu=page.getByRole('menu');await menu.waitFor();
+    const choices=menu.getByRole('menuitemradio');assert.deepEqual(await choices.evaluateAll(nodes=>nodes.map(el=>el.getAttribute('aria-label'))),['Build','Chat','Plan']);
+    await page.keyboard.press('Home');for(let i=0;i<['build','ask','plan'].indexOf(value);i++)await page.keyboard.press('ArrowDown');
+    assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),({build:'Build',ask:'Chat',plan:'Plan'})[value]);
+    await page.keyboard.press('Enter');await menu.waitFor({state:'hidden'});
+  };
   await page.waitForFunction(()=>!document.querySelector('[data-testid="chat-mode-selector"]')?.disabled);
-  assert.deepEqual(await mode.locator('option').allTextContents(),['Build','Chat','Plan']);
-  const waitValue=async value=>{const deadline=Date.now()+10000;while(await mode.inputValue()!==value||await mode.isDisabled()){assert.ok(Date.now()<deadline,'mode selection did not settle');await new Promise(r=>setTimeout(r,20));}};
+  assert.deepEqual(await mirror.locator('option').allTextContents(),['Build','Chat','Plan']);
+  await tabToMode();assert.equal(await mode.getAttribute('aria-label'),'Chat mode: Build');
+  for(const key of ['Enter','Space']){await mode.press(key);await page.getByRole('menu').waitFor();await page.keyboard.press('Escape');await page.getByRole('menu').waitFor({state:'hidden'});assert.equal(await mode.evaluate(el=>el===document.activeElement),true,'Escape restores trigger focus');}
+  const waitValue=async value=>{const deadline=Date.now()+10000;while(await mirror.inputValue()!==value||await mode.isDisabled()){assert.ok(Date.now()<deadline,'mode selection did not settle');await new Promise(r=>setTimeout(r,20));}};
   const settings=()=>get(page,'settings','user');
   const waitDefault=async value=>{const deadline=Date.now()+10000;while(true){const s=await settings();if(s.selectedChatMode===value&&s.defaultChatMode===value)return;assert.ok(Date.now()<deadline);await new Promise(r=>setTimeout(r,20));}};
   const abortNext=store=>page.evaluate(store=>{const put=IDBObjectStore.prototype.put;window.__modeAborts=0;IDBObjectStore.prototype.put=function(value,key){const r=put.call(this,value,key);if(this.name===store)r.addEventListener('success',()=>{IDBObjectStore.prototype.put=put;window.__modeAborts++;this.transaction.abort();},{once:true});return r;};},store);
-  await mode.selectOption('ask');await waitDefault('ask');await waitValue('ask');
-  await abortNext('settings');await mode.selectOption('plan');await page.getByRole('alert').filter({hasText:'The chat mode could not be saved. Try again.'}).waitFor();assert.equal(await page.evaluate(()=>window.__modeAborts),1);await waitDefault('ask');await waitValue('ask');
+  // Hold the real settings call before dispatch, then release it into the actual host.
+  await page.evaluate(()=>{const ipc=window.electron.ipcRenderer,invoke=ipc.invoke;window.__modeWrites=0;ipc.invoke=async function(channel,...args){if(channel==='set-user-settings'){window.__modeWrites++;await new Promise(resolve=>window.__releaseMode=resolve);}return invoke.call(this,channel,...args);};window.__restoreMode=()=>ipc.invoke=invoke;});
+  await chooseMode('ask','Space');await page.waitForFunction(()=>typeof window.__releaseMode==='function');
+  assert.equal(await mode.isDisabled(),true);assert.equal(await mode.getAttribute('aria-busy'),'true');
+  await page.keyboard.press('Control+.');assert.equal(await page.evaluate(()=>window.__modeWrites),1);
+  await page.evaluate(()=>{window.__restoreMode();window.__releaseMode();});await waitDefault('ask');await waitValue('ask');
+  await abortNext('settings');await chooseMode('plan');await page.getByRole('alert').filter({hasText:'The chat mode could not be saved. Try again.'}).waitFor();assert.equal(await page.evaluate(()=>window.__modeAborts),1);await waitDefault('ask');await waitValue('ask');
   for(const value of ['plan','build','ask']){await page.keyboard.press('Control+.');await waitDefault(value);await waitValue(value);}
   await page.reload();await mode.waitFor();await waitValue('ask');
   const made=await call(page,'create-app',{name:'mode-controls'}),chatId=made.chatId,appId=made.app.id;
@@ -57,10 +75,10 @@ try {
   await page.evaluate(({appId,spec})=>window.__prism.rulesAfterTurn(appId,'<dyad-spec>'+JSON.stringify(spec)+'</dyad-spec>'),{appId,spec:JSON.parse(fs.readFileSync(new URL('./fixtures/live/rsvp.json',import.meta.url),'utf8'))});
   await page.goto(base+'chat?id='+chatId+'&appId='+appId);await mode.waitFor();await waitValue('ask');
   const chat=()=>get(page,'chats',chatId),waitChat=async value=>{const deadline=Date.now()+10000;while((await chat()).chatMode!==value){assert.ok(Date.now()<deadline);await new Promise(r=>setTimeout(r,20));}await waitValue(value);};
-  await mode.selectOption('plan');await waitChat('plan');assert.equal((await settings()).defaultChatMode,'build');
+  await chooseMode('plan');await waitChat('plan');assert.equal((await settings()).defaultChatMode,'build');
   for(const value of ['build','ask']){await page.keyboard.press('Control+.');await waitChat(value);}
-  await abortNext('chats');await mode.selectOption('plan');await page.getByRole('alert').filter({hasText:'The chat mode could not be saved. Try again.'}).waitFor();assert.equal(await page.evaluate(()=>window.__modeAborts),1);await waitChat('ask');
-  await mode.selectOption('plan');await waitChat('plan');await mode.selectOption('ask');await waitChat('ask');
+  await abortNext('chats');await chooseMode('plan');await page.getByRole('alert').filter({hasText:'The chat mode could not be saved. Try again.'}).waitFor();assert.equal(await page.evaluate(()=>window.__modeAborts),1);await waitChat('ask');
+  await chooseMode('plan');await waitChat('plan');await chooseMode('ask');await waitChat('ask');
   const snapshot=()=>page.evaluate(async appId=>({files:(await window.__host.all('files')),head:await window.__host.get('refs',`${appId}:main`),rules:await window.__prism.rulesOf(appId),versions:await window.__host.get('versions',appId)}),appId),before=await snapshot();
   const input=page.getByTestId('chat-input-container').getByRole('textbox');await input.fill('Explain the current RSVP application');await input.press('Enter');
   const disclosure=page.getByRole('dialog',{name:'Review cloud request',exact:true});await disclosure.waitFor();const disclosed=await disclosure.locator('pre').textContent();assert.ok(JSON.parse(disclosed).messages[0].content.includes('ask mode'));
@@ -73,8 +91,8 @@ try {
   for(const width of [390,768,1280]){
     await page.setViewportSize({width,height:844});await mode.waitFor();await waitValue('build');await page.getByTestId('model-picker').hover();
     for(const control of [mode,page.getByTestId('model-picker')]){const box=await control.boundingBox();assert.ok(box&&box.x>=0&&box.x+box.width<=width+1,'composer controls must fit the viewport');}
-    await page.keyboard.press('Control+.');await waitChat('ask');await mode.selectOption('build');await waitChat('build');
+    await page.keyboard.press('Control+.');await waitChat('ask');await chooseMode('build');await waitChat('build');
   }
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({profile:'foundry/browser-chat-mode-controls/1',canonicalChoices:true,homePersistence:true,chatPersistence:true,keyboardScope:true,initialDefaults:true,explicitOverride:true,unsupportedRefused:true,lateAbortSettings:true,lateAbortChat:true,queuedModeImmutable:true,responsiveModes:true,readOnlyGeneration:true,reload:true,pageErrors:errors}));
+  console.log(JSON.stringify({profile:'foundry/browser-chat-mode-controls/1',canonicalChoices:true,homePersistence:true,chatPersistence:true,keyboardScope:true,initialDefaults:true,explicitOverride:true,unsupportedRefused:true,lateAbortSettings:true,lateAbortChat:true,queuedModeImmutable:true,responsiveModes:true,tabReachable:true,keyboardMenu:true,escapeFocusReturn:true,noDuplicateControls:true,savingDisabled:true,readOnlyGeneration:true,reload:true,pageErrors:errors}));
 } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}

@@ -20,7 +20,16 @@ import { useAppThumbnails } from "@/hooks/useAppThumbnails";
 import { sortAppsForShowcase } from "@/lib/sortApps";
 import { featuredApps, featuredOnHome } from "../../hologram.featured-apps.mjs";
 
-type Featured = { id: string; by: string; name: string; sentence: string; tag: string; idea: string; hue: number; url: string };
+type Featured = {
+  id: string;
+  by: string;
+  name: string;
+  sentence: string;
+  tag: string;
+  idea: string;
+  hue: number;
+  url: string;
+};
 type View = "featured" | "mine" | "saved";
 
 const BOOKMARKS = "foundry:bookmarks";
@@ -54,7 +63,12 @@ function useBookmarks() {
 function Cover({ hue }: { hue: number }) {
   const band = (index: number) => `hsl(${(hue + index * 26) % 360} 86% 64%)`;
   return (
-    <svg viewBox="0 0 288 144" preserveAspectRatio="xMidYMid slice" aria-hidden="true" className="absolute inset-0 h-full w-full">
+    <svg
+      viewBox="0 0 288 144"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+      className="absolute inset-0 h-full w-full"
+    >
       <defs>
         <linearGradient id={`g-${hue}-ground`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor={`hsl(${hue} 34% 13%)`} />
@@ -68,7 +82,12 @@ function Cover({ hue }: { hue: number }) {
       <rect width="288" height="144" fill={`url(#g-${hue}-ground)`} />
       <polygon points="0,58 96,66 96,78 0,86" fill={`url(#g-${hue}-beam)`} />
       {[0, 1, 2, 3, 4].map((index) => (
-        <polygon key={index} points={`96,70 288,${18 + index * 26} 288,${40 + index * 26}`} fill={band(index)} opacity={0.42 - index * 0.045} />
+        <polygon
+          key={index}
+          points={`96,70 288,${18 + index * 26} 288,${40 + index * 26}`}
+          fill={band(index)}
+          opacity={0.42 - index * 0.045}
+        />
       ))}
       <polygon points="88,52 112,72 88,92" fill="#ffffff" opacity="0.1" />
     </svg>
@@ -135,7 +154,9 @@ function Card({
           {keep}
         </div>
         <div className="flex min-w-0 flex-col px-0.5">
-          <span className="truncate text-[15px] font-medium leading-snug text-foreground">{title}</span>
+          <span className="truncate text-[15px] font-medium leading-snug text-foreground">
+            {title}
+          </span>
           <span className="truncate text-[13px] leading-5 text-muted-foreground">{under}</span>
         </div>
       </div>
@@ -153,17 +174,30 @@ export function FeaturedAppShowcase() {
   const [query, setQuery] = useState("");
 
   const featured = useMemo(() => (featuredApps as Featured[]).slice(0, featuredOnHome), []);
-  const mine = useMemo(() => sortAppsForShowcase(apps).slice(0, featuredOnHome), [apps]);
-  const thumbnails = useAppThumbnails(useMemo(() => mine.map((app) => app.id), [mine]));
+  const mine = useMemo(() => sortAppsForShowcase(apps), [apps]);
 
   const asked = query.trim().toLowerCase();
-  const matches = (text: string) => !asked || text.toLowerCase().includes(asked);
-  const shownFeatured = featured.filter(
-    (app) => (view === "saved" ? kept.includes("featured:" + app.id) : view === "featured") && matches(app.name),
-  );
-  const shownMine = mine.filter(
-    (app) => (view === "saved" ? kept.includes("app:" + app.id) : view === "mine") && matches(app.name),
-  );
+  // Select before limiting: creating another app must not hide an existing bookmark or search match.
+  // Mixed saved previews keep catalogue order first, then the renderer's own-app showcase order.
+  const { shownFeatured, shownMine } = useMemo(() => {
+    const matches = (text: string) => !asked || text.toLowerCase().includes(asked);
+    const shownFeatured = featured
+      .filter(
+        (app) =>
+          (view === "saved" ? kept.includes("featured:" + app.id) : view === "featured") &&
+          matches(app.name),
+      )
+      .slice(0, featuredOnHome);
+    const shownMine = mine
+      .filter(
+        (app) =>
+          (view === "saved" ? kept.includes("app:" + app.id) : view === "mine") &&
+          matches(app.name),
+      )
+      .slice(0, featuredOnHome - shownFeatured.length);
+    return { shownFeatured, shownMine };
+  }, [featured, mine, view, kept, asked]);
+  const thumbnails = useAppThumbnails(useMemo(() => shownMine.map((app) => app.id), [shownMine]));
   const nothing = shownFeatured.length === 0 && shownMine.length === 0;
 
   const take = (app: Featured) => {
@@ -172,13 +206,21 @@ export function FeaturedAppShowcase() {
   };
 
   const pill = (id: View, label: string) => (
-    <button key={id} type="button" data-chosen={view === id ? "" : undefined} onClick={() => setView(id)}>
+    <button
+      key={id}
+      type="button"
+      data-chosen={view === id ? "" : undefined}
+      onClick={() => setView(id)}
+    >
       {label}
     </button>
   );
 
   return (
-    <section data-testid="featured-app-showcase" className="w-full max-w-6xl mx-auto px-8 mt-8 mb-12">
+    <section
+      data-testid="featured-app-showcase"
+      className="w-full max-w-6xl mx-auto px-8 mt-8 mb-12"
+    >
       <div className="mb-4 flex items-center justify-between gap-4">
         <div data-slot="home-featured-views" className="flex min-w-0 items-center">
           <button
@@ -238,7 +280,13 @@ export function FeaturedAppShowcase() {
               under={app.by}
               badge={app.url ? "Published" : "Coming soon"}
               cover={<Cover hue={app.hue} />}
-              keep={<Keep on={kept.includes("featured:" + app.id)} label={`Bookmark ${app.name}`} onClick={() => toggle("featured:" + app.id)} />}
+              keep={
+                <Keep
+                  on={kept.includes("featured:" + app.id)}
+                  label={`Bookmark ${app.name}`}
+                  onClick={() => toggle("featured:" + app.id)}
+                />
+              }
               onOpen={() => take(app)}
             />
           ))}
@@ -252,23 +300,36 @@ export function FeaturedAppShowcase() {
                 badge={null}
                 cover={
                   picture ? (
-                    <img src={picture} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover object-top" />
+                    <img
+                      src={picture}
+                      alt=""
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-cover object-top"
+                    />
                   ) : (
                     <Cover hue={(app.id * 47) % 360} />
                   )
                 }
-                keep={<Keep on={kept.includes("app:" + app.id)} label={`Bookmark ${app.name}`} onClick={() => toggle("app:" + app.id)} />}
+                keep={
+                  <Keep
+                    on={kept.includes("app:" + app.id)}
+                    label={`Bookmark ${app.name}`}
+                    onClick={() => toggle("app:" + app.id)}
+                  />
+                }
                 onOpen={() => openApp(app.id)}
               />
             );
           })}
           {nothing && (
             <p data-slot="home-featured-empty" className="py-6 text-sm text-muted-foreground">
-              {view === "saved"
-                ? "Nothing bookmarked yet. The star on a card keeps it here."
-                : view === "mine"
-                  ? "No apps yet. Describe one in the box above."
-                  : "Nothing matches that."}
+              {asked
+                ? "Nothing matches that."
+                : view === "saved"
+                  ? "Nothing bookmarked yet. The star on a card keeps it here."
+                  : view === "mine"
+                    ? "No apps yet. Describe one in the box above."
+                    : "Nothing matches that."}
             </p>
           )}
         </div>

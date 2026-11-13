@@ -53,7 +53,8 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
   for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
   assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
-  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "he hero fills the first screen at every size", "the name in a serif italic", "one short scroll brings the whole row", "that room's golden section, 610 pixels, centred", "three chips centred under it on one line: two ideas", "Surprise me, which writes another into the box", "attach, then the model that will answer beside it", "the same pill as the model, with its name and a chevron", "Search, Featured, My apps and Bookmarked", "kept in this browser alone and never sent anywhere", "white light entering and leaving as a spectrum", "who made it under its name", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "with no line under it and no app picker", "he hero fills the first screen at every size", "the name in a serif italic", "one short scroll brings the cards", "that room's golden section, 610 pixels, centred", "At 768 pixels and above, two fresh ideas", "below 768 pixels, only Surprise me is shown", "Surprise me writes another idea into the box", "attach, then the model that will answer beside it", "the same pill as the model, with its name and a chevron", "Search, Featured, My apps and Bookmarked", "kept in this browser alone and never sent anywhere", "white light entering and leaving as a spectrum", "who made it under its name", "its checked, source-bound thumbnail when available", "otherwise it uses locally drawn spectrum artwork", "golden section of the room above the floor", "rises from the bottom edge", "normally reachable with Tab", "no duplicate accessibility control", "in one column at the right"]) assert.ok(spec.includes(said), said);
+  for (const obsolete of ["no app picker and no mode selector", "Every chat builds", "a card 233 by 144", "its cards are 144 wide", "three chips centred under it on one line", "carrying its initial", "Each app on the floor shows its own picture"]) assert.equal(spec.includes(obsolete), false, "contradictory Experience promise: " + obsolete);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
   // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
@@ -87,7 +88,8 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.ok(css.includes('[data-slot="chat-mode"] { grid-row: var(--controls); grid-column: 3; justify-self: end;'));
   const selector = read("../vendor/dyad/hologram.ChatModeSelector.tsx");
   assert.ok(selector.includes('data-slot="chat-mode-toggle"') && selector.includes("DropdownMenuTrigger"));
-  assert.ok(selector.includes('aria-hidden="true"') && selector.includes("tabIndex={-1}"), "the toggle is a second voice beside the select");
+  // Accessibility is qualified through the actual projected component in the mandatory
+  // browser_chat_mode_controls suite, not by requiring hidden controls in this stylesheet gate.
   assert.ok(selector.includes("chatModeCatalog.modes.map"), "the toggle names its own modes instead of the catalogue's");
   // The two controls are one pair: the same pill, the same two-line rows.
   const model = read("../vendor/dyad/hologram.ModelPicker.tsx");
@@ -114,17 +116,16 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.equal(/\[role="region"\] > \* \{ width: \d+px/.test(css), false, "a card still keeps a width of its own");
   assert.ok(css.includes('[data-slot="home-featured-keep"][data-chosen] { opacity: 1;'), "a kept card does not stay lit");
   assert.equal(/https?:\/\//.test(floor), false, "the floor fetches something");
-  assert.ok(floor.includes("<svg viewBox=\"0 0 288 144\""), "a cover is no longer drawn here");
+  assert.match(floor, /<svg\s+viewBox="0 0 288 144"/, "a cover is no longer drawn here");
   assert.ok(read("../vendor/dyad/hologram.screens.mjs").includes('"src/components/FeaturedAppShowcase.tsx": "hologram.screens/FeaturedAppShowcase.tsx"'));
-  // A card without a cover is still a card: the tile and its initial are drawn, and a real cover fills it.
+  // Checked own-app media and local spectrum fallback are exercised by home_card_keyboard.test.mjs.
   assert.ok(css.includes('[data-slot="home-featured"] [role="region"] button img { object-fit: cover !important;'));
   assert.ok(css.includes("max-height: 233px"), "the room under the hero is not capped on a tall window");
   assert.ok(css.includes("flex-wrap: nowrap !important"), "the ideas still wrap into a block");
   // The floor itself is never hidden (a rule inside it may hide a part of a card, which is not the floor).
   assert.equal(/\[data-slot="home-featured"\]\s*\{[^}]*display:\s*none/.test(css), false, "the floor is hidden at some size");
   assert.ok(css.includes("min-width: 768px") && css.includes("max-width: 767px"), "the home rules answer only one width");
-  const mode = read('../vendor/dyad/hologram.ChatModeSelector.tsx');
-  assert.ok(mode.includes('tabIndex={-1}') && mode.includes('pointer-events-none absolute left-0 top-0 h-px w-px opacity-0'));
+
 });
 
 test("each approval explains why, then how, then what, in plain words, and still states what must be disclosed", () => {

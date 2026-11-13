@@ -99,4 +99,74 @@ test("actual selector creation settings and mandatory browser bind to canonical 
     ),
   );
   assert.ok(read("studio/tools/shell_parse.mjs").includes("browser-chat-modes.mjs"));
+  // The SDK-native suite has no renderer npm prerequisite. Its four pure controls stay complete;
+  // compiled renderer controls are independently mandatory in Studio, after its locked npm install.
+  const workflow = read(".github/workflows/studio.yml");
+  const accessibility = read("studio/tools/chat_mode_accessibility.test.mjs");
+  const assertProjectedGate = (workflow, fixture) => {
+    const lane = workflow.match(/\n  lane:\n([\s\S]*?)    steps:/)?.[1];
+    assert.ok(lane, "Studio lane must remain present");
+    assert.equal(
+      /^    (?:if|continue-on-error):/m.test(lane),
+      false,
+      "Studio cannot skip or ignore the renderer lane",
+    );
+    const steps = workflow
+      .split(/^      - /m)
+      .filter((step) => step.includes("run: node --test tools/chat_mode_accessibility.test.mjs"));
+    assert.equal(steps.length, 1, "one mandatory projected accessibility command");
+    const step = steps[0];
+    assert.match(step, /\n        run: node --test tools\/chat_mode_accessibility\.test\.mjs\s*$/);
+    assert.ok(
+      step.includes(
+        "if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}",
+      ),
+    );
+    assert.equal(step.includes("continue-on-error"), false);
+    assert.ok(
+      workflow.includes("run: npm ci --prefix vendor/dyad --ignore-scripts --no-audit --no-fund"),
+    );
+    assert.equal(/\b(?:test|nodeTest)\.(?:skip|only|todo)\s*\(/.test(fixture), false);
+    assert.equal(
+      (fixture.match(/^test\("/gm) ?? []).length,
+      3,
+      "all three projected cases must remain",
+    );
+    assert.ok(fixture.includes("assert.equal(completedCases, 3,"));
+    assert.ok(fixture.includes("completedCases++"));
+    assert.ok(fixture.includes("resolveUi(name, file.pathname)"));
+    assert.ok(fixture.includes('screenSource(file.pathname, fs.readFileSync(file, "utf8"))'));
+    assert.ok(fixture.includes('compile("hologram.ChatModeSelector.tsx")'));
+  };
+  assertProjectedGate(workflow, accessibility);
+  for (const broken of [
+    workflow.replace("  lane:\n", "  lane:\n    if: false\n"),
+    workflow.replace(
+      "run: node --test tools/chat_mode_accessibility.test.mjs",
+      "run: node --test tools/shell_ui.test.mjs",
+    ),
+    workflow.replace(
+      "run: node --test tools/chat_mode_accessibility.test.mjs",
+      "run: node --test --test-name-pattern=projected tools/chat_mode_accessibility.test.mjs",
+    ),
+    workflow.replace(
+      "run: node --test tools/chat_mode_accessibility.test.mjs",
+      "continue-on-error: true\n        run: node --test tools/chat_mode_accessibility.test.mjs",
+    ),
+    workflow.replaceAll(
+      "if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}",
+      "if: false",
+    ),
+  ])
+    assert.throws(() => assertProjectedGate(broken, accessibility), { name: "AssertionError" });
+  for (const broken of [
+    accessibility.replace('test("projected selector', 'test.skip("projected selector'),
+    accessibility.replace("assert.equal(completedCases, 3,", "assert.equal(completedCases, 2,"),
+    accessibility.replace("resolveUi(name, file.pathname)", "null"),
+    accessibility.replace(
+      'compile("hologram.ChatModeSelector.tsx")',
+      'compile("src/components/ChatModeSelector.tsx")',
+    ),
+  ])
+    assert.throws(() => assertProjectedGate(workflow, broken), { name: "AssertionError" });
 });

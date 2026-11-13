@@ -260,6 +260,9 @@ jobs:
       - name: Home cards and nested bookmarks keep separate keyboard actions
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/home_card_keyboard.test.mjs
+      - name: The mode menu has one accessible keyboard trigger and preserves host ownership
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/chat_mode_accessibility.test.mjs
       - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/live_app_prove.test.mjs

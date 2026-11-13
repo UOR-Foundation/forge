@@ -30,7 +30,9 @@ test('mandatory acceptance observes duplicate CSS requests and actual styled ren
  // not the renderer; only the actual-browser command qualifies rendered CSS and network identity.
  const start=browser.indexOf('  const headlineSizes = [];'),end=browser.indexOf("  assert.equal(await tab.locator('link[rel=stylesheet]",start);
  assert.ok(start>0&&end>start,'the mandatory responsive heading oracle must precede stylesheet and Settings checks');
- const oracle=browser.slice(start,end);
+ const layoutStart=browser.indexOf("  const homeLayouts = [];",start);
+ assert.ok(layoutStart>start&&layoutStart<end);
+ const oracle=browser.slice(start,layoutStart)+"  await tab.setViewportSize({ width: 1280, height: 900 });";
  const expected=[[390,'34px'],[809,'34px'],[810,'34.02px'],[1280,'53.76px'],[1309,'54.978px'],[1310,'55px'],[1440,'55px']];
  const exercise=async computed=>{
   let width;const visited=[];
@@ -49,4 +51,29 @@ test('mandatory acceptance observes duplicate CSS requests and actual styled ren
  assert.equal(actual.width,1280,'restore desktop navigation before Settings');
  // Only the extracted browser assertion may reject a bad style, not the harness's report checks.
  for(const [width] of expected)await assert.rejects(exercise(w=>w===width?'48px':correct(w)),{code:'ERR_ASSERTION'},`the oracle must reject a wrong size at ${width}px`);
+ const layoutOracle=browser.slice(layoutStart,end),layoutWidths=[390,767,768,1023,1024,1280];
+ const exerciseLayout=async mutate=>{
+  let width;const visited=[];
+  const tab={async setViewportSize(size){width=size.width;assert.equal(size.height,900);},locator(selector){
+   assert.equal(selector,'[data-slot="home-page"]');return {async evaluate(callback){
+    visited.push(width);
+    const data={columns:width<1024?2:4,visibleIdeas:width<768?0:2,surpriseShown:true,widths:[120,120,120,120]};
+    mutate?.(data,width);
+    const region={children:data.widths.map(value=>({getBoundingClientRect:()=>({width:value})})),style:{gridTemplateColumns:Array(data.columns).fill('120px').join(' ')}};
+    const idea=i=>({matches:()=>false,style:{display:i<data.visibleIdeas?'block':'none'}});
+    const surprise={matches:()=>true,style:{display:data.surpriseShown?'block':'none'}};
+    const suggestions={children:[idea(0),idea(1),surprise],querySelector(s){assert.equal(s,'[data-slot="home-surprise"]');return surprise;}};
+    return callback({querySelector(s){if(s==='[data-slot="home-featured"] [role="region"]')return region;assert.equal(s,'[data-slot="home-suggestions"]');return suggestions;}});
+   }};
+  }};
+  const layouts=await vm.runInNewContext("(async()=>{"+layoutOracle+";return homeLayouts;})()",{assert,tab,getComputedStyle:el=>el.style});
+  return {layouts:JSON.parse(JSON.stringify(layouts)),visited,width};
+ };
+ const layouts=await exerciseLayout();
+ assert.deepEqual(layouts.visited,layoutWidths,'every grid/chip breakpoint must execute');
+ assert.equal(layouts.width,1280);
+ assert.deepEqual(layouts.layouts.map(({width,columns,visibleIdeas,surpriseShown})=>({width,columns,visibleIdeas,surpriseShown})),layoutWidths.map(width=>({width,columns:width<1024?2:4,visibleIdeas:width<768?0:2,surpriseShown:true})));
+ for(const width of layoutWidths)for(const mutate of [data=>data.columns=3,data=>data.visibleIdeas=data.visibleIdeas?0:2,data=>data.surpriseShown=false,data=>data.widths.pop(),data=>data.widths[1]=233])
+  await assert.rejects(exerciseLayout((data,w)=>{if(w===width)mutate(data);}),{code:'ERR_ASSERTION'},'the actual layout oracle must reject incorrect data at '+width);
+
 });

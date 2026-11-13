@@ -432,11 +432,12 @@ aside[aria-label^="Active"] button::before { content: ""; width: 8px; height: 8p
 [data-slot="sidebar-wrapper"] { --sidebar-width: 233px !important; }
 /* Home asks one thing, what to build: the app picker is not shown there. */
 [data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { display: none !important; }
-/* Every chat builds. The mode selector is not shown, on Home, in a chat or in Settings. */
+/* The composer mode menu owns selection; the separate default-mode setting stays hidden. */
 #setting-default-chat-mode { display: none !important; }
 /* The tools are the first card of Settings, where they are found without scrolling. */
 #foundry-shell-actions { order: -1; }
-/* The selector itself is kept for the page's own checks, one pixel and unseen; it takes no space and no pointer.
+/* The select mirror is hidden from accessibility and interaction; the visible menu owns selection.
+   The mirror takes no space and no pointer.
    Its wrapper keeps its place, so a mode that could not be saved is still said there. */
 select[data-testid="chat-mode-selector"] { position: absolute !important; left: 0; top: 0; width: 1px !important; height: 1px !important; padding: 0 !important; border: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 div:has(> select[data-testid="chat-mode-selector"]) { position: relative; }
@@ -445,12 +446,11 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
 
 
 /* Home: one screen, two parts. The hero holds the middle of whatever space there is; the apps you have made
-   rest on the floor, one row on a panel that rises from the bottom edge, in reach at every size. The page
-   itself never scrolls: the row scrolls sideways instead, and the cards that follow peek over the edge so it
-   is plain there are more.
+   rest on the floor, a responsive grid on a panel that rises from the bottom edge. The floor peeks into
+   the first screen and the page scrolls to reveal its cards.
 
    The measures are the golden ratio's, as the phone's home already is: the headline grows with the window
-   from 34 to 55 px; the spaces are the series 8, 13, 21, 34; a card is 233 wide, which is 144 x phi, over a
+   from 34 to 55 px; the spaces are the series 8, 13, 21, 34; cards share the available width over a
    13 px corner; the panel's own corner is 21. The panel is the popover glass under a hairline, so it reads
    over any photo in any look and the hero above it stays the brightest thing on the screen. */
 [data-slot="home-page"] { height: 100% !important; min-height: 100% !important; padding-bottom: 0 !important; }
@@ -477,7 +477,7 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
 }
 [data-slot="home-suggestions"]::-webkit-scrollbar { display: none; }
 [data-slot="home-suggestions"] > button { flex: none; }
-/* The floor: a panel that rises from the bottom edge, inset from the sides, holding one row of apps. */
+/* The floor: a panel that rises from the bottom edge, inset from the sides, holding a bounded app grid. */
 [data-slot="home-featured"] { padding-inline: 34px; }
 [data-slot="home-featured"] > section {
   max-width: none !important; margin: 0 !important; padding: 21px 21px 0 !important;
@@ -505,8 +505,8 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
 [data-slot="home-featured"] [role="region"] > * { width: auto !important; min-width: 0; }
 [data-slot="home-featured-empty"] { grid-column: 1 / -1; }
 @media (max-width: 1023px) { [data-slot="home-featured"] [role="region"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-/* A card is its picture, 233 by 144 (144 x phi), with the app name under it; the blurb stays on the Apps
-   page, so the floor holds one clean row. */
+/* Legacy button-card geometry; projected Home cards set their own cover aspect ratio.
+   Current Home cards share the grid width and put the name under the cover. */
 [data-slot="home-featured"] [role="region"] button > div:first-child, [data-slot="home-featured"] [role="region"] > button {
   aspect-ratio: 1.618 !important; border-radius: 13px !important;
   border-color: color-mix(in srgb, var(--foreground) 12%, transparent) !important;
@@ -517,7 +517,7 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
 [data-slot="home-featured"] [role="region"] > *:hover button > div:first-child { border-color: color-mix(in srgb, var(--foreground) 26%, transparent) !important; }
 [data-slot="home-featured"] [role="region"] button > div + div { gap: 0 !important; }
 @media (prefers-reduced-motion: reduce) { [data-slot="home-featured"] [role="region"] > * > *, [data-slot="home-featured"] [role="region"] > button { transition: none; } }
-/* On a phone the panel keeps the page's 16 px gutter, the cards are 144 wide, and it clears the tab bar. */
+/* On a phone the panel keeps the page's 16 px gutter and clears the tab bar; cards keep their grid columns. */
 @media (max-width: 767px) {
   /* On a phone the tab bar floats over the last 76 pixels of the scroller, and a flex child that overflows
      does not carry the scroller's own padding into the scrollable area: the floor carries it instead, so the

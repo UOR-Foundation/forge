@@ -75,5 +75,51 @@ try {
  await initialize(page);await prepare(page,id);
  await call('delete-app',{appId:id});
  const deleted=await page.evaluate(async()=>{let code;try{await gallery.publishGallery(database,galleryId,gallerySource,{picture:galleryPicture,version:'late'});}catch(e){code=e.code;}return {code,record:await window.__host.get('refs',`gallery:${galleryId}`),read:await gallery.readGallery(database,galleryId)};});assert.deepEqual(deleted,{code:'gallerySourceChanged',record:undefined,read:null});
- assert.deepEqual(errors,[]);console.log(JSON.stringify({actualHost:true,actualIndexedDB:true,twoWindows:true,atomicFieldMerge:true,lateAbort:true,sourceChangeRefused:true,inputCaptured:true,staleFieldsDiscarded:true,rendererCheckedMedia:true,rendererCardAdapterFreshness:true,visibleDescriptionChecked:false,legacyCacheIgnored:true,corruptionRefused:true,deletionPreventsResurrection:true,pageExceptions:0}));
+
+ // Actual renderer selection: save the oldest of four apps, then add a fifth and reload.
+ // These are real host-created apps with a real source-bound thumbnail, not injected component data.
+ const savedId=await make('saved-older-home-app');
+ await prepare(page,savedId);
+ await page.evaluate(()=>gallery.publishGallery(database,galleryId,gallerySource,{picture:galleryPicture,version:'saved-home'}));
+ for(const name of ['newer-home-2','newer-home-3','newer-home-4'])await make(name);
+ await page.goto(base);await page.waitForFunction(()=>!!window.electron&&!!window.__gallery);
+ const floor=page.getByTestId('featured-app-showcase');
+ const savedTile=floor.getByTestId('app-showcase-card-saved-older-home-app');
+ const savedKeep=savedTile.getByRole('button',{name:'Bookmark saved-older-home-app',exact:true});
+ const savedKeys=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('foundry:bookmarks')??'[]'));
+ await floor.getByRole('button',{name:'My apps',exact:true}).click();await savedTile.waitFor();
+ await savedKeep.press('Enter');assert.deepEqual(await savedKeys(),['app:'+savedId]);
+ await floor.getByRole('button',{name:'Bookmarked',exact:true}).click();await savedTile.waitFor();
+ await make('newer-home-5');
+ await page.reload();await floor.getByRole('button',{name:'Bookmarked',exact:true}).click();await savedTile.waitFor();
+ assert.deepEqual(await savedKeys(),['app:'+savedId]);
+ assert.equal(await savedTile.locator('img').evaluate(async image=>{await image.decode();return image.naturalWidth;}),20);
+ for(let repeat=0;repeat<2;repeat++){
+  await floor.getByRole('button',{name:'My apps',exact:true}).click();
+  await savedTile.waitFor({state:'hidden'});
+  assert.equal(await floor.locator('[data-testid^="app-showcase-card-"]').count(),4);
+  await floor.getByRole('button',{name:'Bookmarked',exact:true}).click();await savedTile.waitFor();
+ }
+ await floor.getByRole('button',{name:'My apps',exact:true}).click();
+ await floor.getByRole('button',{name:'Search apps',exact:true}).click();
+ const query=floor.getByRole('textbox',{name:'Find an app',exact:true});
+ await query.fill('  SAVED-OLDER-HOME-APP  ');await savedTile.waitFor();
+ assert.equal(await floor.locator('[data-testid^="app-showcase-card-"]').count(),1);
+ assert.equal(await savedTile.locator('img').evaluate(async image=>{await image.decode();return image.naturalWidth;}),20);
+ await query.fill('no-matching-local-app');
+ await page.waitForFunction(()=>document.querySelector('[data-slot="home-featured-empty"]')?.textContent==='Nothing matches that.');
+ await query.fill('saved-older-home-app');await savedTile.waitFor();
+ await floor.getByRole('button',{name:'Bookmarked',exact:true}).click();await savedTile.waitFor();
+ for(const key of ['Space','Enter']){
+  await savedKeep.press(key);assert.deepEqual(await savedKeys(),[]);await savedTile.waitFor({state:'hidden'});
+  await floor.getByRole('button',{name:'My apps',exact:true}).click();await savedTile.waitFor();
+  await savedKeep.press(key);assert.deepEqual(await savedKeys(),['app:'+savedId]);
+  await floor.getByRole('button',{name:'Bookmarked',exact:true}).click();await savedTile.waitFor();
+ }
+ await query.press('Escape');assert.equal(await query.count(),0);
+ await savedKeep.press('Space');assert.deepEqual(await savedKeys(),[]);await savedTile.waitFor({state:'hidden'});
+ await page.waitForFunction(()=>document.querySelector('[data-slot="home-featured-empty"]')?.textContent==='Nothing bookmarked yet. The star on a card keeps it here.');
+ await page.reload();await floor.getByRole('button',{name:'Bookmarked',exact:true}).click();
+ assert.deepEqual(await savedKeys(),[]);assert.equal(await savedTile.count(),0);
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({actualHost:true,actualIndexedDB:true,twoWindows:true,atomicFieldMerge:true,lateAbort:true,sourceChangeRefused:true,inputCaptured:true,staleFieldsDiscarded:true,rendererCheckedMedia:true,rendererCardAdapterFreshness:true,visibleDescriptionChecked:false,legacyCacheIgnored:true,corruptionRefused:true,deletionPreventsResurrection:true,savedOlderApp:true,fullCollectionSearch:true,selectedThumbnail:true,repeatedSavedToggle:true,savedRemovalReload:true,pageExceptions:0}));
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}

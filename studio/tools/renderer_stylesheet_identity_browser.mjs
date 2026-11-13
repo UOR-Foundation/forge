@@ -46,6 +46,29 @@ try {
     assert.equal(actual, fontSize, `Home heading at ${width}px must follow clamp(34px, 4.2vw, 55px)`);
     headlineSizes.push({ width, fontSize: actual });
   }
+  // The Experience module describes the same existing responsive grid and idea-chip visibility.
+  const homeLayouts = [];
+  for (const width of [390, 767, 768, 1023, 1024, 1280]) {
+    await tab.setViewportSize({ width, height: 900 });
+    const actual = await tab.locator('[data-slot="home-page"]').evaluate(home => {
+      const region = home.querySelector('[data-slot="home-featured"] [role="region"]');
+      const suggestions = home.querySelector('[data-slot="home-suggestions"]');
+      const shown = element => getComputedStyle(element).display !== 'none';
+      const widths = [...region.children].map(card => card.getBoundingClientRect().width);
+      return {
+        columns: getComputedStyle(region).gridTemplateColumns.split(/\s+/).length,
+        visibleIdeas: [...suggestions.children].filter(child => !child.matches('[data-slot="home-surprise"]') && shown(child)).length,
+        surpriseShown: shown(suggestions.querySelector('[data-slot="home-surprise"]')),
+        widths,
+      };
+    });
+    assert.equal(actual.columns, width < 1024 ? 2 : 4, 'Home columns at ' + width);
+    assert.equal(actual.visibleIdeas, width < 768 ? 0 : 2, 'Home ideas at ' + width);
+    assert.equal(actual.surpriseShown, true, 'Surprise me stays available');
+    assert.equal(actual.widths.length, 4, 'the default featured preview has four cards');
+    assert.ok(actual.widths.every(value => value > 0 && Math.abs(value - actual.widths[0]) < 1), 'cards share the available width');
+    homeLayouts.push({ width, ...actual });
+  }
   await tab.setViewportSize({ width: 1280, height: 900 });
   assert.equal(await tab.locator('link[rel=stylesheet][href="/foundry/assets/index.css"]').count(),1);
   assert.equal(stylesheetRequests,1,'home must reuse initial renderer stylesheet');
@@ -53,5 +76,5 @@ try {
   await tab.waitForURL('**/settings');
   assert.equal(await tab.locator('body').evaluate(el=>getComputedStyle(el).fontFamily.includes('Geist')),true);
   assert.equal(stylesheetRequests,1,'settings must retain the initial stylesheet');
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({actualRenderer:true,home:true,headlineSizes,settings:true,stylesheetRequests,pageExceptions:0}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({actualRenderer:true,home:true,headlineSizes,homeLayouts,settings:true,stylesheetRequests,pageExceptions:0}));
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
