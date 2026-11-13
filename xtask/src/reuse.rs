@@ -187,8 +187,10 @@ mod tests {
             "the page build keeps no holo for the pin"
         );
         assert!(
-            pages.contains(r#"cp "$PAGE/app.holo" "$PAGE/app.json" kernel-proof/"#),
-            "the holo artifact does not carry the holo and the app.json the pin reads"
+            pages.contains(
+                r#"cp "$PAGE/app.holo" "$PAGE/app.json" "$PAGE/producer.json" kernel-proof/"#
+            ),
+            "the holo artifact does not carry the original signed producer manifest"
         );
         assert!(
             pages.contains(
@@ -204,7 +206,7 @@ mod tests {
             "the pin no longer follows the page build"
         );
         assert!(
-            pin.contains("gh attestation verify .pin/app.holo --repo \"$GITHUB_REPOSITORY\""),
+            pin.contains(r#"node studio/tools/pages_source_binding.mjs adopt .pin "$TRIGGER" "$GITHUB_REPOSITORY""#),
             "the pin takes a holo without checking the signature over its bytes"
         );
         assert!(
@@ -314,40 +316,30 @@ mod tests {
         );
     }
 
-    /// The live check reads the deployed site, which is the page's address and Forge's; with the same
-    /// browser it has nothing new to see, so it is kept by those three and skipped in full on a hit.
+    /// Live evidence names the assembled bytes and harness, while deployment and observation
+    /// retain one lock. Cache hits still check that production serves the addressed bytes.
     #[test]
     fn the_live_check_is_addressed_by_what_it_reads() {
         let pages = workflow("pages.yml");
-        let key = "key: live-seen-v1-playwright-1.56.1-${{ needs.build.outputs.address }}-${{ needs.forge.outputs.address }}";
-        assert_eq!(
-            pages.matches(key).count(),
-            2,
-            "the live check is restored and saved under one address"
+        let key = "key: live-seen-v2-playwright-1.56.1-${{ steps.artifact-identity.outputs.digest }}-${{ hashFiles('src/studio/tools/live_e2e.mjs', 'src/studio/scripts/live_e2e_all.sh', 'src/studio/tools/pages_live_identity.mjs', 'src/studio/tools/fixtures/**') }}";
+        assert_eq!(pages.matches(key).count(), 2);
+        assert!(
+            !pages.contains("\n  live:\n"),
+            "observation releases the deployment lock"
         );
-        assert!(pages.contains("      address: ${{ steps.address.outputs.key }}"));
-        assert!(pages.contains("      address: ${{ steps.forge-address.outputs.key }}"));
         let live = pages
-            .split(
-                "
-  live:
-",
-            )
+            .split("      # Observation stays in this job")
             .nth(1)
-            .expect("the live job");
+            .expect("the locked live steps");
+        assert_eq!(live.matches("pages_live_identity.mjs artifact ").count(), 2);
+        assert_eq!(live.matches("pages_live_identity.mjs check ").count(), 4);
         for step in live.split("      - name: ").skip(1) {
-            let first = step.lines().next().unwrap_or_default();
-            // The checkout brings the scripts the check runs; the restore is the check for the address.
-            if first.starts_with("This exact site")
-                || first.starts_with("Check out the deployed revision")
-            {
-                continue;
-            }
             assert!(
-                step.contains("steps.seen.outputs.cache-hit != 'true'"),
-                "a step of the live check runs although the site was checked before: {first}"
+                step.contains("steps.deployment.outcome == 'success'"),
+                "live evidence without successful deployment"
             );
         }
+        assert!(live.contains("PAGES_LIVE_MANIFEST="));
     }
 
     /// The Prism page's address leaves the other workflows out, and may: its build reads none of them.
@@ -358,7 +350,7 @@ mod tests {
         let pages = workflow("pages.yml");
         assert!(
             pages.contains(
-                "hashFiles('**', '!studio/**', '!v2/**', '!.git/**', '!.github/workflows/**', '.github/workflows/pages.yml')"
+                "hashFiles('**', '!studio/**', '!v2/**', '!.git/**', '!.github/workflows/**', '.github/workflows/pages.yml', 'studio/tools/pages_source_binding.mjs')"
             ),
             "the page address changed: say here what its build reads"
         );

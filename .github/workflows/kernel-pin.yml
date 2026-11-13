@@ -54,7 +54,7 @@ jobs:
       - name: Check out the branch to pin
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ env.REF }}
+          ref: ${{ github.event.workflow_run.head_sha || env.REF }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -69,18 +69,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ github.event.workflow_run.id }}
+          TRIGGER: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
           mkdir -p .pin
           gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name kernel-holo --dir .pin
-          test -s .pin/app.holo
-          gh attestation verify .pin/app.holo --repo "$GITHUB_REPOSITORY"
-          fingerprint=$(node -e 'const a=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")); process.stdout.write(a.attestations.build.id)' .pin/app.json)
-          [[ $fingerprint =~ ^[0-9a-f]{64}$ ]]
-          {
-            echo "HOLO_PATH=.pin/app.holo"
-            echo "HOLO_FINGERPRINT=$fingerprint"
-          } >>"$GITHUB_ENV"
+          node studio/tools/pages_source_binding.mjs adopt .pin "$TRIGGER" "$GITHUB_REPOSITORY"
       - name: Build and verify the holo through the locked SDK
         if: github.event_name == 'workflow_dispatch'
         shell: bash
@@ -137,9 +131,10 @@ jobs:
         env:
           HOLO: ${{ steps.holo.outputs.path }}
           FINGERPRINT: ${{ steps.holo.outputs.fingerprint }}
-          SOURCE: ${{ github.sha }}
         run: |
           set -euo pipefail
+          SOURCE=${PRODUCER_SOURCE:-$(git rev-parse HEAD)}
+          ADOPTED=${ADOPTED_SOURCE:-$(git rev-parse HEAD)}
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           pin() { printf 'https://raw.githubusercontent.com/%s/%s/studio/shell/kernel/kernel.holo\nblake3:%s\n' "$GITHUB_REPOSITORY" "$1" "$FINGERPRINT" >studio/KERNEL_REV; }
@@ -147,7 +142,7 @@ jobs:
           pin "$(git rev-parse HEAD)"
           (cd studio && node tools/kernel.mjs)
           git add studio/shell/kernel studio/KERNEL_REV
-          git commit -m "Archive the kernel holo app/ builds (blake3:${FINGERPRINT:0:8})" -m "Built and proved by the locked SDK in the kernel pin workflow, from ${SOURCE}."
+          git commit -m "Archive the kernel holo app/ builds (blake3:${FINGERPRINT:0:8})" -m "Built and proved by the locked SDK from producer ${SOURCE}; adopted for ${ADOPTED}."
           pin "$(git rev-parse HEAD)"
           (cd studio && node tools/kernel.mjs)
           git add studio/shell/kernel studio/KERNEL_REV

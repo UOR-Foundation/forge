@@ -203,7 +203,7 @@ jobs:
         run: node --test tools/main_stateful_integration.test.mjs
       - name: Notation preserves serialized source-owned generation
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
-        run: node --test tools/notation_host_integration.test.mjs tools/backlog_workflows.test.mjs tools/application_shape_authority.test.mjs tools/proof_approval_cancellation.test.mjs
+        run: node --test tools/notation_host_integration.test.mjs tools/backlog_workflows.test.mjs tools/pages_source_binding.test.mjs tools/canonical_generation.test.mjs tools/pages_live_identity.test.mjs tools/application_shape_authority.test.mjs tools/proof_approval_cancellation.test.mjs
       - name: The site's Featherless relay takes only the site's offered, bounded chat requests, and keeps its key private
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test relay/featherless/worker.test.mjs

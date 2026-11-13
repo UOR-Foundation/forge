@@ -10,6 +10,22 @@ test("compiler archive locks exact bytes license identity and independent stagin
   const output = execFileSync("python3", [fileURLToPath(new URL("./compiler_assets_cases.py", import.meta.url))], { encoding: "utf8", timeout: 120000 });
   assert.deepEqual(JSON.parse(output), { passed: true, files: 3 });
 });
+test("cached dependency trees never substitute for verified offline asset archives", () => {
+  const script = fileURLToPath(new URL("./package_cache_cases.py", import.meta.url));
+  const options = { encoding: "utf8", timeout: 120000 };
+  const requireComplete = output => assert.deepEqual(JSON.parse(output), {
+    tests: 7, skipped: 0, failures: 0, errors: 0, expectedFailures: 0, unexpectedSuccesses: 0,
+  });
+  requireComplete(execFileSync("python3", [script], options));
+  // unittest exits successfully for both cases: the caller must reject their receipts.
+  for (const mutation of [
+    "unittest.defaultTestLoader.loadTestsFromTestCase = lambda cls: unittest.TestSuite()",
+    "original = unittest.defaultTestLoader.loadTestsFromTestCase\ndef skip_all(cls):\n cls.__unittest_skip__ = True\n cls.__unittest_skip_why__ = 'planted skip'\n return original(cls)\nunittest.defaultTestLoader.loadTestsFromTestCase = skip_all",
+  ]) {
+    const output = execFileSync("python3", ["-c", `import runpy, sys, unittest\n${mutation}\nrunpy.run_path(sys.argv[1], run_name='__main__')`, script], options);
+    assert.throws(() => requireComplete(output), { code: 'ERR_ASSERTION' });
+  }
+});
 test("compiler imports local script and wasm once under the actual base", async () => {
   const requests = [], starts = [];
   const compiler = { initialize: async options => starts.push(options) };
@@ -45,4 +61,15 @@ test("actual build publication and CI require the local compiler closure",()=>{
   for(const path of ['compiler/package.json','compiler/esm/browser.min.js','compiler/esbuild.wasm'])assert.ok(read('../shell/shell-cache.js').includes(JSON.stringify(path)));
   for(const workflow of ['studio.yml','pages.yml']){const s=read('../../.github/workflows/'+workflow);assert.match(s,/npm ci --prefix runtime --ignore-scripts/);assert.match(s,/python3 scripts\/compiler_assets.py --check/);}
   assert.match(read('../../.github/workflows/studio.yml'),/node tools\/compiler_browser.mjs/);
+  const pages = read('../../.github/workflows/pages.yml');
+  const forge = pages.slice(pages.indexOf('\n  forge:'), pages.indexOf('\n  deploy:'));
+  assert.match(forge, /cache-dependency-path: \|\n            studio\/vendor\/dyad\/package-lock.json\n            studio\/runtime\/package-lock.json/);
+  const runtimeInstalls = forge.split('      - name:').filter(step => step.includes('run: npm ci --prefix runtime'));
+  assert.equal(runtimeInstalls.length, 1, 'exactly one runtime install is required');
+  assert.deepEqual([...runtimeInstalls[0].matchAll(/        if: (.*)/g)].map(match => match[1]), ["steps.forge-reuse.outputs.cache-hit != 'true'"], 'runtime install must survive modules and bundle cache hits');
+  assert.match(runtimeInstalls[0], /        run: npm ci --prefix runtime --ignore-scripts --no-audit --no-fund\n/);
+  const preparation = forge.split('      - name:').find(step => step.includes('run: python3 scripts/prepare_asset_cache.py'));
+  assert.ok(preparation, 'missing archive preparation');
+  assert.deepEqual([...preparation.matchAll(/        if: (.*)/g)].map(match => match[1]), ["steps.forge-reuse.outputs.cache-hit != 'true'"]);
+  assert.ok(forge.indexOf('scripts/prepare_asset_cache.py') < forge.indexOf('run: python3 scripts/stamp_shell.py'));
 });

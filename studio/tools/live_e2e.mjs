@@ -20,6 +20,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright")
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { observeResponses } from "./pages_live_identity.mjs";
 
 const [TARGET, SPEC, OUT] = process.argv.slice(2);
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".wasm": "application/wasm", ".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".woff2": "font/woff2", ".webmanifest": "application/manifest+json" };
@@ -54,6 +55,9 @@ const log = (k, v) => { report[k] = v; console.log(k.padEnd(28), typeof v === "s
 
 const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN, args: ["--no-sandbox"] } : {}) });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
+const finishIdentity = process.env.PAGES_LIVE_MANIFEST
+  ? observeResponses(context, JSON.parse(fs.readFileSync(process.env.PAGES_LIVE_MANIFEST, "utf8")), BASE)
+  : null;
 const page = await context.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e.message).slice(0, 200)));
@@ -235,6 +239,7 @@ const within = async (journey, value) => (await page.evaluate((line) => window._
 const first = firstPaint ? firstPaint.at - stream.firstNodePush : Infinity;
 const works = [...work, ...(report["patch work (edits)"] || [])];
 const kernelSays = { pixel: await within("pixel", first), update: works.length > 0 && await within("update", Math.max(...works)), checked: await within("checked", check.ms) };
+if (finishIdentity) await finishIdentity();
 await browser.close();
 if (server) server.close();
 
