@@ -1892,7 +1892,7 @@ async function chatTurn(chatId, intent) {
         if (!verdict || verdict.ok || !verdict.issues || !verdict.issues.length) return;
         assertGenerationActive(abort.signal);
         if (tm.turn === chatId) { tm.repaired = true; tmMark("refused"); }
-        const ask = inference.specAsk({ ...genBody, messages: [...genBody.messages, { role: "assistant", content: "<dyad-spec>" + JSON.stringify(draft.spec) + "</dyad-spec>" }, { role: "user", content: prism.specRepairPrompt(verdict.issues) }] }, { format: prism.SPEC_FORMAT });
+        const ask = inference.specAsk({ ...genBody, messages: [...genBody.messages, { role: "assistant", content: "<dyad-spec>" + JSON.stringify(draft.spec) + "</dyad-spec>" }, { role: "user", content: prism.specRepairPrompt(verdict.issues, verdict.broken) }] }, { format: prism.SPEC_FORMAT });
         const { text } = await paidGenerate(ask, onTextSoon, abort.signal);
         await settleText();
         await enqueueText(text);

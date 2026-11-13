@@ -111,7 +111,18 @@ export function withExamples(raw) {
  * What a model is told when the checker refuses its spec: the checker's own words, each with the request
  * that shows the conflict, and what to write back.
  */
-export const specRepairPrompt = (issues) => "Forge checked your spec and refused it:\n" + issues.slice(0, 8).map((i) => "- " + i).join("\n") + "\nWrite the whole spec again with that fixed and nothing else changed. Where a guarantee and a rule disagree, decide which the request means and change the other. Never list \"invalid\" among the outcomes.";
+// Measured with Qwen3 30B on 2026-11-13: told only that a guarantee "does not hold", it wrote the spec back
+// with the guarantee still in it; shown the guarantee and the rule as it wrote them, and the two ways out,
+// it fixed the spec in one turn.
+export function specRepairPrompt(issues, broken = []) {
+  const lines = broken.length
+    ? broken.slice(0, 6).map((b) => `- The guarantee ${JSON.stringify(b.guarantee)} is false: the request \`${b.request}\` answers ${b.answer}, ${b.rule ? "by the rule " + JSON.stringify(b.rule) : "because no rule matches and the otherwise answer is " + b.answer}.`)
+    : issues.slice(0, 8).map((i) => "- " + i);
+  const how = broken.length
+    ? "For each one, fix it in one of two ways: delete that guarantee from \"properties\", or change the rules so that request gets the answer the guarantee names."
+    : "Fix exactly that.";
+  return "Forge checked your spec and refused it:\n" + lines.join("\n") + "\n" + how + " Then write the whole spec again with nothing else changed. Never list \"invalid\" among the outcomes.";
+}
 
 // ---- the one thing a model may write
 // Every model, on the device or in the cloud, writes the app's JSON spec and nothing else. LexLean a
@@ -493,8 +504,11 @@ export function checkSpec(raw) {
       catch (e) { if (!(e instanceof SpecError)) throw e; }
     }
   }
+  const broken = [];
+  const written = ({ id, says, ...x }) => x;
   for (const p of spec.properties) {
     const found = counterexample(spec, p);
+    if (found.request !== null) broken.push({ guarantee: written(p), request: found.request, answer: found.outcome, rule: found.rule ? written(spec.rules.find((r) => r.id === found.rule) || {}) : null });
     if (found.request !== null) issues.push(`${p.id} (${p.kind} ${p.then} when ${describeConditions(p.when)}) does not hold: \`${found.request}\` answers ${found.outcome}${found.rule ? ` by ${found.rule}` : " by otherwise"}.`);
   }
   const vectors = acceptanceVectors(spec);
@@ -506,7 +520,7 @@ export function checkSpec(raw) {
   }
   if (failed) issues.push(`The rule module disagrees with ${failed} of ${vectors.length} acceptance vectors. This is a Forge bug.`);
   if (raw && typeof raw === "object" && !("examples" in raw) && Array.isArray(authored.examples) && !authored.examples.length) { const { examples, ...rest } = authored; authored = rest; }
-  return { ok: issues.length === 0, spec, authored, issues, notes, vectors: vectors.length, module: issues.length ? null : moduleSource(spec, vectors.length) };
+  return { ok: issues.length === 0, spec, authored, issues, broken, notes, vectors: vectors.length, module: issues.length ? null : moduleSource(spec, vectors.length) };
 }
 
 // ---- the proof: the LexLean project prism-code sends, proved on the hosted verifier

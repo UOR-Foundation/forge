@@ -224,7 +224,7 @@ try {
     otherwise: "standard",
     properties: [{ kind: "never", when: [{ field: "weight", op: "<", value: 0 }], then: "standard" }, { kind: "never", when: [{ field: "weight", op: ">", value: 100 }], then: "standard" }, { kind: "always", when: [{ field: "weight", op: "=", value: 0 }], then: "standard" }] };
   const copy = (v) => JSON.parse(JSON.stringify(v));
-  const first = prism.checkSpec(copy(qwen)), ask = prism.specRepairPrompt(first.issues);
+  const first = prism.checkSpec(copy(qwen)), ask = prism.specRepairPrompt(first.issues, first.broken);
   const mended = copy(qwen); mended.properties[2] = { kind: "always", when: [{ field: "weight", op: "=", value: 0 }, { field: "destination", op: "is", value: "domestic" }], then: "standard" };
   const second = prism.checkSpec(copy(mended)), third = prism.checkSpec(copy(second.authored));
   const used = copy(qwen); used.rules[0].then = "invalid";
@@ -232,11 +232,11 @@ try {
   draftRepair = {
     cleaned: first.notes.some((n) => /Dropped `invalid` from the answers/.test(n)) && first.notes.some((n) => /Dropped 2 guarantees about requests that cannot happen/.test(n)),
     refused: first.ok === false && first.issues.length === 1 && /always standard when weight equals 0/.test(first.issues[0]) && first.issues[0].includes("`0 worldwide` answers express"),
-    asked: ask.includes(first.issues[0]) && /Write the whole spec again with that fixed and nothing else changed/.test(ask),
+    asked: first.broken.length === 1 && ask.includes('The guarantee {"kind":"always","when":[{"field":"weight","op":"=","value":0}],"then":"standard"} is false: the request `0 worldwide` answers express, by the rule {"when":[{"field":"destination","op":"is","value":"worldwide"}],"then":"express"}.') && /delete that guarantee from "properties", or change the rules/.test(ask) && /write the whole spec again with nothing else changed/.test(ask) && prism.specRepairPrompt(["a field is missing"]).includes("- a field is missing"),
     accepted: second.ok === true && !second.authored.outcomes.includes("invalid") && second.authored.properties.length === 1 && second.authored.rules.length === 4,
     sealed: read(second.authored).specAddress === read(second.spec).specAddress && third.ok === true && third.notes.length === 0 && JSON.stringify(third.authored) === JSON.stringify(second.authored),
     answeredInvalid: prism.checkSpec(used).ok === false,
-    host: hostSource.includes("if (accepted && accepted.ok && accepted.authored) tag.spec = accepted.authored;") && hostSource.includes("const repairedSpec = async (genBody) => {") && hostSource.includes("for (let round = 0; round < 2; round++) {") && (hostSource.match(/await repairedSpec\(/g) || []).length === 2 && hostSource.includes("{ role: \"user\", content: prism.specRepairPrompt(verdict.issues) }] }, { format: prism.SPEC_FORMAT });"),
+    host: hostSource.includes("if (accepted && accepted.ok && accepted.authored) tag.spec = accepted.authored;") && hostSource.includes("const repairedSpec = async (genBody) => {") && hostSource.includes("for (let round = 0; round < 2; round++) {") && (hostSource.match(/await repairedSpec\(/g) || []).length === 2 && hostSource.includes("{ role: \"user\", content: prism.specRepairPrompt(verdict.issues, verdict.broken) }] }, { format: prism.SPEC_FORMAT });"),
   };
 } catch (e) { draftRepair = { error: String(e) }; }
 claim("draft: an unused `invalid` and guarantees about requests that cannot happen are dropped and named", draftRepair.cleaned === true && draftRepair.answeredInvalid === true);
