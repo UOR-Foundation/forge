@@ -1,0 +1,94 @@
+# Lean 4.32.1's own kernel in WebAssembly: Phase 1
+
+Lean 4.32.1's C++ kernel now builds as single-threaded WebAssembly and gives the verdict native Lean gives on all 14
+inputs the earlier experiments used (7 accepted, 7 refused). The module is 2.22 MB (418 KB gzip). With the pinned
+library resident, a whole project is judged in 42 to 136 ms.
+
+All timings below are under Node 22.22.1 in WSL on one desktop. No browser has run this module yet; that is Phase 3.
+
+## What was built
+
+- **The kernel is Lean's.** `src/kernel`, `src/runtime` and `src/util` at commit `f054605a` (tag v4.32.1), compiled
+  with Emscripten 6.0.13. No threads, so no cross-origin isolation headers are needed.
+- **Only the kernel's slice of Lean is linked.** The driver (`driver/Checker.lean`) imports `Lean.Environment` and
+  lean4export's reader. Its import closure is 777 modules (601 Init, 138 Std, 36 Lean), not the elaborator.
+  `gen-c.sh` regenerates their C with Lean 4.32.1's own compiler from the pinned source.
+- **The replay is Lean's.** It is `Lean.Environment.replay` with its imports trimmed. Every declaration goes to
+  `Kernel.Environment.addDeclCore`, which is `lean_add_decl`.
+
+## Changes to Lean, all of them
+
+| Change | Where | Why |
+| --- | --- | --- |
+| No `-pthread`, no `LEAN_MULTI_THREAD` | build flags | Upstream's Emscripten settings hard-code threads |
+| Two stub signatures corrected | `upstream/lean-emscripten-stubs.patch` | The `LEAN_EMSCRIPTEN` stubs no longer match their declarations, so the build does not compile |
+| `Lean.reduceBool` / `reduceNat` refuse | `wasm/no_interpreter.cpp` | They run compiled code through the IR interpreter, which is not linked. The hook throws, so it can only refuse |
+| Kernel refusals name their kind and constant, not the terms | `driver/Checker.lean` | Printing terms needs the elaborator's printer |
+
+libuv v1.48.0 is linked for `runtime/io.cpp`, built as Lean's own recipe builds it (`build-libuv.sh`).
+
+The linker reports two signature mismatches, `lean_io_create_tempfile` and `lean_io_create_tempdir`. The checker
+never calls them; a call would trap.
+
+## Agreement
+
+`node agree.mjs`: 14 inputs, 0 disagreements between the arena's official checker with all of Lean
+(`../serverless-prove/evidence/lean-kernel.json`), this driver native, this driver as WebAssembly judging the whole
+file, and as WebAssembly with the library resident.
+
+The refused inputs are the earlier experiments' planted faults: a proof by `sorry`, false and altered statements,
+altered definitions and a missing type. nanoda was not re-run here; the earlier report records that it matched the
+official checker on the same 14.
+
+Not covered by this gate: an axiom outside the allowed list. The kernel accepts any declared axiom; the audit that
+refuses it is the tab's (`../serverless-prove/export.mjs`), and is Phase 2.
+
+## Measurements (Node, desktop)
+
+| What | Result |
+| --- | --- |
+| Module | 2,224,621 bytes; 417,809 gzip. `sha256:bb0ce35a…` |
+| Time to ready (instantiate and initialize) | 14 to 57 ms |
+| Whole file, every declaration (about 5,250) | 6.7 to 8.8 s; 92 MB. Native: 6.5 to 8.9 s |
+| Library made resident (25.7 MB, 5,041 declarations) | 1.35 to 1.96 s, once per worker; 77 MB |
+| Project over the resident library (about 180 declarations sent to the kernel) | median 42 to 136 ms, worst 151 ms; 77 MB |
+
+**Resident library.** The library is entered with the kernel's own `addDeclWithoutChecking`; inductive types are
+still checked. That is sound only for bytes this same kernel has judged whole, so the library's address must be
+recorded together with the kernel's when the library is checked at build time. The spec's reuse rule states this.
+
+## The spec
+
+`app/src/InTabKernel.lex.tex`: the verdict, the axiom rule, address binding, reuse, the two words and the fallback.
+Lean proved its 14 theorems on the hosted verifier, profile `spec` (attestation `918674e4…`,
+`evidence/spec-verify.json`). The module is not yet an entrypoint of `app/lexlean.toml`, so `just vv` does not read
+it; that is Phase 2.
+
+## Not established
+
+- Any browser, and any phone. Memory of 77 to 92 MB has not been tried in iOS Safari.
+- First-visit download: the library is 4.07 MB gzip, the module 0.42 MB.
+- The 1.4 to 2.0 s library load on a phone. Most of it is reading 25.7 MB of NDJSON.
+- Lean 4.32.1's kernel has a known soundness bug (lean4#14576, fixed in 4.33.1). This build has it too.
+
+## Reproduce (WSL)
+
+```bash
+bash v2/in-tab-kernel/native.sh
+```
+
+```bash
+bash v2/in-tab-kernel/gen-c.sh
+```
+
+```bash
+bash v2/in-tab-kernel/build-libuv.sh
+```
+
+```bash
+bash v2/in-tab-kernel/build-wasm.sh
+```
+
+`gen-c.sh` needs Lean's source at the pinned commit in `$TLK/lean4` and `build-wasm.sh` needs Emscripten 6.0.13 in
+`$TLK/emsdk` (`TLK` defaults to `~/tlk`). The inputs come from the serverless-prove experiment's uncommitted `dist/`
+(`stage-inputs.sh`).

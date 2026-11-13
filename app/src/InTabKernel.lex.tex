@@ -1,0 +1,357 @@
+\begin{lexlean}{InTabKernel}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\title{Boolean}
+\begin{semanticmodule}
+structure{
+  name: Evidence,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: hasBytes, type: Nat}, {name: libraryPinned, type: Nat}, {name: libraryDerived, type: Nat}, {name: bundleNamed, type: Nat}, {name: bundleDerived, type: Nat}, {name: kernelPinned, type: Nat}, {name: kernelDerived, type: Nat}, {name: specStatement, type: Nat}, {name: checkedStatement, type: Nat}, {name: axiomsDeclared, type: Nat}, {name: axiomsObserved, type: Nat}, {name: leanRan, type: Nat}, {name: leanAccepted, type: Nat}, {name: secondRan, type: Nat}, {name: secondAccepted, type: Nat}, {name: serverSays, type: Nat}]
+}
+
+structure{
+  name: Stored,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: present, type: Nat}, {name: storedKey, type: Nat}, {name: computedKey, type: Nat}, {name: storedKernel, type: Nat}, {name: kernelPinned, type: Nat}, {name: storedBytes, type: Nat}, {name: derivedBytes, type: Nat}]
+}
+
+definition{
+  name: codeProved,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: codeKernelChecked,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: codePending,
+  parameters: [],
+  result: Nat,
+  body: 2
+}
+
+definition{
+  name: codeRefused,
+  parameters: [],
+  result: Nat,
+  body: 3
+}
+
+definition{
+  name: allowedAxiomsBound,
+  parameters: [],
+  result: Nat,
+  body: 8
+}
+
+definition{
+  name: mayRunKernel,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((((project e hasBytes) =? 1) && ((project e libraryDerived) =? (project e libraryPinned))) && (((project e bundleDerived) =? (project e bundleNamed)) && ((project e kernelDerived) =? (project e kernelPinned))))
+}
+
+definition{
+  name: axiomsAdmitted,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: (((project e axiomsObserved) =? (project e axiomsDeclared)) && ((project e axiomsObserved) <? (allowedAxiomsBound)))
+}
+
+definition{
+  name: verdictCode,
+  parameters: [e : Evidence],
+  result: Nat,
+  body: (if (not ((project e hasBytes) =? 1)) then (codePending) else (if (not (mayRunKernel e)) then (codeRefused) else (if (not ((project e checkedStatement) =? (project e specStatement))) then (codeRefused) else (if (not (axiomsAdmitted e)) then (codeRefused) else (if ((project e leanRan) =? 1) then (if (not ((project e leanAccepted) =? 1)) then (codeRefused) else (if (((project e secondRan) =? 1) && (not ((project e secondAccepted) =? 1))) then (codeRefused) else (codeProved))) else (if ((project e secondRan) =? 1) then (if ((project e secondAccepted) =? 1) then (codeKernelChecked) else (codeRefused)) else (codePending)))))))
+}
+
+definition{
+  name: accepted,
+  parameters: [code : Nat],
+  result: Bool,
+  body: ((code =? (codeProved)) || (code =? (codeKernelChecked)))
+}
+
+definition{
+  name: wordProved,
+  parameters: [],
+  result: Nat,
+  body: 0
+}
+
+definition{
+  name: wordKernelChecked,
+  parameters: [],
+  result: Nat,
+  body: 1
+}
+
+definition{
+  name: wordChecking,
+  parameters: [],
+  result: Nat,
+  body: 2
+}
+
+definition{
+  name: wordRefused,
+  parameters: [],
+  result: Nat,
+  body: 3
+}
+
+definition{
+  name: wordOf,
+  parameters: [code : Nat],
+  result: Nat,
+  body: (if (code =? (codeProved)) then (wordProved) else (if (code =? (codeKernelChecked)) then (wordKernelChecked) else (if (code =? (codePending)) then (wordChecking) else (wordRefused))))
+}
+
+definition{
+  name: reuseAdmits,
+  parameters: [r : Stored],
+  result: Bool,
+  body: ((((project r present) =? 1) && ((project r storedKey) =? (project r computedKey))) && (((project r storedKernel) =? (project r kernelPinned)) && ((project r storedBytes) =? (project r derivedBytes))))
+}
+
+definition{
+  name: breaksKernelGate,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((accepted (verdictCode e)) && (not ((((project e leanRan) =? 1) && ((project e leanAccepted) =? 1)) || (((project e secondRan) =? 1) && ((project e secondAccepted) =? 1)))))
+}
+
+theorem{
+  name: noAcceptanceWithoutAKernelInTheTab,
+  parameters: [e : Evidence],
+  statement: ((breaksKernelGate e) = false),
+  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksKernelGate, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksKernelIdentity,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((accepted (verdictCode e)) && (not ((project e kernelDerived) =? (project e kernelPinned))))
+}
+
+theorem{
+  name: noAcceptanceUnderAnotherKernel,
+  parameters: [e : Evidence],
+  statement: ((breaksKernelIdentity e) = false),
+  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksKernelIdentity, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAxiomsExact,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((accepted (verdictCode e)) && (not ((project e axiomsObserved) =? (project e axiomsDeclared))))
+}
+
+theorem{
+  name: noAcceptanceWithOtherAxioms,
+  parameters: [e : Evidence],
+  statement: ((breaksAxiomsExact e) = false),
+  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksAxiomsExact, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAxiomsAllowed,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((accepted (verdictCode e)) && (not ((project e axiomsObserved) <? (allowedAxiomsBound))))
+}
+
+theorem{
+  name: noAcceptanceOutsideTheAllowedAxioms,
+  parameters: [e : Evidence],
+  statement: ((breaksAxiomsAllowed e) = false),
+  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksAxiomsAllowed, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAddressBeforeKernel,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((mayRunKernel e) && (not (((project e libraryDerived) =? (project e libraryPinned)) && ((project e bundleDerived) =? (project e bundleNamed)))))
+}
+
+theorem{
+  name: kernelRunsOnlyOnAddressedBytes,
+  parameters: [e : Evidence],
+  statement: ((breaksAddressBeforeKernel e) = false),
+  proof: linear_arithmetic{definitions: [breaksAddressBeforeKernel, mayRunKernel]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAddress,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((accepted (verdictCode e)) && (not (((project e libraryDerived) =? (project e libraryPinned)) && ((project e bundleDerived) =? (project e bundleNamed)))))
+}
+
+theorem{
+  name: noAcceptanceOfAlteredBytes,
+  parameters: [e : Evidence],
+  statement: ((breaksAddress e) = false),
+  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksAddress, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksReuse,
+  parameters: [r : Stored],
+  result: Bool,
+  body: ((reuseAdmits r) && (not ((((project r storedKey) =? (project r computedKey)) && ((project r storedKernel) =? (project r kernelPinned))) && ((project r storedBytes) =? (project r derivedBytes)))))
+}
+
+theorem{
+  name: reuseOnlyUnderTheSameKeyKernelAndBytes,
+  parameters: [r : Stored],
+  statement: ((breaksReuse r) = false),
+  proof: linear_arithmetic{definitions: [breaksReuse, reuseAdmits]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksNothingStored,
+  parameters: [r : Stored],
+  result: Bool,
+  body: ((not ((project r present) =? 1)) && (reuseAdmits r))
+}
+
+theorem{
+  name: nothingStoredMeansChecking,
+  parameters: [r : Stored],
+  statement: ((breaksNothingStored r) = false),
+  proof: linear_arithmetic{definitions: [breaksNothingStored, reuseAdmits]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksProvedStatement,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: (((verdictCode e) =? (codeProved)) && (not ((project e checkedStatement) =? (project e specStatement))))
+}
+
+theorem{
+  name: provedOnlyForTheSpecStatement,
+  parameters: [e : Evidence],
+  statement: ((breaksProvedStatement e) = false),
+  proof: linear_arithmetic{definitions: [allowedAxiomsBound, axiomsAdmitted, breaksProvedStatement, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksProvedNeedsLean,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: (((verdictCode e) =? (codeProved)) && (not (((project e leanRan) =? 1) && ((project e leanAccepted) =? 1))))
+}
+
+theorem{
+  name: provedNeedsLeanInTheTab,
+  parameters: [e : Evidence],
+  statement: ((breaksProvedNeedsLean e) = false),
+  proof: linear_arithmetic{definitions: [allowedAxiomsBound, axiomsAdmitted, breaksProvedNeedsLean, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksFallback,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((not ((project e leanRan) =? 1)) && ((verdictCode e) =? (codeProved)))
+}
+
+theorem{
+  name: withoutLeanNeverProved,
+  parameters: [e : Evidence],
+  statement: ((breaksFallback e) = false),
+  proof: linear_arithmetic{definitions: [allowedAxiomsBound, axiomsAdmitted, breaksFallback, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksDisagreement,
+  parameters: [e : Evidence],
+  result: Bool,
+  body: ((accepted (verdictCode e)) && ((((project e leanRan) =? 1) && ((project e secondRan) =? 1)) && (not ((project e leanAccepted) =? (project e secondAccepted)))))
+}
+
+theorem{
+  name: kernelsThatDisagreeRefuse,
+  parameters: [e : Evidence],
+  statement: ((breaksDisagreement e) = false),
+  proof: linear_arithmetic{definitions: [accepted, allowedAxiomsBound, axiomsAdmitted, breaksDisagreement, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: sameInTab,
+  parameters: [e : Evidence, f : Evidence],
+  result: Bool,
+  body: ((((((project e hasBytes) =? (project f hasBytes)) && ((project e libraryPinned) =? (project f libraryPinned))) && (((project e libraryDerived) =? (project f libraryDerived)) && ((project e bundleNamed) =? (project f bundleNamed)))) && ((((project e bundleDerived) =? (project f bundleDerived)) && ((project e kernelPinned) =? (project f kernelPinned))) && (((project e kernelDerived) =? (project f kernelDerived)) && ((project e specStatement) =? (project f specStatement))))) && (((((project e checkedStatement) =? (project f checkedStatement)) && ((project e axiomsDeclared) =? (project f axiomsDeclared))) && (((project e axiomsObserved) =? (project f axiomsObserved)) && ((project e leanRan) =? (project f leanRan)))) && ((((project e leanAccepted) =? (project f leanAccepted)) && ((project e secondRan) =? (project f secondRan))) && ((project e secondAccepted) =? (project f secondAccepted)))))
+}
+
+definition{
+  name: breaksServerVerdict,
+  parameters: [e : Evidence, f : Evidence],
+  result: Bool,
+  body: ((sameInTab e f) && (not ((verdictCode e) =? (verdictCode f))))
+}
+
+theorem{
+  name: noVerdictFromTheServer,
+  parameters: [e : Evidence, f : Evidence],
+  statement: ((breaksServerVerdict e f) = false),
+  proof: linear_arithmetic{definitions: [allowedAxiomsBound, axiomsAdmitted, breaksServerVerdict, codeKernelChecked, codePending, codeProved, codeRefused, mayRunKernel, sameInTab, verdictCode]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksWord,
+  parameters: [code : Nat],
+  result: Bool,
+  body: (((wordOf code) =? (wordProved)) && (not (code =? (codeProved))))
+}
+
+theorem{
+  name: onlyProvedReadsProved,
+  parameters: [code : Nat],
+  statement: ((breaksWord code) = false),
+  proof: linear_arithmetic{definitions: [breaksWord, codeKernelChecked, codePending, codeProved, codeRefused, wordChecking, wordKernelChecked, wordOf, wordProved, wordRefused]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksWeaker,
+  parameters: [code : Nat],
+  result: Bool,
+  body: ((code =? (codeKernelChecked)) && ((wordOf code) =? (wordProved)))
+}
+
+theorem{
+  name: kernelCheckedNeverReadsProved,
+  parameters: [code : Nat],
+  statement: ((breaksWeaker code) = false),
+  proof: linear_arithmetic{definitions: [breaksWeaker, codeKernelChecked, codePending, codeProved, codeRefused, wordChecking, wordKernelChecked, wordOf, wordProved, wordRefused]},
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}
