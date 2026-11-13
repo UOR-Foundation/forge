@@ -131,3 +131,45 @@ Feature: telemetry
     Given the model in studio/telemetry/src/Telemetry.lex.tex
     When the Lean kernel checks keptIsBounded during lexlean verify in the telemetry workflow
     Then no input meets breaksKept
+
+  @TL-22 @build
+  Scenario: An app the kernel refused anything is never shown as all clear
+    Given the model in studio/telemetry/src/Telemetry.lex.tex
+    When the Lean kernel checks refusedIsShown during lexlean verify in the telemetry workflow
+    Then no input meets breaksRefusalHidden
+
+  @TL-23 @build
+  Scenario: An app is never shown as reaching a site it was never allowed to reach
+    Given the model in studio/telemetry/src/Telemetry.lex.tex
+    When the Lean kernel checks reachNeedsAllowance during lexlean verify in the telemetry workflow
+    Then no input meets breaksReachUnallowed
+
+  @TL-24 @build
+  Scenario: A refused site is never shown as only allowed
+    Given the model in studio/telemetry/src/Telemetry.lex.tex
+    When the Lean kernel checks refusedSiteIsShown during lexlean verify in the telemetry workflow
+    Then no input meets breaksSiteRefusalHidden
+
+  @TL-25 @build
+  Scenario: A refusal is never counted as allowed, and an allowance never as a refusal
+    Given the model in studio/telemetry/src/Telemetry.lex.tex
+    When the Lean kernel checks refusalNeverAllowed during lexlean verify in the telemetry workflow
+    Then no input meets breaksMiscounted
+
+  @TL-26 @build
+  Scenario: Every allowance and every refusal is counted once
+    Given the model in studio/telemetry/src/Telemetry.lex.tex
+    When the Lean kernel checks decisionCountedOnce during lexlean verify in the telemetry workflow
+    Then no input meets breaksUncounted
+
+  @TL-27 @build
+  Scenario: The time an app or a site was last seen never moves back
+    Given the model in studio/telemetry/src/Telemetry.lex.tex
+    When the Lean kernel checks lastNeverMovesBack during lexlean verify in the telemetry workflow
+    Then no input meets breaksLastBack
+
+  @TL-28 @build
+  Scenario: The device never keeps more than 256 apps
+    Given the model in studio/telemetry/src/Telemetry.lex.tex
+    When the Lean kernel checks appsKeptIsBounded during lexlean verify in the telemetry workflow
+    Then no input meets breaksAppsKept

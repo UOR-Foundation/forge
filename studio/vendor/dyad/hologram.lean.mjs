@@ -1,5 +1,5 @@
-// hologram-forge (ours, not Dyad's; see VENDORED.md): what the shell leaves out of the first load. Each entry
-// is a patch in hologram.screens.mjs's form (one exact passage of a Dyad file, refused when it is gone), so the
+// hologram-forge (ours, not upstream's; see VENDORED.md): what the shell leaves out of the first load. Each entry
+// is a patch in hologram.screens.mjs's form (one exact passage of an upstream file, refused when it is gone), so the
 // build and the typecheck apply them together. The measurements that chose them are in studio/PERFORMANCE.md.
 //
 // The first load is the home page and the composer; everything else arrives when it is asked for:
@@ -223,8 +223,8 @@ function useNarrow() {
 ];
 
 // The first prompt waited 2,000 ms on Home after the stream had started before it opened the chat ("settle"),
-// time Dyad's desktop backend takes to accept a stream. This host accepts the submit as it is made, and the
-// state machine still waits for its own acceptance and the preview decision; Dyad's own test mode runs it at 0.
+// time upstream's desktop backend takes to accept a stream. This host accepts the submit as it is made, and the
+// state machine still waits for its own acceptance and the preview decision; upstream's own test mode runs it at 0.
 const settlePatches = [
   { file: "src/app/layout.tsx", from: `settleDelayMs={settings?.isTestMode ? 0 : 2_000}`, to: `settleDelayMs={0}` },
 ];

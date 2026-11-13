@@ -42,7 +42,7 @@ import { executeWorkWithGuest } from "./work-codec.mjs";
 import { validateProviderKey } from "./provider-key-validation.mjs";
 // The browser host: the surface src/preload.ts exposes as window.electron, implemented on the page
 // with no server. Rules come from the generated core (core.wasm: preimage, restore, network, view);
-// addresses are κ (sha256) over the bytes the core spells; records live in IndexedDB. Adapters only:
+// addresses are BLAKE3 over the bytes the core spells; records live in IndexedDB. Adapters only:
 // nothing here decides, it derives, stores and forwards.
 //
 // Slices 1 and 2: settings, apps and their files, versions as kappa snapshots, chats as records,
@@ -86,7 +86,7 @@ const emitLocal = (channel, payload) => { const set = listeners.get(channel); if
 const emit = (channel,payload)=>{emitLocal(channel,payload);relayWindowEvent(channel,payload);};
 
 // ---- the generated core, the addresses and the store come from the shared inference module: one
-// core.wasm, one κ, one database ("hologram-forge" v3) for the builder's records and the seals.
+// core.wasm, one BLAKE3, one database ("hologram-forge" v2) for the builder's records and the seals.
 const enc = new TextEncoder(), dec = new TextDecoder();
 let core = null;
 const coreReady = inference.coreReady().then((c) => (core = c));
@@ -484,6 +484,17 @@ function tmFlush() {
   if (!events.length) return;
   tmIdle(() => telemetryOf().then(({ telemetry }) => telemetry.record({ events, dropped, model: modelName })).catch((e) => console.warn("[telemetry]", (e && e.code) || e)));
 }
+// What each app was let reach: the worker hands over the kernel's decisions as it serves an app
+// (sw.template.js, noteGate); they are recorded at idle like a turn. A preview's address changes with every
+// build, so the address is named here with the app it belongs to, and its builds count as one app.
+const tmApps = new Map();
+const tmNameApp = (address, appId, name) => tmApps.set(address, { key: "app:" + appId, name: name || null });
+if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", (e) => {
+  const d = e.data;
+  if (!d || d.type !== "telemetry/gate" || typeof d.id !== "string" || !Array.isArray(d.decisions)) return;
+  const named = tmApps.get(d.id) || {};
+  tmIdle(() => telemetryOf().then(({ telemetry }) => telemetry.noteApp({ id: d.id, key: named.key ?? null, name: named.name ?? null, installed: d.installed === true, decisions: d.decisions })).catch((err) => console.warn("[telemetry]", (err && err.code) || err)));
+});
 async function openTelemetry() {
   const [{ openPanel }, t] = await Promise.all([import("./telemetry/panel.mjs"), telemetryOf()]);
   openPanel(t);
@@ -633,6 +644,7 @@ async function buildPreview(appId) {
   const appUrl = new URL(path.slice(1), BASE);
   const owner = await get("apps", appId);
   const endpoints = Array.isArray(owner && owner.grants) ? owner.grants : PREVIEW_ENDPOINTS;
+  tmNameApp("p:" + previewId(appUrl.pathname), appId, owner && owner.name);
   const previousPermission = await get("refs", "capabilities:" + previewId(appUrl.pathname));
   const permission = endpoints.length ? await authorizePreview({ id: previewId(appUrl.pathname), source: source.reference, endpoints }) : null;
   const approvedEndpoints = permission ? permission.disclosure.endpoints : [];
@@ -1081,7 +1093,7 @@ window.__preview = buildPreview;
 // ---- the renderer's tags: what the model writes becomes files. The grammar is the renderer's: a block per
 // file, attributes path and description, content verbatim between the tags; delete and rename are
 // single tags; add-dependency names packages the import map must carry.
-function parseDyadTags(text) {
+function parsePrismTags(text) {
   const writes = [], deletes = [], renames = [], deps = [];
   const attr = (s, name) => { const m = s.match(new RegExp(name + '="([^"]*)"')); return m ? m[1] : null; };
   for (const m of text.matchAll(/<dyad-write\s+([^>]*)>([\s\S]*?)<\/dyad-write>/g)) {
@@ -1094,7 +1106,7 @@ function parseDyadTags(text) {
   for (const m of text.matchAll(/<dyad-add-dependency\s+([^>]*?)\s*\/?>/g)) { const p = attr(m[1], "packages") || attr(m[1], "package"); if (p) deps.push(...p.split(/\s+/).filter(Boolean)); }
   return { writes, deletes, renames, deps };
 }
-async function applyDyadTags(appId, tags, options = {}) {
+async function applyPrismTags(appId, tags, options = {}) {
   const copied = copyGenerationInput(tags, options.source), { signal, onCommit } = options;
   await coreReady;
   assertGenerationActive(signal);
@@ -1102,7 +1114,7 @@ async function applyDyadTags(appId, tags, options = {}) {
   assertCanonicalGeneration(source, copied.tags, lexlean);
   return applyStoredProjectPatch(await dbReady, appId, copied.tags, { core, derive: kappa, source, signal, onCommit });
 }
-window.__chat = { parseDyadTags, applyDyadTags };
+window.__chat = { parsePrismTags, applyPrismTags };
 
 // ---- the chat stream machine. the renderer submits a turn only here: SUBMIT on the chat_stream
 // machine, then it watches the snapshot (admitting, streaming, finalizing, idle) and applies the
@@ -1882,7 +1894,7 @@ async function chatTurn(chatId, intent) {
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
-      // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
+      // Until the answer starts, the model's reasoning shows in upstream's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
       const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
       const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
@@ -1934,10 +1946,10 @@ async function chatTurn(chatId, intent) {
     if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
     if (execution.sourceEffects) {
       // Code a model wrote is never applied: the app's code and screen are projections of its module.
-      const wrote = parseDyadTags(full);
+      const wrote = parsePrismTags(full);
       const refusedCode = wrote.writes.length + wrote.deletes.length + wrote.renames.length + wrote.deps.length;
       const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
-      const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
+      const applied = await applyPrismTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
       let changed = applied.changed;
       hostedSource = applied.source;
       // A model writes the app's JSON spec and nothing else: LexLean in its turn is dropped before the
@@ -2243,6 +2255,7 @@ handlers.set("holo:publish", async ({ appId }) => {
   if (address !== composed.identities.archive_kappa) throw new Error("the page's address of the archive differs from PrismPM's: " + address);
   await assertBuildSourceCurrent(await dbReady, appId, captured);
   const done = await install(bytes, { appId, application: app.name, version });
+  tmNameApp("holo:" + done.path.split("/").filter(Boolean).pop(), appId, app.name);
   await row("granted", address);
   const record = { application: app.name, version, closure, attestation, provenance: prov, identities: composed.identities, directory: composed.directory, byteLength: bytes.length, modelId, viewBytes: view.length, guestBytes: guest.length };
   lastPublish = { record, bytes, guest, view, model: modelBytes, source: sourceBytes, page };

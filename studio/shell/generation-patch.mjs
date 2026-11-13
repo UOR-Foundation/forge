@@ -5,7 +5,7 @@ const failure = code => Object.assign(new Error(code === "generationCancelled" ?
 const portable = path => typeof path === "string" && path.length > 0 && !/[\\\u0000-\u001f:]/.test(path) && path.split("/").every(part => part && part !== "." && part !== "..");
 export function assertGenerationActive(signal) { if (signal?.aborted) throw failure("generationCancelled"); }
 export function stageGenerationPatch(source, input) {
-  if (!source || typeof source.name !== "string" || typeof source.reference !== "string" || !/^sha256:[0-9a-f]{64}$/.test(source.reference) || !Array.isArray(source.files) || source.files.length > 1000 || source.files.some(row => !Array.isArray(row) || row.length !== 2 || typeof row[0] !== "string" || typeof row[1] !== "string")) throw failure("invalidGenerationPatch");
+  if (!source || typeof source.name !== "string" || typeof source.reference !== "string" || !/^blake3:[0-9a-f]{64}$/.test(source.reference) || !Array.isArray(source.files) || source.files.length > 1000 || source.files.some(row => !Array.isArray(row) || row.length !== 2 || typeof row[0] !== "string" || typeof row[1] !== "string")) throw failure("invalidGenerationPatch");
   let patch;
   try { patch = structuredClone(input); } catch { throw failure("invalidGenerationPatch"); }
   if (!patch || ![patch.writes, patch.deletes, patch.renames, patch.deps].every(Array.isArray) || patch.writes.length + patch.deletes.length + patch.renames.length > 1000 || patch.deps.length > 128) throw failure("invalidGenerationPatch");

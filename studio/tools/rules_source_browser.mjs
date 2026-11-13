@@ -6,7 +6,7 @@ import { chromium } from "../vendor/dyad/node_modules/playwright-core/index.mjs"
 const sources = new Map([
   ["/application-shape.mjs", fs.readFileSync(new URL("../shell/application-shape.mjs", import.meta.url))],
   ["/rules.mjs", fs.readFileSync(new URL("../shell/rules-source.mjs", import.meta.url))],
-  ["/address.mjs", fs.readFileSync(new URL("../shell/address.mjs", import.meta.url))], ["/prism-code/src/sha256.mjs", fs.readFileSync(new URL("../shell/prism-code/src/sha256.mjs", import.meta.url))],
+  ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))],
 ]);
 const server = http.createServer((request, response) => {
   if (request.url === "/") { response.setHeader("content-type", "text/html"); response.end("<!doctype html><title>Rules source binding acceptance</title>"); return; }
@@ -23,7 +23,7 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   const report = await page.evaluate(async () => {
     const { readBoundRules, saveBoundRules } = await import("/rules.mjs");
-    const { kappa } = await import("/address.mjs");
+    const { kappa } = await import("/blake3.mjs");
     const check = (condition, message) => { if (!condition) throw Error(message); };
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open("rules-test", 1);

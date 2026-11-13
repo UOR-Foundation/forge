@@ -39,7 +39,7 @@ export function retiredApplicationPaths(source, nextShape, nextPath, canonicalSo
 export async function boundApplicationState(source, derive) {
   if (applicationShape(source) !== 'stateful') return null;
   const state = source.applicationState;
-  if (!state || typeof state !== 'object' || Array.isArray(state) || !['drafting','checked','proving','proved','published'].includes(state.phase) || !/^sha256:[0-9a-f]{64}$/.test(state.sourceKappa || '')) return null;
+  if (!state || typeof state !== 'object' || Array.isArray(state) || !['drafting','checked','proving','proved','published'].includes(state.phase) || !/^blake3:[0-9a-f]{64}$/.test(state.sourceKappa || '')) return null;
   if (['proved','published'].includes(state.phase) && (typeof state.proof?.attestation_id !== 'string' || !state.proof.attestation_id)) return null;
   const module = new Map(source.files).get(APP_SOURCE_PATH);
   return await derive(new TextEncoder().encode(module)) === state.sourceKappa ? structuredClone(state) : null;

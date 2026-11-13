@@ -29,7 +29,8 @@ export async function kernelBudgets(ask) {
 }
 
 export function createTelemetry({ model, backend, ask }) {
-  const { KPI, LEVER, LOOP } = model;
+  const { KPI, LEVER, LOOP, NET, STANDING } = model;
+  const standingName = Object.fromEntries(Object.entries(STANDING).map(([n, c]) => [c, n]));
   const names = Object.fromEntries(Object.entries(KPI).map(([n, c]) => [c, n]));
   const leverName = Object.fromEntries(Object.entries(LEVER).map(([n, c]) => [c, n]));
   let budgets = null;
@@ -141,14 +142,65 @@ export function createTelemetry({ model, backend, ask }) {
     return format === "openmetrics" ? history(set) : snapshot(set);
   }
 
+  // The kernel's decisions about one app, as the worker saw them: whether it was opened, and each site it
+  // was allowed to reach or refused. They are folded into the app's totals by the model (appStep, reachStep)
+  // and kept like a turn, so they are asked of the kernel as a store. `id` is the address the worker serves
+  // the app under; the host may name the app it belongs to (`key`, `name`), which is remembered, so the
+  // builds of one app are one app, across reloads.
+  async function noteOne({ id, key = null, name = null, installed = false, decisions }) {
+    await flow("store");
+    if (typeof id !== "string" || !id || !Array.isArray(decisions) || !decisions.length) throw new TelemetryRefused("telemetry.badDecision", "a note names an app and at least one decision");
+    const coded = decisions.map((d) => {
+      const kind = NET[d && d.kind], site = d && d.site;
+      const needsSite = kind === NET.allowed || kind === NET.blocked;
+      if (kind == null || !Number.isFinite(d.at) || d.at < 0 || (needsSite ? typeof site !== "string" || !site : site != null)) throw new TelemetryRefused("telemetry.badDecision", JSON.stringify(d));
+      return { kind, at: d.at, value: Number.isFinite(d.value) && d.value > 0 ? d.value : 0, site: needsSite ? site : null };
+    });
+    const aliases = (await backend.getMeta("aliases")) ?? {};
+    if (key) { delete aliases[id]; aliases[id] = { key, name }; }
+    const names = Object.keys(aliases), drop = model.evicted(names.length);
+    for (const n of names.slice(0, drop)) delete aliases[n];
+    await backend.setMeta("aliases", aliases);
+    const alias = aliases[id], appId = alias?.key ?? id;
+    const app = (await backend.getApp(appId)) ?? { id: appId, name: null, installed: false, net: model.appEmpty(), sites: {} };
+    app.name = name ?? alias?.name ?? app.name;
+    app.installed = app.installed || installed === true;
+    for (const d of coded.sort((a, b) => a.at - b.at)) {
+      app.net = model.appStep(app.net, d);
+      if (d.site) app.sites[d.site] = model.reachStep(app.sites[d.site] ?? model.reachEmpty(), d);
+    }
+    const sites = Object.entries(app.sites).sort((a, b) => a[1].last - b[1].last);
+    for (const [site] of sites.slice(0, model.sitesEvicted(sites.length))) delete app.sites[site];
+    await backend.putApp(app);
+    const all = (await backend.allApps()).sort((a, b) => a.net.last - b.net.last);
+    const evict = model.appsEvicted(all.length);
+    if (evict > 0) await backend.removeApps(all.slice(0, evict).map((a) => a.id));
+    return app;
+  }
+
+  // Notes arrive as the worker decides, several at once; each reads and rewrites its app, so they run one
+  // after another, and one refused note does not stop the next.
+  let noting = Promise.resolve();
+  const noteApp = (note) => { const run = noting.then(() => noteOne(note)); noting = run.catch(() => {}); return run; };
+
+  // Every app, with the model's standing for it and each of its sites: refused first, then the latest.
+  async function apps() {
+    await flow("show");
+    return (await backend.allApps()).map((a) => ({
+      id: a.id, name: a.name, installed: a.installed, ...a.net, standing: standingName[model.standing(a.net)],
+      sites: Object.entries(a.sites).map(([site, r]) => ({ site, ...r, standing: standingName[model.reachStanding(r)] }))
+        .sort((x, y) => STANDING[y.standing] - STANDING[x.standing] || y.last - x.last),
+    })).sort((x, y) => STANDING[y.standing] - STANDING[x.standing] || y.last - x.last);
+  }
+
   // Captured turns, as recorded, for replaying elsewhere; a save like any other.
   async function exportTurns({ userAct = false } = {}) {
     await flow("save", userAct === true);
-    return JSON.stringify({ spec: "prism/telemetry-turns/1", models: (await backend.getMeta("models")) ?? [], turns: await backend.all() }) + "\n";
+    return JSON.stringify({ spec: "prism/telemetry-turns/1", models: (await backend.getMeta("models")) ?? [], turns: await backend.all(), apps: await backend.allApps() }) + "\n";
   }
 
   return {
-    record, report, dataset, budgets: budgetTable,
+    record, report, dataset, budgets: budgetTable, noteApp, apps,
     adopt: (kpi) => act(kpi, "approve"),
     dismiss: (kpi) => act(kpi, "dismiss"),
     exportSnapshot: (act) => exportAs("text", act),

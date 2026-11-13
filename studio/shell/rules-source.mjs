@@ -1,7 +1,7 @@
 // FoundrySpecification.rulesSourceBoundary: identity plus an atomic status update.
 import {isStatefulModule, shapeFailure} from './application-shape.mjs';
 const phases = new Set(["drafting", "checked", "proving", "proved", "published"]);
-const address = value => typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
+const address = value => typeof value === "string" && /^blake3:[0-9a-f]{64}$/.test(value);
 const valid = state => state && typeof state === "object" && !Array.isArray(state) && address(state.specKappa) && phases.has(state.phase);
 const fail = code => Object.assign(new Error(`Rule state refused: ${code}`), { code });
 const encoder = new TextEncoder();

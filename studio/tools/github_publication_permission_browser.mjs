@@ -32,7 +32,7 @@ try {
   const start=mode=>page.evaluate(async mode=>{
     const {buildOnGitHub}=await import(new URL('github-build.js',location.href));
     const {authorizeGitHubPublication,bindPublicationSource}=await import(new URL('github-publication-permission.mjs',location.href));
-    const source='sha256:'+'a'.repeat(64),expected={specKappa:source,phase:'proved'};
+    const source='blake3:'+'a'.repeat(64),expected={specKappa:source,phase:'proved'};
     window.publicationCurrent=structuredClone(expected);window.publicationSpec={name:'App',title:'App',purpose:'<img src=x onerror="window.__publicationInjected=true">'};window.publicationCalls=[];window.publicationOutcome=null;window.publicationAbort=new AbortController();
     const fetch=async(url,options)=>{
       const endpoint=new URL(url);if(endpoint.origin!=='https://api.github.com')throw Error('unexpected destination');

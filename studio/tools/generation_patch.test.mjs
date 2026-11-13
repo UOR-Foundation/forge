@@ -5,7 +5,7 @@ import vm from "node:vm";
 import {activeApplicationModule} from "../shell/application-shape.mjs";
 import * as lexlean from "../shell/live/lexlean.mjs";
 import { stageGenerationPatch, assertGenerationActive } from "../shell/generation-patch.mjs";
-const source = { name: "app", reference: "sha256:" + "a".repeat(64), files: [["a", "old"], ["b", "other"]], dependencies: [] };
+const source = { name: "app", reference: "blake3:" + "a".repeat(64), files: [["a", "old"], ["b", "other"]], dependencies: [] };
 const tags = (extra = {}) => ({ writes: [], deletes: [], renames: [], deps: [], ...extra });
 test("stage applies complete distinct writes deletes and renames without mutating source", () => {
   const result = stageGenerationPatch(source, tags({ writes: [{ path: "c", content: "new" }], renames: [{ from: "a", to: "d" }], deletes: [{ path: "b" }] }));
@@ -43,7 +43,7 @@ test("the host binds generation source signal and committed results", () => {
   assert.ok(!host.includes('content: "This is my codebase. "'));
   assert.ok(host.includes("prism.deviceRequest(intent.prompt, capturedSpec)"));
   assert.ok(host.includes("current?.specKappa === await kappa(enc.encode(capturedSpec))"));
-  assert.ok(host.includes("applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit })"));
+  assert.ok(host.includes("applyPrismTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit })"));
   // Code a model writes is never applied; the rules are read against the applied source.
   assert.ok(host.includes("const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };"));
   // What is applied is the turn without any LexLean the model wrote: a model writes the JSON spec only.

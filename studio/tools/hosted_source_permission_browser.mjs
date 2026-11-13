@@ -35,7 +35,7 @@ try{
  await page.goto(base);await page.evaluate(async()=>{window.api=await import('/live/app.mjs');window.permission=await import('/hosted-source-permission.mjs');});
  const start=async({turn=false}={})=>page.evaluate(turn=>{
   window.result=null;window.controller=new AbortController();document.getElementById('prior').focus();
-  if(turn)window.scope=window.api.createHostedSourceSession({appId:7,turnId:'browser-turn',source:'sha256:'+'a'.repeat(64),signal:controller.signal,assertCurrent:async()=>true});
+  if(turn)window.scope=window.api.createHostedSourceSession({appId:7,turnId:'browser-turn',source:'blake3:'+'a'.repeat(64),signal:controller.signal,assertCurrent:async()=>true});
   window.source='<script>window.injected=true</script> private app source';
   void window.api.dataForm(window.source,fetch,{signal:controller.signal,...(turn?{session:scope}:{})}).then(value=>result={ok:true},error=>result={code:error.code});
  },turn);

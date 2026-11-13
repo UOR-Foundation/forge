@@ -1,5 +1,5 @@
 // The live preview's projection: preview = project(spec). Pure and deterministic, so the same spec
-// always gives the same screen, and every node carries a kappa (κ, the sha256 of its canonical bytes): the
+// always gives the same screen, and every node carries a kappa (BLAKE3 of its canonical bytes): the
 // frame redraws only the nodes whose kappa changed, and leaves every other one exactly as it is.
 //
 // The spec is the only source. A screen is drawn from a closed set of node kinds the frame knows how
@@ -9,7 +9,7 @@
 // The input may be a spec still being written (a model streaming it), or rules that never checked,
 // so `sanitize` keeps only the parts that are whole and well formed. The checked spec is the one the
 // proof is about; what is drawn mid-stream is labelled a draft by the caller.
-import { kappa as kappaOf } from "../address.mjs";
+import { kappa as kappaOf } from "../prism-code/src/blake3.mjs";
 import { repairJson } from "../prism.js";
 
 const enc = new TextEncoder();

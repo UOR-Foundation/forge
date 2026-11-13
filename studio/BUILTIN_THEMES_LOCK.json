@@ -1,7 +1,7 @@
 {
   "profile": "foundry/imported-builtin-themes/1",
   "compiler": "0.25.9",
-  "generatorSha256": "142cb41a015e61fbc8ce6e7bcc431456a088d371bb1fa94a4a2516f584ca6af2",
+  "generatorSha256": "1e7666f1dd39641c7fa176ca3678b9db873722422e973911e3b4831d0b6d56cd",
   "packageLockSha256": "8cf7dcd27fd83fd4871f455a1becb280d1c0eab105c3f3f669d091537d712ed8",
   "licenseSha256": "eb194f9b70920f23323e2f993330f92d175e361fd11efb526626f71f9be8f8b2",
   "inputs": [
@@ -12,7 +12,7 @@
   ],
   "output": {
     "path": "builtin-themes.mjs",
-    "sha256": "7b70fd9937539e47a6c1e34e15397b3d46055d4805be1864cf9c4b40b2222f83",
-    "bytes": 2947
+    "sha256": "bf600405ec1c7ea84481532696558f45b6b6fd80781a3a3b9e2f2844c04f58bb",
+    "bytes": 2948
   }
 }

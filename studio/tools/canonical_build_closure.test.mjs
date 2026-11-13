@@ -21,7 +21,7 @@ test("changed or missing canonical module bytes refuse",()=>{
 });
 test("changed or missing runtime bytes refuse even with coherent content hashes",()=>{
   for(const candidate of [changed("src/lib/prism.ts","private runtime"),files.filter(([path])=>path!=="src/lib/prism.ts")]){
-    const source={name:"app",reference:"sha256:"+"a".repeat(64),files:candidate,dependencies:[]};
+    const source={name:"app",reference:"blake3:"+"a".repeat(64),files:candidate,dependencies:[]};
     assert.throws(()=>verifyCapturedSource(source,{...source,oid:source.reference}),e=>e.code==="canonicalBuildMismatch");
   }
 });
