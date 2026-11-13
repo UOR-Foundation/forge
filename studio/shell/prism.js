@@ -12,6 +12,7 @@ import { toLexLean, draftOf } from "./live/lexlean.mjs";
 import { PROMPT as APP_SHAPE } from "./live/app.mjs";
 import { checkObligations } from "./live/obligations.mjs";
 import { tableKernel } from "./live/table.mjs";
+import { KEY_PREFIX, REFUSAL, trustDescriptor, sameVerifier, attests, reuseSentence, addresses, admit, headersOf, record as reuseRecord, theoremsOf, without } from "./prism/proof-reuse.mjs";
 
 // prism-code's checker (prism/spec.mjs, byte for byte) keeps a spec to 24 rules, because its proofs are one
 // linear_arithmetic theorem per guarantee over the whole first-match chain. Past that, Forge checks the
@@ -446,8 +447,8 @@ async function rpc(method, name, params) {
 const callTool = (tool, args, tasks = false) => rpc("tools/call", tool, { name: tool, arguments: args, _meta: meta(tasks) });
 
 /** Ask Lean to prove the spec's guarantees. Resolves { ok, record, seconds } or { ok: false, error }. */
-export async function prove(spec, { onWait = () => {}, beforeSubmit = () => {} } = {}) {
-  const result = await proveFiles(async (axioms) => { const files = await projectFiles(spec, axioms); return { files, entrypoints: files.map((f) => f.path) }; }, { onWait, beforeSubmit, before: () => { if (spec.rules.length > PROVE_RULES_MAX) throw new Error(`These ${spec.rules.length} rules are checked on every request, but Lean proves at most ${PROVE_RULES_MAX} rules today: its proofs are one theorem per guarantee over the whole rule chain. Proving more waits for local proofs in LexLean (UOR-Foundation/PrismPM#605).`); } });
+export async function prove(spec, { onWait = () => {}, beforeSubmit = () => {}, store = null } = {}) {
+  const result = await proveFiles(async (axioms) => { const files = await projectFiles(spec, axioms); return { files, entrypoints: files.map((f) => f.path) }; }, { onWait, beforeSubmit, store, before: () => { if (spec.rules.length > PROVE_RULES_MAX) throw new Error(`These ${spec.rules.length} rules are checked on every request, but Lean proves at most ${PROVE_RULES_MAX} rules today: its proofs are one theorem per guarantee over the whole rule chain. Proving more waits for local proofs in LexLean (UOR-Foundation/PrismPM#605).`); } });
   if (result.ok) { const { seconds, ...rest } = result.record; result.record = { ...rest, properties: spec.properties.map((p) => p.id), seconds }; }
   return result;
 }
@@ -455,15 +456,33 @@ export async function prove(spec, { onWait = () => {}, beforeSubmit = () => {} }
  * Proves LexLean files on the hosted verifier: every theorem through Lean and leanchecker, each with
  * its exact axioms. `filesFor(axioms)` gives { files, entrypoints } for the axiom sets Lean has named
  * so far (declaration name -> "[a, b]"); a wrong set is corrected from what Lean observed and proved
- * again. Resolves { ok, record, seconds, axioms } or { ok: false, error }.
+ * again. With `store` ({ get(key), put(key, value) }), a theorem whose address holds an admitted record
+ * (prism/proof-reuse.mjs) is taken out of the files and not proved again; when every theorem is, Lean
+ * does not run. Resolves { ok, record, seconds, axioms } or { ok: false, error }.
  */
-export async function proveFiles(filesFor, { onWait = () => {}, before = () => {}, beforeSubmit = () => {} } = {}) {
+export async function proveFiles(filesFor, { onWait = () => {}, before = () => {}, beforeSubmit = () => {}, store = null } = {}) {
   before();
   const t0 = Date.now();
   const axioms = {};
   let submitted = false;
+  // Reuse only saves time: if deciding it fails (the verifier does not answer a lookup), prove everything.
+  const reuse = store ? await reusable(filesFor, safely(store)).catch(() => null) : null;
+  if (reuse) Object.assign(axioms, reuse.axioms);
+  if (reuse && reuse.theorems.length && reuse.reused.size === reuse.theorems.length) {
+    // Every theorem was proved before, on these exact bytes: no Lean run. The files are asked for once
+    // more so the caller holds the module under the axiom sets Lean observed.
+    await filesFor(axioms);
+    // A rolling deployment or revocation during lookup cannot commit a cached verdict.
+    if (!sameVerifier(reuse.identity, await verifier().catch(() => null))) return proveFiles(filesFor, { onWait, before, beforeSubmit });
+    beforeSubmit();
+    const latest = [...reuse.reused.values()].sort((a, b) => String(b.verified_at).localeCompare(String(a.verified_at)))[0];
+    const seconds = Math.round((Date.now() - t0) / 1000);
+    return { ok: true, seconds, axioms: { ...axioms }, record: { schema: "prism/hosted-verification/2", server: HOSTED, profile: PROFILE, draft: null, entrypoints: [], verified_at: latest.verified_at, attestation_id: latest.attestation_id, attestations: [...new Set([...reuse.reused.values()].map((r) => r.attestation_id))], semantic_id: null, source_id: null, modules: [], theorems: reuse.summary(), proved: 0, reused: reuse.reused.size, seconds } };
+  }
   for (let round = 1; round <= 6; round++) {
-    const { files, entrypoints } = await filesFor(axioms);
+    const asked = await filesFor(axioms);
+    const entrypoints = asked.entrypoints;
+    const files = reuse && reuse.reused.size ? without(asked.files, entrypoints, new Set(reuse.reused.keys())) : asked.files;
     if (!submitted) { beforeSubmit(); submitted = true; }
     const written = await callTool("lexlean_draft_write", { profile: PROFILE, files });
     const draft = written && written.structuredContent && written.structuredContent.draft;
@@ -493,10 +512,83 @@ export async function proveFiles(filesFor, { onWait = () => {}, before = () => {
     const modules = entrypoints.map((p) => p.replace(/^src\//, "").replace(/\.lex\.tex$/, "").split("/").join("."));
     const absent = modules.filter((m) => !proved.has(m));
     if (absent.length) return { ok: false, error: "the verifier did not verify " + absent.join(", ") };
+    const verifiedAt = new Date().toISOString();
+    if (reuse && reuse.identity?.trust) {
+      const authorFiles = files.filter((f) => entrypoints.includes(f.path));
+      const records = await Promise.all(reuse.theorems.filter((t) => !reuse.reused.has(t.id)).map((t) => reuseRecord({ theorem: t, address: reuse.address[t.id], verifier: reuse.identity, axioms, authorFiles, draft, attestationId: body.attestation_id, verifiedAt })));
+      // A completed proof is filed only under the toolchain that actually attested it.
+      // The current gateway's bare found response cannot establish that binding.
+      const evidence = await attestation(body.attestation_id).catch(() => null);
+      const current = await verifier().catch(() => null);
+      const bound = sameVerifier(reuse.identity, current) && records.every((r) => attests(evidence, r.attestation_id, r.trust, r.files.map((f) => f.sha256)));
+      if (reuse.reused.size && !bound) return proveFiles(filesFor, { onWait, before, beforeSubmit });
+      if (bound) for (const record of records) await reuse.store.put(record.address, record);
+    }
     const seconds = Math.round((Date.now() - t0) / 1000);
-    return { ok: true, seconds, axioms: { ...axioms }, record: { schema: "prism/hosted-verification/1", server: HOSTED, profile: PROFILE, draft, entrypoints, verified_at: new Date().toISOString(), attestation_id: body.attestation_id, semantic_id: body.semantic_id || null, source_id: body.source_id || null, modules: [...proved], seconds } };
+    const reused = reuse ? reuse.reused : new Map();
+    return { ok: true, seconds, axioms: { ...axioms }, record: { schema: "prism/hosted-verification/2", server: HOSTED, profile: PROFILE, draft, entrypoints, verified_at: verifiedAt, attestation_id: body.attestation_id, attestations: [...new Set([body.attestation_id, ...[...reused.values()].map((r) => r.attestation_id)])], semantic_id: body.semantic_id || null, source_id: body.source_id || null, modules: [...proved], theorems: reuse ? reuse.summary() : [], proved: reuse ? reuse.theorems.length - reused.size : null, reused: reused.size, seconds } };
   }
   return { ok: false, error: "the axiom sets did not settle" };
+}
+
+// ---- reuse: theorems Lean proved before on the same bytes (prism/proof-reuse.mjs)
+// The verifier's identity is part of every address: a proof made by another profile is not reused.
+async function verifier() {
+  const answer = await callTool("lexlean_profiles", { profile: PROFILE });
+  if (!answer || answer.isError) throw new Error("the verifier did not name its profile");
+  const s = answer.structuredContent || {};
+  const profile = s.id ? s : (Array.isArray(s.profiles) && s.profiles.length === 1 ? s.profiles[0] : null);
+  if (!profile || (profile.name && profile.name !== PROFILE) || typeof profile.id !== "string" || !/^[0-9a-f]{64}$/.test(profile.id)) throw new Error("the verifier did not name its profile");
+  return { server: HOSTED, profile: PROFILE, profileId: profile.id, trust: trustDescriptor(profile.proof_reuse) };
+}
+async function attestation(id) {
+  const answer = await callTool("lexlean_attestation", { by: "id", value: id });
+  return answer && !answer.isError ? answer.structuredContent : null;
+}
+// A store that fails reads as empty and drops writes: reuse saves time, it never decides a verdict.
+const safely = (store) => ({
+  get: async (key) => { try { return (await store.get(KEY_PREFIX + key)) ?? null; } catch { return null; } },
+  put: async (key, value) => { try { await store.put(KEY_PREFIX + key, value); } catch {} },
+});
+/**
+ * Which theorems of the files `filesFor({})` gives were proved before. A theorem still to be proved that
+ * names a reused one needs it in the file, so that one is proved again too. Sends no source: the
+ * verifier is asked for its current trust descriptor and each exact attestation.
+ */
+async function reusable(filesFor, store) {
+  const { files, entrypoints } = await filesFor({});
+  const authors = files.filter((f) => entrypoints.includes(f.path));
+  const theorems = theoremsOf(authors);
+  const reused = new Map(), refusals = {}, axioms = {};
+  const summary = () => theorems.map((t) => ({ theorem: t.id, address: address[t.id] || null, reused: reused.has(t.id), attestation_id: reused.get(t.id)?.attestation_id ?? null, refusal: refusals[t.id] ?? null }));
+  let address = {}, identity = null;
+  if (!theorems.length) return { theorems, reused, axioms, summary, store, address, identity };
+  identity = await verifier();
+  if (!identity.trust) {
+    for (const t of theorems) refusals[t.id] = REFUSAL.trustUnavailable;
+    return { theorems, reused, axioms, summary, store, address, identity };
+  }
+  address = await addresses({ files, entrypoints, verifier: identity });
+  const headers = headersOf(authors);
+  const asked = new Map();
+  const found = (id) => {
+    if (!asked.has(id)) asked.set(id, attestation(id));
+    return asked.get(id);
+  };
+  for (const t of theorems) {
+    const entry = await store.get(address[t.id]);
+    const decision = await admit({ entry, theorem: t, address: address[t.id], verifier: identity, headers, found });
+    if (decision.admitted) reused.set(t.id, entry); else refusals[t.id] = decision.refusal;
+  }
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const t of theorems) if (!reused.has(t.id)) for (const d of t.reached) {
+      const id = `${d.path}#${d.name}`;
+      if (d.kind === "theorem" && reused.has(id)) { reused.delete(id); refusals[id] = REFUSAL.needed; changed = true; }
+    }
+  }
+  for (const entry of reused.values()) Object.assign(axioms, entry.axioms);
+  return { theorems, reused, axioms, summary, store, address, identity };
 }
 
 // ---- the build: the commit prism-code makes on a repository created from UOR-Foundation/template
@@ -569,7 +661,7 @@ export function provingMessage(spec) {
   return `Proving ${spec.properties.length} guarantee${spec.properties.length === 1 ? "" : "s"} with Lean on the hosted verifier, usually two to four minutes. The preview keeps working meanwhile.`;
 }
 export function proofMessage(spec, result) {
-  if (result.ok) return `**Proved by Lean.** ${spec.properties.length} of ${spec.properties.length} guarantee${spec.properties.length === 1 ? "" : "s"} hold for every request, in ${result.seconds} s. Attestation \`${result.record.attestation_id.slice(0, 16)}…\`. Publishing now carries the rules and this proof.`;
+  if (result.ok) return `**Proved by Lean.** ${spec.properties.length} of ${spec.properties.length} guarantee${spec.properties.length === 1 ? "" : "s"} hold for every request, in ${result.seconds} s.${reuseSentence(spec.properties.length, result.record.reused)} Attestation \`${result.record.attestation_id.slice(0, 16)}…\`. Publishing now carries the rules and this proof.`;
   return `**Not proved.** ${result.error}. The rules are back to checked: ask me to change them, or reply **approve** to try again.`;
 }
 export { requestLimits };

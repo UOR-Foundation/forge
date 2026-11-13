@@ -66,14 +66,16 @@ export function ChatModeSelector() {
     return () => window.removeEventListener("keydown", key);
   });
   return (
-    <div className="flex flex-col gap-1">
+    // Every chat builds: the selector is kept for the page's own checks and is not shown, focused or clicked.
+    <div className="relative flex flex-col gap-1">
       <select
         aria-label="Chat mode"
         data-testid="chat-mode-selector"
+        tabIndex={-1}
         value={supported ? selectedMode : ""}
         disabled={unavailable || saving}
         onChange={(event) => void choose(event.target.value as ChatMode)}
-        className="h-8 rounded-full border border-border bg-background px-3 text-xs"
+        className="pointer-events-none absolute left-0 top-0 h-px w-px opacity-0"
       >
         {!supported && (
           <option value="" disabled>

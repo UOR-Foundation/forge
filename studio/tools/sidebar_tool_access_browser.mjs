@@ -34,7 +34,6 @@ try {
     for(let attempt=0;attempt<8;attempt++){
       const preview=page.getByRole('dialog',{name:'Review preview permissions',exact:true});
       if(await preview.count())await preview.getByRole('button',{name:"Don't allow",exact:true}).click();
-      if(inSidebar&&!await dock.isVisible()&&!await page.locator('[data-mobile=true][data-state=open]').count())await page.locator('[data-slot=sidebar-trigger]:visible').click();
       try{await locator.hover({timeout:500});if(await locator.evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return hit===node||node.contains(hit);}))break;}catch(error){if(error.name!=='TimeoutError'||attempt===7){console.log(await page.evaluate(()=>({dock:document.querySelector('#foundry-shell-actions')?.outerHTML,sidebars:[...document.querySelectorAll('[data-slot=sidebar-content]')].map(n=>({html:n.outerHTML.slice(-600),rect:n.getBoundingClientRect().toJSON(),ancestors:(()=>{const a=[];for(let p=n;p;p=p.parentElement)a.push([p.tagName,p.getAttribute('aria-hidden'),p.inert,p.dataset.slot]);return a;})()})),dialogs:[...document.querySelectorAll('dialog')].map(n=>n.outerHTML.slice(0,200))})));throw error;}}
     }
     assert.equal(await locator.evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return hit===node||node.contains(hit);}),true,'control pointer target is obstructed');
@@ -42,13 +41,18 @@ try {
   const activate=async(locator,inSidebar=false)=>{for(let attempt=0;attempt<8;attempt++){await pointer(locator,inSidebar);try{await locator.click({timeout:500});return;}catch(error){if(error.name!=='TimeoutError'||attempt===7)throw error;}}};
   let dialogCount=0;
   const checkTools=async()=>{
-    try{await dock.waitFor({timeout:1000});}catch(error){if(error.name!=='TimeoutError')throw error;await page.locator('[data-slot=sidebar-trigger]:visible').click();}
+    // The tools are the last card of the Settings page, and are not in the sidebar on any page.
+    const back=page.url();assert.equal(await page.locator('[data-slot=sidebar-content] #foundry-shell-actions').count(),0,'the tools must not be in the sidebar');
+    await page.goto(base+'settings');
     await dock.waitFor();assert.equal(await dock.count(),1);assert.equal(await dock.getByRole('button').count(),3);
+    assert.equal(await page.locator('div:has(> #general-settings) > #foundry-shell-actions').count(),1,'the tools must be a card of the Settings page');
+    assert.equal(await page.locator('[data-slot=sidebar-content] #foundry-shell-actions').count(),0,'the tools must not be in the sidebar');
     for(const [label,title,close] of [['Preview permissions','Stored preview permissions','Close permissions'],['Interactive apps','Interactive applications','Close'],['Discover an app','Discover an application','Cancel']]){
       console.log('sidebar tool',label);const entry=dock.getByRole('button',{name:label,exact:true});await activate(entry,true);
       const dialog=page.getByRole('dialog',{name:title,exact:true});await dialog.waitFor();await activate(dialog.getByRole('button',{name:close,exact:true}));await dialog.waitFor({state:'hidden'});dialogCount++;
-      await page.waitForFunction(()=>{const a=document.activeElement;if(!a?.matches('#foundry-shell-actions button,[data-slot=sidebar-trigger]'))return false;const r=a.getBoundingClientRect();return r.width>0&&r.height>0&&r.right>0&&r.left<innerWidth;},null,{timeout:2000});
+      await page.waitForFunction(()=>{const a=document.activeElement;if(!a?.matches('#foundry-shell-actions button'))return false;const r=a.getBoundingClientRect();return r.width>0&&r.height>0&&r.right>0&&r.left<innerWidth;},null,{timeout:2000});
     }
+    if(back!==page.url())await page.goto(back);
   };
   await checkTools();
   const made=await page.evaluate(()=>window.electron.ipcRenderer.invoke('create-app',{name:'sidebar-access',initialChatMode:'build'}));

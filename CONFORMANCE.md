@@ -417,6 +417,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-47` | `build` | Direct cloud inference uses only explicit device credentials and release assembly refuses legacy public credential files |
 
+## proof-reuse
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-85` | `build` | A theorem Lean proved on the same declarations is reused instead of proved again, and only changed theorems go to Lean |
+
 ## proposal-admission
 
 | ID | Level | Statement |

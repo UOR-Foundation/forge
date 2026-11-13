@@ -56,12 +56,18 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: The page's address, from every file it is built from (all but studio/ and v2/)
+      - name: The page's address, from every file it is built from (all but studio/, v2/ and the other workflows)
         # v2/ holds prototypes no step of this build reads (just app reads app/, bootstrap/, site/), so a
         # change there publishes the page already verified for the same inputs instead of rebuilding it.
+        #
+        # The other workflow files are left out for the same reason: no step of this job reads one. The
+        # steps are this file's own, so this file stays in the key. Before this, a pull request that only
+        # added a test step to another workflow changed the address, and main built and proved the kernel again
+        # for 28 minutes before it could publish a stylesheet (run of 2248dcd, 2026-11-12). The patterns
+        # are read in order: the workflows are taken out, then this one is put back.
         id: address
         shell: bash
-        run: echo "key=prism-page-v1-${{ hashFiles('**', '!studio/**', '!v2/**', '!.git/**') }}" >>"$GITHUB_OUTPUT"
+        run: echo "key=prism-page-v2-${{ hashFiles('**', '!studio/**', '!v2/**', '!.git/**', '!.github/workflows/**', '.github/workflows/pages.yml') }}" >>"$GITHUB_OUTPUT"
       - name: The page already built, verified and signed from these files, if there is one
         id: reuse
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

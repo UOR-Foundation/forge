@@ -1,0 +1,13 @@
+{
+ "draft": "prism-app/6fbcb5c6b07034aaccdb381cfd7de7394fd2e15c95336f55b45670963d30653f",
+ "modules": [
+  "App",
+  "Foundation.Bytes",
+  "Foundation.Codec",
+  "Foundation.Codec.Cbor.V1.Primitive",
+  "Foundation.Utf8",
+  "Foundation.View.Browser.V1.Model",
+  "Foundation.View.Browser.V1.Wire",
+  "Foundation.View.Text.V1.Model"
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "forms": {
+  "hosted-check/corpus": {
+   "reflexivity": 2,
+   "linear_arithmetic": 5
+  },
+  "probe-payment/src": {
+   "linear_arithmetic": 2
+  },
+  "probe-view/src": {
+   "linear_arithmetic": 2
+  },
+  "reuse/src": {
+   "linear_arithmetic": 26
+  },
+  "loop/answers": {
+   "reflexivity": 4,
+   "linear_arithmetic": 6
+  }
+ },
+ "statements": [
+  {
+   "set": "guests (loop/answers/guests-3.verified)",
+   "theorems": 5,
+   "stated": 5,
+   "reflexivity": 2,
+   "definitionsReached": 9,
+   "equations": 12,
+   "definitionsRefused": 0,
+   "reasons": {}
+  },
+  {
+   "set": "payment (probe-payment)",
+   "theorems": 2,
+   "stated": 2,
+   "reflexivity": 0,
+   "definitionsReached": 3,
+   "equations": 3,
+   "definitionsRefused": 0,
+   "reasons": {}
+  },
+  {
+   "set": "reuse",
+   "theorems": 26,
+   "stated": 26,
+   "reflexivity": 0,
+   "definitionsReached": 52,
+   "equations": 66,
+   "definitionsRefused": 0,
+   "reasons": {}
+  },
+  {
+   "set": "probe-view",
+   "theorems": 2,
+   "stated": 2,
+   "reflexivity": 0,
+   "definitionsReached": 1,
+   "equations": 1,
+   "definitionsRefused": 0,
+   "reasons": {}
+  }
+ ]
+}

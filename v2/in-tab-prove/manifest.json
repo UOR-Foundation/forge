@@ -1,0 +1,112 @@
+{
+ "checker": {
+  "file": "dist/kernel-tab.wasm",
+  "address": "sha256:5a963d9b472ac3ed5a22c498c76826caf85d80c55715090e346ea7b775ffdba5",
+  "bytes": 834536,
+  "gzip": 252067,
+  "brotli": 188775,
+  "source": {
+   "nanoda_lib": "0da9f98feadd3a0a2ef4b3dbcf52a298a6fef929",
+   "version": "0.4.32",
+   "wrapper": "crate/",
+   "rust": "1.97.1",
+   "target": "wasm32-wasip1"
+  }
+ },
+ "exporter": {
+  "lean4export": "86e4a339507466921dc8c5417c8cb1de1ce7df60",
+  "format": "3.1.0",
+  "lean": "4.32.1",
+  "githash": "f054605aea4b840552cca2e725580bffd1e1b704"
+ },
+ "permitted_axioms": [
+  "Classical.choice",
+  "Quot.sound",
+  "propext"
+ ],
+ "exports": {
+  "fault.hacked": {
+   "address": "sha256:cde774ef85a2ca3319fa6b4b3441d98054f89396f047ef5a73787ad3dff1c180",
+   "bytes": 584758,
+   "gzip": 91065,
+   "brotli": 63376
+  },
+  "fault.sorry": {
+   "address": "sha256:02c120fd75b27556688cff14cd547ecd33ef4fa89b1aaee615d8ea260ba8b334",
+   "bytes": 584758,
+   "gzip": 91038,
+   "brotli": 63280
+  },
+  "fault.true": {
+   "address": "sha256:c101dfc76a7010d8e107ffa74b2e4a78b875502e30af15109a3b29cd94a77ef9",
+   "bytes": 584401,
+   "gzip": 90978,
+   "brotli": 63305
+  },
+  "guests.clearEmpties": {
+   "address": "sha256:f63ee39a3be7de0ae6896596ea4755b5f77afc40a3f0014e557fbb04afa930cb",
+   "bytes": 533563,
+   "gzip": 82715,
+   "brotli": 57592
+  },
+  "guests.emptyIgnored": {
+   "address": "sha256:c50a8ac0def3d9bdc77f41e3200d5a7f798cdc3d8c1656ff01b8d7bb3f3ed884",
+   "bytes": 3992093,
+   "gzip": 638346,
+   "brotli": 433818
+  },
+  "guests.longIgnored": {
+   "address": "sha256:badb03a07b583f75390ddc45486a3c787490e4d2f53fe55991425eb91efbdd73",
+   "bytes": 3936096,
+   "gzip": 628942,
+   "brotli": 426913
+  },
+  "guests.staleIgnored": {
+   "address": "sha256:903e53d6f7d020af80d5c6597068e8aafe4634b5e4c9c2ee4cd534f1bb36aeaa",
+   "bytes": 4111287,
+   "gzip": 657176,
+   "brotli": 446202
+  },
+  "guests.startsEmpty": {
+   "address": "sha256:b355615cdf6be0e5622eb08fb3c3115f26499c71d8ceac8f5176103897c21b4d",
+   "bytes": 534599,
+   "gzip": 82729,
+   "brotli": 57602
+  },
+  "guests.whole": {
+   "address": "sha256:5331e3794cf6ea17cc0059269bf2aebd12c47cf62abdb1d8ccf06d1ace40f858",
+   "bytes": 26272888,
+   "gzip": 4137137,
+   "brotli": 2766099
+  },
+  "library": {
+   "address": "sha256:48cc5e5427248794605c59353bbfb6362b0202c6e88b5a38e6ddfac42e03409e",
+   "bytes": 25745953,
+   "gzip": 4060412,
+   "brotli": 2716493
+  },
+  "payment.clearAdvances": {
+   "address": "sha256:7657929ff4359cecca833085c4da164c395c3945c715f64809633b5a50f9925a",
+   "bytes": 584072,
+   "gzip": 90922,
+   "brotli": 63091
+  },
+  "payment.viewKeepsRevision": {
+   "address": "sha256:c625e6fa05b270f0caaaadb88098b5d7d7949b4f1696da3ac76406da87bc53fe",
+   "bytes": 595489,
+   "gzip": 91198,
+   "brotli": 63013
+  },
+  "payment.whole": {
+   "address": "sha256:5e0c5f23d26e7f03c3397a5b589573b295d5f40189b0e2f595cdd026f818c493",
+   "bytes": 26256233,
+   "gzip": 4132833,
+   "brotli": 2762846
+  }
+ },
+ "library": {
+  "address": "sha256:48cc5e5427248794605c59353bbfb6362b0202c6e88b5a38e6ddfac42e03409e",
+  "bytes": 25745953,
+  "declarations": 5041
+ }
+}

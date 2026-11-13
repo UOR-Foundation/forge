@@ -1,0 +1,99 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>In-tab kernel check</title>
+<style>body{font:14px/1.4 system-ui;margin:16px;max-width:900px}pre{white-space:pre-wrap;word-break:break-all;background:#f4f4f4;padding:12px}</style>
+<h1>In-tab kernel check: measurements</h1>
+<p id="state">starting</p>
+<pre id="out"></pre>
+<script type="module">
+const params = new URLSearchParams(location.search);
+const RUNS = Number(params.get("runs") ?? 12);
+const state = document.getElementById("state"), out = document.getElementById("out");
+const stats = (list) => { const s = [...list].sort((a, b) => a - b); const r = (x) => Math.round(x * 10) / 10; return { median: r((s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2), worst: r(s.at(-1)), best: r(s[0]), n: s.length }; };
+const manifest = await (await fetch("./manifest.json")).json();
+const report = { userAgent: navigator.userAgent, cores: navigator.hardwareConcurrency, crossOriginIsolated, sharedArrayBuffer: typeof SharedArrayBuffer, runs: RUNS };
+
+// Bytes by address: from the Cache API when it holds them, else from the network and into the cache.
+const fetched = {};
+async function bytesOf(label, file, address) {
+  const cache = await caches.open("in-tab-prove"), key = new Request(`/by-address/${address}`);
+  const t = performance.now();
+  const hit = await cache.match(key);
+  if (hit) { const body = await hit.arrayBuffer(); (fetched[label] ??= []).push({ from: "cache", ms: performance.now() - t }); return body; }
+  const response = await fetch(file);
+  const body = await response.arrayBuffer();
+  const entry = performance.getEntriesByName(new URL(file, location).href).at(-1);
+  (fetched[label] ??= []).push({ from: "network", ms: performance.now() - t, bytes: body.byteLength, transferBytes: entry?.encodedBodySize });
+  await cache.put(key, new Response(body.slice(0)));
+  return body;
+}
+function start() {
+  const worker = new Worker("./worker.mjs", { type: "module" });
+  let next = 0; const waiting = new Map();
+  worker.onmessage = ({ data }) => { waiting.get(data.id)(data); waiting.delete(data.id); };
+  const call = (message, transfer = []) => new Promise((resolve) => { const id = next++; waiting.set(id, resolve); worker.postMessage({ id, ...message }, transfer); });
+  return { call, stop: () => worker.terminate() };
+}
+
+try {
+  if (params.has("fresh")) await caches.delete("in-tab-prove");
+  const names = (params.get("exports") ?? Object.keys(manifest.exports).join(",")).split(",").filter((n) => manifest.exports[n]);
+  const options = { permitted_axioms: manifest.permitted_axioms };
+  const starts = { toReady: [], fetchChecker: [], load: [] };
+  const checks = Object.fromEntries(names.map((n) => [n, { first: [], again: [], admitted: [], hash: [], roundTrip: [], fetch: [], memory: 0, verdict: null }]));
+  for (let run = 0; run < RUNS; run += 1) {
+    state.textContent = `run ${run + 1} of ${RUNS}`;
+    // A start: a new worker, the checker's bytes from the cache (from the network on the first), then ready.
+    const t0 = performance.now();
+    const wasm = await bytesOf("checker", manifest.checker.file, manifest.checker.address);
+    const t1 = performance.now();
+    const session = start();
+    const loaded = await session.call({ op: "load", wasm, address: manifest.checker.address }, [wasm]);
+    if (!loaded.ok) throw new Error(JSON.stringify(loaded));
+    const t2 = performance.now();
+    starts.fetchChecker.push(t1 - t0); starts.load.push(loaded.ms); starts.toReady.push(t2 - t0);
+    if (run === 0) report.probe = await session.call({ op: "probe", urls: [location.origin + "/manifest.json", "https://example.com/"] });
+    for (const name of names) {
+      const entry = manifest.exports[name], slot = checks[name];
+      const f0 = performance.now();
+      const bytes = await bytesOf(name, `./dist/exports/${name}.ndjson`, entry.address);
+      slot.fetch.push(performance.now() - f0);
+      const copy = bytes.slice(0);
+      const c0 = performance.now();
+      const first = await session.call({ op: "check", export: bytes, address: entry.address, options }, [bytes]);
+      slot.roundTrip.push(performance.now() - c0);
+      if (!first.ok) throw new Error(JSON.stringify(first));
+      slot.first.push(first.check_ms); slot.hash.push(first.hash_ms);
+      const again = await session.call({ op: "check", export: copy, address: entry.address, options }, [copy]);
+      slot.again.push(again.check_ms);
+      if (name.endsWith(".whole")) {
+        const third = (await bytesOf(name, `./dist/exports/${name}.ndjson`, entry.address));
+        const kept = await session.call({ op: "check", export: third, address: entry.address, options, library: manifest.library }, [third]);
+        if (!kept.ok || !kept.result.ok || kept.result.checked !== first.result.declarations - manifest.library.declarations) throw new Error(`${name}: admitted run ${JSON.stringify(kept).slice(0, 300)}`);
+        slot.admitted.push(kept.hash_ms + kept.check_ms);
+      }
+      slot.memory = Math.max(slot.memory, first.result.memory_bytes ?? 0);
+      const verdict = first.result.ok ? `accepted ${first.result.checked} declarations, ${first.result.theorems.length} theorems, axioms ${first.result.axioms_in_environment.join(" ")}` : `refused (${first.result.stage}): ${String(first.result.refusal).slice(0, 300)}`;
+      if (slot.verdict !== null && slot.verdict !== verdict) throw new Error(`${name}: verdict changed between runs`);
+      slot.verdict = verdict;
+    }
+    session.stop();
+  }
+  report.start = { firstVisit: { toReady: starts.toReady[0], fetch: fetched.checker[0] }, returnVisit: { toReady: stats(starts.toReady.slice(1)), fetchFromCache: stats(starts.fetchChecker.slice(1)), hashCompileWarm: stats(starts.load.slice(1)) } };
+  report.checks = Object.fromEntries(names.map((n) => [n, {
+    verdict: checks[n].verdict, exportBytes: manifest.exports[n].bytes, exportGzip: manifest.exports[n].gzip,
+    firstFetch: fetched[n][0], cacheRead_ms: stats(checks[n].fetch.slice(1)), hash_ms: stats(checks[n].hash),
+    check_ms: stats(checks[n].first), checkAgainSameWorker_ms: stats(checks[n].again), pageRoundTrip_ms: stats(checks[n].roundTrip),
+    libraryAdmitted_ms: checks[n].admitted.length ? stats(checks[n].admitted) : undefined,
+    linearMemoryBytes: checks[n].memory,
+  }]));
+  if (performance.memory) report.pageHeap = { usedJSHeapSize: performance.memory.usedJSHeapSize };
+  if (navigator.storage?.estimate) report.storage = await navigator.storage.estimate();
+  state.textContent = "done";
+} catch (error) {
+  report.error = String(error.stack ?? error);
+  state.textContent = "failed";
+}
+out.textContent = JSON.stringify(report, null, 1);
+</script>

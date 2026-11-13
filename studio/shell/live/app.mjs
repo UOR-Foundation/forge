@@ -11,6 +11,7 @@ import { describe, fieldValue } from "./v2/render.mjs";
 import * as notation from "./notation.mjs";
 import { check as hostedCheck, loadLibrary, prepare } from "./v2/check.mjs";
 import { isStatefulModule as isAppShape } from '../application-shape.mjs';
+import { reuseSentence } from "../prism/proof-reuse.mjs";
 export { isAppShape };
 
 import { HOSTED_SOURCE_ENDPOINT as HOSTED, withHostedSourcePermission } from "../hosted-source-permission.mjs";
@@ -77,7 +78,7 @@ export function proofMessage(result) {
       : "**Not proved.** The verifier could not run the proof: " + why + ". This says nothing about the app. It is back to checked; reply approve to try again.";
   }
   const lines = result.theorems.map((t, i) => "- " + (result.promises[i] ? result.promises[i] + "\n  Lean proved: " : "Lean proved: ") + "`" + t.statement + "`");
-  return "**Proved by Lean.** " + result.theorems.length + " theorem" + (result.theorems.length === 1 ? "" : "s") + " about this app, for every state, in " + result.seconds + " s. Attestation `" + result.record.attestation_id.slice(0, 16) + "…`.\n\n" + lines.join("\n") + "\n\nA sentence can say more than its theorem: the statement is what is proved. The app cannot be published yet.";
+  return "**Proved by Lean.** " + result.theorems.length + " theorem" + (result.theorems.length === 1 ? "" : "s") + " about this app, for every state, in " + result.seconds + " s." + reuseSentence(result.theorems.length, result.record.reused) + " Attestation `" + result.record.attestation_id.slice(0, 16) + "…`.\n\n" + lines.join("\n") + "\n\nA sentence can say more than its theorem: the statement is what is proved. The app cannot be published yet.";
 }
 
 /** One line a person or a model can act on. */

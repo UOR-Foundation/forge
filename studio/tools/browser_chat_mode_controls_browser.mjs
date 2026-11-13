@@ -71,7 +71,7 @@ try {
   assert.equal(receipt?.outcome,'completed');assert.equal(sent.length,1);assert.deepEqual(await snapshot(),before,'queued Ask must remain read-only after another window selects Build');assert.ok((await chat()).messages.at(-1).content.includes('&lt;dyad-spec&gt;'));
   await page.reload();await mode.waitFor();await waitValue('build');
   for(const width of [390,768,1280]){
-    await page.setViewportSize({width,height:844});await mode.waitFor();await waitValue('build');await mode.hover();
+    await page.setViewportSize({width,height:844});await mode.waitFor();await waitValue('build');await page.getByTestId('model-picker').hover();
     for(const control of [mode,page.getByTestId('model-picker')]){const box=await control.boundingBox();assert.ok(box&&box.x>=0&&box.x+box.width<=width+1,'composer controls must fit the viewport');}
     await page.keyboard.press('Control+.');await waitChat('ask');await mode.selectOption('build');await waitChat('build');
   }

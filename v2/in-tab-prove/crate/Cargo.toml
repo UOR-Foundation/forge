@@ -1,0 +1,20 @@
+[package]
+name = "kernel_tab"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+# nanoda_lib is used unmodified; build.sh points this path at the pinned commit.
+[dependencies]
+nanoda_lib = { path = "../nanoda_lib" }
+serde_json = "1.0.111"
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
+# nanoda's own release profile keeps these checks on; a wrapped index in a proof checker must stop it, not continue.
+overflow-checks = true

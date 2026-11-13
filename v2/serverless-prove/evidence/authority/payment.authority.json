@@ -1,0 +1,4542 @@
+{
+ "attestation_id": "0a828680c7669f2fe1284f88b16c64980aadecfa0688e51a0c00b707f002a175",
+ "declarations": [
+  {
+   "name": "PrismTextRequest.Foundation.Bytes.ByteOrder",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Bytes.BufferError",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Bytes.BoundedBuffer",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Bytes.appendBytes",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Bytes.byteLength",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Bytes.byteAt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Bytes.sliceBytes",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Bytes.compareBytes",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Utf8.encode",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.Utf8.decode",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.Choice",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.TextChoice",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.TableRow",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.TableChunk",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.Content",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.Node",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.Presentation",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.Value",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.FieldValue",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.Intent",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.countNats",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.countChoices",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.countTextChoices",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.countRows",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.countNodes",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.countFields",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.countStrings",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.contentKind",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.contentEnabled",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.contentChoices",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.rowCells",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.chunkCells",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.contentCells",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.numbersValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.labelsValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.choicesValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.choiceExists",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.textChoiceExists",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.textChoicesValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.rowsValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.countChunks",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.chunksValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.contentValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.nodeAt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.ancestorsValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.bindingValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.actionId",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.defaultAction",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.noActionCollision",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.nodeValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.nodesValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.presentationValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.intentFieldsValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.intentValid",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.fieldValueFits",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.boundFieldsFit",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.intentActionFits",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.intentFits",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.bindingsContainSecret",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.nodesContainSecretAction",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.actionContainsSecret",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.presentationRequiresSecret",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.intentRequiresSecret",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Browser.V1.Model.progressFits",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Text.V1.Model.TextView",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Text.V1.Model.AcceptanceVector",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Text.V1.Model.TextApplication",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Foundation.View.Text.V1.Model.textApplicationProfile",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.State",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.catalogue",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.initial",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.choiceOf",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.textOf",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.roleText",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.fits",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.requestBytes",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.verdict",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.firstRows",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.decided",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.cleared",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.step",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.chunksOf",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.view",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.viewKeepsRevision",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.Payment.clearAdvances",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.Role",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.Decision",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.Request",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.application",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.parseRole",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.parseAmount",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.decodeRequest",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.decodeFields",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.judge",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.encodeDecision",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "none"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.dispatchString",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "PrismTextRequest.PaymentApproval.dispatch",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable.append",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Appendable.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.format",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.parse",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Decimal.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.bitAnd",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.bitNot",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.bitOr",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.bitXor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.fromInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.maximum",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.minimum",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.shiftLeft",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.shiftRight",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Fixed.toToMathInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable.index",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Indexable.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable.length",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Lengthable.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.isZero",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.quotient",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Quotient.remainder",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.Sliceable.slice",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.ToMathInt.toInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.append",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.bitAnd",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.bitNot",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.bitOr",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.bitXor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedAdd",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedAddInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedConvert",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedFromInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedMultiply",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedMultiplyInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedMultiplyInt64.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedNegate",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedNegateInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedQuotient",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedQuotientInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedSubtract",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.checkedSubtractInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.compareBytes",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.divideMagnitudeInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.divideMagnitudeInt64._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.divideMagnitudeInt64._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.divideMagnitudeInt64._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.divideMagnitudeInt64.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.equal",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.formatDecimal",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.index",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instAppendableByteArray",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instAppendableList",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instDecimalInt",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instDecimalInt.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instDecimalOfFixedOfToString",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instFixedInt16",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instFixedInt32",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instFixedInt64",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instFixedInt8",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instFixedUInt16",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instFixedUInt32",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instFixedUInt64",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instFixedUInt8",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instIndexableByteArrayUInt8",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instIndexableList",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instLengthableByteArray",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instLengthableList",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instLengthableString",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instQuotientInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instQuotientNat",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instSliceableByteArray",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instSliceableList",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.instToMathIntInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.join",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.length",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.listIndex",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.listIndex._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.listIndex._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.listIndex._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.listIndex.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.magnitudeInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.multiply",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.multiplyMagnitudeInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.multiplyMagnitudeInt64._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.multiplyMagnitudeInt64._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.multiplyMagnitudeInt64._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.multiplyMagnitudeInt64.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.negate",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.parseDecimal",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.quotient",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.remainder",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.shiftLeft",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.shiftRight",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.signedMagnitudeInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.slice",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.splitExact",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.subtract",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.utf8Decode",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.utf8Encode",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key.casesOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key.compare",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key.ctorIdx",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key.mk._flat_ctor",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key.mk.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key.noConfusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key.noConfusionType",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.Key.recOn",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.compareCodes",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.compareCodes._f",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.compareCodes._sparseCasesOn_1",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.compareCodes._sunfold",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.compareCodes._unsafe_rec",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.compareCodes.match_1",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.compareCodes.match_4",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.containsElement",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.containsElement._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.containsElement._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.containsElement._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.graphNodes",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.graphReachable",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.graphSuccessors",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.graphTopological",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertElement",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertElement._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertElement._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertElement._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertElement.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertEntry",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertEntry._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertEntry._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertEntry._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertEntry.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.insertEntry.match_3",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyBool",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyInt16",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyInt32",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyInt8",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyNat",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyProd",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyString",
+   "observed": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Classical.choice",
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyUInt16",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyUInt32",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyUInt64",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.instKeyUInt8",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterate",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterate._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterate._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterate._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterate.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterateUntil",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterateUntil._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterateUntil._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterateUntil._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.iterateUntil.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lessThan",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lessThan._sparseCasesOn_1",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lessThan.match_1",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.listFold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lookupEntry",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lookupEntry._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lookupEntry._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lookupEntry._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapContains",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapEntries",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapFold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapInsert",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapKeys",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapLookup",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapRemove",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapSize",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.mapValues",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.reachableFrom",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.reachableFrom._f",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.reachableFrom._sparseCasesOn_1",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.reachableFrom._sunfold",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.reachableFrom._unsafe_rec",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.reachableFrom.match_1",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.reachableFrom.match_4",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.removeElement",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.removeElement._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.removeElement._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.removeElement._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.removeEntry",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.removeEntry._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.removeEntry._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.removeEntry._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setContains",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setDifference",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setElements",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setFold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setInsert",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setIntersection",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setRemove",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setSize",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.setUnion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.topological",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.topological._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.topological._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.topological._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lessThan._sparseCasesOn_1.else_eq",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.lessThan.eq_1",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanCollections.listFold.eq_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.append_list",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.length_list",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_int",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_int16",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_int32",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_int64",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_int8",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_nat",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_uint16",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_uint32",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_uint64",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.lessThan_uint8",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_add_int",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_add_int_self",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_add_nat",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_add_nat_self",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_append",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_cons",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_extend",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_fusion",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_nil",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_pair",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_prepend",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_sub_int",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.listFold_sub_int_self",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.mapEntries_self",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.mapFold_listFold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.mapSize_length",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.quotient_int",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.quotient_nat",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.remainder_int",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.remainder_nat",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.setElements_self",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.setFold_listFold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.setSize_length",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt.eq_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt.eq_2",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt.eq_def",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_add",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_append",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_cons",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_const",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_mul",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_mul_right",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_mul_self",
+   "observed": [
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_neg",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_neg_self",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_nil",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_perm",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_reverse",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumInt_sub",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat._f",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat._sunfold",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat._unsafe_rec",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat.eq_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat.eq_2",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat.eq_def",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat.match_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_add",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_append",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_cons",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_const",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_mul",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_mul_right",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_mul_self",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_nil",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_perm",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.sumNat_reverse",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.tdiv_ediv",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanLaws.tmod_emod",
+   "observed": [
+    "Quot.sound",
+    "propext"
+   ],
+   "policy": {
+    "axioms": [
+     "Quot.sound",
+     "propext"
+    ],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.quotient.eq_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  },
+  {
+   "name": "LexLeanRuntime.remainder.eq_1",
+   "observed": [],
+   "policy": {
+    "axioms": [],
+    "kind": "exact"
+   },
+   "result": "ok"
+  }
+ ],
+ "lexlean": {
+  "compiler_semantics": "5262e5b4c8b5668ae7066ad686757a6bb7f80c941d515fb9d586894fbc7de69a",
+  "executable_sha256": "e4168b533d3369e7e0e2ed7cdb331f8dd94e3aa20362d55ded086a24ca3b16f8",
+  "version": "0.3.0"
+ },
+ "oleans": [
+  {
+   "byte_length": 430856,
+   "module": "LexLeanRuntime.Portable",
+   "sha256": "b977672854525e77607b537c3be5adba33aaca00b47edfa6a30bd0d36ffd5094"
+  },
+  {
+   "byte_length": 303136,
+   "module": "LexLeanRuntime.Collections",
+   "sha256": "9eac5c21764b72bf897ffe00d9e5624799e1eb1bae2dea3c81f33864928b4f87"
+  },
+  {
+   "byte_length": 334096,
+   "module": "LexLeanRuntime.Laws",
+   "sha256": "ba661b0b6bc49533546a02810a274bde3e58849f52d6ff55a473c95c51453cfa"
+  },
+  {
+   "byte_length": 87904,
+   "module": "PrismTextRequest.Foundation.Bytes",
+   "sha256": "a9286ccbb0ff719442af533b2a0958044a3baec42b4e2f0dc0dae291ba3bedda"
+  },
+  {
+   "byte_length": 7104,
+   "module": "PrismTextRequest.Foundation.Utf8",
+   "sha256": "17f4cd9223b232d45e769a62f7bde7b46434c6f0af2e34a261a292aa339a998c"
+  },
+  {
+   "byte_length": 740312,
+   "module": "PrismTextRequest.Foundation.View.Browser.V1.Model",
+   "sha256": "eafa36594d1cbd61d964472dc372b9f6cf9ea1e065ab1c02151e2ee0c7dbf403"
+  },
+  {
+   "byte_length": 110968,
+   "module": "PrismTextRequest.Foundation.View.Text.V1.Model",
+   "sha256": "a3d241589a0990d8766846b6f456ef04261d7c018754034a379f4dc2be630c04"
+  },
+  {
+   "byte_length": 111376,
+   "module": "PrismTextRequest.Payment",
+   "sha256": "d71aaf3a61833e8c613bfd89223c42f1d41dd89020f051703f6e829d405ae41a"
+  },
+  {
+   "byte_length": 144208,
+   "module": "PrismTextRequest.PaymentApproval",
+   "sha256": "1b33cf59c8d7deda12c29dddc1e2dc485e1299457980f294949e5395e19d0830"
+  }
+ ],
+ "status": "verified",
+ "toolchain": {
+  "lake": {
+   "executable_sha256": "60330ab6f07dce20f3fa9ebb08e8b984ea9549eac172afeb15d9d2227060e2b3",
+   "version_output": "Lake version 5.0.0-src+f054605 (Lean version 4.32.1)"
+  },
+  "lean": {
+   "executable_sha256": "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+   "version_output": "Lean (version 4.32.1, x86_64-unknown-linux-gnu, commit f054605aea4b840552cca2e725580bffd1e1b704, Release)"
+  },
+  "leanchecker": {
+   "executable_sha256": "c7c51e296d28dd443ed60f9414feef41253ede89dea76dbb2adde29768c3ed5f",
+   "version_output": "leanchecker bin/leanchecker sha256:c7c51e296d28dd443ed60f9414feef41253ede89dea76dbb2adde29768c3ed5f\nuncaught exception: Could not find any oleans for: LexLeanIdentityProbe\n"
+  }
+ }
+}

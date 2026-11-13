@@ -167,3 +167,22 @@ What stays outside the kernel, and why:
 ## Hologram's lookup-table inference
 
 Studied, not adopted. Hologram-Technologies/hologram's "O(1)" tables precompute 16-bit and 8-bit activation functions (128 KB per bf16 function) on the CPU, with bit-identical results. Matrix multiplication is still computed, and it dominates LLM decode on WebGPU. Its "KV-dispatch" reuses a graph's result for identical inputs, which Forge's sealed answers already serve faster. Its releases ship native binaries only. The npm packages (`@tryhologram/sdk`, `@tryhologram/wasm`) compile tensor graphs and are not an LLM runtime. Forge's Q engine wasm is byte for byte the one in Hologram-Technologies/hologram-apps. Nothing here would measurably cut Forge's first token, warm-up or cache. Adopting the inference code would also need a Git dependency, which R6 forbids. Nothing was measured in the browser, because there was no browser artifact to measure.
+
+## How long a change takes to reach the site (measured 2026-11-12)
+
+Measured from GitHub's own step times, on a pull request that changed only the shell and a test step (158) and on its merge to main (`2248dcd`).
+
+| Where | Step | Time |
+|---|---|---|
+| Pull request | acceptance (the kernel proof is reused when `app/` is unchanged) | 255 s |
+| Pull request | lane (the browser journeys are 249 s of it) | 623 s |
+| Pull request | mobile journeys and live previews | 562 s |
+| Main | build and verify the holo, before anything is published | 1,745 s |
+| Main | build Forge | 317 s |
+| Main | live previews on the deployed site | 374 s |
+
+The 1,745 s on main was the kernel built and proved again for a change that touched no kernel input: the Prism page's address hashed every workflow file, and the pull request had added one test step to another workflow. The address now leaves the other workflows out (`pages.yml`, held by `xtask`'s `the_page_address_omits_only_workflows_its_build_does_not_read`). Expected on the next shell-only merge: that job restores the verified page instead of building it. Not yet observed.
+
+A change to how Foundry looks and reads no longer touches `app/` at all: those preferences are `studio/experience/src/FoundryExperience.lex.tex`, checked in about a second.
+
+Still slow, and not changed here: a change to `app/` is proved on the pull request (about 20 minutes), again on main for both architectures, again for the page, and again by the kernel pin, which then publishes a second time. Main proves by design; reusing a proof there is a trust decision of its own.
