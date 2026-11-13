@@ -774,7 +774,6 @@ window.addEventListener("message", (e) => {
   const m = e.data;
   if (!m || typeof m.type !== "string" || !m.type.startsWith("live/") || !isLiveFrame(e.source)) return;
   // The frame reads its app from the address (a string); the host keys apps as the store does (a number).
-  if (m.type === "live/hello" && tm.turn) tmOnce("frame");
   if (m.type === "live/hello") {
     // The hidden warm-up frame has no app. Only a real project identity may read source.
     const app = typeof m.app === "number" ? m.app : typeof m.app === "string" && /^[1-9][0-9]*$/.test(m.app) ? Number(m.app) : 0;
@@ -787,24 +786,30 @@ window.addEventListener("message", (e) => {
     }).catch(() => refuse(app, null, "The app preview could not be refreshed. Reopen it to try again."));
     return;
   }
-  if (m.type === "live/painted") {
-    if (m.changed) {
-      liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift();
-      if (tm.turn) { tmMark("update", Math.round((m.work || 0) * 1000)); tmMark("pixel"); }
-      if (tm.editOpen) { tm.editOpen = false; tmMark("editScreen"); if (!tm.turn) tmFlush(); }
-    }
-    return;
-  }
+  if (m.type === "live/painted") { if (m.changed) { liveTimes.push(m.ms); if (liveTimes.length > 200) liveTimes.shift(); } return; }
   // Everything else acts on an app: the one this frame was shown, never the one the message names.
   const appId = liveWindows.get(e.source);
   if (!appId) return;
   if (m.type === "live/intent") { if (appApps.has(appId)) appFramesReady().then((frames) => frames.intent(appId, m)).catch(() => {}); return; }
-  if (m.type === "live/patch" && Array.isArray(m.ops)) { tm.editOpen = true; tmMark("edit"); }
   if (m.type === "live/patch" && Array.isArray(m.ops)) patchSpec(appId, m.ops, { author: "user", key: m.key || null }).catch(() => {});
   else if (m.type === "live/undo" || m.type === "live/redo") stepSpec(appId, m.type === "live/undo" ? "undo" : "redo").catch(() => {});
   else if (m.type === "live/point") { if (livePointed.get(appId)?.key === m.key) livePointed.delete(appId); else livePointed.set(appId, { key: m.key, kind: m.kind, edit: m.edit || {}, text: String(m.text || "").slice(0, 200) }); }
 });
 new MutationObserver(() => { for (const appId of liveLatest.keys()) pushLive(appId, liveLatest.get(appId).raw, liveLatest.get(appId).trust); }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+// Build telemetry watches the same frame messages through its own listener, so the live handler above stays
+// exactly the production one its tests lift out; it applies the same trust checks and only marks moments.
+window.addEventListener("message", (e) => {
+  const m = e.data;
+  if (!m || typeof m.type !== "string" || !m.type.startsWith("live/") || !isLiveFrame(e.source)) return;
+  if (m.type === "live/hello") { if (tm.turn) tmOnce("frame"); return; }
+  if (m.type === "live/painted") {
+    if (!m.changed) return;
+    if (tm.turn) { tmMark("update", Math.round((m.work || 0) * 1000)); tmMark("pixel"); }
+    if (tm.editOpen) { tm.editOpen = false; tmMark("editScreen"); if (!tm.turn) tmFlush(); }
+    return;
+  }
+  if (m.type === "live/patch" && Array.isArray(m.ops) && liveWindows.get(e.source)) { tm.editOpen = true; tmMark("edit"); }
+});
 // The rules as they stand: the checked spec at its kernel phase, else what the model wrote, as a draft.
 // A stateful app is its module: it is run again from the stored source. Resolves whether this app is one.
 async function refreshApp(appId, options = {}) {
