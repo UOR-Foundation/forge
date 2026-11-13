@@ -62,7 +62,11 @@ const raw = [
   { name: "raw_tooShort", request: "verdict " + wordsOf(base).map(hexWord).join("").slice(8), response: "malformedVerdictRequest" },
   { name: "raw_notHex", request: "verdict " + "g" + wordsOf(base).map(hexWord).join("").slice(1), response: "malformedVerdictRequest" },
 ];
-const corpus = { schema: "prism/in-tab-kernel-verdict-vectors/1", words: WORDS, vectors: [...cases, ...raw] };
+// The vectors the guest carries and replays when it is built. Each is a 584-byte request, several times the size of
+// any other protocol's, so the guest carries one per answer; the whole corpus is replayed against the built guest.
+const EMBEDDED = ["proved_byLean", "kernelChecked_withoutLean", "checking_noBytes", "refused_alteredLibrary", "malformed_flagNotBoolean", "raw_tooLarge"];
+const corpus = { schema: "prism/in-tab-kernel-verdict-vectors/1", words: WORDS, vectors: [...cases, ...raw].map((v) => ({ ...v, embedded: EMBEDDED.includes(v.name) })) };
+if (corpus.vectors.filter((v) => v.embedded).length !== EMBEDDED.length) throw new Error("an embedded vector is not in the corpus");
 
 // ---- the protocol module
 const list = (words) => words.reduceRight((tail, w) => `(cons ${w} ${tail})`, "(nil Nat)");
@@ -161,7 +165,7 @@ const acceptance = `definition{
   name: verdictAcceptance,
   parameters: [],
   result: (List Foundation.View.Text.V1.Model::AcceptanceVector),
-  body: ${corpus.vectors.reduceRight((tail, v) => `(cons ${vector(v)} ${tail})`, "(previewAcceptance)")}
+  body: ${corpus.vectors.filter((v) => v.embedded).reduceRight((tail, v) => `(cons ${vector(v)} ${tail})`, "(previewAcceptance)")}
 }
 
 `;
@@ -182,4 +186,4 @@ for (const [url, text] of outputs) {
   if (check) { console.error("drift: " + url.pathname.split("/").slice(-3).join("/")); drift++; } else fs.writeFileSync(url, text);
 }
 if (drift) process.exit(1);
-console.log(JSON.stringify({ vectors: corpus.vectors.length, theorems: theorems.length, check }));
+console.log(JSON.stringify({ vectors: corpus.vectors.length, embedded: EMBEDDED.length, theorems: theorems.length, check }));

@@ -12,6 +12,9 @@ const typed = vectors.filter((v) => v.input), proved = typed.find((v) => v.name 
 
 test('the corpus covers every verdict and every refusal the model names', () => {
   assert.equal(vectors.length, 19); assert.equal(typed.length, 16);
+  // The guest carries one vector per answer; the rest of the corpus is replayed against the built guest.
+  assert.deepEqual(vectors.filter((v) => v.embedded).map((v) => v.name), ['proved_byLean', 'kernelChecked_withoutLean', 'checking_noBytes', 'refused_alteredLibrary', 'malformed_flagNotBoolean', 'raw_tooLarge']);
+  assert.equal((read('../../app/src/ForgeKernel.lex.tex').match(/request := 0x7665726469637420/g) || []).length, 6);
   const by = (prefix) => vectors.filter((v) => v.name.startsWith(prefix)).length;
   assert.deepEqual([by('proved_'), by('kernelChecked_'), by('checking_'), by('refused_'), by('malformed_'), by('raw_')], [2, 1, 2, 9, 2, 3]);
   for (const v of typed) {

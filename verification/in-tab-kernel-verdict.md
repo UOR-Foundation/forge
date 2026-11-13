@@ -14,15 +14,15 @@ Lean proved the model and the protocol on the hosted verifier, profile `prism-ap
 
 In the locked SDK image, `lexlean fmt --check --all` and `lexlean lock --check` pass on all 24 modules.
 
-The corpus has 19 vectors: 16 typed and three raw. The six-test Node suite passes, the 144-test Rust conformance suite passes, and `check-model` and `cargo fmt --check` pass. On Linux the 636-test Studio suite passes but for `home_card_keyboard`, whose `happy-dom` dependency is not installed here.
+The corpus has 19 vectors: 16 typed and three raw. The guest carries six of them as acceptance vectors, one per answer; a request is 584 bytes, and with all 19 embedded the SDK's Lean stage ran past its limit in CI (`PP5007: application-lean timed out`, run 43501078726). The six-test Node suite passes, the 144-test Rust conformance suite passes, and `check-model` and `cargo fmt --check` pass. On Linux the 636-test Studio suite passes but for `home_card_keyboard`, whose `happy-dom` dependency is not installed here.
 
 Seven planted codec defects were each refused (`node studio/tools/in_tab_kernel_verdict_defects.mjs`): a reply whose word is not its code believed; an extra field ignored; an axiom outside the admitted three dropped; an address cut to 128 bits; the request read after the guest is ready; a flag other than 0 or 1 sent; a guest fault read as proved. Restoring the codec restores the suite. Two rules no test could fail, a reply-length bound and a bytes check, were removed: the two exact reply shapes already imply both.
 
-Five existing suites pinned the kernel's acceptance root as `previewAcceptance`; it is now `verdictAcceptance`, which ends in `previewAcceptance`. The count of acceptance requests in the model moves from 321 to 340.
+Five existing suites pinned the kernel's acceptance root as `previewAcceptance`; it is now `verdictAcceptance`, which ends in `previewAcceptance`. The count of acceptance requests in the model moves from 321 to 327.
 
 ## Open qualification
 
-`prismpm verify` did not complete locally: the SDK ended with `PP5007: application-lean timed out`. So the guest has not been built from this model here, and the 19 vectors have not been replayed in a compiled guest. The ten vectors Lean did not evaluate, the three raw ones among them, rest on `in_tab_verdict_author.mjs`'s reading of the model until that replay. CI's `just vv` is the authority for both.
+`prismpm verify` did not complete locally: the SDK ended with `PP5007: application-lean timed out`. So the guest has not been built from this model here, and no vector has been replayed in a compiled guest. The ten vectors Lean did not evaluate, the three raw ones among them, rest on `in_tab_verdict_author.mjs`'s reading of the model until that replay. CI's `just vv` is the authority for both.
 
 The installed, signed guest (`studio/shell/kernel/kernel.holo`) predates this protocol and answers `verdict` requests as it answers any unknown word. No host handler calls the codec. A new signed guest, runtime and browser replay, and Studio acceptance remain mandatory before the studio shows a verdict from it.
 
