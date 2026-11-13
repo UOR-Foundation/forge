@@ -110,9 +110,13 @@ jobs:
       - name: Find the holo, and whether the pin is already current
         id: holo
         shell: bash
+        env:
+          BUILT: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
           shopt -s nullglob
+          # The commit whose app/ the holo was built from: the page build's, or the branch as checked out.
+          echo "source=${BUILT:-$(git rev-parse HEAD)}" >>"$GITHUB_OUTPUT"
           if [[ -n "${HOLO_PATH:-}" ]]; then
             holos=("$HOLO_PATH")
             fingerprint=$HOLO_FINGERPRINT
@@ -137,11 +141,14 @@ jobs:
         env:
           HOLO: ${{ steps.holo.outputs.path }}
           FINGERPRINT: ${{ steps.holo.outputs.fingerprint }}
-          SOURCE: ${{ github.sha }}
+          SOURCE: ${{ steps.holo.outputs.source }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Kept as a file: the push below replays these two commits onto a newer tip of the branch.
+          cat >"$RUNNER_TEMP/archive.sh" <<'ARCHIVE'
+          set -euo pipefail
           pin() { printf 'https://raw.githubusercontent.com/%s/%s/studio/shell/kernel/kernel.holo\nblake3:%s\n' "$GITHUB_REPOSITORY" "$1" "$FINGERPRINT" >studio/KERNEL_REV; }
           cp "$HOLO" studio/shell/kernel/kernel.holo
           pin "$(git rev-parse HEAD)"
@@ -152,6 +159,8 @@ jobs:
           (cd studio && node tools/kernel.mjs)
           git add studio/shell/kernel studio/KERNEL_REV
           git commit -m "KERNEL_REV names the commit that archives the kernel holo"
+          ARCHIVE
+          bash "$RUNNER_TEMP/archive.sh"
       - name: The Kernel gate and the kernel's boundary tests, on the new pin
         if: steps.holo.outputs.current != 'true'
         shell: bash
@@ -159,14 +168,51 @@ jobs:
           set -euo pipefail
           (cd studio && node tools/kernel.mjs --check)
           node --test studio/tools/kernel_boundary.test.mjs
+      # The build takes some twenty minutes and main often moves meanwhile, so a refused push is expected.
+      # The pin is true only of a base whose app/ and SDK lock are the ones the holo was built from: on a
+      # refusal the two pin commits are replayed onto the new tip, which is gated again, as long as that
+      # stays so. When it does not, this pin is stale and the page build of the newer change pins that one.
       - name: Push the pin
+        id: push
         if: steps.holo.outputs.current != 'true'
-        # The checkout keeps no credentials; the token is handed to this one push and to nothing else.
+        shell: bash
+        # The checkout keeps no credentials; the token is handed to these pushes and fetches and to nothing else.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$REF"
+          HOLO: ${{ steps.holo.outputs.path }}
+          FINGERPRINT: ${{ steps.holo.outputs.fingerprint }}
+          SOURCE: ${{ steps.holo.outputs.source }}
+        run: |
+          set -euo pipefail
+          origin="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for attempt in 1 2 3 4 5; do
+            if ! git diff --quiet "$SOURCE" HEAD~2 -- app/ prismpm.lock; then
+              echo "::notice::app/ on $REF is no longer what blake3:${FINGERPRINT:0:8} was built from ($SOURCE); not pinning it"
+              exit 0
+            fi
+            if git push "$origin" "HEAD:$REF"; then
+              echo "pushed=true" >>"$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git fetch --quiet "$origin" "$REF"
+            if ! git diff --quiet "$SOURCE" FETCH_HEAD -- app/ prismpm.lock; then
+              echo "::notice::app/ on $REF changed since blake3:${FINGERPRINT:0:8} was built from $SOURCE; not pinning it"
+              exit 0
+            fi
+            if [[ $(git show FETCH_HEAD:studio/KERNEL_REV | sed -n 2p) == "blake3:$FINGERPRINT" ]]; then
+              echo "::notice::$REF already pins blake3:${FINGERPRINT:0:8}"
+              exit 0
+            fi
+            echo "push $attempt refused; replaying the pin onto the new tip of $REF"
+            git reset --quiet --hard FETCH_HEAD
+            bash "$RUNNER_TEMP/archive.sh"
+            (cd studio && node tools/kernel.mjs --check)
+            node --test studio/tools/kernel_boundary.test.mjs
+          done
+          echo "::error::five pushes to $REF were refused"
+          exit 1
       - name: Deploy the site with the new pin
-        if: steps.holo.outputs.current != 'true' && env.REF == 'main'
+        if: steps.push.outputs.pushed == 'true' && env.REF == 'main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pages.yml --ref main
