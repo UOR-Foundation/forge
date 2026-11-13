@@ -1481,5 +1481,45 @@ definition{
   result: String,
   body: "A hosted proof covers theorems, and each theorem has an address: the SHA256 of length-framed fields naming the verifier (server, profile and the profile identity it reports), the local trust policy epoch, the current service trust epoch and the SHA256 addresses of Lean, Lake, leanchecker, LexLean and compiler semantics, every library file sent, each author module's header, the theorem's own declaration and every author declaration it reaches by name, transitively. A declaration of a kind other than structure, inductive, definition or theorem is reached by every theorem. Declarations are compared without their axioms member and with layout whitespace outside strings made canonical; whitespace between tokens and inside strings is kept. After a verified run, each theorem proved is filed under its address with the exact author files sent, their SHA256 digests, the axiom sets Lean observed for it and the declarations it reaches, and the attestation. A filed record stands for a theorem only when it is well formed, names that theorem, its address and verifier equal the current ones, every file hashes to its digest, the files have the current modules' paths and headers, they hold the theorem and every declaration it reaches, and the verifier still reports that exact attestation as verified under the same trust descriptor, covering every recorded file digest. A bare found result is insufficient. Otherwise the refusal is typed and the theorem is proved again; a theorem still to be proved that names a reused one returns it to the run. Reused theorems are removed from the files Lean is sent, their observed axiom sets are applied first, and when every theorem is reused Lean does not run and the result names the attestations it rests on. The reuse schema is prism/proof-reuse/2 and the local policy epoch is foundry/proof-reuse-trust/1. A fresh profile lookup must carry lexlean-mcp/proof-reuse-trust/1 with an epoch and all five toolchain addresses as lowercase SHA256 hex; the two Lean 4.32.1 executable addresses pinned by the current SDK are retired for reuse. Missing, legacy, malformed or retired trust evidence refuses reuse with proofReuseTrustUnavailable; a mismatch refuses reuse with proofReuseTrustMismatch. Every lookup is by the recorded attestation ID. The descriptor is read again before committing a reused result; a change reruns the entire proof without reuse. A newly proved record is filed only when that exact attestation and a fresh descriptor agree, never by stamping an earlier proof with a later toolchain. Unsupported service metadata falls back to full proving, without filing reusable records. This does not block fresh proofs or change their existing acceptance boundary. Records live in the browser's own store; failing reads count as absent and failing writes are dropped. Lookups send only attestation IDs and the profile name, never source. This saves proof time; it is not an independent kernel check, does not prove that the verifier's attestation lookup is sound, does not repair a verifier or establish its soundness, and does not change publication, which proves the whole app again in the SDK image."
 }
+
+inductive{
+  name: PagesSourceError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: pagesInvalidClaim, fields: []},
+    {name: pagesArtifactMismatch, fields: []},
+    {name: pagesSignatureMismatch, fields: []},
+    {name: pagesInputMismatch, fields: []},
+    {name: pagesStaleSource, fields: []},
+    {name: pagesLiveIdentityMismatch, fields: []},
+    {name: pagesLiveResponseMismatch, fields: []}
+  ]
+}
+
+definition{
+  name: pagesSourceBoundary,
+  parameters: [],
+  result: String,
+  body: "Kernel adoption retains the original signed Pages producer manifest and holo across identical-input cache reuse. The manifest names the producer revision, complete non-studio non-v2 tracked input tree including the Pages workflow and the studio producer-claim helper, holo SHA256 and archive fingerprint. GitHub provenance must authenticate both subjects for that producer revision and repository Pages workflow on hosted runners. The producer input identity is recomputed and must equal the adopted checkout inputs. The triggering run, checkout and current main head must agree before adoption; publication remains a non-force push. An independently built manual pin records its actual checkout source. Only the main branch may deploy production; other branch dispatches can build and sign without deployment. Pages deployment and live verification share a concurrency lock. Superseded deployment cannot authorize a live check or cache write. Live evidence is addressed by the complete deployed file manifest and browser version; cache reuse verifies deployed bytes, and fresh browser observations reject mismatching static responses and identity changes before saving. This is source and byte identity evidence, not a new theorem proof or a substitute for any required SDK, kernel or browser acceptance gate. GitHub attestation verification and scheduling remain imported services."
+}
+
+inductive{
+  name: CanonicalGenerationError,
+  type_parameters: [],
+  parameters: [],
+  constructors: [
+    {name: canonicalSourceMismatch, fields: []},
+    {name: canonicalInvalidSdk, fields: []},
+    {name: canonicalUnexpectedWrite, fields: []}
+  ]
+}
+
+definition{
+  name: canonicalGenerationBoundary,
+  parameters: [],
+  result: String,
+  body: "Hosted canonical generation is acceptance preparation only. A read-only pull-request job checks out the exact head revision, or the exact dispatch revision, and uses only the immutable prismpm.lock SDK to run Rust formatting, model-write, and the app lock-format-lock writers. No credential, Docker socket or write token enters the container. A receipt names the unchanged source commit, exact SDK image and patch SHA256. Only modifications to existing CONFORMANCE.md, app/lexlean.lock, app/src LexLean modules and project Rust source under crates or xtask can appear in its patch; universal policy files, deletions, mode changes, other writes and untracked nonignored files refuse collection. Only the patch and receipt are uploaded for review. There is no automatic commit, push or application. Generated working-tree bytes never qualify the original commit; after reviewed changes are committed, every existing full exact-head acceptance gate must run normally."
+}
 \end{semanticmodule}
 \end{lexlean}

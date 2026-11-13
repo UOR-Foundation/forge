@@ -67,9 +67,10 @@ jobs:
         # added a test step to another workflow changed the address, and main built and proved the kernel again
         # for 28 minutes before it could publish a stylesheet (run of 2248dcd, 2026-11-12). The patterns
         # are read in order: the workflows are taken out, then this one is put back.
+        # The producer-claim helper is also an input even though the rest of studio/ is independent.
         id: address
         shell: bash
-        run: echo "key=prism-page-v2-${{ hashFiles('**', '!studio/**', '!v2/**', '!.git/**', '!.github/workflows/**', '.github/workflows/pages.yml') }}" >>"$GITHUB_OUTPUT"
+        run: echo "key=prism-page-v3-${{ hashFiles('**', '!studio/**', '!v2/**', '!.git/**', '!.github/workflows/**', '.github/workflows/pages.yml', 'studio/tools/pages_source_binding.mjs') }}" >>"$GITHUB_OUTPUT"
       - name: The page already built, verified and signed from these files, if there is one
         id: reuse
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -127,6 +128,12 @@ jobs:
             echo "path=${holos[0]}"
             echo "fingerprint=$fingerprint"
           } >>"$GITHUB_OUTPUT"
+      - name: Bind the original producer and inputs to the holo before signing
+        if: steps.reuse.outputs.cache-hit != 'true'
+        env:
+          HOLO: ${{ steps.holo.outputs.path }}
+          FINGERPRINT: ${{ steps.holo.outputs.fingerprint }}
+        run: node studio/tools/pages_source_binding.mjs create "$HOLO" "$FINGERPRINT" site/producer.json
       # Signing calls Sigstore's public services. Its log can answer 404 for an entry it has just
       # accepted, so a failed signing is tried again after a wait, three times in all.
       - name: Sign the holo's provenance as this repository's workflow
@@ -135,7 +142,9 @@ jobs:
         continue-on-error: true
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: ${{ steps.holo.outputs.path }}
+          subject-path: |
+            ${{ steps.holo.outputs.path }}
+            site/producer.json
           show-summary: false
       - name: Wait before signing again
         if: steps.reuse.outputs.cache-hit != 'true' && steps.attest1.outcome == 'failure'
@@ -146,7 +155,9 @@ jobs:
         continue-on-error: true
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: ${{ steps.holo.outputs.path }}
+          subject-path: |
+            ${{ steps.holo.outputs.path }}
+            site/producer.json
           show-summary: false
       - name: Wait longer before the last try
         if: steps.reuse.outputs.cache-hit != 'true' && steps.attest2.outcome == 'failure'
@@ -156,7 +167,9 @@ jobs:
         if: steps.reuse.outputs.cache-hit != 'true' && steps.attest2.outcome == 'failure'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: ${{ steps.holo.outputs.path }}
+          subject-path: |
+            ${{ steps.holo.outputs.path }}
+            site/producer.json
           show-summary: false
       - name: The signed statement the page names
         id: attest
@@ -270,7 +283,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p kernel-proof
-          cp "$PAGE/app.holo" "$PAGE/app.json" kernel-proof/
+          cp "$PAGE/app.holo" "$PAGE/app.json" "$PAGE/producer.json" kernel-proof/
           if [[ -s .prism-proof/attestation ]]; then cp .prism-proof/attestation kernel-proof/attestation; fi
           ls -la kernel-proof
       - name: Keep the kernel's holo, for whatever else this commit proves
@@ -430,11 +443,14 @@ jobs:
           if-no-files-found: error
 
   deploy:
+    # Branch dispatches can qualify build/signing without touching the production environment.
+    if: github.ref == 'refs/heads/main'
     name: publish Forge at the root and its Prism page under app/
     needs: [build, forge]
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 45
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
@@ -442,6 +458,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     # One publish at a time, and never an older revision over a newer one: builds now overlap, so a run
     # whose commit is no longer main's head leaves the site to the run that built the head.
+    # The lock stays held through live observation and cache save: another run cannot replace its bytes.
     concurrency:
       group: pages
       cancel-in-progress: false
@@ -472,16 +489,7 @@ jobs:
           path: src
           fetch-depth: 0
           persist-credentials: false
-          sparse-checkout: |
-            v2/reuse
-            v2/shell
-            v2/site
-            v2/hosted-check
-            v2/probe-payment/data
-            v2/probe-payment/src
-            v2/loop/answers
-            studio/shell/prism-code/src/blake3.mjs
-          sparse-checkout-cone-mode: false
+
       - name: The address-based reuse page, under reuse/
         if: steps.current.outputs.publish == 'true'
         # Byte-for-byte copies in the repository's own layout, so the page's relative imports resolve
@@ -507,6 +515,10 @@ jobs:
           node src/v2/site/build.mjs out/v2
           test -s out/v2/index.html
           test -s out/v2/site/apps.json
+      - name: Address every assembled deployment byte
+        if: steps.current.outputs.publish == 'true'
+        id: artifact-identity
+        run: node src/studio/tools/pages_live_identity.mjs create out "$RUNNER_TEMP/pages-manifest.json"
       - name: Configure Pages
         if: steps.current.outputs.publish == 'true'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
@@ -523,67 +535,67 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
 
-  live:
-    # After the deploy, not before it: the live site is checked as visitors get it (the worker installs,
-    # every app fixture streams, edits and undoes within its budgets); a miss reports, it never holds a
-    # deploy back. The same check runs on every pull request that changes Forge (forge-perf.yml).
-    name: every Prism app previews live within its budgets, on the deployed site
-    needs: [build, forge, deploy]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    defaults:
-      run:
-        working-directory: studio
-    steps:
-      - name: Check out the deployed revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      # What this check reads is the deployed site, and the deployed site is those two addresses: the page's
-      # and Forge's. The same two with the same browser have nothing new to show, so the check is kept by
-      # that address and a deploy of unchanged bytes costs nothing. A miss runs it in full.
+      # Observation stays in this job so the deployment lock is never released between publish and save.
+      - name: Verify the deployed identity and every artifact byte before live evidence reuse
+        if: steps.deployment.outcome == 'success'
+        env:
+          BASE: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          node src/studio/tools/pages_live_identity.mjs check "$BASE" out/pages-deployment.json
+          node src/studio/tools/pages_live_identity.mjs artifact "$BASE" "$RUNNER_TEMP/pages-manifest.json"
+          node src/studio/tools/pages_live_identity.mjs check "$BASE" out/pages-deployment.json
       - name: This exact site, in this exact browser, already previewed live
         id: seen
+        if: steps.deployment.outcome == 'success'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: studio/live-seen
-          key: live-seen-v1-playwright-1.56.1-${{ needs.build.outputs.address }}-${{ needs.forge.outputs.address }}
+          path: src/studio/live-seen
+          key: live-seen-v2-playwright-1.56.1-${{ steps.artifact-identity.outputs.digest }}-${{ hashFiles('src/studio/tools/live_e2e.mjs', 'src/studio/scripts/live_e2e_all.sh', 'src/studio/tools/pages_live_identity.mjs', 'src/studio/tools/fixtures/**') }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        if: steps.seen.outputs.cache-hit != 'true'
+        if: steps.deployment.outcome == 'success' && steps.seen.outputs.cache-hit != 'true'
         with:
           node-version: "24"
       - name: The browser, kept by its version
-        if: steps.seen.outputs.cache-hit != 'true'
+        if: steps.deployment.outcome == 'success' && steps.seen.outputs.cache-hit != 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-1.56.1-chromium-${{ runner.os }}-${{ runner.arch }}
       - name: The browser
-        if: steps.seen.outputs.cache-hit != 'true'
+        if: steps.deployment.outcome == 'success' && steps.seen.outputs.cache-hit != 'true'
         run: |
           npm install --no-audit --no-fund --global playwright@1.56.1
           playwright install --with-deps chromium
       - name: Every Prism app previews live within its budgets
-        if: steps.seen.outputs.cache-hit != 'true'
+        if: steps.deployment.outcome == 'success' && steps.seen.outputs.cache-hit != 'true'
         run: |
+          set -euo pipefail
           export PLAYWRIGHT_MODULE="$(npm root --global)/playwright/index.mjs"
-          bash scripts/live_e2e_all.sh "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" "$RUNNER_TEMP/live-e2e"
-      - name: Keep that these bytes previewed live
-        if: steps.seen.outputs.cache-hit != 'true'
+          export PAGES_LIVE_MANIFEST="$RUNNER_TEMP/pages-manifest.json"
+          bash src/studio/scripts/live_e2e_all.sh "${{ steps.deployment.outputs.page_url }}" "$RUNNER_TEMP/live-e2e"
+      - name: Recheck deployment and all bytes after live observation
+        if: steps.deployment.outcome == 'success'
+        env:
+          BASE: ${{ steps.deployment.outputs.page_url }}
         run: |
-          mkdir -p live-seen
-          echo "${{ needs.build.outputs.address }} ${{ needs.forge.outputs.address }}" >live-seen/address
+          set -euo pipefail
+          node src/studio/tools/pages_live_identity.mjs check "$BASE" out/pages-deployment.json
+          node src/studio/tools/pages_live_identity.mjs artifact "$BASE" "$RUNNER_TEMP/pages-manifest.json"
+          node src/studio/tools/pages_live_identity.mjs check "$BASE" out/pages-deployment.json
+      - name: Keep that these bytes previewed live
+        if: steps.deployment.outcome == 'success' && steps.seen.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p src/studio/live-seen
+          cp "$RUNNER_TEMP/pages-manifest.json" src/studio/live-seen/manifest.json
       - name: Keep that under its address
-        if: steps.seen.outputs.cache-hit != 'true'
+        if: steps.deployment.outcome == 'success' && steps.seen.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: studio/live-seen
-          key: live-seen-v1-playwright-1.56.1-${{ needs.build.outputs.address }}-${{ needs.forge.outputs.address }}
+          path: src/studio/live-seen
+          key: live-seen-v2-playwright-1.56.1-${{ steps.artifact-identity.outputs.digest }}-${{ hashFiles('src/studio/tools/live_e2e.mjs', 'src/studio/scripts/live_e2e_all.sh', 'src/studio/tools/pages_live_identity.mjs', 'src/studio/tools/fixtures/**') }}
       - name: Keep what the check saw
-        if: always() && steps.seen.outputs.cache-hit != 'true' 
+        if: always() && steps.deployment.outcome == 'success' && steps.seen.outputs.cache-hit != 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: live-e2e
