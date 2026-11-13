@@ -49,11 +49,11 @@ test("the look comes from the brand's tokens: no colour of its own, in any theme
 test("studio/experience: centred popups, golden measures, tools on Settings, a quiet Home", () => {
   // The preferences are a LexLean module of their own, outside the kernel's proof inputs.
   const spec = read("../experience/src/FoundryExperience.lex.tex");
-  for (const name of ["oneLook", "popupsCentred", "goldenRatio", "questionAsNotification", "whyHowWhat", "sidebarIsNavigation", "toolsOnSettings", "homeAsksOneThing", "homeIsAWorkspace", "modelMenu"]) assert.ok(spec.includes("name: " + name + ","), name);
+  for (const name of ["oneLook", "popupsCentred", "goldenRatio", "questionAsNotification", "whyHowWhat", "sidebarIsNavigation", "toolsOnSettings", "homeAsksOneThing", "homeIsAWorkspace", "featuredCovers", "modelMenu"]) assert.ok(spec.includes("name: " + name + ","), name);
   assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
   for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
   assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
-  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "never scrolls at any size", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "the hero fills the first screen at every size", "one short scroll brings the whole row", "a tile in the brand's light carrying its initial", "golden section of the room above the floor", "rises from the bottom edge", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
   // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
@@ -66,8 +66,12 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.ok(css.includes('#setting-default-chat-mode { display: none !important; }'));
   assert.ok(css.includes('p:has(> [data-slot="home-wide"]) { display: none !important; }'), 'the line under the home question is shown');
   // Home is a workspace: the floor sits last, the hero takes the room above it and the ideas are one line.
-  assert.match(css, /\[data-slot="home-featured"\] \{ margin-top: auto;/);
-  assert.match(css, /\[data-slot="home-stage"\] \{\s*flex: 1 1 auto;/);
+  assert.match(css, /\[data-slot="home-stage"\] \{\s*flex: 0 0 auto; min-height: calc\(100% - 89px\);/, "the hero no longer fills the first screen with the floor peeking under it");
+  assert.ok(css.includes("min-height: calc(100% - 55px)"), "the phone's peek is gone");
+  assert.ok(css.includes("padding-bottom: 76px"), "the floor no longer clears the phone's tab bar");
+  // A card without a cover is still a card: the tile and its initial are drawn, and a real cover fills it.
+  assert.match(css, /\[data-slot="home-featured"\] \[role="region"\] button > div:first-child > div \{\s*background: linear-gradient/);
+  assert.ok(css.includes('[data-slot="home-featured"] [role="region"] button img { object-fit: cover !important;'));
   assert.ok(css.includes("max-height: 233px"), "the room under the hero is not capped on a tall window");
   assert.ok(css.includes("flex-wrap: nowrap !important"), "the ideas still wrap into a block");
   // The floor itself is never hidden (a rule inside it may hide a part of a card, which is not the floor).

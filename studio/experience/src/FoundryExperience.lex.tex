@@ -63,7 +63,14 @@ definition{
   name: homeIsAWorkspace,
   parameters: [],
   result: String,
-  body: "Home is a workspace, not a page: one screen that never scrolls at any size. The hero sits at the golden section of the room above the floor, its question over a work surface at most 987 pixels wide, with the ideas on one line that scrolls sideways rather than a block that wraps. On a tall window the room under the hero is capped at 233 pixels, so it settles toward the middle instead of leaving a void. The apps already made rest on the floor: one row on a panel that rises from the bottom edge, inset from the sides, on the popover glass under a hairline, with a card 233 by 144 for each app and its name under it. On a phone the panel keeps the page gutter, its cards are 144 wide, and it sits just above the tab bar."
+  body: "Home is a workspace, not a page: the hero fills the first screen at every size, and the floor of apps already made peeks above the bottom edge, 89 pixels on a desktop and 55 on a phone, so one short scroll brings the whole row and its way into the gallery into view, clear of the phone's tab bar. The hero sits at the golden section of the room above the floor, its question over a work surface at most 987 pixels wide, with the ideas on one line that scrolls sideways rather than a block that wraps. On a tall window the room under the hero is capped at 233 pixels, so it settles toward the middle instead of leaving a void. The floor is one row on a panel that rises from the bottom edge, inset from the sides, on the popover glass under a hairline, with a card 233 by 144 for each app and its name under it. On a phone the panel keeps the page gutter, its cards are 144 wide."
+}
+
+definition{
+  name: featuredCovers,
+  parameters: [],
+  result: String,
+  body: "Each app on the floor shows its own picture, taken from the app itself the first time it runs and kept until the app changes, filling the card from its top edge. An app that has not run yet shows a tile in the brand's light carrying its initial, so every card reads as a card and none is an empty box."
 }
 
 definition{
