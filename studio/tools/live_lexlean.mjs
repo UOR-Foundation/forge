@@ -196,14 +196,14 @@ try {
   const shapeOk = (schema, v) => {
     if (schema.enum) return schema.enum.includes(v);
     if (schema.anyOf) return schema.anyOf.some((x) => shapeOk(x, v));
-    if (schema.type === "integer") return Number.isInteger(v);
+    if (schema.type === "integer") return Number.isInteger(v) && (schema.minimum === undefined || v >= schema.minimum);
     if (schema.type === "string") return typeof v === "string" && (!schema.pattern || new RegExp(schema.pattern).test(v));
     if (schema.type === "array") return Array.isArray(v) && v.length >= (schema.minItems || 0) && v.length <= (schema.maxItems ?? Infinity) && v.every((x) => shapeOk(schema.items, x));
     if (schema.type === "object") return !!v && typeof v === "object" && !Array.isArray(v) && (schema.required || []).every((k) => k in v) && Object.keys(v).every((k) => k in schema.properties && shapeOk(schema.properties[k], v[k]));
     return false;
   };
   fastTurn = {
-    schema: shapeOk(prism.SPEC_SCHEMA, bare) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, files: [] }) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, rules: [] }) && JSON.stringify(prism.SPEC_SCHEMA).length <= 8192 && prism.SPEC_FORMAT.json_schema.schema === prism.SPEC_SCHEMA,
+    schema: shapeOk(prism.SPEC_SCHEMA, bare) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, files: [] }) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, rules: [] }) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, fields: [{ name: "t", kind: "number", min: -5, max: 40 }] }) && JSON.stringify(prism.SPEC_SCHEMA).length <= 8192 && prism.SPEC_FORMAT.json_schema.schema === prism.SPEC_SCHEMA,
     bare: tagged === "<dyad-spec>" + text + "</dyad-spec>" && prism.parseSpecTag(tagged).spec.title === bare.title && prism.asSpecTurn(text.slice(0, 40)) === "<dyad-spec>" + text.slice(0, 40) && prism.asSpecTurn("Here it is.\n<dyad-spec>{}</dyad-spec>") === "Here it is.\n<dyad-spec>{}</dyad-spec>" && prism.asSpecTurn("I cannot.") === "I cannot.",
     examples: given.examples.length >= 2 && given.examples.length <= 6 && JSON.stringify(given) === JSON.stringify(again) && prism.checkSpec(JSON.parse(JSON.stringify(given))).ok && prism.checkSpec(JSON.parse(JSON.stringify(given))).notes.every((n) => !/Set aside example/.test(n)) && new Set(given.examples.map((e) => e.response)).size >= 2 && prism.withExamples(JSON.parse(prism.SPEC_EXAMPLE)).examples.length === JSON.parse(prism.SPEC_EXAMPLE).examples.length,
     prompt: /Write no "examples": Forge adds them from the rules\./.test(SPEC_RULES),

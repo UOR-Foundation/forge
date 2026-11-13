@@ -72,7 +72,7 @@ const WORD = { type: "string", pattern: "^[a-z][a-z0-9_]*$" };
 const CONDITION = { type: "object", properties: { field: WORD, op: { enum: ["is", "is not", "<", "<=", ">", ">=", "=", "!="] }, value: { anyOf: [{ type: "integer" }, { type: "string" }, { type: "object", properties: { field: WORD }, required: ["field"], additionalProperties: false }] } }, required: ["field", "op", "value"], additionalProperties: false };
 export const SPEC_SCHEMA = { type: "object", properties: {
   title: { type: "string" }, purpose: { type: "string" },
-  fields: { type: "array", minItems: 1, maxItems: 8, items: { type: "object", properties: { name: WORD, kind: { enum: ["number", "choice"] }, min: { type: "integer" }, max: { type: "integer" }, values: { type: "array", minItems: 2, maxItems: 32, items: WORD } }, required: ["name", "kind"], additionalProperties: false } },
+  fields: { type: "array", minItems: 1, maxItems: 8, items: { type: "object", properties: { name: WORD, kind: { enum: ["number", "choice"] }, min: { type: "integer", minimum: 0 }, max: { type: "integer", minimum: 0 }, values: { type: "array", minItems: 2, maxItems: 32, items: WORD } }, required: ["name", "kind"], additionalProperties: false } },
   outcomes: { type: "array", minItems: 1, items: WORD },
   rules: { type: "array", minItems: 1, maxItems: 24, items: { type: "object", properties: { when: { type: "array", minItems: 1, items: CONDITION }, then: WORD }, required: ["when", "then"], additionalProperties: false } },
   otherwise: WORD,
