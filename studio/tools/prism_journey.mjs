@@ -7,6 +7,8 @@
 //
 //   shell/prism/spec.mjs                               src/journey/spec.mjs   (the checker)
 //   shell/prism/render.mjs                             src/journey/render.mjs (the model renderer)
+//   shell/prism/session.mjs                            src/journey/session.mjs (the spec compiler the
+//                                                      builder, shell/prism/builder, checks a spec with)
 //   shell/prism/lex/Foundation/Bytes.lex.tex           templates/text-request/src/Foundation/Bytes.lex.tex
 //   shell/prism/lex/Foundation/View/Text/V1/Model.lex.tex  templates/text-request/src/Foundation/View/Text/V1/Model.lex.tex
 //   shell/prism/template.mjs                           src/journey/template.mjs (the GitHub template writer)
@@ -32,6 +34,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FILES = [
   ["src/journey/spec.mjs", "shell/prism/spec.mjs"],
   ["src/journey/render.mjs", "shell/prism/render.mjs"],
+  ["src/journey/session.mjs", "shell/prism/session.mjs"],
   ["templates/text-request/src/Foundation/Bytes.lex.tex", "shell/prism/lex/Foundation/Bytes.lex.tex"],
   ["templates/text-request/src/Foundation/View/Text/V1/Model.lex.tex", "shell/prism/lex/Foundation/View/Text/V1/Model.lex.tex"],
   ["src/journey/template.mjs", "shell/prism/template.mjs"],

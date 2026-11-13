@@ -1566,10 +1566,13 @@ handlers.set("prism:status", async ({ appId }) => (await rulesOf(appId)) || null
 const prismCode = () => import("./prism-code/src/index.mjs");
 // The commit, and beside it the app's own card (shell/live/card-files.mjs): the page the template builds then
 // draws the app with the preview's components, from the same spec, and answers through the verified guest.
-// templateCommit itself stays prism-code's, byte for byte (tools/prism_template.mjs); the card files are the
-// app's, which the template's page reads and pins nothing about.
+// templateCommit itself stays prism-code's, byte for byte (tools/prism_template.mjs); the builder
+// (prism/builder/commit.mjs) then writes the app as a full Prism model, every facet beside the behavior, so
+// the template's gate proves the whole model; the card files are the app's, which the template's page reads
+// and pins nothing about.
 async function publishCommit(args) {
-  const commit = await prism.templateCommit(args);
+  const { facetCommit } = await import("./prism/builder/commit.mjs");
+  const commit = await facetCommit(await prism.templateCommit(args), args);
   const { cardFiles } = await import("./live/card-files.mjs");
   const load = async (p) => { const r = await fetch(new URL(p, BASE)); if (!r.ok) throw new Error(p + " answered " + r.status); return r.text(); };
   const { files } = await cardFiles(args.spec, { load });

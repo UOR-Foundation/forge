@@ -1,0 +1,520 @@
+\begin{lexlean}{Design}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\importmodule{Architecture}
+\importmodule{Foundation.Arch}
+\title{design view}
+\begin{semanticmodule}
+definition{
+  name: processHandleMessage,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentStudioShell"})
+}
+
+definition{
+  name: processDraftSpec,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentInferenceProvider"})
+}
+
+definition{
+  name: processAskTheKernel,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: processProve,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentHostedChecker"})
+}
+
+definition{
+  name: processPublish,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentStudioShell"})
+}
+
+definition{
+  name: processOnCheck,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: processOnApprove,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: processOnAttest,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: processOnFail,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: processOnPublish,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: processOnEdit,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: processOnWait,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: processOnReword,
+  parameters: [],
+  result: Foundation.Arch::SystemProcess,
+  body: (record Foundation.Arch::SystemProcess {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: stateDrafting,
+  parameters: [],
+  result: Foundation.Arch::SystemState,
+  body: (record Foundation.Arch::SystemState {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: stateChecked,
+  parameters: [],
+  result: Foundation.Arch::SystemState,
+  body: (record Foundation.Arch::SystemState {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: stateProving,
+  parameters: [],
+  result: Foundation.Arch::SystemState,
+  body: (record Foundation.Arch::SystemState {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: stateProved,
+  parameters: [],
+  result: Foundation.Arch::SystemState,
+  body: (record Foundation.Arch::SystemState {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: statePublished,
+  parameters: [],
+  result: Foundation.Arch::SystemState,
+  body: (record Foundation.Arch::SystemState {owner := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: viewUmlComponents,
+  parameters: [],
+  result: Foundation.Arch::DesignView,
+  body: (record Foundation.Arch::DesignView {title := "Components of Prism AI Foundry", viewpoint := "Architecture::viewpointAppVisitorIntegrityOfPublishedApps", diagram := (ctor Foundation.Arch::DesignDiagram.umlComponent)})
+}
+
+definition{
+  name: viewUmlBuild,
+  parameters: [],
+  result: Foundation.Arch::DesignView,
+  body: (record Foundation.Arch::DesignView {title := "Building an app from one message", viewpoint := "Architecture::viewpointAppBuilderHonestProofStatus", diagram := (ctor Foundation.Arch::DesignDiagram.umlSequence)})
+}
+
+definition{
+  name: viewUmlPhases,
+  parameters: [],
+  result: Foundation.Arch::DesignView,
+  body: (record Foundation.Arch::DesignView {title := "The build phase of an app", viewpoint := "Architecture::viewpointAppBuilderHonestProofStatus", diagram := (ctor Foundation.Arch::DesignDiagram.umlStateMachine)})
+}
+
+definition{
+  name: umlBrowser,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentBrowser"})
+}
+
+definition{
+  name: umlFoundryKernelGuest,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentFoundryKernelGuest"})
+}
+
+definition{
+  name: umlGitHub,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentGitHub"})
+}
+
+definition{
+  name: umlHostedChecker,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentHostedChecker"})
+}
+
+definition{
+  name: umlInferenceProvider,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentInferenceProvider"})
+}
+
+definition{
+  name: umlOriginKernelWorker,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentOriginKernelWorker"})
+}
+
+definition{
+  name: umlPrismSDK,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentPrismSDK"})
+}
+
+definition{
+  name: umlProjectStore,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentProjectStore"})
+}
+
+definition{
+  name: umlStudioShell,
+  parameters: [],
+  result: Foundation.Arch::UmlComponent,
+  body: (record Foundation.Arch::UmlComponent {view := "Design::viewUmlComponents", component := "Architecture::componentStudioShell"})
+}
+
+definition{
+  name: umlBrowserToStudioShell,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeBrowserToStudioShell"})
+}
+
+definition{
+  name: umlFoundryKernelGuestToOriginKernelWorker,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeFoundryKernelGuestToOriginKernelWorker"})
+}
+
+definition{
+  name: umlFoundryKernelGuestToStudioShell,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeFoundryKernelGuestToStudioShell"})
+}
+
+definition{
+  name: umlGitHubToBrowser,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeGitHubToBrowser"})
+}
+
+definition{
+  name: umlHostedCheckerToStudioShell,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeHostedCheckerToStudioShell"})
+}
+
+definition{
+  name: umlInferenceProviderToStudioShell,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeInferenceProviderToStudioShell"})
+}
+
+definition{
+  name: umlOriginKernelWorkerToFoundryKernelGuest,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeOriginKernelWorkerToFoundryKernelGuest"})
+}
+
+definition{
+  name: umlPrismSDKToFoundryKernelGuest,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgePrismSDKToFoundryKernelGuest"})
+}
+
+definition{
+  name: umlProjectStoreToStudioShell,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeProjectStoreToStudioShell"})
+}
+
+definition{
+  name: umlStudioShellToFoundryKernelGuest,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeStudioShellToFoundryKernelGuest"})
+}
+
+definition{
+  name: umlStudioShellToGitHub,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeStudioShellToGitHub"})
+}
+
+definition{
+  name: umlStudioShellToHostedChecker,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeStudioShellToHostedChecker"})
+}
+
+definition{
+  name: umlStudioShellToInferenceProvider,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeStudioShellToInferenceProvider"})
+}
+
+definition{
+  name: umlStudioShellToOriginKernelWorker,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeStudioShellToOriginKernelWorker"})
+}
+
+definition{
+  name: umlStudioShellToProjectStore,
+  parameters: [],
+  result: Foundation.Arch::UmlConnector,
+  body: (record Foundation.Arch::UmlConnector {view := "Design::viewUmlComponents", edge := "Architecture::edgeStudioShellToProjectStore"})
+}
+
+definition{
+  name: seqBrowser,
+  parameters: [],
+  result: Foundation.Arch::UmlLifeline,
+  body: (record Foundation.Arch::UmlLifeline {view := "Design::viewUmlBuild", component := "Architecture::componentBrowser", order := 0})
+}
+
+definition{
+  name: seqStudioShell,
+  parameters: [],
+  result: Foundation.Arch::UmlLifeline,
+  body: (record Foundation.Arch::UmlLifeline {view := "Design::viewUmlBuild", component := "Architecture::componentStudioShell", order := 1})
+}
+
+definition{
+  name: seqInferenceProvider,
+  parameters: [],
+  result: Foundation.Arch::UmlLifeline,
+  body: (record Foundation.Arch::UmlLifeline {view := "Design::viewUmlBuild", component := "Architecture::componentInferenceProvider", order := 2})
+}
+
+definition{
+  name: seqFoundryKernelGuest,
+  parameters: [],
+  result: Foundation.Arch::UmlLifeline,
+  body: (record Foundation.Arch::UmlLifeline {view := "Design::viewUmlBuild", component := "Architecture::componentFoundryKernelGuest", order := 3})
+}
+
+definition{
+  name: seqHostedChecker,
+  parameters: [],
+  result: Foundation.Arch::UmlLifeline,
+  body: (record Foundation.Arch::UmlLifeline {view := "Design::viewUmlBuild", component := "Architecture::componentHostedChecker", order := 4})
+}
+
+definition{
+  name: msg0HandleMessage,
+  parameters: [],
+  result: Foundation.Arch::UmlMessage,
+  body: (record Foundation.Arch::UmlMessage {view := "Design::viewUmlBuild", kind := (ctor Foundation.Arch::UmlMessageKind.synchronous), order := 0, source := "Architecture::componentBrowser", target := "Architecture::componentStudioShell", process := "Design::processHandleMessage"})
+}
+
+definition{
+  name: msg1DraftSpec,
+  parameters: [],
+  result: Foundation.Arch::UmlMessage,
+  body: (record Foundation.Arch::UmlMessage {view := "Design::viewUmlBuild", kind := (ctor Foundation.Arch::UmlMessageKind.synchronous), order := 1, source := "Architecture::componentStudioShell", target := "Architecture::componentInferenceProvider", process := "Design::processDraftSpec"})
+}
+
+definition{
+  name: msg2DraftSpec,
+  parameters: [],
+  result: Foundation.Arch::UmlMessage,
+  body: (record Foundation.Arch::UmlMessage {view := "Design::viewUmlBuild", kind := (ctor Foundation.Arch::UmlMessageKind.reply), order := 2, source := "Architecture::componentInferenceProvider", target := "Architecture::componentStudioShell", process := "Design::processDraftSpec"})
+}
+
+definition{
+  name: msg3AskTheKernel,
+  parameters: [],
+  result: Foundation.Arch::UmlMessage,
+  body: (record Foundation.Arch::UmlMessage {view := "Design::viewUmlBuild", kind := (ctor Foundation.Arch::UmlMessageKind.synchronous), order := 3, source := "Architecture::componentStudioShell", target := "Architecture::componentFoundryKernelGuest", process := "Design::processAskTheKernel"})
+}
+
+definition{
+  name: msg4AskTheKernel,
+  parameters: [],
+  result: Foundation.Arch::UmlMessage,
+  body: (record Foundation.Arch::UmlMessage {view := "Design::viewUmlBuild", kind := (ctor Foundation.Arch::UmlMessageKind.reply), order := 4, source := "Architecture::componentFoundryKernelGuest", target := "Architecture::componentStudioShell", process := "Design::processAskTheKernel"})
+}
+
+definition{
+  name: msg5Prove,
+  parameters: [],
+  result: Foundation.Arch::UmlMessage,
+  body: (record Foundation.Arch::UmlMessage {view := "Design::viewUmlBuild", kind := (ctor Foundation.Arch::UmlMessageKind.synchronous), order := 5, source := "Architecture::componentStudioShell", target := "Architecture::componentHostedChecker", process := "Design::processProve"})
+}
+
+definition{
+  name: msg6Prove,
+  parameters: [],
+  result: Foundation.Arch::UmlMessage,
+  body: (record Foundation.Arch::UmlMessage {view := "Design::viewUmlBuild", kind := (ctor Foundation.Arch::UmlMessageKind.reply), order := 6, source := "Architecture::componentHostedChecker", target := "Architecture::componentStudioShell", process := "Design::processProve"})
+}
+
+definition{
+  name: msg7HandleMessage,
+  parameters: [],
+  result: Foundation.Arch::UmlMessage,
+  body: (record Foundation.Arch::UmlMessage {view := "Design::viewUmlBuild", kind := (ctor Foundation.Arch::UmlMessageKind.reply), order := 7, source := "Architecture::componentStudioShell", target := "Architecture::componentBrowser", process := "Design::processHandleMessage"})
+}
+
+definition{
+  name: stPhaseDrafting,
+  parameters: [],
+  result: Foundation.Arch::UmlState,
+  body: (record Foundation.Arch::UmlState {view := "Design::viewUmlPhases", state := "Design::stateDrafting", initial := true})
+}
+
+definition{
+  name: stPhaseChecked,
+  parameters: [],
+  result: Foundation.Arch::UmlState,
+  body: (record Foundation.Arch::UmlState {view := "Design::viewUmlPhases", state := "Design::stateChecked", initial := false})
+}
+
+definition{
+  name: stPhaseProving,
+  parameters: [],
+  result: Foundation.Arch::UmlState,
+  body: (record Foundation.Arch::UmlState {view := "Design::viewUmlPhases", state := "Design::stateProving", initial := false})
+}
+
+definition{
+  name: stPhaseProved,
+  parameters: [],
+  result: Foundation.Arch::UmlState,
+  body: (record Foundation.Arch::UmlState {view := "Design::viewUmlPhases", state := "Design::stateProved", initial := false})
+}
+
+definition{
+  name: stPhasePublished,
+  parameters: [],
+  result: Foundation.Arch::UmlState,
+  body: (record Foundation.Arch::UmlState {view := "Design::viewUmlPhases", state := "Design::statePublished", initial := false})
+}
+
+definition{
+  name: trRule1FromDrafting,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 0, source := "Design::stateDrafting", target := "Design::stateDrafting", trigger := "Design::processOnEdit"})
+}
+
+definition{
+  name: trRule1FromChecked,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 1, source := "Design::stateChecked", target := "Design::stateDrafting", trigger := "Design::processOnEdit"})
+}
+
+definition{
+  name: trRule1FromProving,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 2, source := "Design::stateProving", target := "Design::stateDrafting", trigger := "Design::processOnEdit"})
+}
+
+definition{
+  name: trRule1FromProved,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 3, source := "Design::stateProved", target := "Design::stateDrafting", trigger := "Design::processOnEdit"})
+}
+
+definition{
+  name: trRule1FromPublished,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 4, source := "Design::statePublished", target := "Design::stateDrafting", trigger := "Design::processOnEdit"})
+}
+
+definition{
+  name: trRule2FromDrafting,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 5, source := "Design::stateDrafting", target := "Design::stateChecked", trigger := "Design::processOnCheck"})
+}
+
+definition{
+  name: trRule3FromChecked,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 6, source := "Design::stateChecked", target := "Design::stateProving", trigger := "Design::processOnApprove"})
+}
+
+definition{
+  name: trRule4FromProving,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 7, source := "Design::stateProving", target := "Design::stateProved", trigger := "Design::processOnAttest"})
+}
+
+definition{
+  name: trRule5FromProving,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 8, source := "Design::stateProving", target := "Design::stateChecked", trigger := "Design::processOnFail"})
+}
+
+definition{
+  name: trRule6FromProved,
+  parameters: [],
+  result: Foundation.Arch::UmlTransition,
+  body: (record Foundation.Arch::UmlTransition {view := "Design::viewUmlPhases", order := 9, source := "Design::stateProved", target := "Design::statePublished", trigger := "Design::processOnPublish"})
+}
+\end{semanticmodule}
+\end{lexlean}

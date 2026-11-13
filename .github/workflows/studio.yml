@@ -217,6 +217,11 @@ jobs:
       - name: The Prism journey in the shell is prism-code's, byte for byte
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/prism_journey.mjs --check
+      - name: Every app the studio publishes is a full Prism model, written by the builder
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: |
+          node tools/builder/pack.mjs --check
+          node --test tools/builder_commit.test.mjs
       - name: The commit Forge makes on a template instance is prism-code's, byte for byte
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node tools/prism_template.mjs --check
