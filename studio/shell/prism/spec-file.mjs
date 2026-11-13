@@ -14,7 +14,7 @@
  * says), and reading it again gives the same bytes.
  */
 import { createHash } from './sha256.mjs';
-import { kappa } from '../address.mjs';
+import { kappa } from '../prism-code/src/blake3.mjs';
 import { SPEC_SCHEMA, SpecError, validateSpec } from './spec.mjs';
 
 export const SPEC_FILE = 'spec.json';
@@ -183,7 +183,7 @@ export function canonicalJson(value) {
  * Read a spec: JSON text, or a value already parsed (an agent's tool call).
  * Returns the normalized spec, its canonical text and bytes (what spec.json
  * holds), and two names for those bytes: `specAddress`, the UOR content
- * address (`sha256:<hex>`, κ, the same address a holo v5 names its objects by, and
+ * address (`blake3:<hex>`, the same kappa a holo labels its blobs with, and
  * the seal the app carries), and `specHash`, their `sha256:<hex>`. Throws
  * SpecError naming the rule and the JSON path of the first problem.
  */

@@ -337,7 +337,7 @@ export function renderModel(spec, { axioms = {}, specAddress = null } = {}) {
 
 /**
  * The seal: how an application says which spec it was built from. Its purpose,
- * then the spec's UOR content address in `[prism/spec/1 sha256:<hex>]` — the
+ * then the spec's UOR content address in `[prism/spec/1 blake3:<hex>]` — the
  * same kappa the holo labels its own blobs with, so the spec is named the way
  * everything else in a holo is named.
  *
@@ -349,7 +349,7 @@ export function renderModel(spec, { axioms = {}, specAddress = null } = {}) {
  * exactly this address, is where the spec itself belongs; that is the Rust
  * builder's to add.
  */
-export const SPEC_SEAL_MARK = /\[prism\/spec\/1 (sha256:[0-9a-f]{64})\]/;
+export const SPEC_SEAL_MARK = /\[prism\/spec\/1 (blake3:[0-9a-f]{64})\]/;
 export const describedBy = (spec, specAddress) => (specAddress ? `${spec.purpose || spec.title} [prism/spec/1 ${specAddress}]` : spec.purpose || spec.title);
 
 /** The proofs module, or null when the spec states no property. */
