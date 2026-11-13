@@ -230,6 +230,61 @@ mod tests {
         );
     }
 
+    /// A workflow GitHub cannot read runs nothing at all: it reports a failure named after the file and
+    /// no job starts, so a broken deploy looks like a deploy that never happened. One key written twice in
+    /// the same block is the way an edit does that, and a YAML reader takes the last one silently, so the
+    /// reader here is the gate: among the lines of one block, a key is written once.
+    #[test]
+    fn no_workflow_writes_a_key_twice_in_one_block() {
+        for (name, source) in workflows() {
+            let mut block: Vec<(usize, String)> = Vec::new();
+            let mut scalar: Option<usize> = None;
+            for (number, line) in source.lines().enumerate() {
+                let indent = line.len() - line.trim_start().len();
+                let text = line.trim();
+                if let Some(at) = scalar {
+                    // Inside a block scalar nothing is a key until the indentation comes back.
+                    if text.is_empty() || indent > at {
+                        continue;
+                    }
+                    scalar = None;
+                }
+                if text.is_empty() || text.starts_with('#') {
+                    continue;
+                }
+                let body = text.strip_prefix("- ").unwrap_or(text);
+                let starts = text.starts_with("- ");
+                let Some(key) = body.split_once(':').map(|(key, _)| key.trim().to_owned()) else {
+                    continue;
+                };
+                if key.contains(' ') || key.contains('"') || key.contains('\'') {
+                    continue;
+                }
+                let column = if starts { indent + 2 } else { indent };
+                // A new item in a list starts a block of its own, so nothing at its depth survives it; an
+                // ordinary line keeps the siblings it shares a block with and drops what was deeper.
+                if starts {
+                    block.retain(|(at, _)| *at < column);
+                } else {
+                    block.retain(|(at, _)| *at <= column);
+                }
+                assert!(
+                    !block.contains(&(column, key.clone())),
+                    "{name}: {key} is written twice in one block, at line {}",
+                    number + 1
+                );
+                block.push((column, key));
+                if body.ends_with(": |")
+                    || body.ends_with(": >")
+                    || body.ends_with(": |-")
+                    || body.ends_with(": >-")
+                {
+                    scalar = Some(column);
+                }
+            }
+        }
+    }
+
     /// Forge's bundle is what the renderer's own files compile to, so its address is those files and
     /// nothing else: a stylesheet or a shell script leaves it alone. The compile is skipped only for a
     /// bundle already compiled from exactly those bytes, and the dependency trees are addressed by the
