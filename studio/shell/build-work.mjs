@@ -4,7 +4,7 @@ import {captureProjectSource,commitPreparedProject} from './project-edit.mjs';
 import {storageRequest} from './storage-request.mjs';
 const messages={invalidBuildWork:'Invalid build work',buildWorkBusy:'A build already owns this project',buildWorkUnavailable:'Durable build work is unavailable',buildWorkConflict:'Build work changed; read its current state again',buildWorkSourceChanged:'The build source changed',buildWorkArtifactInvalid:'The retained build artifact is invalid',buildWorkLimitExceeded:'The retained build journal is full'};
 export const buildWorkFailure=code=>Object.assign(new Error(messages[code]||messages.buildWorkUnavailable),{code:Object.hasOwn(messages,code)?code:'buildWorkUnavailable'});
-const address=s=>typeof s==='string'&&/^sha256:[a-f0-9]{64}$/.test(s);
+const address=s=>typeof s==='string'&&/^blake3:[a-f0-9]{64}$/.test(s);
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const uint=n=>Number.isInteger(n)&&n>=0&&n<=0xffffffff;
 function copyJournal(input){

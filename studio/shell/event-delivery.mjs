@@ -13,7 +13,7 @@ const messages = {
 };
 const fail = code => Object.assign(new Error(messages[code]), {code});
 const uint = n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff;
-const address = s => typeof s === "string" && /^sha256:[0-9a-f]{64}$/.test(s);
+const address = s => typeof s === "string" && /^blake3:[0-9a-f]{64}$/.test(s);
 const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
 function journal(value) {
   if (!value) throw fail("eventDeliveryUnconfigured");

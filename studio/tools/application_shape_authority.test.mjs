@@ -16,12 +16,12 @@ import {requiresRulePublication} from '../shell/build-source.mjs';
 import {modulePresentation} from '../shell/module-presentation.mjs';
 import * as live from '../shell/live/project.mjs';
 import {createEditor} from '../shell/live/edit.mjs';
-import { kappa } from '../shell/address.mjs';
+import {kappa} from '../../try/vendor/prism-code/src/blake3.mjs';
 const host=fs.readFileSync(new URL('../shell/host.js',import.meta.url),'utf8');
 const module=fs.readFileSync(new URL('../../v2/loop/answers/guests-3.verified.lex.tex',import.meta.url),'utf8');
 const spec=JSON.parse(fs.readFileSync(new URL('./fixtures/live/rsvp.json',import.meta.url),'utf8'));
 const canonical=lexlean.canonicalSource(spec), decisionPath=`prism/${canonical.name}.lex.tex`;
-const oid='sha256:'+'a'.repeat(64), nextOid='sha256:'+'b'.repeat(64), enc=new TextEncoder();
+const oid='blake3:'+'a'.repeat(64), nextOid='blake3:'+'b'.repeat(64), enc=new TextEncoder();
 const snapshot=(files,applicationState)=>({name:'app',reference:oid,dependencies:[],files,...(applicationState===undefined?{}:{applicationState})});
 
 test('a real stateful module editor save retains the whole bounded input',()=>{

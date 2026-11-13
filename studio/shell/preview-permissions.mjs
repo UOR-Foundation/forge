@@ -13,7 +13,7 @@ const messages = {
 export const previewPermissionFailure = code => Object.assign(new Error(messages[code] || messages.previewPermissionUnavailable), { code: Object.hasOwn(messages, code) ? code : "previewPermissionUnavailable" });
 export function describePreview(input) {
   const fail = () => { throw previewPermissionFailure("invalidPreviewPermission"); };
-  if (!input || typeof input.id !== "string" || !/^[A-Za-z0-9:_-]{1,256}$/.test(input.id) || typeof input.source !== "string" || !/^sha256:[0-9a-f]{64}$/.test(input.source) || !Array.isArray(input.endpoints) || input.endpoints.length > 32) fail();
+  if (!input || typeof input.id !== "string" || !/^[A-Za-z0-9:_-]{1,256}$/.test(input.id) || typeof input.source !== "string" || !/^blake3:[0-9a-f]{64}$/.test(input.source) || !Array.isArray(input.endpoints) || input.endpoints.length > 32) fail();
   const endpoints = input.endpoints.map(origin => {
     if (typeof origin !== "string" || origin.length > 255 || !/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:[0-9]{1,5})?$/.test(origin)) fail();
     try { if (new URL(origin).origin !== origin) fail(); } catch { fail(); }

@@ -35,7 +35,7 @@ fn publish_bytes_and_decisions_match_the_rule_on_every_case() {
         assert_eq!(manifest, s(&case["sourceManifest"]), "source manifest bytes differ on case {name}");
         let d = publishDecision(s(&case["closure"]), s(&case["built"]), case["attestation"].as_str().map(str::to_owned));
         assert_eq!(decision_name(&d), s(&case["decision"]), "publish decision differs on case {name}");
-        assert_eq!(holoPath("sha256:".to_owned() + &"a1".repeat(32)), s(&case["holoPath"]), "holo path differs on case {name}");
+        assert_eq!(holoPath("blake3:".to_owned() + &"a1".repeat(32)), s(&case["holoPath"]), "holo path differs on case {name}");
     }
     println!("publish corpus: {} cases byte identical", cases.len());
 }
