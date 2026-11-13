@@ -152,8 +152,43 @@ def adopt(patch, act):
         template_update(image, pinned_action(), patch.get("standards", ""))
 
 
+PROPOSAL = "automation/template-contract-update"
+
+
+def land(act):
+    """Land the re-pin template-update.yml proposed. A pull request the workflow token opens starts no
+    CI, so the watcher dispatches the acceptance gate (bootstrap.yml) on the proposal's head and merges
+    the proposal once that gate passed on exactly that head. A failed gate is reported, never merged."""
+    pulls = json.loads(run("gh", "pr", "list", "--head", PROPOSAL, "--state", "open",
+                           "--json", "number,headRefOid,mergeable"))
+    for pr in pulls:
+        head = pr["headRefOid"]
+        runs = json.loads(run("gh", "run", "list", "--workflow", "bootstrap.yml", "--branch", PROPOSAL,
+                              "--event", "workflow_dispatch", "--json", "headSha,status,conclusion",
+                              "--limit", "20"))
+        mine = [r for r in runs if r["headSha"] == head]
+        if not mine:
+            print(f"re-pin #{pr['number']}: dispatching the acceptance gate on {head[:12]}")
+            if act:
+                run("gh", "workflow", "run", "bootstrap.yml", "--ref", PROPOSAL)
+        elif mine[0]["status"] != "completed":
+            print(f"re-pin #{pr['number']}: the acceptance gate is running on {head[:12]}")
+        elif mine[0]["conclusion"] != "success":
+            print(f"re-pin #{pr['number']}: the acceptance gate failed on {head[:12]}; not merged")
+            if act:
+                issue(f"Re-pin gate failed at {head[:12]}",
+                      f"bootstrap.yml did not pass on #{pr['number']} at {head}; the re-pin is not merged.")
+        elif pr["mergeable"] != "MERGEABLE":
+            print(f"re-pin #{pr['number']}: proved, but it does not merge cleanly")
+        else:
+            print(f"re-pin #{pr['number']}: proved on {head[:12]}; merging")
+            if act:
+                run("gh", "pr", "merge", str(pr["number"]), "--merge", "--match-head-commit", head)
+
+
 def main():
     act = "--act" in sys.argv[1:]
+    land(act)
     patches = tomllib.loads((ROOT / "upstream.toml").read_text())["patch"]
     for patch in patches:
         repository = patch["repository"]

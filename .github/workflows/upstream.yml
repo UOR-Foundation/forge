@@ -1,4 +1,6 @@
-# Watches the upstream fixes upstream.toml records. Each hour it pins a patched
+# Watches the upstream fixes upstream.toml records, and lands the re-pins it proposes: a proposal the
+# workflow token opens starts no CI, so the watcher dispatches the acceptance gate on it and merges it
+# once that gate passed on its exact head. Each hour it pins a patched
 # SDK image a row names (adopting a fix is adding its row), and asks whether a
 # release ships each fix; when one does, it opens an issue naming that release
 # and dispatches the re-pin (template-update.yml, which opens the pull request).
@@ -25,7 +27,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
       issues: write
       actions: write
     steps:
