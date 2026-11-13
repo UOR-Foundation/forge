@@ -46,9 +46,13 @@ test("the look comes from the brand's tokens: no colour of its own, in any theme
   assert.ok(section.includes("@media (pointer: coarse)") && section.includes("prefers-reduced-motion"));
 });
 
-test("FoundrySpecification.foundrySurfaceExperienceBoundary: centred popups, golden measures, tools on Settings, a quiet Home", () => {
-  const spec = read("../../app/src/FoundrySpecification.lex.tex");
-  assert.ok(spec.includes("name: foundrySurfaceExperienceBoundary,"));
+test("studio/experience: centred popups, golden measures, tools on Settings, a quiet Home", () => {
+  // The preferences are a LexLean module of their own, outside the kernel's proof inputs.
+  const spec = read("../experience/src/FoundryExperience.lex.tex");
+  for (const name of ["oneLook", "popupsCentred", "goldenRatio", "questionAsNotification", "whyHowWhat", "sidebarIsNavigation", "toolsOnSettings", "homeAsksOneThing", "modelMenu"]) assert.ok(spec.includes("name: " + name + ","), name);
+  assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
+  for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
+  assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
   for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);

@@ -49,6 +49,32 @@ jobs:
             ~/.cache/hologram-forge-lane
             ~/.elan
           key: lane-${{ hashFiles('studio/PRISMPM_REV', 'studio/lean-toolchain') }}
+      # How Foundry looks and reads is a LexLean module of its own (studio/experience), outside app/, so a
+      # preference changes no kernel proof input. Its check needs the locked SDK image, which is large, so
+      # the check is kept by its address: the module's files and the lock that names the SDK. A hit means
+      # these exact bytes were checked by this exact SDK, and nothing is pulled.
+      - name: The look-and-feel module's check, kept by its address
+        id: experience
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .experience-checked
+          key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}
+      - name: How Foundry looks and reads is a canonical, locked, checked LexLean module
+        if: steps.experience.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
+          if [[ ! $image =~ ^[a-z0-9.-]+(:[0-9]{1,5})?/[a-z0-9./_-]+@sha256:[0-9a-f]{64}$ ]]; then
+            printf '%s\n' 'prismpm.lock does not select an immutable SDK image' >&2
+            exit 64
+          fi
+          docker run --rm --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,exec,nosuid,size=1g \
+            --volume "$PWD:$PWD" --workdir "$PWD/studio/experience" --env HOME=/tmp/home \
+            "$image" sh -c 'mkdir -p /tmp/home && lexlean fmt --check && lexlean lock --check && lexlean check'
+          mkdir -p .experience-checked
+          printf '%s\n' "$image" >.experience-checked/sdk
       - name: Verify the canonical PR concurrency boundary
         run: python3 tools/studio_concurrency_projection.py --check
       - name: The authored model is what the author script writes
