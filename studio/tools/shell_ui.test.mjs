@@ -53,7 +53,7 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.equal(read("../../app/src/FoundrySpecification.lex.tex").includes("foundrySurfaceExperienceBoundary"), false, "a look-and-feel preference is back in the kernel's specification");
   for (const input of fs.readdirSync(new URL("../../app/src/", import.meta.url)).filter((n) => n.endsWith(".lex.tex"))) assert.equal(read("../../app/src/" + input).includes("FoundryExperience"), false, input + " reads the look-and-feel module, which makes it a kernel proof input");
   assert.ok(read("../../.github/workflows/studio.yml").includes("key: experience-check-v1-${{ hashFiles('studio/experience/**', 'prismpm.lock') }}"));
-  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
+  for (const said of ["centred on the screen", "golden ratio, 1.618", "why, then how, then what", "plain words without technical jargon", "first card of the Settings page", "233 pixels wide", "the question alone, with no line under it", "no app picker and no mode selector", "in one column at the right"]) assert.ok(spec.includes(said), said);
   // centred, across and down
   assert.match(section, /dialog:not\(\[data-slot\]\) \{\s*box-sizing: border-box !important; inset: 0 !important; margin: auto !important; height: fit-content !important;/);
   // 550 = 340 x phi wide, at most 61.8% tall; the card's spaces, tile, title, text and controls are on the series
@@ -64,6 +64,7 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   assert.ok(css.includes('[data-slot="sidebar-wrapper"] { --sidebar-width: 233px !important; }'));
   assert.ok(css.includes('[data-testid="home-chat-input-container"] [data-testid="home-app-selector"] { display: none !important; }'));
   assert.ok(css.includes('#setting-default-chat-mode { display: none !important; }'));
+  assert.ok(css.includes('p:has(> [data-slot="home-wide"]) { display: none !important; }'), 'the line under the home question is shown');
   const mode = read('../vendor/dyad/hologram.ChatModeSelector.tsx');
   assert.ok(mode.includes('tabIndex={-1}') && mode.includes('pointer-events-none absolute left-0 top-0 h-px w-px opacity-0'));
 });

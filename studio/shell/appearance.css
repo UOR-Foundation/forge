@@ -430,3 +430,5 @@ aside[aria-label^="Active"] button::before { content: ""; width: 8px; height: 8p
    Its wrapper keeps its place, so a mode that could not be saved is still said there. */
 select[data-testid="chat-mode-selector"] { position: absolute !important; left: 0; top: 0; width: 1px !important; height: 1px !important; padding: 0 !important; border: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 div:has(> select[data-testid="chat-mode-selector"]) { position: relative; }
+/* Home asks its question and nothing more: the line under it is not shown, on any screen. */
+p:has(> [data-slot="home-wide"]) { display: none !important; }
