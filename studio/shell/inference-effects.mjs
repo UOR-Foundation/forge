@@ -113,9 +113,6 @@ export async function cloudCompletion({ provider, key, bytes, origin, signal, on
       });
       pending += decoder.decode();
     } catch (error) { if (codes.has(error?.code)) throw error; throw fault("malformedInferenceResponse"); }
-    // With thinking turned off, Featherless has returned the whole answer in the reasoning channel and no
-    // answer. An answer that arrived only there is the answer: it is delivered once, when the stream ends.
-    if (!pending && !data.length && done && finish && !text.trim() && thought.trim()) { text = thought; if (first === null) first = performance.now() - started; await notify(onDelta, text); }
     if (pending || data.length || !done || !finish || !text.trim()) throw fault("malformedInferenceResponse");
     return { text: text.trim(), finish, last, ttftMs: Math.round(first || 0) };
   };

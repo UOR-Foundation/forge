@@ -1779,11 +1779,10 @@ async function chatTurn(chatId, intent) {
     // Featherless's GLM reasons for some 14,000 tokens before it writes, inside the same budget, so it gets
     // the most Featherless allows (32,768); 16,384 left a page cut off mid file.
     const body = { model, messages: request, max_tokens: !paid ? 2048 : provider === "featherless" ? 32768 : 16384, temperature: "0.7" };
-    // A turn that writes the spec asks Featherless for no thinking, and a new app's first turn for an answer
-    // held to the spec's schema. The site relay forwards each only while its own switch is on; until then
-    // the request is the one it was. A stateful app's turn asks for neither.
-    const specTurn = paid && provider === "featherless" && execution.sourceEffects && !(moduleNow && appShape.isAppShape(moduleNow[1]));
-    if (specTurn) inference.specAsk(body, { thinkingOff: true, format: new Map(projectSource.files).get("prism/spec.json") ? null : prism.SPEC_FORMAT });
+    // A new decision app's first turn asks Featherless for an answer held to the spec's schema: one JSON
+    // object of that shape, with nothing to repair. The site relay forwards it only while its switch is on;
+    // until then the request is the one it was. Thinking is not asked off: GLM deliberates either way.
+    if (paid && provider === "featherless" && execution.sourceEffects && !moduleNow && !new Map(projectSource.files).get("prism/spec.json")) inference.specAsk(body, { format: prism.SPEC_FORMAT });
     const hit = await lookup(body);
     const route = await routeOf(hit, body);
     // The View's no-key word names OpenRouter; a Featherless model is told about its own key.

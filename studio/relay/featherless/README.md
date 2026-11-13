@@ -36,14 +36,22 @@ site's key failures kept private. For a local run in Cloudflare's runtime, put
 
 The model, the messages, a bounded `max_tokens`, `temperature`, `top_p` and `stop`. Everything else is dropped. A change to `worker.mjs` reaches visitors only after `npx wrangler@4 deploy`.
 
-`chat_template_kwargs.enable_thinking` is not forwarded as deployed. It was, for about three hours on 2026-11-12: with it set to `false`, Featherless returned GLM 5.3 Flash's whole answer in the reasoning channel and an empty answer, in every one of five requests. The worker was rolled back to the version before it.
+`chat_template_kwargs.enable_thinking` is deliberately not forwarded. It was, for about three hours on 2026-11-12: with it set to `false`, Featherless returned GLM 5.3 Flash's whole answer in the reasoning channel and an empty answer, in every one of five requests. The worker was rolled back to the version before it.
 
-Two more fields are forwarded only while a switch in `wrangler.toml` is `"1"`, each in one exact form:
+It was measured again on 2026-11-13, through this relay, with the `prism/spec/1` prompt and one sentence, one run each:
 
-- `FORWARD_THINKING_OFF`: `chat_template_kwargs: {"enable_thinking": false}`, and nothing else in it. Forge now reads an answer that arrives only in the reasoning channel as the answer, which is what the 2026-11-12 run returned, so the switch can be turned on to measure the spec turn without thinking. If an answer comes back empty in Forge, turn it off: no change to Forge is needed either way.
-- `FORWARD_RESPONSE_FORMAT`: `response_format` of type `json_schema`, one schema of at most 8,192 bytes, always sent as strict. Forge sends the `prism/spec/1` shape on a new app's first turn and reads a bare JSON object as the spec. Whether Featherless honours it for GLM 5.3 Flash has not been measured; if it refuses the request, turn it off.
+| request | reasoning channel | answer | total |
+|---|---|---|---|
+| as deployed | 47 s | a spec in its tag, 9 s | 58 s |
+| thinking off | empty | 6,800 characters of deliberation, then three spec blocks | 125 s |
+| thinking off and a response schema | 99 s | one bare JSON spec, 9 s | 108 s |
+| a response schema only | 35 s | one bare JSON spec, 11 s | 47 s |
 
-Each switch is a `[vars]` entry, so changing one is an edit and `npx wrangler@4 deploy`.
+GLM 5.3 Flash deliberates whether or not the switch is set; with it off and no schema, it does so in the answer. The switch is therefore not forwarded under any setting.
+
+`FORWARD_RESPONSE_FORMAT`, a `[vars]` entry in `wrangler.toml`, forwards `response_format` of type `json_schema` while it is `"1"`: one schema of at most 8,192 bytes, always sent as strict. Forge sends the `prism/spec/1` shape on a new app's first turn and reads a bare JSON object as the spec. Featherless honours it for GLM 5.3 Flash: both runs above returned exactly the schema's keys and the checker accepted both. It does not shorten the reasoning; it removes malformed and repeated specs.
+
+Changing it is an edit and `npx wrangler@4 deploy`.
 
 ## Limits
 

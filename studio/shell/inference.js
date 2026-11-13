@@ -296,9 +296,8 @@ export function rememberSession(messages, res, text, entry = engine.model) { if 
 let gpuBusy = Promise.resolve();
 export function withEngine(fn) { const run = gpuBusy.then(fn, fn); gpuBusy = run.catch(() => {}); return run; }
 
-// What a turn that writes the spec asks of Featherless beside its request: no thinking, and, for a new
-// app, an answer held to the spec's schema. Kept beside the request, not in it: the verified core encodes
-// and keys the request it knows. The site relay forwards each only while its own switch is on.
+// What a new app's first turn asks of Featherless beside its request: an answer held to the spec's schema. Kept beside the request, not in it: the verified core encodes
+// and keys the request it knows. The site relay forwards it only while its switch is on.
 // It is carried under a symbol, which no encoding of the request includes.
 export function specAsk(body, ask) { body[Symbol.for("forge.specAsk")] = ask; return body; }
 // ---- the paid route: OpenRouter with the visitor's key. The request bytes are the model's encoder.
@@ -323,10 +322,10 @@ async function paidGenerateOnce(body, onDelta, signal, onReasoning) {
   let bytes = c.run({ op: "encode-openrouter-request", model: paidId(body.model), request: body, stream: true }).bytes;
   // What a spec turn asks of Featherless beside the request (specAsk): set below in the one form the relay
   // forwards, and shown in the disclosure with the rest of the bytes.
-  const { thinkingOff = false, format = null } = body[Symbol.for("forge.specAsk")] || {};
+  const { format = null } = body[Symbol.for("forge.specAsk")] || {};
   // Featherless speaks plain OpenAI chat completions: the core's request without the three fields only
   // OpenRouter reads (usage.include, reasoning, provider), and the standard usage option in their place.
-  if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; if (thinkingOff) j.chat_template_kwargs = { enable_thinking: false }; if (format && format.type === "json_schema") j.response_format = format; bytes = JSON.stringify(j); }
+  if (provider === "featherless") { const j = JSON.parse(bytes); delete j.usage; delete j.reasoning; delete j.provider; if (j.stream) j.stream_options = { include_usage: true }; if (format && format.type === "json_schema") j.response_format = format; bytes = JSON.stringify(j); }
   const credentialOwner = route.credentialOwner;
   const permission = await authorizeInference({ provider: route.provider, model: paidId(body.model), bytes, credentialOwner, signal });
   let result;

@@ -79,12 +79,8 @@ test("the answer's length is capped and unknown fields are dropped", () => {
   assert.equal(shape(body({ max_tokens: undefined }), env()).max_tokens, 32768);
 });
 
-test("the thinking switch is not forwarded unless the relay's own switch is on, and then only as off", () => {
-  for (const kw of [{ enable_thinking: false }, { enable_thinking: true }]) assert.equal("chat_template_kwargs" in shape(body({ chat_template_kwargs: kw }), env()), false);
-  const on = env({ FORWARD_THINKING_OFF: "1" });
-  assert.deepEqual(shape(body({ chat_template_kwargs: { enable_thinking: false, other: 1 } }), on).chat_template_kwargs, { enable_thinking: false });
-  for (const kw of [{ enable_thinking: true }, { enable_thinking: "false" }, {}, null, "off"]) assert.equal("chat_template_kwargs" in shape(body({ chat_template_kwargs: kw }), on), false);
-  assert.equal("chat_template_kwargs" in shape(body(), on), false);
+test("the thinking switch is never forwarded: with it off GLM deliberates in the answer instead", () => {
+  for (const kw of [{ enable_thinking: false }, { enable_thinking: true }]) for (const e of [env(), env({ FORWARD_THINKING_OFF: "1" }), env({ FORWARD_RESPONSE_FORMAT: "1" })]) assert.equal("chat_template_kwargs" in shape(body({ chat_template_kwargs: kw }), e), false);
 });
 
 test("a response schema is not forwarded unless its switch is on, and then only one bounded JSON schema", () => {
@@ -96,7 +92,6 @@ test("a response schema is not forwarded unless its switch is on, and then only 
   const big = { type: "object", description: "x".repeat(9000) };
   for (const bad of [{ type: "json_object" }, { type: "json_schema" }, { type: "json_schema", json_schema: { name: "has space", schema } }, { type: "json_schema", json_schema: { name: "s", schema: [] } }, { type: "json_schema", json_schema: { name: "s", schema: big } }, "json", null])
     assert.equal("response_format" in shape(body({ response_format: bad }), on), false);
-  assert.equal("chat_template_kwargs" in shape(body({ chat_template_kwargs: { enable_thinking: false } }), on), false);
 });
 
 test("a visitor over the per-minute limit is refused before Featherless", async () => {

@@ -21,16 +21,6 @@ test("streaming handles split UTF8, CRLF, reasoning and usage without exposing c
   assert.equal(result.last.usage.completion_tokens, 2); assert.deepEqual(deltas, ["hello 🌱"]); assert.deepEqual(reasons, ["thinking"]);
   assert.equal(sent.url, "https://openrouter.ai/api/v1/chat/completions"); assert.equal(sent.options.headers.Authorization, "Bearer private-key");
 });
-test("an answer that arrives only in the reasoning channel is the answer, delivered once; an empty stream is still refused", async () => {
-  const onlyReasoning = event(chunk({ reasoning: "<dyad-spec>{\"title\":" })) + event(chunk({ reasoning: "\"T\"}</dyad-spec>" })) + event(chunk({}, "stop")) + "data: [DONE]\n\n";
-  const deltas = [], reasons = [];
-  const result = await cloudCompletion({ ...request, onDelta: x => deltas.push(x), onReasoning: x => reasons.push(x) }, { fetch: async () => response(onlyReasoning) });
-  assert.equal(result.text, "<dyad-spec>{\"title\":\"T\"}</dyad-spec>"); assert.deepEqual(deltas, [result.text]); assert.equal(reasons.length, 2);
-  // reasoning followed by an answer is unchanged: the answer is the answer
-  assert.equal((await execute(valid)).text, "hello 🌱");
-  await assert.rejects(execute(event(chunk({}, "stop")) + "data: [DONE]\n\n"), code("malformedInferenceResponse"));
-  await assert.rejects(execute(event(chunk({ reasoning: "   " })) + event(chunk({}, "stop")) + "data: [DONE]\n\n"), code("malformedInferenceResponse"));
-});
 test("missing credentials, unknown providers and invalid request bounds never fetch", async () => {
   let calls = 0; const fetch = async () => { calls++; throw Error(); };
   for (const [change, expected] of [[{ key: "" }, "inferenceUnauthorized"], [{ provider: "unknown" }, "invalidInferenceRequest"], [{ bytes: "x".repeat(2 * 1024 * 1024 + 1) }, "invalidInferenceRequest"]]) await assert.rejects(cloudCompletion({ ...request, ...change }, { fetch }), code(expected));

@@ -111,7 +111,7 @@ test('model context uses notation only from the captured active stateful source 
     assert.match((await context(lines.replace('app Guest list','app Other')))[1].content,/current LexLean module/);
   })();
 });
-test('paid inference preserves exact consent bytes and cancellation, with no thinking switch unless a spec turn asks; denial sends nothing',async()=>{
+test('paid inference preserves exact consent bytes and cancellation with no thinking override; denial sends nothing',async()=>{
   const body=sourceBlock(inference,'async function paidGenerateOnce(','// ---- the route:');
   for(const denied of [false,true]){
     const abort=new AbortController(), log={sent:0,closed:0};
@@ -132,11 +132,5 @@ test('paid inference preserves exact consent bytes and cancellation, with no thi
     else{assert.equal((await run({model:'test'},null,abort.signal,null,{think:false})).text,'answer');assert.equal(log.sent,1);assert.equal(log.closed,1);}
   }
   assert.doesNotMatch(host,/k\.ask\("think 0"\)/);
-  // No caller option turns thinking off. A request carries the switch only when a spec turn asked for it
-  // beside the request (specAsk), in one form; the bytes above, sent without that ask, carry none. The site
-  // relay forwards it only while its own switch is on, and an answer that then arrives in the reasoning
-  // channel is read as the answer (tools/inference_effects.test.mjs).
-  assert.doesNotMatch(inference,/options\.think/);
-  assert.equal((inference.match(/enable_thinking/g)||[]).length,1);
-  assert.ok(inference.includes('if (thinkingOff) j.chat_template_kwargs = { enable_thinking: false };'));
+  assert.doesNotMatch(inference,/options\.think|enable_thinking/);
 });

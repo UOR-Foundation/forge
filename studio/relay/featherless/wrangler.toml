@@ -14,9 +14,8 @@ MODELS = "zai-org/GLM-5.3-Flash"
 # The most a single answer may write (Forge asks for 32,768: GLM reasons before it answers).
 MAX_TOKENS = "32768"
 
-# Two fields a spec turn asks for, each forwarded only while its switch is "1" (README, "What it forwards").
-# Off as deployed: turn one on to measure it, and off again if the answers go wrong.
-FORWARD_THINKING_OFF = "0"
+# A response schema (the prism/spec/1 shape, on a new app's first turn) is forwarded only while this is "1"
+# (README, "What it forwards"). Off as deployed.
 FORWARD_RESPONSE_FORMAT = "0"
 
 # Each visitor (by address) may send this many requests a minute.

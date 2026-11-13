@@ -66,12 +66,9 @@ export function shape(body, env) {
   }
   if (Array.isArray(body.stop) && body.stop.length <= 4 && body.stop.every((s) => typeof s === "string" && s.length <= 64)) out.stop = body.stop;
   if (out.stream) out.stream_options = { include_usage: true };
-  // Two fields a spec turn asks for. Each is forwarded only while its switch is on, and only in the one
-  // form Forge sends, so the relay still forwards nothing it has not named.
-  // Thinking off: with it Featherless has returned GLM's answer in the reasoning channel and an empty
-  // answer. Forge reads an answer that arrives only there (studio/shell/inference-effects.mjs), so the
-  // switch may be turned on to measure it, and off again without a change to Forge.
-  if (env.FORWARD_THINKING_OFF === "1" && body.chat_template_kwargs && typeof body.chat_template_kwargs === "object" && body.chat_template_kwargs.enable_thinking === false) out.chat_template_kwargs = { enable_thinking: false };
+  // A response schema is forwarded only while its switch is on, and only in the one form Forge sends, so
+  // the relay still forwards nothing it has not named. The thinking switch is not forwarded at all: measured
+  // on 2026-11-13, GLM 5.3 Flash deliberates just as long with it off, in the answer itself (README).
   // A response schema: the answer is one JSON object of that shape. Bounded, and one schema, not a list.
   if (env.FORWARD_RESPONSE_FORMAT === "1") {
     const f = body.response_format, js = f && typeof f === "object" && f.type === "json_schema" ? f.json_schema : null;
