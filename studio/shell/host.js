@@ -1314,7 +1314,10 @@ async function proveRules(appId, logicKey, onWait, options = {}) {
   const reservation = options.expectedState || state;
   if (!sameRuleReservation(state, reservation) || (state.logicKappa || state.specKappa) !== logicKey) return null;
   let submitted = false;
-  const result = await prism.prove(reservation.spec, { onWait, beforeSubmit: () => { options.beforeSubmit?.(); submitted = true; } }).catch((e) => {
+  // Proof records live under their theorem address in "refs"; prism/proof-reuse.mjs decides whether one
+  // may stand for a proof.
+  const proofStore = { get: (key) => get("refs", key), put: (key, value) => put("refs", key, value) };
+  const result = await prism.prove(reservation.spec, { onWait, store: proofStore, beforeSubmit: () => { options.beforeSubmit?.(); submitted = true; } }).catch((e) => {
     if (options.beforeSubmit && !submitted) throw e;
     return { ok: false, error: String((e && e.message) || e) };
   });
@@ -1419,7 +1422,7 @@ async function proveApp(appId, sourceKappa, source, onWait, options = {}) {
   const library = await (appLibrary || (appLibrary = appShape.checkLibrary(readEngine).catch((error) => { appLibrary = null; throw error; })));
   let proved = source;
   let submitted = false;
-  const result = await prism.proveFiles(async (axioms) => { proved = appShape.withAxioms(source, axioms); return appShape.proofFiles(proved, library); }, { onWait, beforeSubmit: () => { options.beforeSubmit?.(); submitted = true; } }).catch((e) => {
+  const result = await prism.proveFiles(async (axioms) => { proved = appShape.withAxioms(source, axioms); return appShape.proofFiles(proved, library); }, { onWait, store: { get: (key) => get("refs", key), put: (key, value) => put("refs", key, value) }, beforeSubmit: () => { options.beforeSubmit?.(); submitted = true; } }).catch((e) => {
     if (options.beforeSubmit && !submitted) throw e;
     return { ok: false, error: String((e && e.message) || e) };
   });
