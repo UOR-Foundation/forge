@@ -8,7 +8,7 @@ export const chatModeCatalog = {
     },
     {
       "id": "ask",
-      "label": "Ask"
+      "label": "Chat"
     },
     {
       "id": "plan",

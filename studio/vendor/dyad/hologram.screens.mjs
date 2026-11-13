@@ -24,6 +24,8 @@ export const SCREENS = {
   // App covers: the card shows the app's own first screen, its tag and one two row sentence (shell/covers.mjs).
   "src/components/AppShowcaseCard.tsx": "hologram.screens/AppShowcaseCard.tsx",
   "src/hooks/useAppThumbnails.ts": "hologram.screens/useAppThumbnails.ts",
+  // The home's floor: the apps already made, or, before the first one, the gallery's templates.
+  "src/components/FeaturedAppShowcase.tsx": "hologram.screens/FeaturedAppShowcase.tsx",
 };
 
 // A page's body in the inset, as dashboard-01 spaces it: the site header names the page, so the page keeps
@@ -249,6 +251,63 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     from: `<div className="mt-4 flex flex-wrap justify-center gap-2">`,
     to: `<div className="mt-4 flex flex-wrap justify-center gap-2" data-slot="home-suggestions">`,
   },
+  {
+    file: "src/pages/home.tsx",
+    from: `    return shuffled.slice(0, 3);`,
+    to: `    return shuffled.slice(0, 2);`,
+  },
+  // A featured app with no link yet puts its idea in the box, where the visitor can send it as their own.
+  {
+    file: "src/pages/home.tsx",
+    from: `  // Initialize random prompts
+  useEffect(() => {
+    setRandomPrompts(getRandomPrompts());
+  }, [getRandomPrompts]);`,
+    to: `  // Initialize random prompts
+  useEffect(() => {
+    setRandomPrompts(getRandomPrompts());
+  }, [getRandomPrompts]);
+
+  useEffect(() => {
+    const take = (event: Event) => {
+      const idea = (event as CustomEvent<string>).detail;
+      if (typeof idea === "string" && idea) setInputValue(idea);
+    };
+    window.addEventListener("foundry:idea", take);
+    return () => window.removeEventListener("foundry:idea", take);
+  }, [setInputValue]);`,
+  },
+  // Three chips, always: two ideas and "Surprise me", which writes one more into the box. The chip that
+  // asked for another three ideas is gone; a fresh two are offered on every visit.
+  {
+    file: "src/pages/home.tsx",
+    from: `            <button
+              type="button"
+              disabled={isCheckingProviders}
+              onClick={() => setRandomPrompts(getRandomPrompts())}
+              className="group flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:bg-accent hover:text-foreground disabled:cursor-default disabled:opacity-50"
+            >
+              <RefreshCw className="size-4 transition-transform duration-200 group-hover:rotate-[-25deg]" />
+              {t("moreIdeas")}
+            </button>
+`,
+    to: `            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-slot="home-surprise"
+              disabled={isCheckingProviders}
+              onClick={() => {
+                const ideas = INSPIRATION_PROMPTS.filter((p) => p.prompt !== inputValue);
+                setInputValue(ideas[Math.floor(Math.random() * ideas.length)].prompt);
+              }}
+              className="rounded-full text-muted-foreground"
+            >
+              <Sparkles aria-hidden="true" />
+              Surprise me
+            </Button>
+`,
+  },
   // On a phone the page keeps the inset's 16 px gutter instead of 32 px, so the composer has the room.
   {
     file: "src/pages/home.tsx",
@@ -269,8 +328,7 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
             <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
               Describe your idea. Dyad will turn it into a working app.
             </p>`,
-    to: `              <span data-slot="home-wide">What do you want to build?</span>
-              <span data-slot="home-narrow">Build anything</span>
+    to: `              Build your ideas with <span data-slot="home-name">Prism</span>
             </h1>
             <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
               <span data-slot="home-wide">Describe your idea. Dyad will turn it into a working app.</span>
@@ -282,22 +340,7 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     from: `        <PrivacyBanner />
       </div>
       <FeaturedAppShowcase />`,
-    to: `        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-slot="home-surprise"
-          disabled={isCheckingProviders}
-          onClick={() => {
-            const ideas = INSPIRATION_PROMPTS.filter((p) => p.prompt !== inputValue);
-            setInputValue(ideas[Math.floor(Math.random() * ideas.length)].prompt);
-          }}
-          className="rounded-full text-muted-foreground"
-        >
-          <Sparkles aria-hidden="true" />
-          Surprise me
-        </Button>
-        <PrivacyBanner />
+    to: `        <PrivacyBanner />
       </div>
       <div data-slot="home-featured">
         <FeaturedAppShowcase />
@@ -306,7 +349,7 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
   {
     file: "src/pages/home.tsx",
     from: `import { RefreshCw, Zap } from "lucide-react";`,
-    to: `import { RefreshCw, Sparkles, Zap } from "lucide-react";`,
+    to: `import { Sparkles, Zap } from "lucide-react";`,
   },
   {
     file: "src/components/chat/HomeChatInput.tsx",
@@ -418,18 +461,6 @@ import { ImportAppDialog } from "@/components/ImportAppDialog";`,
     </>
   );
 }`,
-  },
-  // The home's featured row holds the 2:1 cover cards (hologram.screens/AppShowcaseCard.tsx): wide enough
-  // for the sentence's two rows, and the "See more" tile the cover's own shape.
-  {
-    file: "src/components/FeaturedAppShowcase.tsx",
-    from: `            <div key={app.id} className="w-56 flex-shrink-0">`,
-    to: `            <div key={app.id} className="w-72 flex-shrink-0">`,
-  },
-  {
-    file: "src/components/FeaturedAppShowcase.tsx",
-    from: `              className="flex flex-col items-center justify-center w-56 aspect-[4/3] flex-shrink-0`,
-    to: `              className="flex flex-col items-center justify-center w-72 aspect-[2/1] flex-shrink-0`,
   },
 ];
 

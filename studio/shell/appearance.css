@@ -139,6 +139,14 @@
   display: inline-flex; align-items: center; justify-content: center; border-radius: calc(var(--radius) + 2px); background: color-mix(in srgb, var(--foreground) 9%, transparent); }
 [data-testid="chat-input-container"] div.flex.items-end > button:last-child:not(:disabled) { color: var(--primary) !important; }
 [data-testid="chat-input-container"] div.flex.items-end > button:has(> svg.absolute) { display: none; }
+/* The composer's row reads left to right as the question is made: attach, the model answering, then how it
+   should answer, then send. The model sits beside attach; the way of asking sits beside send, on the same
+   pill as the model's, so the two read as one pair. */
+:is([data-testid="home-chat-input-container"], [data-testid="chat-input-container"]) [data-testid="model-picker"] { grid-column: 2; justify-self: start; }
+:is([data-testid="home-chat-input-container"], [data-testid="chat-input-container"]) [data-slot="chat-mode"] { grid-row: var(--controls); grid-column: 3; justify-self: end; align-self: center; }
+/* The way of asking is chosen the way the model is: one pill with its name and a chevron, its menu two-line
+   rows, so the two controls in the row read as one pair. */
+[data-slot="chat-mode-toggle"] { max-width: 144px; }
 /* Narrow boxes, measured by the box itself (a phone, or the build screen's chat beside the preview): the
    model drops its Cloud/Local tag and takes at most half the row, so its name and the other controls fit. */
 :is([data-testid="home-chat-input-container"], [data-testid="chat-input-container"]) { container-type: inline-size; }
@@ -276,9 +284,11 @@ dialog:modal { pointer-events: auto; }
    golden section of the screen: the space above it is to the space below as 1 to phi. Surprise me writes an
    idea into the composer in place of the chips, and the featured apps are on the Apps page. The tab bar is
    55 px, its stops 34 by 89, its icons 21, 21 px from the sides and 13 above the edge. */
-[data-slot="home-narrow"], [data-slot="home-surprise"] { display: none !important; }
+[data-slot="home-narrow"] { display: none !important; }
 @media (max-width: 767px) {
-  [data-slot="home-wide"], [data-slot="home-suggestions"], [data-slot="home-featured"] { display: none !important; }
+  /* On a phone the ideas give way to the one chip that offers another. */
+  [data-slot="home-wide"] { display: none !important; }
+  [data-slot="home-suggestions"] > *:not([data-slot="home-surprise"]) { display: none !important; }
   [data-slot="home-narrow"] { display: inline !important; }
   [data-slot="home-page"] { min-height: 100%; padding-bottom: 0 !important; }
   [data-slot="home-stage"] { flex: 1 1 auto; margin: 0 !important; padding: 0 16px !important; justify-content: flex-start !important; }
@@ -287,7 +297,7 @@ dialog:modal { pointer-events: auto; }
   [data-slot="home-stage"] h1 { font-size: 26px !important; line-height: 34px !important; letter-spacing: -0.02em; }
   [data-slot="home-stage"] h1 + p { margin-top: 8px !important; font-size: 16px !important; line-height: 26px !important; }
   [data-slot="home-stage"] > div > div:first-child { margin-bottom: 21px !important; }
-  [data-slot="home-surprise"] { display: inline-flex !important; height: 34px; margin-top: 21px; padding: 0 13px 0 11px !important; gap: 8px; font-size: 14px !important; }
+  [data-slot="home-surprise"] { height: 34px; padding: 0 13px 0 11px !important; gap: 8px; font-size: 14px !important; }
   [data-slot="home-surprise"] > svg { width: 16px; height: 16px; }
   /* Room for the tab bar under every page but the build screen's. */
   :root:not([data-holo-pane]) #layout-main-content-container { padding-bottom: calc(55px + 21px + env(safe-area-inset-bottom)); }
@@ -432,3 +442,154 @@ select[data-testid="chat-mode-selector"] { position: absolute !important; left: 
 div:has(> select[data-testid="chat-mode-selector"]) { position: relative; }
 /* Home asks its question and nothing more: the line under it is not shown, on any screen. */
 p:has(> [data-slot="home-wide"]) { display: none !important; }
+
+
+/* Home: one screen, two parts. The hero holds the middle of whatever space there is; the apps you have made
+   rest on the floor, one row on a panel that rises from the bottom edge, in reach at every size. The page
+   itself never scrolls: the row scrolls sideways instead, and the cards that follow peek over the edge so it
+   is plain there are more.
+
+   The measures are the golden ratio's, as the phone's home already is: the headline grows with the window
+   from 34 to 55 px; the spaces are the series 8, 13, 21, 34; a card is 233 wide, which is 144 x phi, over a
+   13 px corner; the panel's own corner is 21. The panel is the popover glass under a hairline, so it reads
+   over any photo in any look and the hero above it stays the brightest thing on the screen. */
+[data-slot="home-page"] { height: 100% !important; min-height: 100% !important; padding-bottom: 0 !important; }
+[data-slot="home-stage"] {
+  flex: 0 0 auto; min-height: calc(100% - 89px); display: flex; flex-direction: column; justify-content: center;
+  margin-block: 0 !important; padding: 34px 16px !important;
+}
+[data-slot="home-stage"] h1 {
+  font-size: clamp(34px, 4.2vw, 55px) !important; line-height: 1.06 !important; letter-spacing: -0.03em;
+}
+/* The product's name is said in a serif italic, so the line reads as a sentence and the name as a signature.
+   No serif is shipped with the page and nothing is fetched for one, so this is the reader's own serif. */
+[data-slot="home-name"] {
+  font-family: Georgia, "Times New Roman", "Liberation Serif", serif;
+  font-style: italic; font-weight: 400; font-size: 1.06em; letter-spacing: 0;
+}
+[data-slot="home-stage"] > div > div:first-child { margin-bottom: 21px !important; }
+/* The ideas are one line that scrolls, never a block that wraps: the hero keeps its height whatever is
+   offered, and the line fades at its end where more ideas follow. */
+[data-slot="home-suggestions"] {
+  margin: 21px auto 0 !important; gap: 8px !important; flex-wrap: nowrap !important;
+  justify-content: safe center !important;
+  overflow-x: auto; scrollbar-width: none; padding-inline: 1px;
+}
+[data-slot="home-suggestions"]::-webkit-scrollbar { display: none; }
+[data-slot="home-suggestions"] > button { flex: none; }
+/* The floor: a panel that rises from the bottom edge, inset from the sides, holding one row of apps. */
+[data-slot="home-featured"] { padding-inline: 34px; }
+[data-slot="home-featured"] > section {
+  max-width: none !important; margin: 0 !important; padding: 21px 21px 0 !important;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent); border-bottom: 0;
+  border-radius: 21px 21px 0 0;
+  background: color-mix(in srgb, var(--popover) 58%, transparent);
+  -webkit-backdrop-filter: blur(21px) saturate(1.4); backdrop-filter: blur(21px) saturate(1.4);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+[data-slot="home-featured"] > section > div:first-child { margin-bottom: 13px !important; align-items: baseline; }
+[data-slot="home-featured"] h2 {
+  font: 500 15px/1.3 var(--font-sans) !important; letter-spacing: -0.01em; color: var(--foreground) !important;
+}
+[data-slot="home-featured"] h2 + button {
+  font: 500 13px/1 var(--font-sans) !important; color: color-mix(in srgb, var(--foreground) 62%, transparent) !important;
+  text-decoration: none !important;
+}
+[data-slot="home-featured"] h2 + button:hover { color: var(--foreground) !important; }
+/* The row fills the floor whatever the screen: four even columns on a wide one, two on a narrow one, and
+   the cards share the width rather than keeping a width of their own. */
+[data-slot="home-featured"] [role="region"] {
+  display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px !important; padding-bottom: 13px !important; overflow: visible !important;
+}
+[data-slot="home-featured"] [role="region"] > * { width: auto !important; min-width: 0; }
+[data-slot="home-featured-empty"] { grid-column: 1 / -1; }
+@media (max-width: 1023px) { [data-slot="home-featured"] [role="region"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* A card is its picture, 233 by 144 (144 x phi), with the app name under it; the blurb stays on the Apps
+   page, so the floor holds one clean row. */
+[data-slot="home-featured"] [role="region"] button > div:first-child, [data-slot="home-featured"] [role="region"] > button {
+  aspect-ratio: 1.618 !important; border-radius: 13px !important;
+  border-color: color-mix(in srgb, var(--foreground) 12%, transparent) !important;
+}
+[data-slot="home-featured"] [role="region"] > * { transition: transform 160ms ease; }
+[data-slot="home-featured"] [role="region"] > *:hover { transform: translateY(-2px); }
+[data-slot="home-featured"] [role="region"] button > div:first-child { transition: border-color 160ms ease; }
+[data-slot="home-featured"] [role="region"] > *:hover button > div:first-child { border-color: color-mix(in srgb, var(--foreground) 26%, transparent) !important; }
+[data-slot="home-featured"] [role="region"] button > div + div { gap: 0 !important; }
+@media (prefers-reduced-motion: reduce) { [data-slot="home-featured"] [role="region"] > * > *, [data-slot="home-featured"] [role="region"] > button { transition: none; } }
+/* On a phone the panel keeps the page's 16 px gutter, the cards are 144 wide, and it clears the tab bar. */
+@media (max-width: 767px) {
+  /* On a phone the tab bar floats over the last 76 pixels of the scroller, and a flex child that overflows
+     does not carry the scroller's own padding into the scrollable area: the floor carries it instead, so the
+     last card clears the bar. */
+  [data-slot="home-featured"] { display: block !important; padding-inline: 16px; padding-bottom: 76px; }
+  [data-slot="home-featured"] > section { padding: 13px 13px 0 !important; border-radius: 16px 16px 0 0; }
+  [data-slot="home-featured"] > section > div:first-child { margin-bottom: 8px !important; }
+  [data-slot="home-featured"] h2 { font-size: 14px !important; }
+  [data-slot="home-featured"] [role="region"] { gap: 8px !important; padding-bottom: 8px !important; }
+  /* The hero holds the middle of the room above the floor; the floor is the panel just over the tab bar. */
+  [data-slot="home-stage"] { min-height: calc(100% - 55px); padding: 21px 16px !important; justify-content: flex-start !important; }
+  [data-slot="home-stage"]::before { content: "" !important; flex: 1 1 0; }
+  [data-slot="home-stage"]::after { content: "" !important; flex: 1.618 1 0; max-height: 144px; }
+}
+/* A workspace, not a page: the hero sits at the golden section of the room above the floor (the space over
+   it is to the space under it as 1 to phi), on a phone as on a desktop. The room is 987 px wide at most (a
+   Fibonacci number, 610 x phi) and the composer is its golden section, 610, centred, with the ideas under
+   it on the same measure. */
+@media (min-width: 768px) {
+  [data-slot="home-stage"] { max-width: min(92vw, 987px) !important; justify-content: flex-start !important; }
+  [data-slot="home-stage"]::before { content: ""; flex: 1 1 0; }
+  /* On a tall window the room under the hero is capped at 233 px, so the hero settles toward the middle
+     instead of leaving a void: short windows keep the golden section, tall ones stay composed. */
+  [data-slot="home-stage"]::after { content: ""; flex: 1.618 1 0; max-height: 233px; }
+  /* The work surface is 987 wide; the input is its golden section, 610, centred, with the ideas under it on
+     the same measure. */
+  [data-testid="home-chat-input-container"] { max-width: 610px !important; margin-inline: auto !important; border-radius: 21px !important; }
+  [data-testid="home-chat-input-container"] textarea { min-height: 89px !important; }
+}
+/* The floor's four ways to look at it, in one track like the ways of asking in the box: Search, Featured,
+   My apps, Bookmarked, the chosen one lit. The star on a card is quiet until the card is under the pointer,
+   and stays lit once it is set. */
+[data-slot="home-featured-views"] {
+  gap: 2px; padding: 3px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+[data-slot="home-featured-views"] > button {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 13px; border: 0;
+  border-radius: 999px; background: transparent; cursor: pointer;
+  font: 500 13px/1 var(--font-sans); color: var(--muted-foreground);
+  transition: color 160ms ease, background-color 160ms ease;
+}
+[data-slot="home-featured-views"] > button:hover { color: var(--foreground); }
+[data-slot="home-featured-views"] > button[data-chosen] {
+  color: var(--foreground); background: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 13%, transparent);
+}
+[data-slot="home-featured-query"] {
+  width: 144px; height: 28px; margin-right: 5px; padding: 0 11px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
+  background: var(--background); color: var(--foreground); font: 400 13px/1 var(--font-sans);
+}
+[data-slot="home-featured-query"]::placeholder { color: var(--muted-foreground); }
+[data-slot="home-featured-query"]:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+[data-slot="home-featured-keep"] {
+  position: absolute; right: 8px; top: 8px; display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border: 0; border-radius: 999px; cursor: pointer;
+  background: color-mix(in srgb, var(--background) 80%, transparent); color: var(--muted-foreground);
+  opacity: 0; transition: opacity 160ms ease, color 160ms ease;
+}
+[data-slot="home-featured-keep"]:hover { color: var(--foreground); }
+[data-slot="home-featured-keep"][data-chosen] { opacity: 1; color: var(--foreground); }
+[role="button"]:hover > div > [data-slot="home-featured-keep"], [data-slot="home-featured-keep"]:focus-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="home-featured-views"] > button, [data-slot="home-featured-keep"] { transition: none; }
+}
+@media (max-width: 767px) {
+  [data-slot="home-featured-views"] > button { height: 26px; padding: 0 10px; font-size: 12px; }
+  [data-slot="home-featured-query"] { width: 89px; }
+}
+
+/* The card's cover is drawn in the card itself, so it needs no rule here; its name and who made it sit
+   under it, the name as the page's own size and the maker quieter. */
+[data-slot="home-featured"] [role="region"] button img { object-fit: cover !important; object-position: top center !important; }

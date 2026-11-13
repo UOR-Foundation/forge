@@ -39,7 +39,7 @@ try {
   const get=(tab,store,key)=>tab.evaluate(({store,key})=>window.__host.get(store,key),{store,key});
   const mode=page.getByRole('combobox',{name:'Chat mode',exact:true});assert.equal(await mode.count(),1,'the browser must expose its canonical mode control');
   await page.waitForFunction(()=>!document.querySelector('[data-testid="chat-mode-selector"]')?.disabled);
-  assert.deepEqual(await mode.locator('option').allTextContents(),['Build','Ask','Plan']);
+  assert.deepEqual(await mode.locator('option').allTextContents(),['Build','Chat','Plan']);
   const waitValue=async value=>{const deadline=Date.now()+10000;while(await mode.inputValue()!==value||await mode.isDisabled()){assert.ok(Date.now()<deadline,'mode selection did not settle');await new Promise(r=>setTimeout(r,20));}};
   const settings=()=>get(page,'settings','user');
   const waitDefault=async value=>{const deadline=Date.now()+10000;while(true){const s=await settings();if(s.selectedChatMode===value&&s.defaultChatMode===value)return;assert.ok(Date.now()<deadline);await new Promise(r=>setTimeout(r,20));}};
