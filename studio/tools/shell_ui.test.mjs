@@ -101,13 +101,17 @@ test("studio/experience: centred popups, golden measures, tools on Settings, a q
   const preset = read("../shell/featured-apps.mjs");
   assert.equal(preset.split("    id: ").length - 1, 6, "the floor shows other than six apps");
   for (const field of ["name:", "by:", "sentence:", "tag:", "idea:", "hue:", "url:"]) assert.ok(preset.includes(field), field);
-  assert.ok(preset.includes("export const featuredOnHome = 3;"), "the floor shows other than three of them");
+  assert.ok(preset.includes("export const featuredOnHome = 4;"), "the floor shows other than four of them");
   assert.ok(floor.includes("slice(0, featuredOnHome)") && floor.includes('{app.url ? "Published" : "Coming soon"}'));
   // Four ways to look at the floor, and a star that keeps a card, in this browser alone.
   for (const label of ["<span>Search</span>", '"featured", "Featured"', '"mine", "My apps"', '"saved", "Bookmarked"']) assert.ok(floor.includes(label), label);
   assert.ok(floor.includes('const BOOKMARKS = "foundry:bookmarks"') && floor.includes("window.localStorage"));
   assert.equal(/fetch\(|https?:\/\//.test(floor), false, "the floor reaches the network");
   assert.match(css, /\[data-slot="home-featured-views"\] \{[^}]*border-radius: 999px;/);
+  // The row fills the floor: even columns, four wide and two narrow, with no card keeping a width of its own.
+  assert.match(css, /\[data-slot="home-featured"\] \[role="region"\] \{\s*display: grid !important; grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
+  assert.ok(css.includes("@media (max-width: 1023px) { [data-slot=\"home-featured\"] [role=\"region\"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }"));
+  assert.equal(/\[role="region"\] > \* \{ width: \d+px/.test(css), false, "a card still keeps a width of its own");
   assert.ok(css.includes('[data-slot="home-featured-keep"][data-chosen] { opacity: 1;'), "a kept card does not stay lit");
   assert.equal(/https?:\/\//.test(floor), false, "the floor fetches something");
   assert.ok(floor.includes("<svg viewBox=\"0 0 288 144\""), "a cover is no longer drawn here");

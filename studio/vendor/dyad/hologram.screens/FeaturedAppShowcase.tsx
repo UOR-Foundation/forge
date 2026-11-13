@@ -1,7 +1,7 @@
 // hologram-forge (ours, replaces src/components/FeaturedAppShowcase.tsx; see VENDORED.md): the floor of the
 // home screen. Four ways to look at it, in one row: Search, Featured, My apps, Bookmarked.
 //
-// Featured is the same three Prism apps for every visitor (shell/featured-apps.mjs), so the screen is whole
+// Featured is the same four Prism apps for every visitor (shell/featured-apps.mjs), so the screen is whole
 // before anything has been made. My apps is what this browser holds. Bookmarked is what the visitor starred;
 // a star is one person's convenience on one device, so it is kept in this browser's own storage, never
 // travels, and is forgotten by a browser that keeps nothing. Nothing here reaches the network.
@@ -109,7 +109,7 @@ function Card({
   onOpen: () => void;
 }) {
   return (
-    <div className="w-72 flex-shrink-0">
+    <div className="min-w-0">
       <div
         role="button"
         tabIndex={0}
@@ -152,7 +152,7 @@ export function FeaturedAppShowcase() {
   const [query, setQuery] = useState("");
 
   const featured = useMemo(() => (featuredApps as Featured[]).slice(0, featuredOnHome), []);
-  const mine = useMemo(() => sortAppsForShowcase(apps).slice(0, 10), [apps]);
+  const mine = useMemo(() => sortAppsForShowcase(apps).slice(0, featuredOnHome), [apps]);
   const thumbnails = useAppThumbnails(useMemo(() => mine.map((app) => app.id), [mine]));
 
   const asked = query.trim().toLowerCase();

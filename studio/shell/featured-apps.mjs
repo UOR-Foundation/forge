@@ -1,9 +1,9 @@
-// The apps Foundry shows every visitor on Home, the same three for everyone: the floor shows the first
-// three of this list, and the others wait their turn. Each is a Prism app: its link is
+// The apps Foundry shows every visitor on Home, the same four for everyone: the floor shows the first
+// four of this list, and the others wait their turn. Each is a Prism app: its link is
 // filled in as it is published, and until then its card opens its idea in the box. The cover is drawn from
 // the card's own hue (shell/appearance.css keeps the page's colours in tokens; a cover's light is its own
 // subject, so it is written here, beside the app it belongs to).
-export const featuredOnHome = 3;
+export const featuredOnHome = 4;
 
 export const featuredApps = [
   {

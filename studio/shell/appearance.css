@@ -496,8 +496,15 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
   text-decoration: none !important;
 }
 [data-slot="home-featured"] h2 + button:hover { color: var(--foreground) !important; }
-[data-slot="home-featured"] [role="region"] { gap: 13px !important; padding-bottom: 13px !important; }
-[data-slot="home-featured"] [role="region"] > * { width: 233px !important; }
+/* The row fills the floor whatever the screen: four even columns on a wide one, two on a narrow one, and
+   the cards share the width rather than keeping a width of their own. */
+[data-slot="home-featured"] [role="region"] {
+  display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px !important; padding-bottom: 13px !important; overflow: visible !important;
+}
+[data-slot="home-featured"] [role="region"] > * { width: auto !important; min-width: 0; }
+[data-slot="home-featured-empty"] { grid-column: 1 / -1; }
+@media (max-width: 1023px) { [data-slot="home-featured"] [role="region"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* A card is its picture, 233 by 144 (144 x phi), with the app name under it; the blurb stays on the Apps
    page, so the floor holds one clean row. */
 [data-slot="home-featured"] [role="region"] button > div:first-child, [data-slot="home-featured"] [role="region"] > button {
@@ -520,7 +527,6 @@ p:has(> [data-slot="home-wide"]) { display: none !important; }
   [data-slot="home-featured"] > section > div:first-child { margin-bottom: 8px !important; }
   [data-slot="home-featured"] h2 { font-size: 14px !important; }
   [data-slot="home-featured"] [role="region"] { gap: 8px !important; padding-bottom: 8px !important; }
-  [data-slot="home-featured"] [role="region"] > * { width: 144px !important; }
   /* The hero holds the middle of the room above the floor; the floor is the panel just over the tab bar. */
   [data-slot="home-stage"] { min-height: calc(100% - 55px); padding: 21px 16px !important; justify-content: flex-start !important; }
   [data-slot="home-stage"]::before { content: "" !important; flex: 1 1 0; }
