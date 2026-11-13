@@ -7,8 +7,8 @@ export async function stageInteraction(guest,derive,document,previous,command){
  const copied=structuredClone(command),graph=structuredClone(document.graph),old=previous===undefined?undefined:structuredClone(previous);
  if(!copied||Object.keys(copied).sort().join()!=='audioGranted,event,reducedMotion,reset'||typeof copied.reset!=='boolean')throw interactionFailure('invalidInteractionApplication');
  const identity=await derive(encodeInteraction({profile:graph,state:graph.initial,event:0,audioGranted:false,reducedMotion:true}));
- if(typeof identity!=='string'||!/^blake3:[a-f0-9]{64}$/.test(identity))throw interactionFailure('invalidInteractionApplication');
- if(old&&(old.profile!=='foundry/interaction-state/1'||!Number.isInteger(old.state)||old.state<0||old.state>=32||!Number.isSafeInteger(old.revision)||old.revision<0||old.revision>=Number.MAX_SAFE_INTEGER||!/^blake3:[a-f0-9]{64}$/.test(old.model)))throw interactionFailure('invalidInteractionApplication');
+ if(typeof identity!=='string'||!/^sha256:[a-f0-9]{64}$/.test(identity))throw interactionFailure('invalidInteractionApplication');
+ if(old&&(old.profile!=='foundry/interaction-state/1'||!Number.isInteger(old.state)||old.state<0||old.state>=32||!Number.isSafeInteger(old.revision)||old.revision<0||old.revision>=Number.MAX_SAFE_INTEGER||!/^sha256:[a-f0-9]{64}$/.test(old.model)))throw interactionFailure('invalidInteractionApplication');
  if(old&&old.model!==identity&&!copied.reset)throw interactionFailure('interactionStateStale');
  if(copied.reset&&copied.event!==0)throw interactionFailure('invalidInteractionApplication');
  const answer=await executeInteraction(guest,{profile:graph,state:!old||copied.reset?graph.initial:old.state,event:copied.event,audioGranted:copied.audioGranted,reducedMotion:copied.reducedMotion});

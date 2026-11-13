@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {test} from 'node:test';
-import {blake3} from '../../try/vendor/prism-code/src/blake3.mjs';
+import { kappa } from '../shell/address.mjs';
 import {readPreviewJournal,operateVersionPreview} from '../shell/version-preview-store.mjs';
 import {encodePreviewRequest,previewAddressIdentity} from '../shell/version-preview-codec.mjs';
 import {createVersionPreviewController} from '../shell/version-preview-controller.mjs';
 const vectors=JSON.parse(fs.readFileSync(new URL('../../verification/version-preview-vectors.json',import.meta.url))).vectors;
-const derive=async bytes=>'blake3:'+Buffer.from(blake3(bytes)).toString('hex'),enc=new TextEncoder(),dec=new TextDecoder();
+const derive=async bytes=>kappa(bytes),enc=new TextEncoder(),dec=new TextDecoder();
 const named=name=>{const v=vectors.find(x=>x.name===name);assert.ok(v,name);return structuredClone(v);};
 function fixture(row=named('acquire')){
  const oid=previewAddressIdentity(row.input.command.target),current={oid,name:'fixture',files:[['a.txt','exact']],objects:[]};let raw=row.input.state.active?{...readPreviewJournal(undefined,1),state:structuredClone(row.input.state)}:undefined,writes=0;

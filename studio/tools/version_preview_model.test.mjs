@@ -7,11 +7,11 @@ const vectors=JSON.parse(fs.readFileSync(new URL('../../verification/version-pre
 test('independent preview corpus preserves exact original current and target identities',()=>{
  assert.equal(vectors.length,30);assert.equal(vectors.filter(x=>x.input).length,24);
  for(const row of vectors){if(row.input)assert.equal(dec.decode(encodePreviewRequest(row.input)),row.request,row.name);assert.deepEqual(decodePreviewResponse(enc.encode(row.response)),typeof row.expected==='string'?{ok:false,code:row.expected}:{ok:true,...row.expected},row.name);}
- const id='blake3:'+Array.from({length:32},(_,i)=>i.toString(16).padStart(2,'0')).join('');assert.equal(previewAddressIdentity(previewAddressWords(id)),id);assert.equal(previewAddressIdentity(Array(8).fill(0xffffffff)),'blake3:'+'ff'.repeat(32));assert.equal(previewAddressIdentity(Array(8).fill(0)),'blake3:'+'00'.repeat(32));
+ const id='sha256:'+Array.from({length:32},(_,i)=>i.toString(16).padStart(2,'0')).join('');assert.equal(previewAddressIdentity(previewAddressWords(id)),id);assert.equal(previewAddressIdentity(Array(8).fill(0xffffffff)),'sha256:'+'ff'.repeat(32));assert.equal(previewAddressIdentity(Array(8).fill(0)),'sha256:'+'00'.repeat(32));
 });
 test('exact shapes address widths and unsigned words refuse before guest dispatch',async()=>{
  for(const patch of [{extra:true},{expectedRevision:-1},{command:{kind:1}},{state:{...vectors[0].input.state,origin:Array(7).fill(0)}},{state:{...vectors[0].input.state,current:[4294967296,...Array(7).fill(0)]}}])assert.deepEqual(await previewWithGuest({dispatch:()=>assert.fail()},{...structuredClone(vectors[0].input),...patch}),{ok:false,code:'malformedPreviewRequest'});
- for(const identity of ['blake3:'+'a'.repeat(63),'sha256:'+'a'.repeat(64),'blake3:'+'A'.repeat(64)])assert.throws(()=>previewAddressWords(identity),{code:'malformedPreviewRequest'});
+ for(const identity of ['sha256:'+'a'.repeat(63),'blake3:'+'a'.repeat(64),'sha256:'+'A'.repeat(64)])assert.throws(()=>previewAddressWords(identity),{code:'malformedPreviewRequest'});
 });
 test('request capture precedes readiness and guest faults cannot invent transitions',async()=>{
  let release;const ready=new Promise(resolve=>release=resolve),input=structuredClone(vectors[0].input),pending=previewWithGuest(ready,input);input.command.target[0]=99;release({dispatch:async bytes=>{assert.equal(dec.decode(bytes),vectors[0].request);return enc.encode(vectors[0].response);}});assert.deepEqual(await pending,{ok:true,...vectors[0].expected});assert.deepEqual(await previewWithGuest(Promise.reject(Error('private')),vectors[0].input),{ok:false,code:'previewRuntimeFailed'});

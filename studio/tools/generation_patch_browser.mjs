@@ -14,7 +14,7 @@ const sources = new Map([
   ["/chat-contracts.mjs", fs.readFileSync(new URL("../shell/chat-contracts.mjs", import.meta.url))],
 
   ["/theme-library.mjs", fs.readFileSync(new URL("../shell/theme-library.mjs", import.meta.url))],
-  ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/host-adapters.mjs", hostModule], ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))]]);
+  ["/version-preview-codec.mjs", fs.readFileSync(new URL("../shell/version-preview-codec.mjs", import.meta.url))],["/host-adapters.mjs", hostModule], ["/address.mjs", fs.readFileSync(new URL("../shell/address.mjs", import.meta.url))], ["/prism-code/src/sha256.mjs", fs.readFileSync(new URL("../shell/prism-code/src/sha256.mjs", import.meta.url))]]);
 for (const name of ["application-shape.mjs", "canonical-generation.mjs", "generation-patch.mjs", "project-edit.mjs", "project-creation.mjs", "storage-request.mjs", "rules-source.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
 for (const name of ["live/lexlean.mjs", "prism/render.mjs", "prism/spec.mjs"]) sources.set("/" + name, fs.readFileSync(new URL("../shell/" + name, import.meta.url)));
 const server = http.createServer((request, response) => { const source = sources.get(request.url); response.setHeader("content-type", source ? "text/javascript" : "text/html"); response.end(source || "<!doctype html><title>Generation patch acceptance</title>"); });
@@ -27,7 +27,7 @@ try {
   const report = await page.evaluate(async () => {
     const { applyStoredProjectPatch, assertGenerationActive } = await import("/generation-patch.mjs");
     const { captureProjectSource } = await import("/project-edit.mjs"); const { prepareNewProject, createStoredProject } = await import("/project-creation.mjs");
-    const { storageRequest } = await import("/storage-request.mjs"); const { kappa } = await import("/blake3.mjs"); const { hostAdapters } = await import("/host-adapters.mjs");
+    const { storageRequest } = await import("/storage-request.mjs"); const { kappa } = await import("/address.mjs"); const { hostAdapters } = await import("/host-adapters.mjs");
     const check = (v, m) => { if (!v) throw Error(m); };
     const stores = ["apps", "chats", "files", "objects", "refs", "versions"];
     const db = await new Promise((resolve, reject) => { const q = indexedDB.open("generation-patch", 1); q.onupgradeneeded = () => stores.forEach(s => q.result.createObjectStore(s)); q.onsuccess = () => resolve(q.result); q.onerror = () => reject(q.error); });

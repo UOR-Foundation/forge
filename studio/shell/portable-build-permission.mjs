@@ -2,7 +2,7 @@
 const messages={portableBuildStyleIncomplete:'The styling output does not cover the rendered classes',invalidPortableBuildPermission:'Invalid portable build permission',portableBuildPermissionDenied:'Portable build declined',portableBuildPermissionExpired:'Portable build permission expired',portableBuildPermissionRevoked:'Portable build stopped or permission revoked',portableBuildPermissionOffline:'Portable build networking is unavailable offline',portableBuildPermissionUnavailable:'Portable build permission is unavailable'};
 export const portablePermissionFailure=code=>Object.assign(new Error(messages[code]||messages.portableBuildPermissionUnavailable),{code:Object.hasOwn(messages,code)?code:'portableBuildPermissionUnavailable'});
 export function describePortableBuild(input){
- if(!input||Object.keys(input).sort().join()!=='id,source'||typeof input.id!=='string'||!/^portable-[a-z0-9-]{1,80}$/.test(input.id)||typeof input.source!=='string'||!/^blake3:[a-f0-9]{64}$/.test(input.source))throw portablePermissionFailure('invalidPortableBuildPermission');
+ if(!input||Object.keys(input).sort().join()!=='id,source'||typeof input.id!=='string'||!/^portable-[a-z0-9-]{1,80}$/.test(input.id)||typeof input.source!=='string'||!/^sha256:[a-f0-9]{64}$/.test(input.source))throw portablePermissionFailure('invalidPortableBuildPermission');
  return Object.freeze({id:input.id,source:input.source,endpoints:Object.freeze(['https://esm.sh','https://cdn.tailwindcss.com'])});
 }
 export function authorizePortableBuild(input,{document=globalThis.document,online=()=>globalThis.navigator.onLine,timeoutMs=120000}={}){

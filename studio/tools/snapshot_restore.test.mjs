@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { test } from "node:test";
-import { blake3 } from "../../try/vendor/prism-code/src/blake3.mjs";
+import { kappa } from "../shell/address.mjs";
 import { prepareSnapshot, restoreSnapshot } from "../shell/snapshot-restore.mjs";
 const enc = new TextEncoder();
-const derive = async bytes => "blake3:" + Buffer.from(blake3(bytes)).toString("hex");
+const derive = async bytes => kappa(bytes);
 async function fixture(entries, bytes = enc.encode("hello")) {
   const key = await derive(bytes), state = { entries: entries ?? [["src/a.txt", key, bytes.length]], name: "app", parent: "" };
   const body = enc.encode(JSON.stringify(state)), oid = await derive(body), objects = new Map([[oid, body], [key, bytes]]);

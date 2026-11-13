@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {test} from 'node:test';
-import {blake3} from '../../try/vendor/prism-code/src/blake3.mjs';
+import { kappa } from '../shell/address.mjs';
 import {versionAddress,versionAlias,versionRows,readVersionHistory,listStoredVersions,resolveStoredVersion,setStoredVersionMetadata,verifiedVersionChanges} from '../shell/version-history.mjs';
-const enc=new TextEncoder(),derive=async bytes=>'blake3:'+Buffer.from(blake3(bytes)).toString('hex'),a='blake3:'+'a'.repeat(64),b='blake3:'+'b'.repeat(64);
+const enc=new TextEncoder(),derive=async bytes=>kappa(bytes),a='sha256:'+'a'.repeat(64),b='sha256:'+'b'.repeat(64);
 const row=oid=>({oid,message:'version',timestamp:1,dbTimestamp:null,isFavorite:false,note:null});
 // Request/commit ordering fixture; actual IndexedDB is exercised by the browser gate.
 function database(initial=[row(a)],{missing=false,late=false}={}){
@@ -20,7 +20,7 @@ function database(initial=[row(a)],{missing=false,late=false}={}){
 async function snapshots(){const objects=new Map();async function make(files,parent=''){const entries=[];for(const [path,text] of files){const bytes=enc.encode(text),key=await derive(bytes);objects.set(key,bytes);entries.push([path,key,bytes.length]);}const bytes=enc.encode(JSON.stringify({name:'app',parent,entries})),oid=await derive(bytes);objects.set(oid,bytes);return oid;}const parent=await make([['change.txt','old'],['delete.txt','gone']]),oid=await make([['change.txt','new'],['add.txt','😀\r\n']],parent);return {oid,parent,objects,boundary:{readObject:async key=>objects.get(key),derive,admit:async()=>true},db:database([row(oid),row(parent)])};}
 test('hexadecimal aliases are reversible exact canonical identities and invalid requests refuse',async()=>{
  assert.equal(versionAlias(a),'a'.repeat(64));assert.equal(versionAddress('A'.repeat(64)),a);assert.equal(versionAddress(a),a);
- for(const value of ['a'.repeat(40),'main','blake3:'+ 'G'.repeat(64),null,1])assert.throws(()=>versionAddress(value),{code:'invalidVersionHistory'});
+ for(const value of ['a'.repeat(40),'main','sha256:'+ 'G'.repeat(64),'blake3:'+'a'.repeat(64),null,1])assert.throws(()=>versionAddress(value),{code:'invalidVersionHistory'});
  const db=database();assert.equal((await listStoredVersions(db,{appId:1}))[0].oid,'a'.repeat(64));assert.equal(await resolveStoredVersion(db,1,'A'.repeat(64)),a);
  await assert.rejects(()=>resolveStoredVersion(db,1,b),{code:'versionHistoryMissing'});await assert.rejects(()=>listStoredVersions(db,{appId:0}),{code:'invalidVersionHistory'});
  assert.equal((await listStoredVersions(db,{appId:1,ref:a})).length,1);

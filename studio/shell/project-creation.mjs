@@ -5,7 +5,7 @@ const MiB = 1024 * 1024;
 const encoder = new TextEncoder(), decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 const failure = code => Object.assign(new Error(code === "projectScaffoldFailed" ? "Project scaffold unavailable" : code === "projectPreparationFailed" ? "Project preparation failed" : "Project storage failed"), { code });
 const portable = path => typeof path === "string" && path.length > 0 && !/[\\\u0000-\u001f:]/.test(path) && path.split("/").every(part => part && part !== "." && part !== "..");
-const address = key => typeof key === "string" && /^blake3:[0-9a-f]{64}$/.test(key);
+const address = key => typeof key === "string" && /^sha256:[0-9a-f]{64}$/.test(key);
 export async function loadProjectScaffold(base, { fetchFn = globalThis.fetch, timeoutMs = 30000 } = {}) {
   const controller = new AbortController(); let timer;
   const deadline = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(failure("projectScaffoldFailed")); }, Math.max(1, Math.min(timeoutMs, 30000))); });

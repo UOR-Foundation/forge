@@ -5,8 +5,8 @@ import vm from "node:vm";
 import { canonicalEditPath } from "../shell/canonical-edits.mjs";
 import { editStoredProject } from "../shell/project-edit.mjs";
 import { prepareExistingProject } from "../shell/project-creation.mjs";
-import { kappa } from "../../try/vendor/prism-code/src/blake3.mjs";
-const parent = "blake3:" + "a".repeat(64);
+import { kappa } from "../shell/address.mjs";
+const parent = "sha256:" + "a".repeat(64);
 test("existing snapshot delegates the exact parent to generated preimage", async () => {
   const calls = [];
   const core = { run: value => { calls.push(value); return { bytes: JSON.stringify(value) }; } };
