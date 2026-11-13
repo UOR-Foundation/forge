@@ -173,6 +173,20 @@ claim("prompt: the model is asked for one JSON spec, never LexLean, and the prom
 // without this line, 55 s with it (42 s of reasoning, 11 s writing the spec). The checker is what makes
 // it safe to ask: a conflict the model does not think through is found here, at once.
 claim("prompt: the model is told to write the spec at once, since Forge checks it", /Write the spec at once. Do not deliberate, and do not draft the spec or try examples in your reasoning/.test(SPEC_RULES));
+// A spec a model writes without a name: the checker names it, the stored spec carries the name, the
+// module is rendered from it, and the address the seal carries is the same with or without the name.
+const { readSpecFile } = await import(new URL("../shell/prism/spec-file.mjs", import.meta.url));
+let namedSpec = false;
+try {
+  const unnamed = JSON.parse(prism.SPEC_EXAMPLE); delete unnamed.name;
+  const checkedName = prism.checkSpec(structuredClone(unnamed)).spec.name, stored = { name: checkedName, ...unnamed };
+  let unnamedRenders = true; try { lex.canonicalSource(unnamed); } catch (e) { unnamedRenders = false; }
+  namedSpec = !unnamedRenders && typeof checkedName === "string" && lex.canonicalSource(stored).source.length > 0
+    && readSpecFile(unnamed).specAddress === readSpecFile(stored).specAddress
+    && prism.checkSpec(structuredClone(stored)).spec.name === checkedName
+    && hostSource.includes("if (named.ok && typeof named.spec?.name === \"string\") tag.spec = { name: named.spec.name, ...tag.spec };");
+} catch (e) {}
+claim("name: a spec written without a name is stored with the checker's name, renders its module, and keeps its address", namedSpec);
 claim("boundary: LexLean a model writes is dropped before the turn is applied, closed or open, and no model is told a second notation", prism.wroteLexLean("a <prism-lexlean>x") && !prism.wroteLexLean("<dyad-spec>{}</dyad-spec>") && prism.withoutLexLean("a<prism-lexlean>m</prism-lexlean>b<prism-lexlean>open") === "ab" && !SPEC_RULES.includes("app notation") && !SPEC_RULES.includes("<prism-lexlean>") && hostSource.includes("const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);") && hostSource.includes("appAfterTurn(appId, turn,") && !hostSource.includes("lexlean.partialFromTurn(full)"));
 const bare = source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
 let bareSpec = null;
