@@ -7,6 +7,15 @@
 // vector before it is written. What Lean proves is the rules; the module is tested against them.
 import { SpecError, validateSpec, unreachableRules, counterexample, describeConditions, requestLimits, decodeRequest, respond } from "./prism/spec.mjs";
 import { names, renderModel, renderProofs, acceptanceVectors, renderSpecDocument } from "./prism/render.mjs";
+import { readSpecFile } from "./prism/spec-file.mjs";
+
+/**
+ * The seal of a spec: the UOR content address of its canonical bytes, which the app's model
+ * carries, so a built app can be held to the JSON it was built from. Taken from the spec itself,
+ * never from how prism/spec.json happens to be written, because the address is of the canonical
+ * form either way.
+ */
+const sealOf = (spec) => readSpecFile(spec).specAddress;
 import { TEMPLATE_EXAMPLE, appJson, conformanceText, featureText, idsToml, lexleanLockText, rustTestText, suiteOf } from "./prism/template.mjs";
 import { toLexLean, draftOf } from "./live/lexlean.mjs";
 import { PROMPT as APP_SHAPE } from "./live/app.mjs";
@@ -410,7 +419,7 @@ export async function projectFiles(spec, axioms = {}) {
   const files = [
     { path: "src/Foundation/Bytes.lex.tex", content: await shellText("./prism/lex/Foundation/Bytes.lex.tex") },
     { path: "src/Foundation/View/Text/V1/Model.lex.tex", content: await shellText("./prism/lex/Foundation/View/Text/V1/Model.lex.tex") },
-    { path: `src/${n.module}.lex.tex`, content: renderModel(spec, { axioms }) },
+    { path: `src/${n.module}.lex.tex`, content: renderModel(spec, { axioms, specAddress: sealOf(spec) }) },
   ];
   const proofs = renderProofs(spec, { axioms });
   if (proofs) files.push({ path: `src/${n.proofs}.lex.tex`, content: proofs });
@@ -609,7 +618,7 @@ export async function templateCommit({ spec, axioms = {}, attestation = null, re
     if (file === "prismpm.toml") text = text.replace('project = "TextRequest"', `project = "${n.module}"`);
     project[file] = text;
   }
-  const model = renderModel(spec, { axioms });
+  const model = renderModel(spec, { axioms, specAddress: sealOf(spec) });
   const proofs = renderProofs(spec, { axioms });
   const sources = [`src/${n.module}.lex.tex`, ...(proofs ? [`src/${n.proofs}.lex.tex`] : [])];
   // writeTemplateApp: the app under app/, and every file the gate and the page read.
