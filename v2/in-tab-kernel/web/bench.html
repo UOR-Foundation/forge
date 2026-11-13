@@ -67,7 +67,11 @@ async function bench() {
   const w3 = new Worker("./worker.mjs", { type: "module" });
   const alteredKernel = await ask(w3, { op: "open", manifest, glue: glue.bytes.slice(0), wasm: badWasm.buffer, library: library.bytes.slice(0) });
   w3.terminate();
+  const w4 = new Worker("./worker.mjs", { type: "module" });
+  const unbound = await ask(w4, { op: "open", manifest: { ...manifest, binding: { ...manifest.binding, kernel: "0".repeat(64) } }, glue: glue.bytes.slice(0), wasm: wasm.bytes.slice(0), library: library.bytes.slice(0) });
+  w4.terminate();
   result.faults = {
+    unboundLibrary: { refused: unbound.ok === false, says: unbound.refusal },
     alteredBundle: { refused: altered.accepted !== true && !!altered.refusal, says: altered.refusal ?? altered.output },
     alteredLibrary: { refused: alteredLibrary.ok === false, says: alteredLibrary.refusal },
     alteredKernel: { refused: alteredKernel.ok === false, says: alteredKernel.refusal },
@@ -83,10 +87,10 @@ async function bench() {
   }
   worker.terminate();
   const rows = Object.values(result.inputs);
-  result.summary = { inputs: rows.length, agree: rows.filter((r) => r.agree).length, faultsRefused: Object.values(result.faults).filter((f) => f.refused).length, faults: 3 };
+  result.summary = { inputs: rows.length, agree: rows.filter((r) => r.agree).length, faultsRefused: Object.values(result.faults).filter((f) => f.refused).length, faults: 4 };
   return result;
 }
 
-bench().then((r) => { window.__bench = r; status(r.summary ? `Done: ${r.summary.agree} of ${r.summary.inputs} verdicts agree; ${r.summary.faultsRefused} of 3 address faults refused.` : "Stopped: " + (r.open?.refusal ?? "unknown")); document.getElementById("out").textContent = JSON.stringify(r, null, 1); })
+bench().then((r) => { window.__bench = r; status(r.summary ? `Done: ${r.summary.agree} of ${r.summary.inputs} verdicts agree; ${r.summary.faultsRefused} of 4 address faults refused.` : "Stopped: " + (r.open?.refusal ?? "unknown")); document.getElementById("out").textContent = JSON.stringify(r, null, 1); })
   .catch((e) => { window.__bench = { error: String(e && e.stack || e) }; status("Failed: " + e); });
 </script>

@@ -170,6 +170,9 @@ structure Resident where
 
 initialize resident : IO.Ref (Option Resident) ← IO.mkRef none
 
+/-- What each library constant met so far rests on. Emptied when a library is made resident. -/
+initialize axiomCache : IO.Ref (Std.HashMap Name NameSet) ← IO.mkRef {}
+
 /--
 Reads the library and enters its declarations without type checking them (`addDeclWithoutChecking`, the kernel's own
 entry; inductive types are still checked, the kernel has no other way to add them). This is sound only for bytes this
@@ -182,7 +185,26 @@ def loadLibrary (path : String) : IO String := do
   let env := (← Lean.mkEmptyEnvironment).toKernelEnv
   let (env, _) ← replay (withoutQuotParts reader.constMap) env (check := false)
   resident.set (some { reader, env })
+  axiomCache.set {}
   return s!"Library resident: {reader.constMap.size} declarations."
+
+/--
+Every axiom a constant rests on, through everything it refers to, read from the kernel's environment after the
+kernel accepted it. The kernel itself admits any declared axiom, so this is what an audit compares with the axioms a
+theorem declares. Answers are kept by constant, so what the library's constants rest on is worked out once.
+-/
+partial def axiomsOf (env : Kernel.Environment) (n : Name) : StateM (Std.HashMap Name NameSet) NameSet := do
+  if let some known := (← get)[n]? then return known
+  -- The environment has no cycles; the entry made first only keeps a malformed one from looping.
+  modify (·.insert n {})
+  let mut found : NameSet := {}
+  if let some ci := env.find? n then
+    if ci matches .axiomInfo _ then found := found.insert n
+    for c in ci.getUsedConstantsAsSet do
+      for a in (← axiomsOf env c) do
+        found := found.insert a
+  modify (·.insert n found)
+  return found
 
 /-- Judges a suffix that continues the resident library's file: every declaration it adds goes to the kernel. -/
 def checkSuffix (path : String) : IO String := do
@@ -192,7 +214,17 @@ def checkSuffix (path : String) : IO String := do
   let mut added : Std.HashMap Name ConstantInfo := {}
   for n in reader.constOrder.extract r.reader.constOrder.size reader.constOrder.size do
     added := added.insert n reader.constMap[n]!
-  let (_, judged) ← replay (withoutQuotParts added) r.env
+  let (env, judged) ← replay (withoutQuotParts added) r.env
+  -- One line per theorem the suffix adds, in the suffix's order, before the verdict line.
+  let mut cache ← axiomCache.get
+  for n in reader.constOrder.extract r.reader.constOrder.size reader.constOrder.size do
+    if let some (.thmInfo _) := added[n]? then
+      let (found, next) := (axiomsOf env n).run cache
+      cache := next
+      let names := (found.toList.map toString).toArray.qsort (· < ·)
+      IO.println s!"axioms {n}: {", ".intercalate names.toList}"
+  -- Only the library's constants are the same at the next check.
+  axiomCache.set (cache.filter fun n _ => r.reader.constMap.contains n)
   return s!"Accepted {added.size} declarations over the resident library ({judged} sent to the kernel)."
 
 def report (act : IO String) : IO UInt32 := do

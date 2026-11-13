@@ -23,6 +23,10 @@ const manifest = {
   library: entry("library.ndjson", library),
   inputs: [],
 };
+// The record that this kernel judged this library whole (bind-library.mjs). A dist is not made without it.
+const binding = JSON.parse(fs.readFileSync(path.join(here, "evidence", "library-binding.json"), "utf8"));
+if (binding.kernel !== manifest.wasm.sha256 || binding.loader !== manifest.glue.sha256 || binding.library !== manifest.library.sha256) throw new Error("evidence/library-binding.json is for another kernel or library: run bind-library.mjs");
+manifest.binding = binding;
 for (const f of fs.readdirSync(inputs).filter((f) => f.endsWith(".ndjson")).sort()) {
   const bytes = fs.readFileSync(path.join(inputs, f));
   const name = f.replace(/\.ndjson$/, "");

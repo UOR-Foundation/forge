@@ -3,7 +3,7 @@
 // re-derives every address itself before the kernel sees a byte (InTabKernel.kernelRunsOnlyOnAddressedBytes).
 //
 //   { op: "open", manifest, glue, wasm, library }   -> { ok, timings, heapMB } | { ok: false, refusal }
-//   { op: "check", id, suffix, sha256 }             -> { id, accepted, exit, ms, output } | { id, refusal }
+//   { op: "check", id, suffix, sha256 }             -> { id, accepted, exit, ms, axioms, output } | { id, refusal }
 //   { op: "whole", id, bytes }                      -> the same, every declaration judged, in a fresh instance
 const now = () => performance.now();
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -27,7 +27,13 @@ function run(m, entry, bytes) {
   catch (e) { exit = 3; lines.push("trap: " + (e && e.message ? e.message : String(e))); }
   const ms = now() - t0;
   m.FS.unlink("/in.ndjson");
-  return { accepted: exit === 0, exit, ms, output: lines.join("\n").slice(-400) };
+  // The kernel's own report of what each accepted theorem rests on; the verdict's axiom audit reads it.
+  const axioms = {}, rest = [];
+  for (const line of lines) {
+    const m = /^axioms ([^:]+): ?(.*)$/.exec(line);
+    if (m) axioms[m[1]] = m[2] ? m[2].split(", ") : []; else rest.push(line);
+  }
+  return { accepted: exit === 0, exit, ms, axioms: exit === 0 ? axioms : {}, output: rest.join("\n").slice(-400) };
 }
 
 async function open({ manifest, glue, wasm, library }) {
@@ -39,6 +45,9 @@ async function open({ manifest, glue, wasm, library }) {
   if (glueSha !== manifest.glue.sha256) return { ok: false, refusal: "the kernel's loader is not the pinned one" };
   if (wasmSha !== manifest.wasm.sha256) return { ok: false, refusal: "the kernel is not the pinned one" };
   if (librarySha !== manifest.library.sha256) return { ok: false, refusal: "the library is not the pinned one" };
+  // The library is entered without checking, which is sound only if this kernel has judged it whole before.
+  const b = manifest.binding;
+  if (!b || b.kernel !== wasmSha || b.loader !== glueSha || b.library !== librarySha) return { ok: false, refusal: "no record that this kernel has checked this library" };
   t = now();
   const url = URL.createObjectURL(new Blob([glue], { type: "text/javascript" }));
   try { factory = (await import(url)).default; } finally { URL.revokeObjectURL(url); }

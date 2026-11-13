@@ -41,8 +41,8 @@ The refused inputs are the earlier experiments' planted faults: a proof by `sorr
 altered definitions and a missing type. nanoda was not re-run here; the earlier report records that it matched the
 official checker on the same 14.
 
-Not covered by this gate: an axiom outside the allowed list. The kernel accepts any declared axiom; the audit that
-refuses it is the tab's (`../serverless-prove/export.mjs`), and is Phase 2.
+An axiom outside the allowed list is not among these inputs. The kernel accepts any declared axiom; refusing one is
+the verdict's job, from the axiom report below.
 
 ## Measurements (Node, desktop)
 
@@ -77,6 +77,26 @@ about a phone's speed or memory.
 **Resident library.** The library is entered with the kernel's own `addDeclWithoutChecking`; inductive types are
 still checked. That is sound only for bytes this same kernel has judged whole, so the library's address must be
 recorded together with the kernel's when the library is checked at build time. The spec's reuse rule states this.
+
+## Axioms and the library binding
+
+Both were open after Phase 1 and are now built into the prototype.
+
+- **Axioms.** The kernel admits any declared axiom, so after it accepts a suffix the driver reports, for each theorem
+  the suffix adds, every axiom it rests on, read from the kernel's own environment (`axiomsOf`). On the two test
+  projects the report equals what LexLean's attestation observed, for all 7 theorems the attestation lists
+  (`evidence/axioms.json`, `axioms-agree.py`). The worker returns the report; FA-86's verdict takes it as the observed
+  axiom set. What each library constant rests on is kept between checks, so the report does not walk the library
+  again.
+- **Binding.** `bind-library.mjs` has the WebAssembly kernel judge the whole library, 5,038 declarations, and records
+  the kernel's, the loader's and the library's address together (`evidence/library-binding.json`). `make-dist.mjs`
+  refuses to make a dist without a binding for exactly those three, and the worker refuses to open without one. When
+  the kernel was rebuilt, the stale binding was refused until the library was judged again.
+
+With both in place, one Chromium 156 tab on the same desktop: open 1.33 s (library 1.21 s), 77 MB; a project over
+the resident library, axioms included, median 35 to 89 ms, worst single run 125 ms; 14 of 14 verdicts agree; the
+four address faults, an unbound library among them, are refused. The module is now 2.23 MB, 419 KB gzip
+(`sha256:c1300379…`); the sizes and hash earlier in this report are of the build before these two changes.
 
 ## The prover (GitHub Actions)
 
