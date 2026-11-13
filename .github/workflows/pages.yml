@@ -279,7 +279,6 @@ jobs:
           name: kernel-holo
           path: kernel-proof
           if-no-files-found: error
-          if-no-files-found: error
 
   forge:
     name: build Forge (studio/), the app builder at the site's root
