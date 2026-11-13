@@ -256,6 +256,27 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     from: `    return shuffled.slice(0, 3);`,
     to: `    return shuffled.slice(0, 2);`,
   },
+  // A featured app with no link yet puts its idea in the box, where the visitor can send it as their own.
+  {
+    file: "src/pages/home.tsx",
+    from: `  // Initialize random prompts
+  useEffect(() => {
+    setRandomPrompts(getRandomPrompts());
+  }, [getRandomPrompts]);`,
+    to: `  // Initialize random prompts
+  useEffect(() => {
+    setRandomPrompts(getRandomPrompts());
+  }, [getRandomPrompts]);
+
+  useEffect(() => {
+    const take = (event: Event) => {
+      const idea = (event as CustomEvent<string>).detail;
+      if (typeof idea === "string" && idea) setInputValue(idea);
+    };
+    window.addEventListener("foundry:idea", take);
+    return () => window.removeEventListener("foundry:idea", take);
+  }, [setInputValue]);`,
+  },
   // Three chips, always: two ideas and "Surprise me", which writes one more into the box. The chip that
   // asked for another three ideas is gone; a fresh two are offered on every visit.
   {
