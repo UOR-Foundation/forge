@@ -1505,7 +1505,7 @@ definition{
 }
 
 inductive{
-  name: CanonicalGenerationError,
+  name: HostedCanonicalGenerationError,
   type_parameters: [],
   parameters: [],
   constructors: [
@@ -1516,7 +1516,7 @@ inductive{
 }
 
 definition{
-  name: canonicalGenerationBoundary,
+  name: hostedCanonicalGenerationBoundary,
   parameters: [],
   result: String,
   body: "Hosted canonical generation is acceptance preparation only. A read-only pull-request job checks out the exact head revision, or the exact dispatch revision, and uses only the immutable prismpm.lock SDK to run Rust formatting, model-write, and the app lock-format-lock writers. No credential, Docker socket or write token enters the container. A receipt names the unchanged source commit, exact SDK image and patch SHA256. Only modifications to existing CONFORMANCE.md, app/lexlean.lock, app/src LexLean modules and project Rust source under crates or xtask can appear in its patch; universal policy files, deletions, mode changes, other writes and untracked nonignored files refuse collection. Only the patch and receipt are uploaded for review. There is no automatic commit, push or application. Generated working-tree bytes never qualify the original commit; after reviewed changes are committed, every existing full exact-head acceptance gate must run normally."

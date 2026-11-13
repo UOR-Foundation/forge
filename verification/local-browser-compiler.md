@@ -47,3 +47,54 @@ This establishes compiler availability and finite runtime examples, not general
 compiler preservation, offline dependency resolution or complete app closure.
 
 Supplementary host diagnostic: verified 12 modules; attestation c80c5cbb957e41779b4e8cede743ca8585cf22cd244b966933853279bfdbc9de. This is not the locked SDK acceptance gate.
+
+## Pages archive-cache prerequisite repair
+
+The Pages optimization could restore `runtime/node_modules` and the renderer
+bundle while npm's archive cache lacked esbuild-wasm. A real npm reproduction
+with an isolated empty cache and an unpacked esbuild-wasm package fixture failed
+with `compilerPackageUnavailable`. Unpacked dependencies are not archive authority.
+
+Dependency preparation now independently verifies both locked asset archives
+before shell stamping, even on modules/bundle cache hits. Only an unavailable
+archive triggers `npm cache add` of the existing policy's exact, lock-validated
+registry URL, with scripts disabled and a 60-second deadline. The result is
+reacquired through the unchanged offline loader and checked for SHA512, package
+identity, bounded archive structure and required members. Invalid locks or
+successfully acquired but corrupt archives refuse without a hydration retry.
+Staging, independent verification and shell closure are unchanged. The setup-node
+npm cache identity now includes both runtime and renderer lockfiles.
+
+Seven preparation controls cover a real isolated empty-cache reproduction,
+missing archive hydration/reacquisition, verified reuse without hydration,
+corrupt cached and downloaded archives, invalid lock authority, and failed
+hydration. These execute from the FA-32 Node test and its seven-test Rust wrapper.
+The workflow control requires both lock inputs and an unconditional preflight
+within the non-reused Forge build before stamping. Existing FA-31/FA-32 archive
+adversarial controls remain in force.
+
+Five representative planted defects were rejected by
+`node --test studio/tools/local_browser_compiler.test.mjs`: removing the runtime
+lock from the npm cache key, skipping preparation on a modules hit, accepting an
+unavailable archive, omitting post-download verification, and retrying an
+integrity failure as a cache miss. Each mutation was restored before retesting.
+This repairs prerequisites for the existing compiler/editor boundaries; it adds
+no compiler semantics or alternative archive authority.
+
+Local qualification also started with a fresh real npm cache, fetched both exact
+production archives through this preflight, and successfully verified them again
+with `npm_config_offline=true`. The combined compiler/editor, Pages source/live
+identity, canonical-generation and backlog suites passed 36 tests with no skips.
+The FA-32 Rust wrapper compiled directly with Rust 1.97.1 and passed. This is
+focused diagnostic evidence, not full SDK acceptance: the offline Cargo run
+lacked `toml_parser`, and this environment has no Docker for the immutable SDK's
+`just vv` boundary. Full acceptance must run on the final integrated revision.
+
+Independent review caught a vacuity gap in the preparation subprocess gate:
+Python's unittest exit status alone accepts empty and entirely skipped suites.
+The preparation runner now reports actual tests, skips, errors, failures,
+expected failures and unexpected successes. Its Node caller requires exactly
+seven tests and zero for every other count. Two negative controls execute the
+real runner with an empty suite and with all seven cases skipped; both Python
+processes exit successfully, and the Node caller rejects both receipts. The
+outer seven-test FA-32 wrapper cannot count either case as preparation success.

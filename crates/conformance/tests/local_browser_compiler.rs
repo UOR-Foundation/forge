@@ -21,8 +21,8 @@ fn local_browser_compiler_fa_32() {
         String::from_utf8_lossy(&output.stderr)
     );
     for required in [
-        "# tests 6",
-        "# pass 6",
+        "# tests 7",
+        "# pass 7",
         "# fail 0",
         "# cancelled 0",
         "# skipped 0",

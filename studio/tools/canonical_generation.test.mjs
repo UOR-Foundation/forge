@@ -57,6 +57,22 @@ test('all allowed existing writer categories produce reviewable patches and no-o
  }finally{fs.rmSync(r.dir,{recursive:true,force:true});}
 });
 test('generation workflow never writes remotely or substitutes generated-tree acceptance',()=>{
+ // This project-shape regression catches the observed LLT4001 collision early; the
+ // locked LexLean compiler remains the authority for generated names and canonicality.
+ const model=fs.readFileSync(new URL('../../app/src/FoundrySpecification.lex.tex',import.meta.url),'utf8');
+ const uniqueDeclarations=source=>{
+  const names=[...source.matchAll(/^(?:inductive|definition|structure|theorem)\{\s*name:\s*([A-Za-z][A-Za-z0-9_]*),/gm)].map(match=>match[1]);
+  assert.ok(names.length>0,'model declarations must be inspected');
+  assert.equal(names.length,new Set(names).size,'duplicate model declaration name');
+  for(const name of ['CanonicalGenerationError','canonicalGenerationBoundary','HostedCanonicalGenerationError','hostedCanonicalGenerationBoundary'])
+   assert.equal(names.filter(found=>found===name).length,1,`missing or duplicated ${name}`);
+ };
+ uniqueDeclarations(model);
+ for(const [fresh,existing] of [['HostedCanonicalGenerationError','CanonicalGenerationError'],['hostedCanonicalGenerationBoundary','canonicalGenerationBoundary']]){
+  const collision=model.replace(`name: ${fresh},`,`name: ${existing},`);
+  assert.notEqual(collision,model,'collision mutation must change the model');
+  assert.throws(()=>uniqueDeclarations(collision),/duplicate model declaration name/);
+ }
  const text=fs.readFileSync(new URL('../../.github/workflows/canonical-generation.yml',import.meta.url),'utf8');
  assert.match(text,/pull_request:/);assert.match(text,/workflow_dispatch:/);
  assert.match(text,/contents: read/);assert.ok(!/contents: write|id-token:|secrets\.|pull_request_target|git push|workflow run|just vv|prismpm verify/.test(text));

@@ -22,9 +22,9 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${server.address().port}/foundry/`, origin = new URL(base).origin;
 const executablePath = process.env.CHROME_BIN || ["/usr/bin/chromium", "/usr/bin/google-chrome"].find(p => fs.existsSync(p));
 const fixture=JSON.parse(fs.readFileSync(new URL('./fixtures/specs/parking-fee.json',import.meta.url),'utf8')).spec;
-const {SPEC_RULES,moduleContext}=await import('../shell/prism.js');
-const draft=SPEC_RULES.match(/Example: <prism-lexlean>([\s\S]*?)<\/prism-lexlean>/)[1];
-const answer='Here is the updated application.\n<prism-lexlean>'+draft+'</prism-lexlean>\n<dyad-write path="intruder.txt" description="ignored">UNTRUSTED_GENERATED_CODE</dyad-write>\n<dyad-spec-patch>[null,{"op":"set","path":["purpose"],"value":"A checked purpose from the accepted operation"}]</dyad-spec-patch>\nThe update is ready.';
+const {SPEC_RULES,SPEC_EXAMPLE,MODULE_EXAMPLE,specContext}=await import('../shell/prism.js');
+const draft=MODULE_EXAMPLE;
+const answer='Here is the updated application.\n<dyad-spec>'+SPEC_EXAMPLE+'</dyad-spec>\n<prism-lexlean>'+draft.replace('ParkingFee','IntruderModule')+'</prism-lexlean>\n<dyad-write path="intruder.txt" description="ignored">UNTRUSTED_GENERATED_CODE</dyad-write>\n<dyad-spec-patch>[null,{"op":"set","path":["purpose"],"value":"A checked purpose from the accepted operation"}]</dyad-spec-patch>\nThe update is ready.';
 let browser;
 try {
   browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox"] });
@@ -46,7 +46,8 @@ try {
   const theme=await call('create-custom-theme',{name:'Generation fixture',prompt:'THEME-CAPTURED-BEFORE-APPROVAL'});await call('set-app-theme',{appId,themeId:'custom:'+theme.id});
   await call('set-user-settings',{selectedModel:{provider:'featherless',name:'zai-org/GLM-5.3-Flash'},providerSettings:{featherless:{apiKey:{value:'integration-local-fixture'}}}});
   const moduleOf=()=>page.evaluate(async({base,appId})=>{const {captureProjectSource}=await import(base+'project-edit.mjs'),inference=await import(base+'inference.js');const source=await captureProjectSource(await inference.db(),appId);return source.files.find(([p])=>/^prism\/[A-Z]\w*\.lex\.tex$/.test(p))[1];},{base,appId});
-  const before=await moduleOf();
+  const specOf=()=>page.evaluate(appId=>window.__host.get('files',appId+':prism/spec.json'),appId);
+  const before=await specOf();
   await page.goto(base+'chat?id='+made.chatId+'&appId='+appId);await page.waitForFunction(()=>!!window.electron);await page.getByTestId('chat-input-container').getByRole('textbox').fill('Revise the canonical module and its purpose.');await page.getByTestId('chat-input-container').getByRole('textbox').press('Enter');
   const disclosure=page.getByRole('dialog',{name:'Review cloud request',exact:true});
   for(let i=0;i<8;i++){
@@ -55,7 +56,7 @@ try {
     await page.getByRole('dialog',{name:'Review preview permissions',exact:true}).getByRole('button',{name:"Don't allow",exact:true}).click();
   }
   await disclosure.waitFor();const disclosed=await disclosure.locator('pre').textContent(),request=JSON.parse(disclosed);
-  assert.equal(request.messages[0].content,SPEC_RULES+'\n\nTHEME-CAPTURED-BEFORE-APPROVAL');assert.equal(request.messages[1].content,moduleContext(before));assert.ok(!disclosed.includes('PRIVATE-IMPLEMENTATION-FIXTURE'));assert.equal(sent.length,0);
+  assert.equal(request.messages[0].content,SPEC_RULES+'\n\nTHEME-CAPTURED-BEFORE-APPROVAL');assert.equal(request.messages[1].content,specContext(before));assert.ok(!disclosed.includes('\\begin{lexlean}'));assert.ok(!disclosed.includes('PRIVATE-IMPLEMENTATION-FIXTURE'));assert.equal(sent.length,0);
   await call('update-custom-theme',{id:theme.id,prompt:'THEME-CHANGED-AFTER-DISCLOSURE'});assert.equal(await disclosure.locator('pre').textContent(),disclosed);
   await disclosure.getByRole('button',{name:'Send this request',exact:true}).click();
   let chat;
@@ -66,11 +67,12 @@ try {
   }
   assert.ok(chat.messages.at(-1)?.requestId,'completed response receipt was not persisted');
   const last=chat.messages.at(-1).content;
-  assert.ok(last.includes('Code not applied')&&last.includes('Patch refused')&&last.includes('The update is ready.'),last);assert.ok(!last.includes('definition{')&&!last.includes('\\begin{lexlean}'));
+  assert.ok(last.includes('Code not applied')&&last.includes('LexLean not applied')&&last.includes('Patch refused')&&last.includes('The update is ready.'),last);assert.ok(!last.includes('definition{')&&!last.includes('\\begin{lexlean}'));
   assert.deepEqual(sent,[disclosed]);
   const state=await page.evaluate(async appId=>({spec:JSON.parse(await window.__host.get('files',appId+':prism/spec.json')),intruder:await window.__host.get('files',appId+':intruder.txt'),notes:await window.__host.get('files',appId+':notes.txt')}),appId);
   assert.equal(state.spec.purpose,'A checked purpose from the accepted operation');assert.equal(state.intruder,undefined);assert.equal(state.notes,'PRIVATE-IMPLEMENTATION-FIXTURE');
-  const next=await moduleOf(),meter=await call('chat:count-tokens',{chatId:made.chatId,input:'next'});
-  assert.equal(meter.codebaseTokens,Math.ceil(moduleContext(next).length/4));assert.equal(meter.systemPromptTokens,Math.ceil((SPEC_RULES+'\n\nTHEME-CHANGED-AFTER-DISCLOSURE').length/4));assert.equal(meter.messageHistoryTokens,chat.messages.reduce((n,m)=>n+Math.ceil((m.content||'').length/4),0));
+  assert.equal(state.spec.title,JSON.parse(SPEC_EXAMPLE).title);assert.ok(!(await moduleOf()).includes('IntruderModule'));
+  const next=await specOf(),meter=await call('chat:count-tokens',{chatId:made.chatId,input:'next'});
+  assert.equal(meter.codebaseTokens,Math.ceil(specContext(next).length/4));assert.equal(meter.systemPromptTokens,Math.ceil((SPEC_RULES+'\n\nTHEME-CHANGED-AFTER-DISCLOSURE').length/4));assert.equal(meter.messageHistoryTokens,chat.messages.reduce((n,m)=>n+Math.ceil((m.content||'').length/4),0));
   assert.deepEqual(errors,[]);console.log(JSON.stringify({actualRenderer:true,canonicalDraft:true,exactThemeConsent:true,implementationSourceExcluded:true,modelWrittenCodeApplied:0,partialPatchRefused:true,acceptedPatchStored:true,moduleHiddenFromChat:true,contextMeter:true,pageExceptions:0}));
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
