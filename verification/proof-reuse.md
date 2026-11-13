@@ -9,7 +9,20 @@ Order of work: the implementation and its Node suite were written before the reg
 scenario and conformance test were added with `just new-capability` afterwards. R3's order was not
 followed for this capability.
 
-## What it does
+## Current trust boundary
+
+FA-85 is hardened by [proof-reuse-trust.md](proof-reuse-trust.md). Reuse now requires a fresh,
+toolchain-bound service descriptor and the exact attestation under that descriptor. Legacy records,
+bare `found: true`, retired SDK Lean digests and unsupported metadata are refused for reuse. The live
+service observed on 2026-11-13 does not supply this contract, so this candidate proves the entire app
+and stores no reusable records there. Fresh-proof acceptance and publication are unchanged.
+
+The eight-test results and hosted timings below describe the original implementation, not the new
+trust boundary or its current hosted performance. The new controls and qualification limits are in
+the linked verification record.
+
+## Original implementation and measurements
+
 
 Each theorem gets an address from the verifier's identity, the library files, the author modules' headers,
 the theorem's own declaration and every author declaration it reaches by name. A verified run files one

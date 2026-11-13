@@ -12,7 +12,7 @@ import { toLexLean, draftOf } from "./live/lexlean.mjs";
 import { PROMPT as APP_SHAPE } from "./live/app.mjs";
 import { checkObligations } from "./live/obligations.mjs";
 import { tableKernel } from "./live/table.mjs";
-import { KEY_PREFIX, REFUSAL, reuseSentence, addresses, admit, headersOf, record as reuseRecord, theoremsOf, without } from "./prism/proof-reuse.mjs";
+import { KEY_PREFIX, REFUSAL, trustDescriptor, sameVerifier, attests, reuseSentence, addresses, admit, headersOf, record as reuseRecord, theoremsOf, without } from "./prism/proof-reuse.mjs";
 
 // prism-code's checker (prism/spec.mjs, byte for byte) keeps a spec to 24 rules, because its proofs are one
 // linear_arithmetic theorem per guarantee over the whole first-match chain. Past that, Forge checks the
@@ -472,6 +472,8 @@ export async function proveFiles(filesFor, { onWait = () => {}, before = () => {
     // Every theorem was proved before, on these exact bytes: no Lean run. The files are asked for once
     // more so the caller holds the module under the axiom sets Lean observed.
     await filesFor(axioms);
+    // A rolling deployment or revocation during lookup cannot commit a cached verdict.
+    if (!sameVerifier(reuse.identity, await verifier().catch(() => null))) return proveFiles(filesFor, { onWait, before, beforeSubmit });
     beforeSubmit();
     const latest = [...reuse.reused.values()].sort((a, b) => String(b.verified_at).localeCompare(String(a.verified_at)))[0];
     const seconds = Math.round((Date.now() - t0) / 1000);
@@ -511,9 +513,16 @@ export async function proveFiles(filesFor, { onWait = () => {}, before = () => {
     const absent = modules.filter((m) => !proved.has(m));
     if (absent.length) return { ok: false, error: "the verifier did not verify " + absent.join(", ") };
     const verifiedAt = new Date().toISOString();
-    if (reuse && reuse.identity) {
+    if (reuse && reuse.identity?.trust) {
       const authorFiles = files.filter((f) => entrypoints.includes(f.path));
-      for (const t of reuse.theorems) if (!reuse.reused.has(t.id)) await reuse.store.put(reuse.address[t.id], await reuseRecord({ theorem: t, address: reuse.address[t.id], verifier: reuse.identity, axioms, authorFiles, draft, attestationId: body.attestation_id, verifiedAt }));
+      const records = await Promise.all(reuse.theorems.filter((t) => !reuse.reused.has(t.id)).map((t) => reuseRecord({ theorem: t, address: reuse.address[t.id], verifier: reuse.identity, axioms, authorFiles, draft, attestationId: body.attestation_id, verifiedAt })));
+      // A completed proof is filed only under the toolchain that actually attested it.
+      // The current gateway's bare found response cannot establish that binding.
+      const evidence = await attestation(body.attestation_id).catch(() => null);
+      const current = await verifier().catch(() => null);
+      const bound = sameVerifier(reuse.identity, current) && records.every((r) => attests(evidence, r.attestation_id, r.trust, r.files.map((f) => f.sha256)));
+      if (reuse.reused.size && !bound) return proveFiles(filesFor, { onWait, before, beforeSubmit });
+      if (bound) for (const record of records) await reuse.store.put(record.address, record);
     }
     const seconds = Math.round((Date.now() - t0) / 1000);
     const reused = reuse ? reuse.reused : new Map();
@@ -524,16 +533,17 @@ export async function proveFiles(filesFor, { onWait = () => {}, before = () => {
 
 // ---- reuse: theorems Lean proved before on the same bytes (prism/proof-reuse.mjs)
 // The verifier's identity is part of every address: a proof made by another profile is not reused.
-let verifierIdentity = null;
 async function verifier() {
-  if (!verifierIdentity) {
-    const answer = await callTool("lexlean_profiles", { profile: PROFILE });
-    const s = (answer && answer.structuredContent) || {};
-    const profileId = s.id || (Array.isArray(s.profiles) && s.profiles.length === 1 && s.profiles[0].id) || null;
-    if (typeof profileId !== "string" || !/^[0-9a-f]{64}$/.test(profileId)) throw new Error("the verifier did not name its profile");
-    verifierIdentity = { server: HOSTED, profile: PROFILE, profileId };
-  }
-  return verifierIdentity;
+  const answer = await callTool("lexlean_profiles", { profile: PROFILE });
+  if (!answer || answer.isError) throw new Error("the verifier did not name its profile");
+  const s = answer.structuredContent || {};
+  const profile = s.id ? s : (Array.isArray(s.profiles) && s.profiles.length === 1 ? s.profiles[0] : null);
+  if (!profile || (profile.name && profile.name !== PROFILE) || typeof profile.id !== "string" || !/^[0-9a-f]{64}$/.test(profile.id)) throw new Error("the verifier did not name its profile");
+  return { server: HOSTED, profile: PROFILE, profileId: profile.id, trust: trustDescriptor(profile.proof_reuse) };
+}
+async function attestation(id) {
+  const answer = await callTool("lexlean_attestation", { by: "id", value: id });
+  return answer && !answer.isError ? answer.structuredContent : null;
 }
 // A store that fails reads as empty and drops writes: reuse saves time, it never decides a verdict.
 const safely = (store) => ({
@@ -543,7 +553,7 @@ const safely = (store) => ({
 /**
  * Which theorems of the files `filesFor({})` gives were proved before. A theorem still to be proved that
  * names a reused one needs it in the file, so that one is proved again too. Sends no source: the
- * verifier is asked for its profile and whether it attested a file with a given SHA-256.
+ * verifier is asked for its current trust descriptor and each exact attestation.
  */
 async function reusable(filesFor, store) {
   const { files, entrypoints } = await filesFor({});
@@ -554,12 +564,16 @@ async function reusable(filesFor, store) {
   let address = {}, identity = null;
   if (!theorems.length) return { theorems, reused, axioms, summary, store, address, identity };
   identity = await verifier();
+  if (!identity.trust) {
+    for (const t of theorems) refusals[t.id] = REFUSAL.trustUnavailable;
+    return { theorems, reused, axioms, summary, store, address, identity };
+  }
   address = await addresses({ files, entrypoints, verifier: identity });
   const headers = headersOf(authors);
   const asked = new Map();
-  const found = (digest) => {
-    if (!asked.has(digest)) asked.set(digest, callTool("lexlean_attestation", { by: "digest", value: digest }).then((a) => !!(a && a.structuredContent && a.structuredContent.found === true)));
-    return asked.get(digest);
+  const found = (id) => {
+    if (!asked.has(id)) asked.set(id, attestation(id));
+    return asked.get(id);
   };
   for (const t of theorems) {
     const entry = await store.get(address[t.id]);

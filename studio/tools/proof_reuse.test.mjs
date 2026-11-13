@@ -161,6 +161,12 @@ test("addresses ignore axioms and layout, and move with the verifier, the librar
   const { files, entrypoints } = await moduleFiles(MODULE())();
   const base = await addresses({ files, entrypoints, verifier: id });
   assert.equal(new Set(Object.values(base)).size, 2);
+  for (const changed of ["epoch", ...Object.keys(TRUST.toolchain)]) {
+    const verifier = identity();
+    if (changed === "epoch") verifier.trust.epoch = "f".repeat(64); else verifier.trust.toolchain[changed] = "f".repeat(64);
+    const other = await addresses({ files, entrypoints, verifier });
+    for (const key of Object.keys(base)) assert.notEqual(other[key], base[key], changed);
+  }
   const relaid = MODULE().replace("theorem{name: bumpBounded, ", "theorem{\n  name: bumpBounded,\n  ").replace("proof: linear_arithmetic{definitions: [bump, cap]}}", "proof: linear_arithmetic{definitions: [bump, cap]},\n  axioms: [\n    Quot.sound,\n    propext\n  ]\n}");
   assert.deepEqual(await addresses({ files: [files[0], { ...files[1], content: relaid }], entrypoints, verifier: id }), base);
   const moved = [
@@ -193,6 +199,7 @@ test("a record is refused unless its address, verifier, bytes and attestation al
   const check = (e, more = {}) => admit({ entry: e, theorem, address: address[theorem.id], verifier, headers: headersOf(authors), found, ...more });
   assert.deepEqual(await check(entry), { admitted: true });
   assert.equal((await check(null)).refusal, REFUSAL.absent);
+  assert.equal((await check(entry, { verifier: { ...verifier, trust: null } })).refusal, REFUSAL.trustUnavailable);
   assert.equal((await check({ ...entry, schema: "other" })).refusal, REFUSAL.malformed);
   assert.equal((await check({ ...entry, theorem: "src/App.lex.tex#capSmall" })).refusal, REFUSAL.malformed);
   assert.equal((await check({ ...entry, address: "c".repeat(64) })).refusal, REFUSAL.address);
@@ -340,4 +347,24 @@ test("a proof completed by a different toolchain is not relabelled or mixed with
   assert.equal(edited.ok, true); assert.equal(edited.record.reused, 0);
   assert.deepEqual(theoremsSent(v.verifies.at(-1)), ["bumpBounded", "capSmall"]);
   for (const record of store.m.values()) assert.equal(record.trust.epoch, TRUST.epoch, "changed toolchain never stamped on prior records");
+});
+
+
+test("an epoch rotation during final attestation retrieval cannot commit a mixed verdict", async () => {
+  const v = fakeVerifier(), store = memoryStore();
+  await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE()), { store }));
+  const original = v.fetch;
+  let rotated = false;
+  v.fetch = async (url, init) => {
+    const result = await original(url, init);
+    const params = init && JSON.parse(init.body).params;
+    if (params?.name === "lexlean_attestation" && params.arguments.value === "2".padStart(64, "0") && !rotated) {
+      v.trust.epoch = "f".repeat(64); rotated = true;
+    }
+    return result;
+  };
+  const edited = await withVerifier(v, () => prism.proveFiles(moduleFiles(MODULE(4)), { store }));
+  assert.equal(rotated, true); assert.equal(edited.ok, true); assert.equal(edited.record.reused, 0);
+  assert.deepEqual(theoremsSent(v.verifies.at(-1)), ["bumpBounded", "capSmall"]);
+  assert.equal(store.m.size, 2, "the mixed candidate never enters the reuse store");
 });

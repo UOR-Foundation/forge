@@ -9,10 +9,20 @@
 //
 // A record filed under an address is believed only when the exact files it names hash to their
 // digests, still hold the theorem and every declaration it reaches, and the verifier still finds an
-// attestation for each of those digests. Otherwise the theorem is proved again; a refusal is never
+// exact attestation under the current toolchain and epoch covering those digests. Otherwise the
+// theorem is proved again; a refusal is never
 // an error.
 
-export const SCHEMA = "prism/proof-reuse/1";
+export const SCHEMA = "prism/proof-reuse/2";
+export const POLICY_EPOCH = "foundry/proof-reuse-trust/1";
+const TRUST_SCHEMA = "lexlean-mcp/proof-reuse-trust/1";
+const TOOLS = ["lean", "lake", "leanchecker", "lexlean", "compilerSemantics"];
+// The two retired Lean executables in prismpm.lock (4.32.1). This is a reuse
+// policy, not a claim that any other executable is sound or qualified for release.
+const RETIRED_LEAN = new Set([
+  "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+  "79fb1d26fa5a39385d59fdc48a711a14b0710ca6480271acce99b4d177cea085",
+]);
 export const KEY_PREFIX = SCHEMA + ":";
 
 // FoundrySpecification.ProofReuseRefusal.
@@ -25,11 +35,38 @@ export const REFUSAL = Object.freeze({
   attestation: "proofReuseAttestationNotFound",
   // Admitted, but a theorem being proved names it, so it goes back into the file and is proved again.
   needed: "proofReuseNeededByChange",
+  trustUnavailable: "proofReuseTrustUnavailable",
+  trustMismatch: "proofReuseTrustMismatch",
 });
 
 const OPEN = "\\begin{semanticmodule}";
 const KNOWN = new Set(["structure", "inductive", "definition", "theorem"]);
 const enc = new TextEncoder();
+const isDigest = (v) => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
+
+/** The service must explicitly bind reuse to its running toolchain and revocation epoch. */
+export function trustDescriptor(value) {
+  if (!value || value.schema !== TRUST_SCHEMA || !isDigest(value.epoch)
+      || !value.toolchain || !TOOLS.every((name) => isDigest(value.toolchain[name]))
+      || RETIRED_LEAN.has(value.toolchain.lean)) return null;
+  // Copy only the defined fields: later mutation and JSON property order do not alter identity.
+  return { schema: TRUST_SCHEMA, epoch: value.epoch,
+    toolchain: Object.fromEntries(TOOLS.map((name) => [name, value.toolchain[name]])) };
+}
+export const sameTrust = (a, b) => {
+  const left = trustDescriptor(a), right = trustDescriptor(b);
+  return !!left && !!right && JSON.stringify(left) === JSON.stringify(right);
+};
+export const sameVerifier = (a, b) => !!a && !!b && a.server === b.server
+  && a.profile === b.profile && a.profileId === b.profileId && sameTrust(a.trust, b.trust);
+
+/** A digest hit alone does not identify which verifier checked the file. */
+export function attests(evidence, attestationId, trust, digests) {
+  return !!evidence && evidence.found === true && evidence.status === "verified"
+    && isDigest(attestationId) && evidence.attestation_id === attestationId
+    && sameTrust(evidence.proof_reuse, trust) && Array.isArray(evidence.files)
+    && evidence.files.every(isDigest) && digests.every((digest) => evidence.files.includes(digest));
+}
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 export async function sha256(text) { return hex(await crypto.subtle.digest("SHA-256", enc.encode(text))); }
 
@@ -136,13 +173,16 @@ export const headersOf = (authorFiles) => Object.fromEntries(authorFiles.map((f)
 
 /**
  * The address of every theorem: { [id]: sha256 hex }, an id being `path#name`. `files` are all the files sent, `entrypoints`
- * the author files among them, `verifier` { server, profile, profileId }.
+ * the author files among them, `verifier` { server, profile, profileId, trust }.
  */
 export async function addresses({ files, entrypoints, verifier }) {
   const authors = files.filter((f) => entrypoints.includes(f.path));
   const library = files.filter((f) => !entrypoints.includes(f.path));
   const headers = headersOf(authors);
-  const shared = [SCHEMA, verifier.server, verifier.profile, verifier.profileId,
+  const trust = trustDescriptor(verifier.trust);
+  if (!trust) throw new Error(REFUSAL.trustUnavailable);
+  const shared = [SCHEMA, POLICY_EPOCH, verifier.server, verifier.profile, verifier.profileId,
+    trust.schema, trust.epoch, ...TOOLS.flatMap((name) => [name, trust.toolchain[name]]),
     ...library.flatMap((f) => ["library", f.path, f.content]),
     ...authors.flatMap((f) => ["header", f.path, headers[f.path]])];
   const out = {};
@@ -164,7 +204,7 @@ export function without(files, entrypoints, ids) {
 export async function record({ theorem, address, verifier, axioms, authorFiles, draft, attestationId, verifiedAt }) {
   const names = new Set([theorem.name, ...theorem.reached.map((d) => d.name)]);
   return {
-    schema: SCHEMA, address, theorem: theorem.id,
+    schema: SCHEMA, policyEpoch: POLICY_EPOCH, trust: trustDescriptor(verifier.trust), address, theorem: theorem.id,
     server: verifier.server, profile: verifier.profile, profileId: verifier.profileId,
     axioms: Object.fromEntries(Object.entries(axioms).filter(([name]) => names.has(name))),
     files: await Promise.all(authorFiles.map(async (f) => ({ path: f.path, content: f.content, sha256: await sha256(f.content) }))),
@@ -173,19 +213,20 @@ export async function record({ theorem, address, verifier, axioms, authorFiles, 
 }
 
 const isText = (v) => typeof v === "string" && v.length > 0;
-const isDigest = (v) => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
-const wellFormed = (e) => e.schema === SCHEMA && isText(e.theorem) && isDigest(e.address) && isText(e.attestation_id)
+const wellFormed = (e) => e.schema === SCHEMA && isText(e.theorem) && isDigest(e.address) && isDigest(e.attestation_id)
   && e.axioms !== null && typeof e.axioms === "object" && !Array.isArray(e.axioms)
   && Array.isArray(e.files) && e.files.length > 0 && e.files.every((f) => f && isText(f.path) && isText(f.content) && isDigest(f.sha256));
 
 /**
  * Decide whether `entry` may stand for the proof of `theorem` (from theoremsOf of the current author
- * files, whose headers are `headers`). Pure except for `found(digest)`: whether the verifier attested a
- * project holding a file with that SHA-256. Resolves { admitted: true } or { admitted: false, refusal }.
+ * files, whose headers are `headers`). Pure except for `found(attestationId)`: current service evidence for the exact
+ * attestation, its toolchain and all file digests. Resolves { admitted: true } or { admitted: false, refusal }.
  */
 export async function admit({ entry, theorem, address, verifier, headers, found }) {
   if (entry == null) return { admitted: false, refusal: REFUSAL.absent };
   if (typeof entry !== "object" || !wellFormed(entry) || entry.theorem !== theorem.id) return { admitted: false, refusal: REFUSAL.malformed };
+  if (!trustDescriptor(verifier.trust)) return { admitted: false, refusal: REFUSAL.trustUnavailable };
+  if (entry.policyEpoch !== POLICY_EPOCH || !sameTrust(entry.trust, verifier.trust)) return { admitted: false, refusal: REFUSAL.trustMismatch };
   if (entry.address !== address) return { admitted: false, refusal: REFUSAL.address };
   if (entry.server !== verifier.server || entry.profile !== verifier.profile || entry.profileId !== verifier.profileId) return { admitted: false, refusal: REFUSAL.verifier };
   for (const f of entry.files) if (await sha256(f.content) !== f.sha256) return { admitted: false, refusal: REFUSAL.bytes };
@@ -194,7 +235,7 @@ export async function admit({ entry, theorem, address, verifier, headers, found 
   // They hold the theorem and every declaration it reaches, each in its own file, up to `axioms:`.
   const held = new Map(entry.files.map((f) => [f.path, new Set(declarationsOf(f.content).declarations.map((d) => canonical(d.source)))]));
   for (const d of [theorem, ...theorem.reached]) if (!held.get(d.path)?.has(d.canon)) return { admitted: false, refusal: REFUSAL.bytes };
-  for (const f of entry.files) if (!(await found(f.sha256))) return { admitted: false, refusal: REFUSAL.attestation };
+  if (!attests(await found(entry.attestation_id), entry.attestation_id, verifier.trust, entry.files.map((f) => f.sha256))) return { admitted: false, refusal: REFUSAL.attestation };
   return { admitted: true };
 }
 
