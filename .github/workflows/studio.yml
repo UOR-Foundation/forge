@@ -102,6 +102,12 @@ jobs:
       - name: Byte identity corpus
         id: corpus
         run: python3 tools/corpus.py
+      - name: Verify source-derived featured app declarations and negative controls
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test vendor/dyad/hologram.featured-apps.types.test.mjs
+      - name: Typecheck every projected renderer screen against the locked compiler
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node vendor/dyad/hologram.typecheck.mjs
       - name: Check the declared host scope and real renderer error recovery
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: |
@@ -164,6 +170,7 @@ jobs:
           run node tools/kernel_owner_readiness_browser.mjs
           run node tools/kernel_owner_handoff_browser.mjs
           run node tools/renderer_stylesheet_identity_browser.mjs
+          run node tools/home_card_keyboard_browser.mjs
           run node tools/atomic_browser_settings_browser.mjs
           run node tools/atomic_chat_preferences_browser.mjs
           run node tools/read_only_chat_execution_browser.mjs
@@ -255,6 +262,9 @@ jobs:
       - name: Foundry's own dialogs, notices and sidebar tools take the app's look from one stylesheet
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/shell_ui.test.mjs
+      - name: Home cards and nested bookmarks keep separate keyboard actions
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/home_card_keyboard.test.mjs
       - name: A stateful app's proof is asked about its own module, and the chat says only what Lean attested
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/live_app_prove.test.mjs

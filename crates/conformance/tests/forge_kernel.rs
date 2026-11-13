@@ -284,3 +284,33 @@ fn forge_kernel_fk_24() {
         "editBudgetBoundHolds",
     );
 }
+
+/// `FK-25`: The kernel never lets a telemetry record reach the network or an app's frame
+#[test]
+fn forge_kernel_fk_25() {
+    pinned(
+        "breaksTelemetryEgress",
+        "body: ((((ForgeKernel::telemetryAllows request) =? 1) && (not ((project request effect) <=? (ForgeKernel::telemetrySave)))) && (not (((project request effect) =? (ForgeKernel::telemetryInfer)) && ((project request device) =? 1))))",
+        "telemetryEgressHolds",
+    );
+}
+
+/// `FK-26`: The kernel never lets a telemetry record be saved unless the user asked
+#[test]
+fn forge_kernel_fk_26() {
+    pinned(
+        "breaksTelemetryUnasked",
+        "body: ((((project request effect) =? (ForgeKernel::telemetrySave)) && (not ((project request asked) =? 1))) && ((ForgeKernel::telemetryAllows request) =? 1))",
+        "telemetryUnaskedHolds",
+    );
+}
+
+/// `FK-27`: The kernel never lets a telemetry record reach a model that is not on the device
+#[test]
+fn forge_kernel_fk_27() {
+    pinned(
+        "breaksTelemetryOffDevice",
+        "body: ((((project request effect) =? (ForgeKernel::telemetryInfer)) && (not ((project request device) =? 1))) && ((ForgeKernel::telemetryAllows request) =? 1))",
+        "telemetryOffDeviceHolds",
+    );
+}

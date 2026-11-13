@@ -38,3 +38,29 @@ both exact-source/workflow signatures verified. Updated reproduction evidence
 is committed with this feature and does not claim whole-application reproduction.
 
 Full immutable SDK and Studio acceptance at this feature revision remain pending.
+
+## Browser fixture closure regression (2026-11-13)
+
+At PR #166 head `91884a665521b736da06241e80f471fd22ed0f9c`,
+`node --test --test-reporter=tap studio/tools/snapshot_bound_builds.test.mjs`
+failed the seventh control with `fixture does not serve /prism/spec-file.mjs`
+(six passed, one failed). The production module was present, but the browser
+fixture's explicit source inventory omitted it.
+
+The fixture now serves that exact production file. The existing module-link
+control also removes `/prism/spec-file.mjs` and requires the same missing-file
+diagnostic. Restored, all seven controls pass with zero skipped, cancelled or
+todo tests; the Rust wrapper's exact seven-test count is unchanged. The actual
+fixture inventory links and evaluates 33 production modules with Node 24.22.1.
+Each of the four missing-module controls and the wrong-export control rejects
+its planted defect. Both edited scripts pass `node --check`, and
+`node studio/tools/shell_parse.mjs` passes.
+
+The Chromium fixture was attempted using installed Chromium and the locally
+available Playwright-core 1.58.2 selected by the fixture's lock. Chromium aborted
+before page creation because the execution sandbox refused its socket and
+crash-settings writes. One narrowly scoped elevated retry of the unchanged
+fixture still failed with `socket() failed: Operation not permitted`; browser
+acceptance was not established. The focused Rust gate could not run because
+Cargo is unavailable. The immutable SDK `just vv` gate and full Studio acceptance
+were not run. No production, model, kernel or visual shell bytes changed.

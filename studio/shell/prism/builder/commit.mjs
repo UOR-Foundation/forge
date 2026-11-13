@@ -15,6 +15,7 @@
 // stay templateCommit's: they record the attestation Lean returned, which the builder does not see.
 import { buildApp } from "./build.mjs";
 import { suiteOf } from "../template.mjs";
+import { readSpecFile } from "../spec-file.mjs";
 
 /** The prompt the builder takes for a spec the studio checked and Lean proved. */
 export function promptOf(spec, { axioms = {}, repository, parts = null } = {}) {
@@ -27,7 +28,8 @@ export function promptOf(spec, { axioms = {}, repository, parts = null } = {}) {
 
 /** `commit` is templateCommit's { files, remove }; the result is the same commit with every facet in it. */
 export async function facetCommit(commit, { spec, axioms = {}, repository, parts = null, lastModified = new Date().toISOString().replace(/\.\d{3}Z$/, "Z") }) {
-  const built = await buildApp(promptOf(spec, { axioms, repository, parts }), { lastModified });
+  // The model carries the spec's seal, as templateCommit's does, so the app is held to its JSON.
+  const built = await buildApp(promptOf(spec, { axioms, repository, parts }), { lastModified, specAddress: readSpecFile(spec).specAddress });
   const suite = suiteOf(spec);
   const owned = (p) => p.startsWith("app/") || ["model/ids.toml", "CONFORMANCE.md", `features/suites/${suite}.feature`, `crates/conformance/tests/${suite}.rs`].includes(p);
   const files = new Map(commit.files.map((f) => [f.path, f.content]));

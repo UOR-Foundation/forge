@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {test} from 'node:test';
+import vm from 'node:vm';
+import {observeReducedMotion} from './reduced_motion_oracle.mjs';
 import {interactionPreset,readInteractionDocument,interactionModule,interactionDocumentFromFiles,validateInteractionDocument} from '../shell/interaction-application.mjs';
 import {createInteractionAudio} from '../shell/interaction-ui.mjs';
 import {assertCanonicalGeneration} from '../shell/canonical-generation.mjs';
@@ -42,4 +44,45 @@ test('storage and host route enforce comparison deletion ownership and private e
  assert.ok(read('../shell/canonical-generation.mjs').includes('prism/interaction.json'));
  for(const name of ['forge:interaction-create','forge:interaction-run','mountInteractionApplications'])assert.ok(read('../shell/host.js').includes(name),name);
  assert.ok(read('../shell/host-boundary.mjs').includes('interactionStateStale'));
+});
+
+test('reduced-motion oracle distinguishes settled effects and refuses active motion within a bound',async()=>{
+ const effect=(change={})=>({constructor:{name:'CSSTransition'},transitionProperty:'color',playState:'running',pending:false,currentTime:0,playbackRate:1,effect:{target:{tagName:'SECTION'},getComputedTiming:()=>({duration:0.01,delay:0,endDelay:0,iterations:1,endTime:0.01,fill:'backwards'})},...change});
+ const timed=timing=>effect({effect:{target:{tagName:'SECTION'},getComputedTiming:()=>({duration:0.01,delay:0,endDelay:0,iterations:1,endTime:0.01,fill:'none',...timing})}});
+ function run({effects=()=>[],media=true,present=true,connected=true,stalled=false}={}){
+  let frame=0,next,deadline,timerCleared=false;
+  const root={isConnected:connected,getAnimations(options){assert.equal(options.subtree,true);return effects(frame);}};
+  const globals={document:{querySelector(selector){assert.equal(selector,'dialog section');return present?root:null;}},matchMedia(query){assert.equal(query,'(prefers-reduced-motion: reduce)');return {matches:media};},requestAnimationFrame(callback){next=callback;return 1;},cancelAnimationFrame(){next=undefined;},setTimeout(callback,ms){assert.equal(ms,1000);deadline=callback;return 2;},clearTimeout(){timerCleared=true;}};
+  const result=vm.runInNewContext(`(${observeReducedMotion.toString()})()`,globals);
+  if(stalled)deadline?.();
+  else {while(next&&frame<100){const callback=next;next=undefined;frame++;callback();}if(next)deadline();}
+  return {result,get frames(){return frame;},get timerCleared(){return timerCleared;}};
+ }
+ const empty=run();await empty.result;assert.equal(empty.frames,2);assert.equal(empty.timerCleared,true);
+ const settling=run({effects:frame=>frame<5?Array.from({length:9},()=>effect({pending:frame<3})):[]});
+ const settled=await settling.result;assert.ok(settling.frames>=7);assert.equal(settled.maximumSettlingEffects,9);
+ const retained=run({effects:()=>[effect({playState:'finished',effect:{target:{tagName:'DIV'},getComputedTiming:()=>({duration:3000,delay:0,endDelay:0,iterations:1,endTime:3000,fill:'forwards'})}})]});
+ assert.equal((await retained.result).finishedEffects,1);
+ for(const animation of [timed({duration:160,endTime:160}),timed({delay:100,endTime:100.01}),timed({endDelay:100,endTime:100.01}),timed({iterations:Infinity,endTime:Infinity}),timed({duration:'auto'}),timed({endTime:NaN}),effect({playbackRate:0}),effect({playState:'paused'}),effect({constructor:{name:'Animation'}}),effect({effect:null}),effect({effect:{}}),effect({playState:'finished',pending:true,effect:{getComputedTiming:()=>({duration:3000,endTime:3000})}})]){
+  const active=run({effects:()=>[animation]});await assert.rejects(active.result,/Reduced motion: active effect/);assert.equal(active.frames,0);assert.equal(active.timerCleared,true);
+ }
+ await assert.rejects(run({effects:()=>[effect()]}).result,/Reduced motion: settlement timeout.*CSSTransition.*color/);
+ await assert.rejects(run({stalled:true}).result,/Reduced motion: settlement timeout/);
+ await assert.rejects(run({media:false}).result,/Reduced motion: preference is not active/);
+ await assert.rejects(run({present:false}).result,/Reduced motion: application section is missing/);
+ await assert.rejects(run({connected:false}).result,/Reduced motion: application section was detached/);
+ // Keep the real journey and its planted controls attached to this tested oracle.
+ const journey=fs.readFileSync(new URL('./stateful_application_journeys_browser.mjs',import.meta.url),'utf8');
+ assert.match(journey,/import \{observeReducedMotion\} from ['"]\.\/reduced_motion_oracle\.mjs['"]/);
+ assert.equal((journey.match(/page\.evaluate\(observeReducedMotion\)/g)||[]).length,3);
+ assert.match(journey,/^  for\(const kind of \['waapi','css'\]\)\{$/m);
+ assert.match(journey,/^    try \{await assert\.rejects\(page\.evaluate\(observeReducedMotion\),\/Reduced motion: active effect\/\);\}$/m);
+ assert.ok(journey.includes('iterations:Infinity')&&journey.includes('reducedMotionNegativeControls:2'));
+ assert.ok(journey.includes('animation: foundry-motion-mutant 3s linear infinite !important'));
+ assert.ok(!journey.includes('requestAnimationFrame(()=>requestAnimationFrame(resolve))'));
+ const wrapper=fs.readFileSync(new URL('../../crates/conformance/tests/stateful_application_journeys.rs',import.meta.url),'utf8');
+ assert.match(wrapper,/#\[test\]\s+fn stateful_application_journeys_fa_42\(\)/);
+ assert.ok(wrapper.includes('.args(["--test", "--test-reporter=tap"])'));
+ for(const expected of ['# tests 7','# pass 7','# fail 0','# cancelled 0','# skipped 0','# todo 0'])assert.ok(wrapper.includes(JSON.stringify(expected)),expected);
+
 });

@@ -39,14 +39,18 @@ test("the host binds generation source signal and committed results", () => {
   const selected = expression => vm.runInNewContext(expression,{projectSource:captured,activeApplicationModule,lexlean,Map});
   assert.equal(selected(selection)[1],canonical.source);
   assert.notEqual(selected('[...new Map(projectSource.files)].find(([path]) => path.endsWith(".lex.tex"))')[1],canonical.source,"old first-module selection is a failing control");
-  assert.ok(host.includes("prism.moduleContext(moduleNow ? moduleNow[1] : null)"));
+  assert.ok(host.includes('prism.specContext(new Map(projectSource.files).get("prism/spec.json"))'), "a decision app is shown its JSON spec, never its module");
   assert.ok(!host.includes('content: "This is my codebase. "'));
   assert.ok(host.includes("prism.deviceRequest(intent.prompt, capturedSpec)"));
   assert.ok(host.includes("current?.specKappa === await kappa(enc.encode(capturedSpec))"));
   assert.ok(host.includes("applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit })"));
   // Code a model writes is never applied; the rules are read against the applied source.
   assert.ok(host.includes("const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };"));
-  assert.ok(host.includes("rulesAfterTurn(appId, full, [], { signal: abort.signal, source: applied.source, onCommit })"));
+  // What is applied is the turn without any LexLean the model wrote: a model writes the JSON spec only.
+  assert.ok(host.includes("const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);"));
+  assert.ok(host.includes("rulesAfterTurn(appId, turn, [], { signal: abort.signal, source: applied.source, onCommit })"));
+  assert.ok(host.includes("if (!prism.wroteLexLean(full)) await repaired(body);"));
+  assert.ok(!host.includes("lexlean.partialFromTurn(full)") && !host.includes("pushApp(appId, writing.text"));
   assert.ok(host.includes("Committed project changes were retained."));
   // A first turn opens the live frame before the app has rules; the renderer's start for that app must
   // settle on the frame, never wait on a build that yields to it (seen on the live site: "Preparing

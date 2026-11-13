@@ -12,7 +12,7 @@ import { chatModeCatalog } from "../../shell/chat-mode-catalog.mjs";
 test("canonical catalog reproduces exactly and offers only implemented browser modes", () => {
   assert.deepEqual(chatModeCatalog.modes, [
     { id: "build", label: "Build" },
-    { id: "ask", label: "Ask" },
+    { id: "ask", label: "Chat" },
     { id: "plan", label: "Plan" },
   ]);
   const r = spawnSync(

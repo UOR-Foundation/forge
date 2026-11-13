@@ -162,7 +162,7 @@ function conformance(m, claims) {
  * paths of the template's example app it replaces. `lastModified` dates the
  * threat model's control set; it is the one input that is not in the prompt.
  */
-export async function buildApp(input, { lastModified } = {}) {
+export async function buildApp(input, { lastModified, specAddress } = {}) {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(lastModified ?? '')) throw new TypeError('lastModified is an instant, YYYY-MM-DDThh:mm:ssZ');
   const m = deriveModel(input);
   m.lastModified = lastModified;
@@ -174,7 +174,7 @@ export async function buildApp(input, { lastModified } = {}) {
   // The observed axiom sets, in the form prism-code's renderer takes them.
   const axioms = Object.fromEntries(Object.entries(m.prompt.axioms).map(([name, set]) => [name, `[${set.join(', ')}]`]));
   // A state machine's decision is owned by its states (builder/machine.mjs); any other app's is prism-code's chain.
-  app(`src/${m.module}.lex.tex`, m.machine ? renderMachineModel(m.spec, m.machine, { axioms }) : renderModel(m.spec, { axioms }));
+  app(`src/${m.module}.lex.tex`, m.machine ? renderMachineModel(m.spec, m.machine, { axioms }) : renderModel(m.spec, { axioms, ...(specAddress ? { specAddress } : {}) }));
   if (m.hasProofs) app(`src/${m.proofs}.lex.tex`, m.machine ? renderMachineProofs(m.spec, m.machine, { axioms }) : renderProofs(m.spec, { axioms }));
   const entrypoints = Object.keys(files)
     .filter((p) => p.startsWith('app/src/') && !p.startsWith('app/src/Foundation/') && !p.startsWith('app/src/Production/'))

@@ -371,6 +371,150 @@ suite = "forge_kernel"
 statement = "The budget from an edit to the screen is never above two frames, 33 ms"
 
 [[id]]
+id = "FK-25"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never lets a telemetry record reach the network or an app's frame"
+
+[[id]]
+id = "FK-26"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never lets a telemetry record be saved unless the user asked"
+
+[[id]]
+id = "FK-27"
+level = "build"
+suite = "forge_kernel"
+statement = "The kernel never lets a telemetry record reach a model that is not on the device"
+
+[[id]]
+id = "TL-01"
+level = "build"
+suite = "telemetry"
+statement = "A journey's first moment, once recorded, never moves"
+
+[[id]]
+id = "TL-02"
+level = "build"
+suite = "telemetry"
+statement = "A journey's end is never recorded before its start, so no KPI span is negative"
+
+[[id]]
+id = "TL-03"
+level = "build"
+suite = "telemetry"
+statement = "The worst preview update is never below an update the turn made"
+
+[[id]]
+id = "TL-04"
+level = "build"
+suite = "telemetry"
+statement = "The worst preview update never falls during a turn"
+
+[[id]]
+id = "TL-05"
+level = "build"
+suite = "telemetry"
+statement = "An edit's time to screen is counted only from an edit that started"
+
+[[id]]
+id = "TL-06"
+level = "build"
+suite = "telemetry"
+statement = "The worst edit to screen never falls during a turn"
+
+[[id]]
+id = "TL-07"
+level = "build"
+suite = "telemetry"
+statement = "A turn within budget is never counted as over"
+
+[[id]]
+id = "TL-08"
+level = "build"
+suite = "telemetry"
+statement = "A turn over budget is always counted as over"
+
+[[id]]
+id = "TL-09"
+level = "build"
+suite = "telemetry"
+statement = "The loop never suggests anything without a turn over budget"
+
+[[id]]
+id = "TL-10"
+level = "build"
+suite = "telemetry"
+statement = "The loop never suggests anything unless most observed turns are over budget"
+
+[[id]]
+id = "TL-11"
+level = "build"
+suite = "telemetry"
+statement = "The loop never suggests anything for a KPI with no budget"
+
+[[id]]
+id = "TL-12"
+level = "build"
+suite = "telemetry"
+statement = "A budgeted KPI over budget in most turns always gets a suggestion"
+
+[[id]]
+id = "TL-13"
+level = "build"
+suite = "telemetry"
+statement = "A time under the kernel's threshold is never judged over"
+
+[[id]]
+id = "TL-14"
+level = "build"
+suite = "telemetry"
+statement = "A time at or over the kernel's threshold is never judged within"
+
+[[id]]
+id = "TL-15"
+level = "build"
+suite = "telemetry"
+statement = "The loop never suggests switching to the model already in use"
+
+[[id]]
+id = "TL-16"
+level = "build"
+suite = "telemetry"
+statement = "The loop never suggests a model switch on fewer than five reads of either model"
+
+[[id]]
+id = "TL-17"
+level = "build"
+suite = "telemetry"
+statement = "The loop never suggests a model switch while Enter to Checked is within budget"
+
+[[id]]
+id = "TL-18"
+level = "build"
+suite = "telemetry"
+statement = "Only the user's approval adopts a suggestion"
+
+[[id]]
+id = "TL-19"
+level = "build"
+suite = "telemetry"
+statement = "Approving with no suggestion pending adopts nothing"
+
+[[id]]
+id = "TL-20"
+level = "build"
+suite = "telemetry"
+statement = "An adopted change is never called an improvement unless the KPI got faster"
+
+[[id]]
+id = "TL-21"
+level = "build"
+suite = "telemetry"
+statement = "The device never keeps more than 512 turns"
+
+[[id]]
 id = "LL-01"
 level = "build"
 suite = "live-lexlean"

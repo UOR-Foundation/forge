@@ -6,6 +6,8 @@
 // byte, at the version below:
 //
 //   shell/prism/spec.mjs                               src/journey/spec.mjs   (the checker)
+//   shell/prism/spec-file.mjs                          src/journey/spec-file.mjs (the strict reader: the
+//                                                      canonical bytes of a spec, and its UOR address)
 //   shell/prism/render.mjs                             src/journey/render.mjs (the model renderer)
 //   shell/prism/session.mjs                            src/journey/session.mjs (the spec compiler the
 //                                                      builder, shell/prism/builder, checks a spec with)
@@ -18,8 +20,9 @@
 //                                                      graph, so Forge opens, checks and runs a built holo with
 //                                                      prism-code's own code (loadArchive, acceptance, dispatch)
 //
-// One line differs, on purpose: template.mjs imports createHash from node:crypto, which no browser has,
-// so the shell's copy imports it from ./sha256.mjs. SUBSTITUTE names it; nothing else may differ.
+// A few imports differ, on purpose: node:crypto, which no browser has, becomes ./sha256.mjs, and
+// spec-file.mjs reads blake3 from the shell's prism-code graph. SUBSTITUTE names each; nothing else
+// may differ.
 //
 //   node tools/prism_journey.mjs            copy them from the package
 //   node tools/prism_journey.mjs --check    the Journey gate: refuse any byte that differs
@@ -29,10 +32,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const PRISM_CODE = "0.7.2";
+const PRISM_CODE = "0.8.0";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FILES = [
   ["src/journey/spec.mjs", "shell/prism/spec.mjs"],
+  ["src/journey/spec-file.mjs", "shell/prism/spec-file.mjs"],
   ["src/journey/render.mjs", "shell/prism/render.mjs"],
   ["src/journey/session.mjs", "shell/prism/session.mjs"],
   ["templates/text-request/src/Foundation/Bytes.lex.tex", "shell/prism/lex/Foundation/Bytes.lex.tex"],
@@ -45,7 +49,16 @@ const FILES = [
 ];
 // Everything src/browser.mjs reaches, statically or through index.mjs's browser branch.
 for (const file of ["browser.mjs", "index.mjs", "archive.mjs", "errors.mjs", "blake3.mjs", "attestations.mjs", "view.mjs", "core.mjs", "capabilities.mjs", "closure.mjs", "sha256.mjs", "inspect.mjs", "vendor/verify.mjs", "verify.mjs", "replay.mjs", "version.mjs", "middleware.mjs", "containers.mjs", "canonical/index.js", "tracing.mjs", "manifest.mjs", "toml.mjs", "provenance.mjs"]) FILES.push(["src/" + file, "shell/prism-code/src/" + file]);
-const SUBSTITUTE = { "shell/prism/template.mjs": ["import { createHash } from 'node:crypto';", "import { createHash } from './sha256.mjs';"] };
+// Node imports the browser has not: each file's substitutions, applied in order. template.mjs and
+// spec-file.mjs hash through node:crypto, and spec-file.mjs reads blake3 from prism-code's own graph,
+// which the shell keeps under prism-code/src.
+const SUBSTITUTE = {
+  "shell/prism/template.mjs": [["import { createHash } from 'node:crypto';", "import { createHash } from './sha256.mjs';"]],
+  "shell/prism/spec-file.mjs": [
+    ["import { createHash } from 'node:crypto';", "import { createHash } from './sha256.mjs';"],
+    ["import { kappa } from '../blake3.mjs';", "import { kappa } from '../prism-code/src/blake3.mjs';"],
+  ],
+};
 
 const prefix = path.join(os.tmpdir(), "hologram-forge-prism-code-" + PRISM_CODE);
 const pkg = path.join(prefix, "node_modules", "prism-code");
@@ -59,7 +72,10 @@ const text = (p) => fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n");
 const bad = [];
 for (const [from, to] of FILES) {
   let upstream = text(path.join(pkg, from));
-  if (SUBSTITUTE[to]) { const [was, is] = SUBSTITUTE[to]; if (!upstream.includes(was)) throw new Error(`${from} no longer has ${was}`); upstream = upstream.replace(was, is); }
+  for (const [was, is] of SUBSTITUTE[to] ?? []) {
+    if (!upstream.includes(was)) throw new Error(`${from} no longer has ${was}`);
+    upstream = upstream.replace(was, is);
+  }
   const target = path.join(root, to);
   if (process.argv[2] === "--check") {
     if (!fs.existsSync(target) || text(target) !== upstream) bad.push(to);
