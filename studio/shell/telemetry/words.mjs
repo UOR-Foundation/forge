@@ -52,3 +52,32 @@ export const METRICS = {
   checks: { name: "prism_checks", help: "Checks after a turn, by whether the result was reused." },
   suggestion: { name: "prism_suggestion", help: "A suggestion the on-device loop makes now; 1 while it stands." },
 };
+
+// The apps view. Keys are the model's standings (standingQuiet, standingReaches, standingBlocked); the
+// standing itself is the model's decision, these are only its words. Plain words: a site, opened, reached,
+// allowed, stopped; never the network's own terms.
+const times = (n) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
+const plural = (n, one, many = one + "s") => `${n} ${n === 1 ? one : many}`;
+export const APP_WORDS = {
+  quiet: () => "Reaches nothing outside this device",
+  reaches: (a) => `Reaches ${plural(a.sites.length, "site")}, all allowed`,
+  blocked: (a) => {
+    const stopped = a.sites.filter((s) => s.blocked > 0).length;
+    if (a.notOpened && !stopped) return `Stopped from opening ${times(a.notOpened)}`;
+    return `Stopped from reaching ${plural(stopped, "site")}` + (a.notOpened ? `, and from opening ${times(a.notOpened)}` : "");
+  },
+};
+export const SITE_WORDS = {
+  reaches: (s) => `Allowed ${times(s.allowed)}`,
+  blocked: (s) => (s.allowed ? `Stopped ${times(s.blocked)}, allowed ${times(s.allowed)}` : `Stopped ${times(s.blocked)}`),
+};
+// The sentence that sums every app up; it leads the panel.
+export const APPS_SUMMARY = (apps) => {
+  if (!apps.length) return "No app has opened on this device yet. Build or open one, and what it reaches shows here.";
+  const reach = apps.filter((a) => a.standing !== "quiet" && a.sites.some((s) => s.allowed > 0)).length;
+  const stopped = apps.filter((a) => a.standing === "blocked").length;
+  let s = `${plural(apps.length, "app")} opened on this device. `;
+  s += reach ? `${reach === apps.length ? (apps.length === 1 ? "It" : "All") : reach} reached the internet` : "None reached the internet";
+  s += stopped ? `, and ${stopped === 1 && apps.length === 1 ? "it" : stopped} ${stopped === 1 ? "was" : "were"} stopped at least once.`: ", and nothing was stopped.";
+  return s;
+};

@@ -144,19 +144,34 @@ const flag = (b) => (b ? "yes" : "no");
 async function gate(origin, effect, record, granted, denied) {
   return (await (await kernel()).ask(`gate ${origin} ${effect} ${flag(record)} ${flag(granted)} ${flag(denied)}`)) === "allow";
 }
-// The policy for one untrusted document, or null when the kernel refuses to serve it.
-async function policyFor(kind, id) {
+// What each app was let reach, for the user's own record on this device (shell/telemetry): the kernel's
+// decisions here, as they are made, handed to one open page of the shell. That page asks the kernel before
+// it keeps them (`telemetry store`, FK-25); nothing here keeps or sends them anywhere else. With no page
+// open there is no record, which loses a count and never a decision.
+const nowMicros = () => Date.now() * 1000;
+async function noteGate(kind, id, decisions) {
+  try {
+    const shell = (await self.clients.matchAll({ type: "window" })).filter((c) => c.url.startsWith(self.registration.scope) && !/^(p|holo|app)\//.test(new URL(c.url).pathname.slice(BASE.length)));
+    const page = shell.find((c) => !/^ui\//.test(new URL(c.url).pathname.slice(BASE.length))) || shell[0];
+    if (page && decisions.length) page.postMessage({ type: "telemetry/gate", id: kind + ":" + id, installed: kind === "holo", decisions });
+  } catch (e) {}
+}
+// The policy for one untrusted document, or null when the kernel refuses to serve it. Each decision is
+// added to `decisions` in the words the Telemetry model counts: notOpened, allowed or blocked, with the site.
+async function policyFor(kind, id, decisions = []) {
   const origin = kind === "p" ? "preview" : "published";
   const record = await grants(id);
   const network = (record && record.network) || {};
   const denied = new Set(Array.isArray(network.denied) ? network.denied : []);
   const served = await gate(origin, "serve", !!record, !!(record && record.serve === true && (kind !== "p" || previewGrantValid(record, id))), false);
   await audit({ principal: kind + ":" + id, operation: "kernel.gate.serve", resource: id, outcome: served ? "granted" : "refused" });
-  if (!served) return null;
+  if (!served) { decisions.push({ kind: "notOpened", at: Date.now() * 1000 }); return null; }
   const allowed = [];
   for (const endpoint of Array.isArray(network.endpoints) ? network.endpoints : []) {
     if (typeof endpoint !== "string" || !ENDPOINT_FORM.test(endpoint)) continue;
-    if (await gate(origin, "fetch", true, true, denied.has(endpoint))) allowed.push(endpoint);
+    const yes = await gate(origin, "fetch", true, true, denied.has(endpoint));
+    if (yes) allowed.push(endpoint);
+    decisions.push({ kind: yes ? "allowed" : "blocked", at: Date.now() * 1000, site: endpoint });
   }
   return policyOf(allowed);
 }
@@ -165,10 +180,19 @@ function untrusted(response, policy) {
   headers.set("content-security-policy", policy);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
-async function serveUntrusted(kind, id, hit) {
+// `opening` is true for the page an app opens with, so an app's own files are not each counted as an opening.
+async function serveUntrusted(kind, id, hit, opening = true) {
   let policy;
-  try { policy = await policyFor(kind, id); } catch (error) {
+  const decisions = [];
+  try { policy = await policyFor(kind, id, decisions); } catch (error) {
+    if (opening) noteGate(kind, id, [{ kind: "notOpened", at: nowMicros() }]);
     return new Response("not served: the kernel did not verify (" + error.message + ")", { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } });
+  }
+  if (opening) {
+    // What the app was served: the bytes of its page on this device.
+    let size = 0;
+    if (policy) try { size = Number(hit.headers.get("content-length")) || (await hit.clone().blob()).size; } catch (e) {}
+    noteGate(kind, id, policy ? [{ kind: "opened", at: nowMicros(), value: size }, ...decisions] : decisions);
   }
   if (!policy) return new Response("not served: no grant to serve " + id, { status: 403, headers: { "content-type": "text/plain; charset=utf-8" } });
   return untrusted(hit, policy);
@@ -191,7 +215,7 @@ async function serveHolo(request, path) {
   if (file.endsWith("/")) file += "index.html";
   const cache = await caches.open("holo");
   const hit = await cache.match(BASE + "holo/" + id + "/" + file);
-  if (hit) return serveUntrusted("holo", id, hit);
+  if (hit) return serveUntrusted("holo", id, hit, file === "index.html" || request.mode === "navigate");
   if (file === "index.html" || !file.includes(".")) {
     const runner = (await caches.match("holo.html")) || (await fetch(new Request(BASE + "holo.html", { cache: "no-store" })).catch(() => null));
     if (runner && runner.ok) return new Response(await runner.text(), { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
@@ -258,6 +282,7 @@ self.addEventListener("fetch", (event) => {
     let allowed = false;
     try { allowed = await gate(who.kind === "p" ? "preview" : "published", "fetch", !!record, granted, denied); } catch (error) { allowed = false; }
     await audit({ principal: who.kind + ":" + who.id, operation: "kernel.gate.fetch", resource: url.origin, outcome: allowed ? "granted" : "refused" });
+    noteGate(who.kind, who.id, [{ kind: allowed ? "allowed" : "blocked", at: nowMicros(), site: url.origin }]);
     if (allowed) return fetch(event.request);
     return new Response("refused by capabilities: " + url.origin, { status: 403, headers: { "content-type": "text/plain" } });
   })());

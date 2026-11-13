@@ -1,17 +1,19 @@
 # On-device build telemetry: design
 
-Foundry measures each build turn on the user's device, keeps the records in that browser, shows them with suggestions when asked, and sends them nowhere. Evidence is in [VERIFICATION.md](VERIFICATION.md); read "Not established" first.
+Foundry measures each build turn on the user's device, and records what each app the user builds or opens was let reach, keeps both in that browser, shows them when asked, and sends them nowhere. Evidence is in [VERIFICATION.md](VERIFICATION.md); read "Not established" first.
 
 ## Where things are
 
 | What | Where |
 | --- | --- |
-| The Telemetry model (records, KPIs as functions of events, verdicts, suggestion rules, the loop) | `studio/telemetry/src/Telemetry.lex.tex`, 21 theorems (TL-01 to TL-21) in `TelemetryProofs.lex.tex` |
+| The Telemetry model (records, KPIs as functions of events, verdicts, suggestion rules, the loop, each app's decisions and standing) | `studio/telemetry/src/Telemetry.lex.tex`, 28 theorems (TL-01 to TL-28) in `TelemetryProofs.lex.tex` |
 | Where a record may go | the Forge kernel: `telemetry EFFECT ASKED DEVICE`, FK-25 to FK-27 (`app/src/ForgeKernel.lex.tex`) |
 | The budgets | the Forge kernel: `budget JOURNEY VALUE` (FK-22 to FK-24); telemetry asks, it keeps no number |
 | The tab's copy of the model | `studio/shell/telemetry/data/*.json`, the toolchain's data form of the checked sources, run by `shell/live/v2/interp.mjs` |
 | Probe, store, report, Prometheus files, panel | `studio/shell/telemetry/` |
 | Marks in the turn | `studio/shell/host.js`, the block headed "build telemetry" |
+| What each app reached | the worker's gate (`studio/shell/sw.template.js`, `noteGate`) hands each decision to the page; `host.js` names the app and records it |
+| The panel's wording | `studio/experience/src/FoundryExperience.lex.tex`, `appsOnDevice` |
 
 ## Measurement
 
@@ -31,6 +33,22 @@ Enter to preview frame, Enter to first declaration, first declaration to first p
 - IndexedDB, origin-scoped, one record per turn, at most 512 (`keepLimit`, TL-21). IndexedDB rather than OPFS because the main thread writes, and OPFS's synchronous handles are worker-only.
 - Ctrl+Alt+T or `#telemetry` opens a dialog: each KPI's last, mean, worst, budget and verdict, reads and checks per model, and the suggestions.
 - Saving is only on the user's click, and the kernel allows it only then (FK-26): a Prometheus text snapshot (0.0.4), an OpenMetrics history (for `promtool tsdb create-blocks-from openmetrics`), alert rules that judge as the kernel does (over at budget + 1 ms), and the turns as JSON. "Erase everything" deletes the database.
+
+## What each app reached
+
+Why: an app a model wrote, or one someone else wrote, runs on the user's device with the user's data near it; what it may reach is the user's first question about it. The worker already asks the kernel, for every app it serves, whether to serve it and which granted site may enter its policy (`gate ORIGIN serve|fetch ...`, FK-05 to FK-09). Those decisions are the record.
+
+How: each decision is handed, as it is made, to one open page of the shell (`telemetry/gate`), never to an app's own page. The page records it at idle through `noteApp`, which asks the kernel `telemetry store` first, like a turn. The model folds an app's decisions into its totals (`appStep`, `reachStep`) and gives it a standing (`standing`: reaches nothing, reaches only allowed sites, or was stopped). A preview's address changes with each build, so the host names the address with its app, and the builds of one app are one app.
+
+What, per app: times opened, times stopped from opening, each site allowed or stopped and how often and when, and the size of the page it was served. Nothing else earns a place:
+
+- Opened and last seen: whether the app is in use at all, which is the first thing to know before deciding about it.
+- Stopped (from opening, or from a site): the one fact that asks for a decision, so it decides the standing and sorts the app first (TL-22, TL-24).
+- Size on the device: what keeping the app costs; it is what the app was served, so it is its only inflow. Previews and installed apps run in a sandbox with no storage of their own, so there is no other storage to count.
+
+Rejected: request and byte counts of an app's own traffic (the sandbox hides a preview's requests from the worker, by design; counting would need a reporting channel out of the sandbox), errors inside an app (its console is its own; reading it would cross the same boundary), CPU and memory per app (no per-frame measure exists in a browser that does not cost the app time).
+
+No new kernel effect: an app's record is a record, kept and shown under the same `store` and `show` decisions as a turn (FK-25).
 
 ## Zero egress as a checked property
 
@@ -61,3 +79,6 @@ Deterministic and on device. A KPI over budget in most observed turns gets one l
 - Interpreter and compiled guest agreement for the Telemetry model: no holo was built.
 - Safari, Firefox, storage under quota pressure, and cross-origin-isolated clock resolution were not exercised.
 - A browser extension or devtools can read a page's storage; zero egress is about Foundry's code, not the user's own browser.
+- What each app reached is the kernel's decisions, not the requests themselves: a site in a preview's policy counts as allowed each time the preview opens, whether or not the app then used it. Only a frame the worker still controls has each request decided, and counted, one by one.
+- A decision made while no page of the shell is open is not recorded (the worker keeps nothing).
+- The worker's hand-over and the host's naming have been checked by source tests, not run in the built shell; the panel has been seen only in a standalone page over fixture records (`studio/tools/fixtures/telemetry_apps.mjs`, synthesized).
