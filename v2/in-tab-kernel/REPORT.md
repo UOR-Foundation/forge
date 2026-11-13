@@ -4,7 +4,8 @@ Lean 4.32.1's C++ kernel now builds as single-threaded WebAssembly and gives the
 inputs the earlier experiments used (7 accepted, 7 refused). The module is 2.22 MB (418 KB gzip). With the pinned
 library resident, a whole project is judged in 42 to 136 ms.
 
-All timings below are under Node 22.22.1 in WSL on one desktop. No browser has run this module yet; that is Phase 3.
+The first table of timings is under Node 22.22.1 in WSL on one desktop. The second is one Chromium tab on the same
+desktop. No Firefox, Safari or phone has run it.
 
 ## What was built
 
@@ -53,9 +54,46 @@ refuses it is the tab's (`../serverless-prove/export.mjs`), and is Phase 2.
 | Library made resident (25.7 MB, 5,041 declarations) | 1.35 to 1.96 s, once per worker; 77 MB |
 | Project over the resident library (about 180 declarations sent to the kernel) | median 42 to 136 ms, worst 151 ms; 77 MB |
 
+## In a browser tab (Chromium 156, desktop)
+
+`web/bench.html` in a module worker, served with no isolation headers (`crossOriginIsolated` false, no
+`SharedArrayBuffer`) and with the worker's network closed (`connect-src 'none'`). Summary in `evidence/browser.json`.
+
+| What | Result |
+| --- | --- |
+| Verdicts | 14 of 14 agree with native Lean |
+| Open: hash three files, initialize, make the library resident | 2.1 to 2.6 s, of which the library is 1.9 to 2.3 s; 77 MB |
+| Project over the resident library, median of 7 | 58 to 163 ms; worst single run 223 ms |
+| One project from nothing, every declaration | 10.4 s; 92 MB |
+| Altered bundle, altered library, altered kernel | each refused before the kernel ran |
+
+The worker re-derives the SHA-256 of the loader, the kernel and the library before using any of them, and of each
+bundle before the kernel reads it. The loader is given the checked bytes through `instantiateWasm`; left alone it
+fetches the module from beside itself, which the closed network refused.
+
+A run with a phone's viewport and user agent on the same CPU gave the same verdicts and similar times. It says nothing
+about a phone's speed or memory.
+
 **Resident library.** The library is entered with the kernel's own `addDeclWithoutChecking`; inductive types are
 still checked. That is sound only for bytes this same kernel has judged whole, so the library's address must be
 recorded together with the kernel's when the library is checked at build time. The spec's reuse rule states this.
+
+## The prover (GitHub Actions)
+
+A new app's proof terms come from an untrusted prover, `prover/prove.sh`, which `.github/workflows/in-tab-proof.yml`
+runs after verifying the app in the locked SDK image. The tab believes nothing it writes: it re-derives the suffix's
+address and the kernel judges every declaration.
+
+- **What it does.** It elaborates the project's rendered Lean modules with Lean 4.32.1, exports them after the
+  library's roots, checks that the pinned library export is a byte prefix, and keeps the rest as `suffix.ndjson`.
+- **Measured locally (WSL), two projects.** 21 and 32 s each. Both suffixes are byte for byte the ones the earlier
+  experiment captured from the SDK image, and the native kernel accepted both over the resident library.
+- **It needs a library pack.** `lexlean verify` publishes the runtime library without its `.olean.server` and
+  `.olean.private` parts, and a module cannot be imported without them. `prover/make-pack.sh` packs them from a
+  staging capture: 7.4 MB, the same bytes from two projects' captures (`sha256:69718022…`). LexLean publishing these
+  itself is upstream request 2 of `../serverless-prove/UPSTREAM.md`.
+- **Not run.** The workflow has not run on GitHub; it is started by hand and nothing calls it. No pack, kernel or
+  library is published anywhere.
 
 ## The spec
 
@@ -66,7 +104,9 @@ it; that is Phase 2.
 
 ## Not established
 
-- Any browser, and any phone. Memory of 77 to 92 MB has not been tried in iOS Safari.
+- Firefox, Safari, and any phone. Memory of 77 to 92 MB has not been tried in iOS Safari.
+- The prover's workflow on a GitHub runner, and how the studio fetches its artifact. Today the studio still calls
+  the hosted verifier, which returns an attestation and no kernel terms.
 - First-visit download: the library is 4.07 MB gzip, the module 0.42 MB.
 - The 1.4 to 2.0 s library load on a phone. Most of it is reading 25.7 MB of NDJSON.
 - Lean 4.32.1's kernel has a known soundness bug (lean4#14576, fixed in 4.33.1). This build has it too.

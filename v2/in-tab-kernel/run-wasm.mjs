@@ -17,7 +17,7 @@ const heapMB = (m) => Math.round(m.HEAPU8.length / 1048576);
 
 async function instance(lines) {
   const t0 = performance.now();
-  const m = await factory({ wasmBinary, print: (s) => lines.push(s), printErr: (s) => lines.push(s) });
+  const m = await factory({ instantiateWasm: (imports, done) => { WebAssembly.instantiate(wasmBinary, imports).then((r) => done(r.instance, r.module)); return {}; }, print: (s) => lines.push(s), printErr: (s) => lines.push(s) });
   const ready = m.ccall("checker_ready", "number", [], []);
   if (ready !== 0) throw new Error("the checker did not initialize: " + lines.join(" "));
   return { m, readyMs: Math.round(performance.now() - t0) };

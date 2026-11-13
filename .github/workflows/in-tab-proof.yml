@@ -1,0 +1,121 @@
+# The untrusted prover for the in-tab kernel (v2/in-tab-kernel). It verifies the repository's app in the locked SDK
+# image, as build.yml does, then writes the proof terms of the verified project as a suffix of the pinned library
+# export and hands them back as an artifact. Nothing here is believed: the tab re-derives the suffix's address and
+# Lean's kernel, running in the tab, judges every declaration in it.
+#
+# Prototype: nothing calls it and no published build reads its output.
+#
+# The library pack is the runtime library's compiled files for this LexLean, which `lexlean verify` does not
+# publish (v2/in-tab-kernel/prover/make-pack.sh). It is named by its SHA-256 and refused if it does not match.
+name: in-tab-proof
+
+# Run by hand only: no push or pull request starts it.
+on:
+  workflow_dispatch:
+    inputs:
+      pack-url:
+        description: Where the library pack (.tar.gz) is.
+        required: true
+        type: string
+      pack-sha256:
+        description: The pack's SHA-256.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: in-tab-proof-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  prove:
+    name: verify the app, export its proof terms
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the exact event revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Find the app
+        id: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f app/lexlean.toml ]]; then project=app
+          elif [[ -f prism/prism.toml ]]; then project=prism
+          elif [[ -f prism.toml ]]; then project=.
+          else printf '%s\n' 'no app here: neither app/lexlean.toml, prism/prism.toml nor prism.toml' >&2; exit 64
+          fi
+          echo "project=$project" >>"$GITHUB_OUTPUT"
+      - name: Verify the app through the locked SDK
+        shell: bash
+        env:
+          PROJECT: ${{ steps.app.outputs.project }}
+        run: |
+          set -euo pipefail
+          image=$(sed -n 's/.*"sdk_image":"\([^"]*\)".*/\1/p' prismpm.lock)
+          if [[ ! $image =~ ^[a-z0-9.-]+(:[0-9]{1,5})?/[a-z0-9./_-]+@sha256:[0-9a-f]{64}$ ]]; then
+            printf '%s\n' 'prismpm.lock does not select an immutable SDK image' >&2
+            exit 64
+          fi
+          # `lexlean verify` takes the entry files; they are the project's declared entrypoints.
+          mapfile -t entrypoints < <(python3 -c 'import sys, tomllib; print("\n".join(tomllib.load(open(sys.argv[1], "rb"))["entrypoints"]))' "$PROJECT/lexlean.toml")
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,exec,nosuid,size=2g \
+            --volume "$PWD:$PWD" \
+            --workdir "$PWD/$PROJECT" \
+            --env HOME=/tmp/prismpm-home \
+            --env PRISMPM_EPHEMERAL_HOME=1 \
+            "$image" sh -c 'lexlean lock && lexlean verify "$@"' sh "${entrypoints[@]}"
+      - name: Install Lean 4.32.1 and the exporter
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/v4.1.2/elan-init.sh -o "$RUNNER_TEMP/elan-init.sh"
+          sh "$RUNNER_TEMP/elan-init.sh" -y --default-toolchain leanprover/lean4:v4.32.1
+          echo "$HOME/.elan/bin" >>"$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone -q https://github.com/leanprover/lean4export "$RUNNER_TEMP/lean4export"
+          cd "$RUNNER_TEMP/lean4export"
+          # The commit v2/in-tab-kernel/driver/lakefile.toml pins; its toolchain file names v4.32.2.
+          git checkout -q 86e4a339507466921dc8c5417c8cb1de1ce7df60
+          echo "leanprover/lean4:v4.32.1" > lean-toolchain
+          lake build
+      - name: Fetch the library pack by its address
+        shell: bash
+        env:
+          PACK_URL: ${{ inputs.pack-url }}
+          PACK_SHA256: ${{ inputs.pack-sha256 }}
+        run: |
+          set -euo pipefail
+          curl -sSfL "$PACK_URL" -o "$RUNNER_TEMP/pack.tar.gz"
+          echo "$PACK_SHA256  $RUNNER_TEMP/pack.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/pack"
+          tar -xzf "$RUNNER_TEMP/pack.tar.gz" -C "$RUNNER_TEMP/pack"
+      - name: Export the proof terms
+        shell: bash
+        env:
+          PROJECT: ${{ steps.app.outputs.project }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          verified=("$PROJECT"/.lexlean/verified/*/)
+          if [[ ${#verified[@]} -ne 1 ]]; then
+            printf 'expected one verified tree, found %d\n' "${#verified[@]}" >&2
+            exit 64
+          fi
+          # Lean itself, not elan's proxy: the script reads `lean --githash`.
+          export PATH="$(dirname "$(elan which lean)"):$PATH"
+          bash v2/in-tab-kernel/prover/prove.sh "${verified[0]}" "$RUNNER_TEMP/pack" \
+            "$RUNNER_TEMP/lean4export/.lake/build/bin/lean4export" "$RUNNER_TEMP/proof"
+      - name: Hand the proof terms back
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-proof-${{ github.sha }}
+          path: ${{ runner.temp }}/proof
+          if-no-files-found: error
+          retention-days: 30

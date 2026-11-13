@@ -1,0 +1,22 @@
+{
+ "note": "Summaries of web/bench.html?runs=7, read from window.__bench on 2026-11-13. One desktop (24 logical cores, 32 GB). The phone row is viewport and user-agent emulation on that same CPU, not a phone.",
+ "kernel": "bb0ce35aa11fbd2732bee1da529f4cf8b6d44d424d9d31b008a1d178605c54e4",
+ "library": "48cc5e5427248794605c59353bbfb6362b0202c6e88b5a38e6ddfac42e03409e",
+ "runs": [
+  {
+   "browser": "Chromium 156 (Claude desktop browser pane), Windows 11",
+   "crossOriginIsolated": false, "sharedArrayBuffer": false,
+   "fetchMs": 192, "hashMs": 41, "readyMs": 110, "libraryMs": 2326, "openTotalMs": 2554, "heapMB": 77,
+   "project": { "inputs": 14, "agreeWithNative": 14, "kernelMedianMs": [58, 163], "roundTripMedianMs": [59, 164], "roundTripWorstMs": 223 },
+   "wholeFromNothing": { "accepted": true, "ms": 10394, "heapMB": 92 },
+   "addressFaults": { "alteredBundle": "refused", "alteredLibrary": "refused", "alteredKernel": "refused" }
+  },
+  {
+   "browser": "Chromium 156, emulated Pixel 8 viewport and user agent, same desktop CPU",
+   "crossOriginIsolated": false, "sharedArrayBuffer": false,
+   "fetchMs": 168, "hashMs": 41, "readyMs": 93, "libraryMs": 1928, "openTotalMs": 2125, "heapMB": 77,
+   "project": { "inputs": 14, "agreeWithNative": 14, "kernelMedianMs": [62, 129], "roundTripMedianMs": [64, 131], "roundTripWorstMs": 178 },
+   "addressFaults": { "alteredBundle": "refused", "alteredLibrary": "refused", "alteredKernel": "refused" }
+  }
+ ]
+}
