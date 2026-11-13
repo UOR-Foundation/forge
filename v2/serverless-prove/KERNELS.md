@@ -37,6 +37,30 @@ what a tab would need.
 | **metalean** (intgrah/metalean) | Lean, toolchain v4.36.0-rc2 | — | 4 for the fast checker, 3 for the logical one | **The only proof-carrying checker.** See below. |
 | Ix, Yatima | Lean | — | — | Content-addressed, aimed at zero-knowledge proofs. Neither reads lean4export. Yatima has been dormant since 2024; Ix's Rust kernel was removed. |
 
+## Verified checkers: con-leche, con-ron and con-agua
+
+This section was added after the survey above. It comes from the kernel-probe session's study (`v2/kernel-probe/STUDY.md` on
+branch `claude/kernel-prism-probe-d15d63`, which read the arena and the repositories). It was not re-read here.
+
+**con-leche** is written in Lean.
+- **What is proved:** every environment it accepts has a set-theoretic model, so it never accepts `False`. The proof
+  covers the cached checker it ships and its parser.
+- **What it declines:** user axioms, `native_decide`, `unsafe` and `partial`, 9 of the arena's 252 tests. It got none
+  wrong.
+
+**con-ron** is con-leche's checker in Rust.
+- **What is proved:** it refines con-leche, through a Lean twin and Aeneas. It has its own proved bignums.
+- **Speed:** it is the fastest verified checker in the arena. Mathlib: 186 s and 6.6 GB, against Lean's own kernel at
+  2,610 s and 9.9 GB.
+
+**con-agua** is the same checker in a small first-order language, L.
+- **What is proved:** it refines con-ron, and a verified compiler emits x86-64 from it.
+- **Browser:** a compiler from L to WebAssembly is on its roadmap as an idea, not started.
+
+This family is the most promising route to a browser kernel whose soundness is proved. **Not established:** whether
+con-ron builds as single-threaded wasm32, and how big or fast it is in a tab. The measurement was approved and
+handed to the kernel-probe session, which had not run it when this was written.
+
 ## Metalean: the formally verified candidate
 
 The README claims a lot, and none of it was checked here.

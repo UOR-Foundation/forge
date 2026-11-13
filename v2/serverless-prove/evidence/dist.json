@@ -1,0 +1,45 @@
+{
+ "note": "dist/ is not committed. These are the addresses of the files the measurements and agreement used; make-dist.mjs and the steps in REPORT.md (Reproduce) rebuild them, and test.mjs refuses a checker or library that does not match manifest.json.",
+ "files": {
+  "guests.App.edit-false.json": {
+   "bytes": 18664,
+   "sha256": "a91264b6224182be249c4d67cbebba75e512f88ff5b6e1e952f7f06ab8786087"
+  },
+  "guests.App.edit-true.json": {
+   "bytes": 18664,
+   "sha256": "126315050ed14c785e912bbd3d5eaf351b462f58c8d997346328204a945cf61b"
+  },
+  "guests.suffix.ndjson": {
+   "bytes": 526935,
+   "sha256": "28d469d1ec7ade96a909ef0cf250042cdeb3317ad058623e1f78803a11f4c2fa"
+  },
+  "guests.whole.ndjson": {
+   "bytes": 26272888,
+   "sha256": "5331e3794cf6ea17cc0059269bf2aebd12c47cf62abdb1d8ccf06d1ace40f858"
+  },
+  "kernel-tab.wasm": {
+   "bytes": 834536,
+   "sha256": "5a963d9b472ac3ed5a22c498c76826caf85d80c55715090e346ea7b775ffdba5"
+  },
+  "library.ndjson": {
+   "bytes": 25745953,
+   "sha256": "48cc5e5427248794605c59353bbfb6362b0202c6e88b5a38e6ddfac42e03409e"
+  },
+  "manifest.json": {
+   "bytes": 371,
+   "sha256": "c0682b51902b84e667bb28d932a5874cbcb3f117778d2ef70427882fe80aea87"
+  },
+  "payment.suffix.ndjson": {
+   "bytes": 510280,
+   "sha256": "c625bae4ff2cb67ff0451355f47a99dd84f468de4b18cd29ef8ca03b017807c3"
+  },
+  "payment.whole.ndjson": {
+   "bytes": 26256233,
+   "sha256": "5e0c5f23d26e7f03c3397a5b589573b295d5f40189b0e2f595cdd026f818c493"
+  },
+  "records.json": {
+   "bytes": 1858,
+   "sha256": "4144188263abb15d2fc2c09ddee7978662bbf3c321dbdba15ed40e3aacf9e8ad"
+  }
+ }
+}

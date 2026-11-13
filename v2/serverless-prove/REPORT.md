@@ -399,6 +399,13 @@ Any failure, absence or mismatch reads as Proving… or Refused, never as Proved
 - the Cache API or OPFS path in this bench: bytes were passed from the page;
 - who signs manifests and attestations;
 - Lean's own kernel in a tab.
+- **con-ron in a tab.** con-ron is the Rust checker proved to refine con-leche, whose accepted environments are
+  proved to have a set-theoretic model. In the arena's own runs it is the fastest verified checker (see
+  `KERNELS.md`). Whether it builds as single-threaded wasm32, its size, its speed in this bench and its verdicts on
+  the planted faults were not measured. The build was approved by the user and handed to the kernel-probe session
+  (branch `claude/kernel-prism-probe-d15d63`), which had not run it when this report was closed. If it measures as
+  lean and fast as nanoda, it would replace nanoda as the second key. A3 would then rest on a published proof of
+  refinement and consistency, not on agreement alone.
 
 ## Reproduce
 
