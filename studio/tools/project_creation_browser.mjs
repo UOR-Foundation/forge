@@ -11,7 +11,7 @@ const sources = new Map([
   ...fs.readdirSync(new URL("../shell/", import.meta.url)).filter(x => x.endsWith(".mjs")).map(x => ["/" + x, fs.readFileSync(new URL("../shell/" + x, import.meta.url))]),
   ["/creation.mjs", fs.readFileSync(new URL("../shell/project-creation.mjs", import.meta.url))],
   ["/storage.mjs", fs.readFileSync(new URL("../shell/storage-request.mjs", import.meta.url))],
-  ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))],
+  ["/address.mjs", fs.readFileSync(new URL("../shell/address.mjs", import.meta.url))], ["/prism-code/src/sha256.mjs", fs.readFileSync(new URL("../shell/prism-code/src/sha256.mjs", import.meta.url))],
   ["/import.mjs", imports],
 ]);
 const server = http.createServer((request, response) => {
@@ -27,7 +27,7 @@ try {
   const page = await browser.newPage(); await page.goto(`http://127.0.0.1:${server.address().port}/`);
   const report = await page.evaluate(async () => {
     const { prepareNewProject, createStoredProject, createStoredChat } = await import("/creation.mjs");
-    const { storageRequest } = await import("/storage.mjs"); const { kappa } = await import("/blake3.mjs");
+    const { storageRequest } = await import("/storage.mjs"); const { kappa } = await import("/address.mjs");
     const { importHandler } = await import("/import.mjs");
     const { prepareProjectImport } = await import("/project-import.mjs");
     const check = (v, m) => { if (!v) throw Error(m); };

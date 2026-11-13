@@ -19,7 +19,7 @@ const sources = new Map([
   ["/project-edit.mjs", fs.readFileSync(new URL("../shell/project-edit.mjs", import.meta.url))],
   ["/project-creation.mjs", fs.readFileSync(new URL("../shell/project-creation.mjs", import.meta.url))],
   ["/storage.mjs", fs.readFileSync(new URL("../shell/storage-request.mjs", import.meta.url))],
-  ["/blake3.mjs", fs.readFileSync(new URL("../../try/vendor/prism-code/src/blake3.mjs", import.meta.url))],
+  ["/address.mjs", fs.readFileSync(new URL("../shell/address.mjs", import.meta.url))], ["/prism-code/src/sha256.mjs", fs.readFileSync(new URL("../shell/prism-code/src/sha256.mjs", import.meta.url))],
 ]);
 const server = http.createServer((request, response) => {
   if(request.url === '/hello-frame.html') {response.setHeader('content-type','text/html');response.end('<!doctype html><script>parent.postMessage({type:"live/hello",app:decodeURIComponent(location.hash.slice(1))},"*")</script>');return;}
@@ -33,7 +33,7 @@ try {
   const report = await page.evaluate(async () => {
     const { editStoredProject, captureProjectSource, commitPreparedProject } = await import("/project-edit.mjs");
     const { prepareNewProject, prepareExistingProject, createStoredProject } = await import("/project-creation.mjs");
-    const { storageRequest } = await import("/storage.mjs"); const { kappa } = await import("/blake3.mjs");
+    const { storageRequest } = await import("/storage.mjs"); const { kappa } = await import("/address.mjs");
     const check = (value, message) => { if (!value) throw Error(message); };
     const stores = ["apps", "chats", "files", "objects", "refs", "versions"];
     const db = await new Promise((resolve, reject) => { const q = indexedDB.open("atomic-edit", 1); q.onupgradeneeded = () => stores.forEach(s => q.result.createObjectStore(s)); q.onsuccess = () => resolve(q.result); q.onerror = () => reject(q.error); });
@@ -58,7 +58,7 @@ try {
       if (kind === "changed") await put("files", `${p.app.id}:b.txt`, "intervening");
       if (kind === "added") await put("files", `${p.app.id}:added.txt`, "intervening");
       if (kind === "removed") await storageRequest(db, "files", "readwrite", s => s.delete(`${p.app.id}:b.txt`));
-      if (kind === "reference") await put("refs", `${p.app.id}:main`, "blake3:" + "f".repeat(64));
+      if (kind === "reference") await put("refs", `${p.app.id}:main`, "sha256:" + "f".repeat(64));
       if (kind === "name") await put("apps", p.app.id, { ...(await get("apps", p.app.id)), name: "renamed" });
       const before = await snapshot(); release();
       let refused = false; try { await editing; } catch (e) { refused = e.code === "projectEditConflict"; }
@@ -89,7 +89,7 @@ try {
     // Protected lifecycle is captured with source and changed only by its exact predecessor.
     // These are transaction fixtures, not evidence of checked/proved application semantics.
     const stateful = await createStoredProject(db, await prepareNewProject({name:'stateful',files:{'prism/App.lex.tex':'structure{ name: State }','prism/app.json':'{"phase":"proved"}'}},boundary));
-    const statefulId=stateful.app.id, predecessor={phase:'checked',sourceKappa:'blake3:'+'a'.repeat(64)},successor={...predecessor,phase:'proving',approvalId:'one'};
+    const statefulId=stateful.app.id, predecessor={phase:'checked',sourceKappa:'sha256:'+'a'.repeat(64)},successor={...predecessor,phase:'proving',approvalId:'one'};
     await put('refs',`stateful:${statefulId}`,predecessor);
     const captured=await captureProjectSource(db,statefulId);
     check(JSON.stringify(captured.applicationState)===JSON.stringify(predecessor),'protected state not captured with source');

@@ -129,6 +129,7 @@ jobs:
           status=0
           run() { "$@" || status=1; }
           run node tools/snapshot_restore_browser.mjs
+          run node tools/kappa_migration_browser.mjs
           run node tools/storage_request_browser.mjs
           run node tools/project_creation_browser.mjs
           run node tools/verified_project_import_browser.mjs

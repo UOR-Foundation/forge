@@ -25,8 +25,8 @@ def decision(endpoints, origin):
     # networkDecision: admitted only when a grant equals the origin; the empty baseline admits nothing.
     return "Accept" if any(e == origin for e in endpoints) else "Refuse"
 
-K1 = "blake3:" + "a1" * 32
-K2 = "blake3:" + "b2" * 32
+K1 = "sha256:" + "a1" * 32
+K2 = "sha256:" + "b2" * 32
 def head_of(refs, branch):
     # headOf: the first ref whose branch equals the name; none otherwise.
     for b_, k in refs:

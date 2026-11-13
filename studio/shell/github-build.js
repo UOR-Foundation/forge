@@ -123,7 +123,7 @@ export async function buildOnGitHub({ token, spec, axioms = {}, attestation = nu
   try {
     const copied=structuredClone({spec,axioms,attestation});
     const bytes=JSON.stringify(copied);
-    if(new TextEncoder().encode(bytes).length>1024*1024||typeof source!=="string"||!/^blake3:[a-f0-9]{64}$/.test(source)||!copied.spec||typeof copied.spec.name!=="string"||! /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(copied.spec.name)||typeof copied.spec.purpose!=="string")throw Error();
+    if(new TextEncoder().encode(bytes).length>1024*1024||typeof source!=="string"||!/^sha256:[a-f0-9]{64}$/.test(source)||!copied.spec||typeof copied.spec.name!=="string"||! /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(copied.spec.name)||typeof copied.spec.purpose!=="string")throw Error();
     ({spec,axioms,attestation}=JSON.parse(bytes));
   } catch {throw effectError("invalidPublicationPermission", "Invalid publication payload");}
   let permission, authorizedCheck;

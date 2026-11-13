@@ -1,6 +1,6 @@
 // FoundrySpecification.snapshotRestoreBoundary: checked browser storage adapter.
 const MiB = 1024 * 1024;
-const address = value => typeof value === "string" && /^blake3:[0-9a-f]{64}$/.test(value);
+const address = value => typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
 const fail = code => Object.assign(new Error(`Snapshot restoration refused: ${code}`), { code });
 const exact = (value, fields) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join(",") === fields;
 const portable = path => typeof path === "string" && path.length > 0 && !/[\\\u0000-\u001f:]/.test(path) && path.split("/").every(part => part && part !== "." && part !== "..");

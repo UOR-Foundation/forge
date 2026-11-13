@@ -48,7 +48,7 @@ async function build(named, fingerprint, acceptance) {
     if (/\/actions\/runs\/\d$/.test(url.pathname)) return reply({ status: "completed", conclusion: "success" });
     return reply({});
   };
-  return buildOnGitHub({ source:"blake3:"+"a".repeat(64), authorize:async()=>({check:async()=>{},close(){}}), token: "token", spec: { name: "test", purpose: "test" }, fetch, sleep: async () => {}, templateCommit: async () => ({ files: [], remove: [] }), open: async () => ({ identities: { archiveFingerprint: fingerprint }, acceptance: async () => acceptance }) });
+  return buildOnGitHub({ source:"sha256:"+"a".repeat(64), authorize:async()=>({check:async()=>{},close(){}}), token: "token", spec: { name: "test", purpose: "test" }, fetch, sleep: async () => {}, templateCommit: async () => ({ files: [], remove: [] }), open: async () => ({ identities: { archiveFingerprint: fingerprint }, acceptance: async () => acceptance }) });
 }
 test("the actual build returns a typed receipt for matching live identity and runtime evidence", async () => {
   const result = await build(digest, digest, accepted);

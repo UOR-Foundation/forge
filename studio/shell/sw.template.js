@@ -99,7 +99,7 @@ async function serveFromPage(request, path) {
 }
 
 // ---- previews and the capability gate
-const openDb = () => new Promise((res, rej) => { const r = indexedDB.open("hologram-forge", 2); r.onupgradeneeded = () => { const d = r.result; for (const s of ["settings", "apps", "chats", "files", "objects", "refs", "versions", "audit"]) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s); if (!d.objectStoreNames.contains("seals")) { const st = d.createObjectStore("seals", { keyPath: "id" }); st.createIndex("kind", "kind"); st.createIndex("promptKappa", "promptKappa"); } }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const openDb = () => new Promise((res, rej) => { const r = indexedDB.open("hologram-forge", 3); r.onupgradeneeded = (e) => { const d = r.result; for (const s of ["settings", "apps", "chats", "files", "objects", "refs", "versions", "audit"]) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s); if (!d.objectStoreNames.contains("seals")) { const st = d.createObjectStore("seals", { keyPath: "id" }); st.createIndex("kind", "kind"); st.createIndex("promptKappa", "promptKappa"); } if (e.oldVersion > 0 && e.oldVersion < 3) r.transaction.objectStore("refs").put(true, "migration:kappa"); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 async function audit(record) { const db = await openDb(); await new Promise((res, rej) => { const t = db.transaction("audit", "readwrite"); t.objectStore("audit").put({ timestamp_millis: Date.now(), ...record }, Date.now() + ":" + record.resource); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
 async function grants(id) { const db = await openDb(); return new Promise((res, rej) => { const q = db.transaction("refs", "readonly").objectStore("refs").get("capabilities:" + id); q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); }
 async function principalOf(e) {
@@ -132,7 +132,7 @@ function previewGrantValid(record, id) {
     const {expires,grantedAt} = record.previewConsent, at = Date.now();
     if (!Number.isFinite(expires) || !Number.isFinite(grantedAt) || at < grantedAt || at >= expires || expires > grantedAt + 120000) return false;
   }
-  return record?.previewConsent?.profile === "foundry/preview-consent/1" && record.previewConsent.id === id && /^blake3:[0-9a-f]{64}$/.test(record.previewConsent.source);
+  return record?.previewConsent?.profile === "foundry/preview-consent/1" && record.previewConsent.id === id && /^sha256:[0-9a-f]{64}$/.test(record.previewConsent.source);
 }
 function policyOf(endpoints) {
   const named = (head) => (endpoints.length ? head + " " + endpoints.join(" ") : head);
@@ -182,7 +182,7 @@ async function serveHolo(request, path) {
   if (download) {
     const bytes = await holoBytes(download[1]);
     if (!bytes) return new Response("no application " + download[1], { status: 404 });
-    return new Response(bytes, { headers: { "content-type": "application/octet-stream", "content-disposition": "attachment; filename=\"" + download[1].replace(/^blake3:/, "") + ".holo\"" } });
+    return new Response(bytes, { headers: { "content-type": "application/octet-stream", "content-disposition": "attachment; filename=\"" + download[1].replace(/^sha256:/, "") + ".holo\"" } });
   }
   const slash = rest.indexOf("/");
   if (slash < 0) return Response.redirect(request.url + "/", 302);

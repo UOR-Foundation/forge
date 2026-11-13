@@ -5,7 +5,7 @@ export function describeGitHubPublication(input){
  try{
   if(!input||Object.keys(input).sort().join()!=='attestation,axioms,repository,source,spec,templateRepository')throw Error();
   const copied=structuredClone(input);
-  if(typeof copied.repository!=='string'||!/^[-A-Za-z0-9]{1,39}\/prism-[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(copied.repository)||copied.templateRepository!=='UOR-Foundation/template'||!/^blake3:[a-f0-9]{64}$/.test(copied.source)||!copied.spec||copied.repository.split('/')[1]!=='prism-'+copied.spec.name)throw Error();
+  if(typeof copied.repository!=='string'||!/^[-A-Za-z0-9]{1,39}\/prism-[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(copied.repository)||copied.templateRepository!=='UOR-Foundation/template'||!/^sha256:[a-f0-9]{64}$/.test(copied.source)||!copied.spec||copied.repository.split('/')[1]!=='prism-'+copied.spec.name)throw Error();
   const payload=JSON.stringify({spec:copied.spec,axioms:copied.axioms,attestation:copied.attestation},null,2),bytes=new TextEncoder().encode(payload).length;
   if(bytes>1024*1024)throw Error();return Object.freeze({repository:copied.repository,source:copied.source,templateRepository:copied.templateRepository,payload,bytes,live:`https://${copied.repository.split('/')[0].toLowerCase()}.github.io/${copied.repository.split('/')[1]}/`});
  }catch{throw publicationPermissionFailure('invalidPublicationPermission');}
@@ -30,7 +30,7 @@ export function authorizeGitHubPublication(input,{document=globalThis.document,o
 
 export function bindPublicationSource(permission,expected,readCurrent){
  let prior,check,close;
- try{if(!expected||!/^blake3:[a-f0-9]{64}$/.test(expected.specKappa)||!['proved','published'].includes(expected.phase)||typeof readCurrent!=='function')throw Error();prior=JSON.stringify(structuredClone(expected));check=permission.check.bind(permission);close=permission.close.bind(permission);}catch{throw publicationPermissionFailure('invalidPublicationPermission');}
+ try{if(!expected||!/^sha256:[a-f0-9]{64}$/.test(expected.specKappa)||!['proved','published'].includes(expected.phase)||typeof readCurrent!=='function')throw Error();prior=JSON.stringify(structuredClone(expected));check=permission.check.bind(permission);close=permission.close.bind(permission);}catch{throw publicationPermissionFailure('invalidPublicationPermission');}
  return Object.freeze({close,check:async()=>{
   await check();let current;try{current=await readCurrent();}catch{throw publicationPermissionFailure('publicationPermissionUnavailable');}
   if(!current||JSON.stringify(current)!==prior)throw publicationPermissionFailure('publicationSourceChanged');

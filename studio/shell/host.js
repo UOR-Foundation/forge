@@ -42,7 +42,7 @@ import { executeWorkWithGuest } from "./work-codec.mjs";
 import { validateProviderKey } from "./provider-key-validation.mjs";
 // The browser host: the surface src/preload.ts exposes as window.electron, implemented on the page
 // with no server. Rules come from the generated core (core.wasm: preimage, restore, network, view);
-// addresses are BLAKE3 over the bytes the core spells; records live in IndexedDB. Adapters only:
+// addresses are κ (sha256) over the bytes the core spells; records live in IndexedDB. Adapters only:
 // nothing here decides, it derives, stores and forwards.
 //
 // Slices 1 and 2: settings, apps and their files, versions as kappa snapshots, chats as records,
@@ -86,7 +86,7 @@ const emitLocal = (channel, payload) => { const set = listeners.get(channel); if
 const emit = (channel,payload)=>{emitLocal(channel,payload);relayWindowEvent(channel,payload);};
 
 // ---- the generated core, the addresses and the store come from the shared inference module: one
-// core.wasm, one BLAKE3, one database ("hologram-forge" v2) for the builder's records and the seals.
+// core.wasm, one κ, one database ("hologram-forge" v3) for the builder's records and the seals.
 const enc = new TextEncoder(), dec = new TextDecoder();
 let core = null;
 const coreReady = inference.coreReady().then((c) => (core = c));
