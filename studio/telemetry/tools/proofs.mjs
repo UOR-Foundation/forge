@@ -59,6 +59,22 @@ claim("TL-20", "An adopted change is never called an improvement unless the KPI 
 claim("TL-21", "The device never keeps more than 512 turns", "keptIsBounded", "count : Nat", "breaksKept",
   "((Telemetry::keepLimit) <? (Telemetry::kept count))", [T("kept"), T("keepLimit")]);
 
+// Per-app network decisions: what the panel shows of each app is the model's, never the view's.
+claim("TL-22", "An app the kernel refused anything is never shown as all clear", "refusedIsShown", "app : Telemetry::AppNet", "breaksRefusalHidden",
+  "(((0 <? (project app blocked)) || (0 <? (project app notOpened))) && (not ((Telemetry::standing app) =? (Telemetry::standingBlocked))))", [T("standing"), T("standingBlocked"), T("standingReaches"), T("standingQuiet")]);
+claim("TL-23", "An app is never shown as reaching a site it was never allowed to reach", "reachNeedsAllowance", "app : Telemetry::AppNet", "breaksReachUnallowed",
+  "(((project app allowed) =? 0) && ((Telemetry::standing app) =? (Telemetry::standingReaches)))", [T("standing"), T("standingBlocked"), T("standingReaches"), T("standingQuiet")]);
+claim("TL-24", "A refused site is never shown as only allowed", "refusedSiteIsShown", "reach : Telemetry::Reach", "breaksSiteRefusalHidden",
+  "((0 <? (project reach blocked)) && (not ((Telemetry::reachStanding reach) =? (Telemetry::standingBlocked))))", [T("reachStanding"), T("standingBlocked"), T("standingReaches")]);
+claim("TL-25", "A refusal is never counted as allowed, and an allowance never as a refusal", "refusalNeverAllowed", "count : Nat, decision : Telemetry::Decision", "breaksMiscounted",
+  "((((project decision kind) =? (Telemetry::netBlocked)) && (not ((Telemetry::tally count decision (Telemetry::netAllowed)) =? count))) || (((project decision kind) =? (Telemetry::netAllowed)) && (not ((Telemetry::tally count decision (Telemetry::netBlocked)) =? count))))", [T("tally"), T("netAllowed"), T("netBlocked")]);
+claim("TL-26", "Every allowance and every refusal is counted once", "decisionCountedOnce", "count : Nat, decision : Telemetry::Decision", "breaksUncounted",
+  "((((project decision kind) =? (Telemetry::netAllowed)) && (not ((Telemetry::tally count decision (Telemetry::netAllowed)) =? (count + 1)))) || (((project decision kind) =? (Telemetry::netBlocked)) && (not ((Telemetry::tally count decision (Telemetry::netBlocked)) =? (count + 1)))))", [T("tally"), T("netAllowed"), T("netBlocked")]);
+claim("TL-27", "The time an app or a site was last seen never moves back", "lastNeverMovesBack", "last : Nat, decision : Telemetry::Decision", "breaksLastBack",
+  "((Telemetry::latest last decision) <? last)", [T("latest")]);
+claim("TL-28", "The device never keeps more than 256 apps", "appsKeptIsBounded", "count : Nat", "breaksAppsKept",
+  "((Telemetry::appKeepLimit) <? (Telemetry::appsKept count))", [T("appsKept"), T("appKeepLimit")]);
+
 const args = (params) => params.split(",").map((p) => p.trim().split(" ")[0]).join(" ");
 let out = "\\begin{lexlean}{TelemetryProofs}\n\\useglossary{lexlean.std.bool@1.2.0}\n\\useglossary{lexlean.std.nat@1.2.0}\n\\importmodule{Telemetry}\n\\title{Boolean}\n\\begin{semanticmodule}\n";
 out += CLAIMS.map((c) => `definition{

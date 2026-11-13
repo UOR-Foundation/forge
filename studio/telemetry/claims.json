@@ -145,5 +145,54 @@
   "theorem": "keptIsBounded",
   "breaks": "breaksKept",
   "body": "((Telemetry::keepLimit) <? (Telemetry::kept count))"
+ },
+ {
+  "id": "TL-22",
+  "statement": "An app the kernel refused anything is never shown as all clear",
+  "theorem": "refusedIsShown",
+  "breaks": "breaksRefusalHidden",
+  "body": "(((0 <? (project app blocked)) || (0 <? (project app notOpened))) && (not ((Telemetry::standing app) =? (Telemetry::standingBlocked))))"
+ },
+ {
+  "id": "TL-23",
+  "statement": "An app is never shown as reaching a site it was never allowed to reach",
+  "theorem": "reachNeedsAllowance",
+  "breaks": "breaksReachUnallowed",
+  "body": "(((project app allowed) =? 0) && ((Telemetry::standing app) =? (Telemetry::standingReaches)))"
+ },
+ {
+  "id": "TL-24",
+  "statement": "A refused site is never shown as only allowed",
+  "theorem": "refusedSiteIsShown",
+  "breaks": "breaksSiteRefusalHidden",
+  "body": "((0 <? (project reach blocked)) && (not ((Telemetry::reachStanding reach) =? (Telemetry::standingBlocked))))"
+ },
+ {
+  "id": "TL-25",
+  "statement": "A refusal is never counted as allowed, and an allowance never as a refusal",
+  "theorem": "refusalNeverAllowed",
+  "breaks": "breaksMiscounted",
+  "body": "((((project decision kind) =? (Telemetry::netBlocked)) && (not ((Telemetry::tally count decision (Telemetry::netAllowed)) =? count))) || (((project decision kind) =? (Telemetry::netAllowed)) && (not ((Telemetry::tally count decision (Telemetry::netBlocked)) =? count))))"
+ },
+ {
+  "id": "TL-26",
+  "statement": "Every allowance and every refusal is counted once",
+  "theorem": "decisionCountedOnce",
+  "breaks": "breaksUncounted",
+  "body": "((((project decision kind) =? (Telemetry::netAllowed)) && (not ((Telemetry::tally count decision (Telemetry::netAllowed)) =? (count + 1)))) || (((project decision kind) =? (Telemetry::netBlocked)) && (not ((Telemetry::tally count decision (Telemetry::netBlocked)) =? (count + 1)))))"
+ },
+ {
+  "id": "TL-27",
+  "statement": "The time an app or a site was last seen never moves back",
+  "theorem": "lastNeverMovesBack",
+  "breaks": "breaksLastBack",
+  "body": "((Telemetry::latest last decision) <? last)"
+ },
+ {
+  "id": "TL-28",
+  "statement": "The device never keeps more than 256 apps",
+  "theorem": "appsKeptIsBounded",
+  "breaks": "breaksAppsKept",
+  "body": "((Telemetry::appKeepLimit) <? (Telemetry::appsKept count))"
  }
 ]
