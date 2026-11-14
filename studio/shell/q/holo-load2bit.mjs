@@ -71,7 +71,7 @@ export function buildEngineManifest(man, normRecs, e8lutData) {
   const native = man.mode === "q4" || man.mode === "q3" || man.mode === "e8" || man.mode === "bitnet" || man.mode === "q1";   // native-bits κ-object (q1 = Bonsai binary)
   return {
     d: man.d, n_heads: man.n_heads, n_kv_heads: man.n_kv_heads, ff: man.ff, vocab: man.vocab, n_layers: man.n_layers, hd: man.hd,
-    bits: native ? man.bits : 8, layout: man.layout, rope_base: man.rope_base, ...(man.maskId !== undefined ? { maskId: man.maskId, diffusion: true } : {}), attn_bias: man.attn_bias, qk_norm: man.qk_norm, qk_norm_dim: man.qk_norm_dim, tied: man.tied,
+    bits: native ? man.bits : 8, layout: man.layout, rope_base: man.rope_base, ...(man.maskId !== undefined ? { maskId: man.maskId, diffusion: true } : {}), attn_bias: man.attn_bias, ...(man.tern ? { tern: true } : {}), ...(man.yarn ? { yarn: man.yarn } : {}), qk_norm: man.qk_norm, qk_norm_dim: man.qk_norm_dim, tied: man.tied,
     ...(man.sub_norm ? { sub_norm: true } : {}), ...(man.hybrid ? { hybrid: man.hybrid } : {}), ...(man.rope_sections ? { rope_sections: man.rope_sections } : {}), ...(man.bitlinear ? { bitlinear: true } : {}), ...(man.ffn_act ? { ffn_act: man.ffn_act } : {}), ...(man.moe ? { moe: man.moe } : {}),
     ...(native ? {} : { twoBit: true, incoherent: man.incoherent === true, preQuantized: true }), tensors, ...(e8lutData ? { e8lutData } : {}),
   };
