@@ -29,28 +29,32 @@ for (const [name, engine, context] of targets) {
     browser = await engine.launch();
     row.version = browser.version();
     const page = await (await browser.newContext(context)).newPage();
-    const errors = [];
-    page.on("pageerror", (e) => errors.push(String(e).slice(0, 200)));
     await page.goto(`http://localhost:${port}/web/bench.html?runs=${runs}&whole=1`);
-    await page.waitForFunction(() => window.__bench !== undefined, null, { timeout: 240000 });
+    await page.waitForFunction(() => window.__bench !== undefined, null, { timeout: 300000 });
     const r = await page.evaluate(() => window.__bench);
-    if (r.error || !r.summary) Object.assign(row, { failed: r.error ?? r.open?.refusal ?? "no summary", errors });
+    if (r.error || !r.summary) row.failed = r.error ?? r.openByLibrary?.refusal ?? "no summary";
     else {
-      const inputs = Object.values(r.inputs), span = (k) => [Math.round(Math.min(...inputs.map((x) => x[k]))), Math.round(Math.max(...inputs.map((x) => x[k])))];
+      const inputs = Object.values(r.inputs), span = (k) => { const xs = inputs.map((x) => x[k]).filter((x) => typeof x === "number"); return xs.length ? [Math.round(Math.min(...xs) * 10) / 10, Math.round(Math.max(...xs) * 10) / 10] : null; };
+      const ms = (x) => x === undefined ? null : Math.round(x);
       Object.assign(row, {
-        userAgent: r.userAgent, crossOriginIsolated: r.crossOriginIsolated, sharedArrayBuffer: r.sharedArrayBuffer,
-        kernel: r.open.kernel, fetchMs: Math.round(r.fetchMs), hashMs: Math.round(r.open.timings.hashMs), readyMs: Math.round(r.open.timings.readyMs),
-        libraryMs: Math.round(r.open.timings.libraryMs), openTotalMs: Math.round(r.open.totalMs), heapMB: r.open.heapMB,
-        project: { inputs: inputs.length, agreeWithNative: r.summary.agree, kernelMedianMs: span("kernelMs"), roundTripMedianMs: span("roundTripMs"), roundTripWorstMs: span("worstRoundTripMs")[1] },
-        wholeFromNothing: r.whole && { accepted: r.whole.accepted, ms: Math.round(r.whole.kernelMs), heapMB: r.whole.heapMB },
-        addressFaults: Object.fromEntries(Object.entries(r.faults).map(([k, v]) => [k, v.refused ? "refused" : "ACCEPTED"])),
+        userAgent: r.userAgent, crossOriginIsolated: r.crossOriginIsolated,
+        fetchKernelMs: ms(r.fetchKernelMs), fetchLibraryMs: ms(r.fetchLibraryMs),
+        openByLibrary: { totalMs: ms(r.openByLibrary.totalMs), libraryMs: ms(r.openByLibrary.timings.libraryMs), heapMB: r.openByLibrary.heapMB },
+        imageKept: r.imageKept, keepImageMs: ms(r.keepImageMs),
+        openByImage: r.openByImage.ok ? { totalMs: ms(r.openByImage.totalMs), imageMs: ms(r.openByImage.timings.imageMs), heapMB: r.openByImage.heapMB } : { failed: r.openByImage.need ?? r.openByImage.refusal },
+        judged: { kernelMs: span("kernelMs"), roundTripMs: span("judgedRoundTripMs") },
+        reused: { medianMs: span("againMs"), worstMs: span("againWorstMs")?.[1] ?? null },
+        laterVisit: { reusedMs: span("laterMs"), kernelOnImageMs: span("onImageKernelMs") },
+        wholeFromNothing: r.whole && { accepted: r.whole.accepted, ms: ms(r.whole.kernelMs), heapMB: r.whole.heapMB },
+        faults: Object.fromEntries(Object.entries(r.faults).map(([k, v]) => [k, v.notRun ? "not run: " + v.notRun : v.refused ? "refused" : "ACCEPTED: " + v.says])),
+        summary: r.summary,
       });
     }
   } catch (e) { row.failed = String(e && e.message || e).split("\n")[0].slice(0, 300); }
   finally { if (browser) await browser.close().catch(() => {}); }
   rows.push(row);
-  console.log(JSON.stringify(row.failed ? { engine: name, version: row.version, failed: row.failed } : { engine: name, version: row.version, open: row.openTotalMs, library: row.libraryMs, project: row.project, whole: row.wholeFromNothing, faults: row.addressFaults }));
+  console.log(JSON.stringify(row.failed ? { engine: name, version: row.version, failed: row.failed } : { engine: name, version: row.version, openByLibrary: row.openByLibrary, openByImage: row.openByImage, keepImageMs: row.keepImageMs, judged: row.judged, reused: row.reused, laterVisit: row.laterVisit, faults: row.faults, summary: row.summary }));
 }
 server.kill();
-fs.writeFileSync(path.join(here, "..", "evidence", "engines.json"), JSON.stringify({ note: "web/bench.html through Playwright on one Windows 11 desktop. Playwright's WebKit is Safari's engine built for Windows, not Safari on a Mac or a phone.", runs: Number(runs), rows }, null, 1) + "\n");
+fs.writeFileSync(path.join(here, "..", "evidence", "engines.json"), JSON.stringify({ note: "web/bench.html through Playwright on one Windows 11 desktop. Playwright's WebKit is Safari's engine built for Windows, not Safari on a Mac or a phone. Chromium is in evidence/browser.json.", runs: Number(runs), rows }, null, 1) + "\n");
 process.exit(rows.some((r) => r.failed) ? 1 : 0);

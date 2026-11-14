@@ -98,27 +98,56 @@ the resident library, axioms included, median 35 to 89 ms, worst single run 125 
 four address faults, an unbound library among them, are refused. The module is now 2.23 MB, 419 KB gzip
 (`sha256:c1300379…`); the sizes and hash earlier in this report are of the build before these two changes.
 
-## Firefox and WebKit
+## Work done once per address
 
-`node web/engines.mjs <playwright>` runs the same bench through Playwright, served with no isolation headers.
-One Windows 11 desktop, kernel `c1300379…`, 7 runs per input (`evidence/engines.json`).
+Hologram's rule, applied to checking: work is named by the address of what it reads, and done once. The worker keeps
+two things in the origin's private file system (IndexedDB where the engine has none).
 
-| | Firefox 153 | WebKit 26.5 | WebKit, iPhone 15 viewport (emulated) |
+- **A verdict**, under the addresses of the kernel, the library and the suffix. The same proof is not judged twice,
+  in this visit or a later one.
+- **The kernel's memory with the library resident**, under the kernel's and the library's. A later open restores it
+  and neither fetches nor reads the library.
+
+A read is believed only if what it holds names the addresses it was asked for and, for the image, re-derives to the
+address recorded beside it. Anything else is a miss, and a miss does the work in full: `InTabKernel.reuseAdmits`, and
+its two theorems in `InTabKernelProofs`.
+
+One desktop, kernel `52fa2174…`, 7 runs (`evidence/browser.json`, `evidence/engines.json`). The engines were run
+through Playwright while other builds loaded the machine, Chromium in the app's browser pane; compare within a
+column, not across.
+
+| | Chromium 156 | Firefox 153 | WebKit 26.5 |
 | --- | --- | --- | --- |
-| Verdicts agreeing with native Lean | 14 of 14 | 14 of 14 | 14 of 14 |
-| Open (library) | 6.2 s (5.9 s) | 2.4 s (2.2 s) | 2.3 s (2.1 s) |
-| Project over the resident library, median | 159 to 417 ms | 42 to 142 ms | 42 to 120 ms |
-| Worst single run | 694 ms | 234 ms | 252 ms |
-| One project from nothing | 35.4 s | 11.5 s | 9.0 s |
-| Address faults refused | 4 of 4 | 4 of 4 | 4 of 4 |
+| Open by reading the library | 1.54 s | 11.6 s | 3.0 s |
+| Open from the kept image | 0.30 s | 0.37 s | 0.70 s |
+| Project judged by the kernel | 41 to 148 ms | 284 to 905 ms | 63 to 270 ms |
+| The same project again | 0.5 to 1.2 ms | 2 ms | 14 to 16 ms |
+| Kept verdict on a later visit | 3 to 15 ms | 31 to 43 ms | 4 to 185 ms |
+| Agreement with native Lean, each way | 14 of 14 | 14 of 14 | 14 of 14 |
+| Faults refused | 6 of 6 | 6 of 6 | 4 of 4; 2 not run |
 
-- **Every engine gives Lean's verdicts** and refuses every altered or unbound file. Memory is the same 77 MB with
-  the library resident and 92 MB from nothing.
-- **Firefox is about three times slower** than WebKit and Chromium on this build, at every step. Its slowest project
-  sits near the 500 ms budget on a desktop, and its worst single run is past it. The cause was not looked for; the
-  build uses WebAssembly exceptions and `-O2`, and neither was varied.
-- **WebKit here is Safari's engine built for Windows**, not Safari on a Mac or a phone. The iPhone row changes the
-  viewport and user agent only. No phone has run this.
+- **Each way** is four: judged by the kernel, reused in the same worker, kept for a later visit, and judged again by a
+  kernel restored from the image.
+- **The six faults**: an altered bundle, kernel, library; a library with no binding; an image with one byte changed
+  (a miss: the worker asks for the library); and a kept verdict rewritten to another suffix's (a miss: the kernel
+  judges it). The last two are planted from the page, which Playwright's WebKit cannot do.
+- **WebKit here is Safari's engine built for Windows.** It has no private file system, so it used the IndexedDB
+  store. The iPhone row of `evidence/engines.json` changes the viewport and user agent only. No phone has run this.
+- **Firefox is the slowest engine** on this build at every step the kernel does. The cause was not looked for.
+
+What this costs, and what it does not establish:
+
+- **Memory.** A kernel opened from the image holds 117 MB, against 77 MB: the memory is grown by an allocation the
+  size of the image, and that space is not given back.
+- **Disk.** The image is 80.5 MB in the origin's storage.
+- **Trust.** The store is the origin's own. A script of this origin that writes a whole, self-consistent record can
+  make the worker believe it, exactly as it could replace the worker. Reuse saves this tab's own work; it is not
+  evidence to anyone else.
+- **The image is not yet the same bytes twice.** Two builds differ in about 140 of 80.5 million bytes
+  (`snapshot-probe.mjs`), not yet explained. So an image is one this origin made, not one shipped by address.
+- **Addresses here are SHA-256**, which the browser computes natively. Hologram's κ is BLAKE3; deriving κ in the tab
+  at speed needs BLAKE3 inside the module, which is not built.
+- **Per-theorem reuse is not built.** A changed project is judged whole. The prover emits one suffix per project.
 
 ## The prover (GitHub Actions)
 
