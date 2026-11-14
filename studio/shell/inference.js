@@ -2,10 +2,11 @@ import {readUserSettings,replaceUserSettings,changeUserSettings} from "./setting
 import {deviceProviderCredential,deviceInferenceRoute} from './private-provider-credentials.mjs';
 import { authorizeInference } from "./inference-consent.mjs";
 import { cloudCompletion } from "./inference-effects.mjs";
+import { deviceEngine } from "./device-engine.mjs";
 // Inference on the page, shared by the landing page (shell.js) and the builder's host (host.js).
 // Adapters only: the rules are in core.wasm, generated from the Lean verified model (the route table,
 // the preimages, the OpenAI wire, the OpenRouter request); the engine is Hologram Q's snapshot under
-// q/; addresses are BLAKE3 from the holospaces wasm; seals live in the device store. No server is
+// q/, reached only through device-engine.mjs; addresses are BLAKE3 from the holospaces wasm; seals live in the device store. No server is
 // contacted except Hugging Face, once, for the model's blocks, and OpenRouter with the visitor's own
 // key on the paid route.
 
@@ -42,13 +43,11 @@ export function coreReady() {
 export let VIEW = null;
 export async function viewReady() { if (VIEW) return VIEW; const inline = document.getElementById("view"); VIEW = inline ? JSON.parse(inline.textContent) : (await coreReady()).run({ op: "view" }); return VIEW; }
 
-// ---- BLAKE3 addresses from the holospaces wasm (the same κ every daemon computes)
+// ---- BLAKE3 addresses from the holospaces wasm (the same κ every daemon computes), through the engine's door
 let kappaFn = null;
 export async function kappaReady() {
   if (kappaFn) return kappaFn;
-  const mod = await import(new URL("q/pkg/holospaces_web.js", BASE).href);
-  if (typeof mod.default === "function") { try { await mod.default(); } catch (e) {} }
-  kappaFn = (bytes) => String(mod.kappa(bytes));
+  kappaFn = await deviceEngine.hasher();
   return kappaFn;
 }
 export async function kappa(bytes) { return (await kappaReady())(bytes); }
@@ -125,8 +124,7 @@ export async function lookup(body) {
       if ((await kappa(enc.encode(JSON.stringify(receipt.value)))) !== receipt.id || (await kappa(enc.encode(answer.value))) !== answer.id) continue;
       return { hit: true, text: answer.value, receipt: m.value.receipt, rec: receipt.value, paid: true, fingerprint: `${receipt.value.model};${receipt.value.provider || ""};${receipt.value.fingerprint || ""}` };
     }
-    const { verifyIntegrity } = await import(new URL("q/core/kappa.js", BASE).href);
-    if (!(await verifyIntegrity(receipt.value)).ok) continue;
+    if (!(await deviceEngine.verifyReceipt(receipt.value)).ok) continue;
     return { hit: true, text: answer.value, receipt: m.value.receipt, rec: receipt.value, modelId: m.value.modelId || null, fingerprint: `${receipt.value.body["prov:used"]["holo:model"]};${receipt.value.body["prov:used"]["holo:engine"]}` };
   }
   return { hit: false, key };
@@ -173,7 +171,7 @@ const SEED = {
 const LOCAL_SEED = typeof location !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
   ? new URL("/seed/q-smollm2-360m.v1.holo", location.origin).href : null;
 const seedEntry = () => (LOCAL_SEED ? { ...SEED, holoUrl: LOCAL_SEED } : SEED);
-export const engine = { instance: null, model: null, mods: null, session: null, loading: null, onState: () => {}, onReady: () => {},
+export const engine = { instance: null, model: null, session: null, loading: null, onState: () => {}, onReady: () => {},
                         tier: "Small", seed: null, large: null, largeLoading: null, promoted: false };
 const sigOf = (list) => (list || []).map((m) => (m.role || "") + (m.content || "")).join("");
 const tailFor = (M, u) => M.llama3 ? `<|eot_id|><|start_header_id|>user<|end_header_id|>
@@ -181,30 +179,20 @@ const tailFor = (M, u) => M.llama3 ? `<|eot_id|><|start_header_id|>user<|end_hea
 ${u || ""}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
 ` : null;
-async function mods() {
-  if (engine.mods) return engine.mods;
-  const q = (p) => new URL("q/core/" + p, BASE).href;
-  const [L, E, F] = await Promise.all([import(q("loader.js")), import(q("engine.js")), import(q("q-brain-fast.mjs"))]);
-  await L.ready();
-  return (engine.mods = { L, E, F });
-}
 // One model, resident. `word` is what the visitor is told while its bytes arrive.
 async function residentModel(entry, word) {
-  const { L, E } = await mods();
-  const loaded = await L.loadModel(entry, {
+  const instance = await deviceEngine.load(entry, {
     onStatus: () => engine.onState(word),
     onProgress: (d, t) => engine.onState(t ? `${word} · ${Math.round((d / t) * 100)}%` : word),
   });
-  if (!loaded || !loaded.gpu) throw new Error("model load failed");
-  return { instance: await E.createEngine(entry, loaded), model: entry };
+  return { instance, model: entry };
 }
 // The large model, loaded behind whatever is answering, then measured once and offered to the rule.
 function loadLarge(word) {
   if (engine.large || engine.largeLoading) return engine.largeLoading || Promise.resolve(engine.large);
   engine.largeLoading = (async () => {
-    const { L } = await mods();
     const V = await viewReady();
-    const entry = L.MODELS.find((m) => m.fam === "TernaryBonsai");   // Ternary Bonsai 1.7B, the device's model
+    const entry = await deviceEngine.model("TernaryBonsai");   // Ternary Bonsai 1.7B, the device's model
     // Behind the seed it is the larger model arriving; without a seed it is the only model there is.
     const held = await residentModel(entry, word || V.largerLoadingLabel);
     engine.large = held;
@@ -226,8 +214,7 @@ function loadLarge(word) {
 // will see. The second is what the rule is told.
 async function measure(held) {
   try {
-    const { F } = await mods();
-    let ids = held.instance.tokenize(F.frameHistory(held.model, [{ role: "user", content: "Say ready." }]));
+    let ids = held.instance.tokenize(deviceEngine.frame(held.model, [{ role: "user", content: "Say ready." }]));
     if (held.model.bos && held.instance.bosId != null) ids = [held.instance.bosId, ...ids];
     let tokps = 0;
     for (let turn = 0; turn < 2; turn++) {
@@ -283,7 +270,7 @@ export function gpuIds(inst, messages, entry = engine.model) {
     const tail = tailFor(entry, last.content);
     if (tail != null && sigOf(messages.slice(0, -1)) === engine.session.sig) return { ids: engine.session.ids.concat(inst.tokenize(tail)), warm: true };
   }
-  let ids = inst.tokenize(engine.mods.F.frameHistory(entry, messages));
+  let ids = inst.tokenize(deviceEngine.frame(entry, messages));
   if (entry.bos && inst.bosId != null) ids = [inst.bosId, ...ids];
   return { ids, warm: false };
 }
