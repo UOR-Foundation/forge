@@ -7,7 +7,7 @@ on:
       - "studio/**"
       - "v2/**"
   pull_request:
-    # Forge (studio/) is not read by the try page, the frame, the identity page or the try codespace: a pull
+    # Forge (studio/) is not read by the try page, the frame, Prism ids or the try codespace: a pull
     # request that changes only Forge or the v2/ prototypes does not wait for them.
     paths-ignore:
       - "studio/**"
@@ -64,12 +64,10 @@ jobs:
           fi
       - name: Verify, answer add 20 22 and replay 22/22
         run: npm run test:try
-      - name: Prism accounts - every signature check refuses, and the passkey flow signs in
+      - name: Prism ids - the pinned stitch copy matches its lock, every session check refuses, and two apps share one id
         run: npm run test:identity
       - name: Build the canonical frame every Prism app loads
         run: node frame/publish.mjs "$RUNNER_TEMP/frame" "$GITHUB_SHA"
-      - name: Build the sign-in page for id.uor.foundation, pinned by hash
-        run: node identity/publish.mjs "$RUNNER_TEMP/identity" "$GITHUB_SHA"
 
   deploy:
     name: publish the try page and the canonical frame
