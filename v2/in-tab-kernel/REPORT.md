@@ -98,6 +98,28 @@ the resident library, axioms included, median 35 to 89 ms, worst single run 125 
 four address faults, an unbound library among them, are refused. The module is now 2.23 MB, 419 KB gzip
 (`sha256:c1300379…`); the sizes and hash earlier in this report are of the build before these two changes.
 
+## Firefox and WebKit
+
+`node web/engines.mjs <playwright>` runs the same bench through Playwright, served with no isolation headers.
+One Windows 11 desktop, kernel `c1300379…`, 7 runs per input (`evidence/engines.json`).
+
+| | Firefox 153 | WebKit 26.5 | WebKit, iPhone 15 viewport (emulated) |
+| --- | --- | --- | --- |
+| Verdicts agreeing with native Lean | 14 of 14 | 14 of 14 | 14 of 14 |
+| Open (library) | 6.2 s (5.9 s) | 2.4 s (2.2 s) | 2.3 s (2.1 s) |
+| Project over the resident library, median | 159 to 417 ms | 42 to 142 ms | 42 to 120 ms |
+| Worst single run | 694 ms | 234 ms | 252 ms |
+| One project from nothing | 35.4 s | 11.5 s | 9.0 s |
+| Address faults refused | 4 of 4 | 4 of 4 | 4 of 4 |
+
+- **Every engine gives Lean's verdicts** and refuses every altered or unbound file. Memory is the same 77 MB with
+  the library resident and 92 MB from nothing.
+- **Firefox is about three times slower** than WebKit and Chromium on this build, at every step. Its slowest project
+  sits near the 500 ms budget on a desktop, and its worst single run is past it. The cause was not looked for; the
+  build uses WebAssembly exceptions and `-O2`, and neither was varied.
+- **WebKit here is Safari's engine built for Windows**, not Safari on a Mac or a phone. The iPhone row changes the
+  viewport and user agent only. No phone has run this.
+
 ## The prover (GitHub Actions)
 
 A new app's proof terms come from an untrusted prover, `prover/prove.sh`, which `.github/workflows/in-tab-proof.yml`
@@ -125,7 +147,8 @@ verifier. The guest has not been built from them locally: `prismpm verify` timed
 
 ## Not established
 
-- Firefox, Safari, and any phone. Memory of 77 to 92 MB has not been tried in iOS Safari.
+- Safari itself, and any phone. Memory of 77 to 92 MB has not been tried in iOS Safari.
+- Why Firefox is three times slower.
 - The prover's workflow on a GitHub runner, and how the studio fetches its artifact. Today the studio still calls
   the hosted verifier, which returns an attestation and no kernel terms.
 - First-visit download: the library is 4.07 MB gzip, the module 0.42 MB.

@@ -1,0 +1,120 @@
+{
+ "note": "web/bench.html through Playwright on one Windows 11 desktop. Playwright's WebKit is Safari's engine built for Windows, not Safari on a Mac or a phone. Chromium is in evidence/browser.json; Playwright's own Chromium was not installed.",
+ "runs": 7,
+ "rows": [
+  {
+   "engine": "firefox",
+   "version": "153.0",
+   "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0",
+   "crossOriginIsolated": false,
+   "sharedArrayBuffer": false,
+   "kernel": "c1300379601e2dba5a1697768da2e398d12cd0a37b961b448c504f216b753736",
+   "fetchMs": 351,
+   "hashMs": 29,
+   "readyMs": 100,
+   "libraryMs": 5947,
+   "openTotalMs": 6163,
+   "heapMB": 77,
+   "project": {
+    "inputs": 14,
+    "agreeWithNative": 14,
+    "kernelMedianMs": [
+     159,
+     417
+    ],
+    "roundTripMedianMs": [
+     161,
+     419
+    ],
+    "roundTripWorstMs": 694
+   },
+   "wholeFromNothing": {
+    "accepted": true,
+    "ms": 35383,
+    "heapMB": 92
+   },
+   "addressFaults": {
+    "unboundLibrary": "refused",
+    "alteredBundle": "refused",
+    "alteredLibrary": "refused",
+    "alteredKernel": "refused"
+   }
+  },
+  {
+   "engine": "webkit",
+   "version": "26.5",
+   "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15",
+   "crossOriginIsolated": false,
+   "sharedArrayBuffer": false,
+   "kernel": "c1300379601e2dba5a1697768da2e398d12cd0a37b961b448c504f216b753736",
+   "fetchMs": 189,
+   "hashMs": 87,
+   "readyMs": 55,
+   "libraryMs": 2174,
+   "openTotalMs": 2360,
+   "heapMB": 77,
+   "project": {
+    "inputs": 14,
+    "agreeWithNative": 14,
+    "kernelMedianMs": [
+     42,
+     142
+    ],
+    "roundTripMedianMs": [
+     46,
+     146
+    ],
+    "roundTripWorstMs": 234
+   },
+   "wholeFromNothing": {
+    "accepted": true,
+    "ms": 11452,
+    "heapMB": 92
+   },
+   "addressFaults": {
+    "unboundLibrary": "refused",
+    "alteredBundle": "refused",
+    "alteredLibrary": "refused",
+    "alteredKernel": "refused"
+   }
+  },
+  {
+   "engine": "webkit, iPhone 15 viewport and user agent (emulated)",
+   "version": "26.5",
+   "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+   "crossOriginIsolated": false,
+   "sharedArrayBuffer": false,
+   "kernel": "c1300379601e2dba5a1697768da2e398d12cd0a37b961b448c504f216b753736",
+   "fetchMs": 198,
+   "hashMs": 93,
+   "readyMs": 55,
+   "libraryMs": 2053,
+   "openTotalMs": 2251,
+   "heapMB": 77,
+   "project": {
+    "inputs": 14,
+    "agreeWithNative": 14,
+    "kernelMedianMs": [
+     42,
+     120
+    ],
+    "roundTripMedianMs": [
+     45,
+     125
+    ],
+    "roundTripWorstMs": 252
+   },
+   "wholeFromNothing": {
+    "accepted": true,
+    "ms": 9008,
+    "heapMB": 92
+   },
+   "addressFaults": {
+    "unboundLibrary": "refused",
+    "alteredBundle": "refused",
+    "alteredLibrary": "refused",
+    "alteredKernel": "refused"
+   }
+  }
+ ]
+}
