@@ -1,6 +1,6 @@
 // dyad-prism (ours, not upstream's; see VENDORED.md): the model picker, replacing upstream's at build time
 // through `resolveId` in vite.shell.config.mts. Two models answer here (shell/host.js): GLM 5.3 Flash in the
-// cloud (Featherless) and BitNet 2B on this device. The menu is those two, each on two lines: its name over
+// cloud (Featherless) and Bonsai 1.7B on this device. The menu is those two, each on two lines: its name over
 // a few words on what choosing it means, and at the right, in one column, a tag saying where it runs. Nothing
 // else: no provider headers, no submenus, no recent section, no effort levels, no price badges, no trial
 // banner, no Pro upsell. Choosing a model is choosing who answers, which is the only

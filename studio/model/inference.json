@@ -343,16 +343,16 @@
   "messages": [
    {
     "role": "user",
-    "content": "webgpu:BitNet smollm2"
+    "content": "webgpu:Bonsai smollm2"
    }
   ],
   "max_tokens": 100,
   "seed": 100,
   "temperature": "0.1",
-  "prompt": "user: webgpu:BitNet smollm2",
+  "prompt": "user: webgpu:Bonsai smollm2",
   "params": "{\"max_tokens\":100,\"seed\":100,\"temperature\":0.1}",
   "openrouter_model": "qwen/qwen3.8-flash",
-  "openrouter_stream": "{\"model\":\"qwen/qwen3.8-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"webgpu:BitNet smollm2\"}],\"max_tokens\":100,\"seed\":100,\"temperature\":0.1,\"stream\":true,\"usage\":{\"include\":true},\"reasoning\":{\"enabled\":false},\"provider\":{\"require_parameters\":true}}",
-  "openrouter_plain": "{\"model\":\"qwen/qwen3.8-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"webgpu:BitNet smollm2\"}],\"max_tokens\":100,\"seed\":100,\"temperature\":0.1,\"stream\":false,\"usage\":{\"include\":true},\"reasoning\":{\"enabled\":false},\"provider\":{\"require_parameters\":true}}"
+  "openrouter_stream": "{\"model\":\"qwen/qwen3.8-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"webgpu:Bonsai smollm2\"}],\"max_tokens\":100,\"seed\":100,\"temperature\":0.1,\"stream\":true,\"usage\":{\"include\":true},\"reasoning\":{\"enabled\":false},\"provider\":{\"require_parameters\":true}}",
+  "openrouter_plain": "{\"model\":\"qwen/qwen3.8-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"webgpu:Bonsai smollm2\"}],\"max_tokens\":100,\"seed\":100,\"temperature\":0.1,\"stream\":false,\"usage\":{\"include\":true},\"reasoning\":{\"enabled\":false},\"provider\":{\"require_parameters\":true}}"
  }
 ]

@@ -14,7 +14,7 @@ fn corpus() -> Vec<Value> {
 
 fn request(case: &Value) -> Request {
     Request {
-        model: "webgpu:BitNet".to_owned(),
+        model: "webgpu:Bonsai".to_owned(),
         messages: case["messages"]
             .as_array()
             .unwrap()
@@ -57,14 +57,14 @@ fn prompt_and_params_bytes_match_the_daemon_rule_on_every_case() {
 #[test]
 fn memo_matches_its_own_key_and_nothing_else() {
     let memo = Memo {
-        model: vec!["did:holo:sha256:model".to_owned(), "webgpu:BitNet".to_owned()],
+        model: vec!["did:holo:sha256:model".to_owned(), "webgpu:Bonsai".to_owned()],
         engineKappa: "e".to_owned(),
         promptKappa: "blake3:p".to_owned(),
         paramsKappa: "blake3:q".to_owned(),
         outputKappa: "blake3:o".to_owned(),
         receipt: "blake3:r".to_owned(),
     };
-    let by_name = vec!["webgpu:BitNet".to_owned()];
+    let by_name = vec!["webgpu:Bonsai".to_owned()];
     let by_kappa = vec!["did:holo:sha256:model".to_owned()];
     let other = vec!["smollm2".to_owned()];
     assert!(memoMatches(&memo, &by_name, "blake3:p", "blake3:q"));
