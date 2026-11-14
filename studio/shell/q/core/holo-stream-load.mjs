@@ -24,6 +24,7 @@ async function gunzip(u8) { const ds = new DecompressionStream("gzip"); const w 
 
 // ── OPFS single-file warm store: the whole .holo, keyed by URL, re-verified against header on read ──
 const OPFS_DIR = "holo-model-files";
+const PERSIST_CHUNK = 64 << 20;
 const fname = (url) => String(url).replace(/[^a-zA-Z0-9._-]/g, "_").slice(-140);
 async function opfsFile(url) {
   try {
@@ -125,9 +126,19 @@ export async function openHoloKappa(url, opts = {}) {
         }
       } else { const all = new Uint8Array(await resp.arrayBuffer()); wholeBuf = all; got = all.length; onProgress(got, tot()); }
       streamDone = true; wake();
-      // persist the COMPLETE file to OPFS for the next visit (fire-and-forget; warm re-verifies anyway)
+      // persist the COMPLETE file to OPFS for the next visit (fire-and-forget; warm re-verifies anyway).
+      // In 64 MB writes: one write of a whole 1.16 GB file (Bonsai 8B) is refused as QuotaExceededError by
+      // Chromium with gigabytes of quota free, which left an empty file and a cold load on every visit.
       if (fh && opts.persist !== false && got > 0) {
-        try { const w = await fh.createWritable(); await w.write(wholeBuf.subarray(0, got)); await w.close(); } catch {}
+        let w = null;
+        try {
+          w = await fh.createWritable();
+          for (let at = 0; at < got; at += PERSIST_CHUNK) await w.write(wholeBuf.subarray(at, Math.min(got, at + PERSIST_CHUNK)));
+          await w.close();
+        } catch (e) {
+          try { if (w) await w.abort(); } catch {}
+          try { console.warn("[holo] warm store not written:", e && e.message || e); } catch {}
+        }
       }
     })().catch((e) => {
       streamErr = e; wake();
