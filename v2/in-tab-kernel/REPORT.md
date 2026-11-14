@@ -98,6 +98,53 @@ the resident library, axioms included, median 35 to 89 ms, worst single run 125 
 four address faults, an unbound library among them, are refused. The module is now 2.23 MB, 419 KB gzip
 (`sha256:c1300379…`); the sizes and hash earlier in this report are of the build before these two changes.
 
+## Proving an app with no server and no elaborator
+
+What the hosted verifier does for an app built in Foundry can be done in the tab for the apps Foundry builds, by
+Lean's own kernel. The probe is in `live/`; nothing in the studio uses it, and no browser has run it yet.
+
+**How.** An app is a first-match rule table over bounded fields, with guarantees. The repository already holds a
+checker for exactly that, `regionCheck`, and a Lean proof that it is sound for every app: `regionCheck_sound` in
+`studio/proof/PrismLive/Regions.lean`. So an app's proof is always the same two steps:
+
+1. `checked : regionCheck B rules props d = true := Eq.refl true`. The kernel accepts this only by evaluating the
+   checker on the app's own rules to `true`.
+2. `all_hold := regionCheck_sound B rules props d checked`: every guarantee holds on every request in the bounds.
+
+Neither step needs a tactic, so neither needs an elaborator. `live/emit.mjs` writes the app's rules as kernel terms
+and those two fixed proofs, as a suffix of a library that holds the checker and its proof.
+
+**Measured** (WebAssembly kernel under Node on one loaded desktop; `evidence/live.json`):
+
+| | Result |
+| --- | --- |
+| The library: `regionCheck_sound` and all it rests on | 6.57 MB, 1.05 MB gzip, 1,898 declarations |
+| Judged whole by the kernel, once | 1.8 to 2.7 s, 64 MB |
+| Made resident | 0.5 to 0.9 s |
+| Writing an app's proof, no Lean | 1 to 5 ms; 4.5 KB for parking, 22 KB for Verdant |
+| Parking: 3 rules, 1 guarantee | accepted in 18 ms median, 64 MB |
+| Parking with a guarantee its rules break | refused |
+| Parking with its rules edited to break the guarantee | refused |
+| Verdant: 35 rules, 15 guarantees | accepted in 2.6 s median, 191 MB |
+
+- **The proofs Lean wrote for the same two apps** (`by decide +kernel`) are judged in the same time, and rest on the
+  same axioms: `propext` and `Quot.sound`.
+- **For scale**: the native kernel took 8.6 to 11.2 s on Verdant on the same loaded machine, Lean's elaborator 25 s,
+  and the studio tells a user the hosted verifier takes "usually two to four minutes".
+- **Verdant is past the hosted path's limit**: the studio offers at most 24 rules for proof today.
+
+**What this does not establish.**
+
+- **Speed on a large app.** Verdant takes seconds and 191 MB, because the kernel evaluates every obligation of every
+  guarantee in one term. The obligations are separable, so they could be judged one at a time and kept by address;
+  that is not built.
+- **What the app runs.** The theorem is about `PrismLive.Kernel.judge` on the data written here. That the data is
+  what the app's rule module decides with is not proved; the hosted path proves its guarantees about the
+  LexLean-rendered module instead. The two are not tied together here.
+- **Coverage.** `regionCheck` refuses a rule that compares two fields, and treats `!=` in a guarantee as not
+  narrowing. An app outside that still needs another proof.
+- **The definitions' unfolding hints** are written as a fixed value. They steer the kernel's speed, not its verdict.
+
 ## Work done once per address
 
 Hologram's rule, applied to checking: work is named by the address of what it reads, and done once. The worker keeps
