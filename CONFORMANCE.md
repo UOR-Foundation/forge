@@ -320,6 +320,12 @@ model does not sanction.
 | --- | --- | --- |
 | `FA-83` | `build` | Stateful preview parsing and checking transmit source only under disclosed source-bound or turn-scoped revocable hosted permission |
 
+## in-tab-kernel-verdict
+
+| ID | Level | Statement |
+| --- | --- | --- |
+| `FA-86` | `build` | A proof verdict is decided by the Prism guest from addresses the tab derived and the result of a kernel run in the tab, never from a server reply |
+
 ## inference-consent
 
 | ID | Level | Statement |

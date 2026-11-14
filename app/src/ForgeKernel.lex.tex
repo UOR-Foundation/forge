@@ -13,6 +13,7 @@
 \importmodule{RoutingProtocol}
 \importmodule{ChatQueueProtocol}
 \importmodule{VersionPreviewProtocol}
+\importmodule{InTabKernelProtocol}
 \importmodule{FeatureComposition}
 \importmodule{CompositionProtocol}
 \importmodule{CompositionFixtures}
@@ -634,7 +635,7 @@ definition{
 }
 
 definition{
-  name: dispatch,
+  name: dispatchApplication,
   parameters: [value : Bytes],
   result: Bytes,
   body: (if (prim equal (sliceOf value 0 8) 0x7072657669657720 : Bool) then (VersionPreviewProtocol::dispatchPreview (sliceOf value 8 (prim subtract (Foundation.Bytes::byteLength value) 8 : Nat))) else (if (prim equal (sliceOf value 0 6) 0x717565756520 : Bool) then (ChatQueueProtocol::dispatchQueue (sliceOf value 6 (prim subtract (Foundation.Bytes::byteLength value) 6 : Nat))) else (if (prim equal (sliceOf value 0 8) 0x70726f706f736520 : Bool) then (RoutingProtocol::dispatchRouting (sliceOf value 8 (prim subtract (Foundation.Bytes::byteLength value) 8 : Nat))) else (if (prim equal (sliceOf value 0 9) 0x696e74657261637420 : Bool) then (InteractionProtocol::dispatchInteraction (sliceOf value 9 (prim subtract (Foundation.Bytes::byteLength value) 9 : Nat))) else (if (prim equal (sliceOf value 0 6) 0x6576656e7420 : Bool) then (EventProtocol::dispatchEvent (sliceOf value 6 (prim subtract (Foundation.Bytes::byteLength value) 6 : Nat))) else (if (prim equal (sliceOf value 0 5) 0x776f726b20 : Bool) then (WorkProtocol::dispatchWork (sliceOf value 5 (prim subtract (Foundation.Bytes::byteLength value) 5 : Nat))) else (if (prim equal (sliceOf value 0 8) 0x636f6d706f736520 : Bool) then (CompositionProtocol::dispatchComposition (sliceOf value 8 (prim subtract (Foundation.Bytes::byteLength value) 8 : Nat))) else (if (64 <? (Foundation.Bytes::byteLength value)) then 0x696e76616c6964 else (let head : Nat := (fieldEnd value 0 (Foundation.Bytes::byteLength value)); (if (prim equal (sliceOf value 0 head) 0x67617465 : Bool) then (if (head <? (Foundation.Bytes::byteLength value)) then (match (decodeGate1 value (head + 1))
@@ -656,6 +657,14 @@ definition{
     | Option.some r => (encodeGate (telemetryAllows r))) else 0x696e76616c6964) else (match (decodeField1 value 0)
     | Option.none => 0x696e76616c6964
     | Option.some request => (encodeAnswer (judge request)))))))))))))))))))),
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: dispatch,
+  parameters: [value : Bytes],
+  result: Bytes,
+  body: (if (prim equal (sliceOf value 0 8) 0x7665726469637420 : Bool) then (InTabKernelProtocol::dispatchVerdict (sliceOf value 8 (prim subtract (Foundation.Bytes::byteLength value) 8 : Nat))) else (dispatchApplication value)),
   axioms: [Quot.sound, propext]
 }
 
@@ -772,10 +781,17 @@ definition{
 }
 
 definition{
+  name: verdictAcceptance,
+  parameters: [],
+  result: (List Foundation.View.Text.V1.Model::AcceptanceVector),
+  body: (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7665726469637420303130303030303030313030303030303131303030303030313230303030303031333030303030303134303030303030313530303030303031363030303030303137303030303030313830303030303031313030303030303132303030303030313330303030303031343030303030303135303030303030313630303030303031373030303030303138303030303030323130303030303032323030303030303233303030303030323430303030303032353030303030303236303030303030323730303030303032383030303030303231303030303030323230303030303032333030303030303234303030303030323530303030303032363030303030303237303030303030323830303030303033313030303030303332303030303030333330303030303033343030303030303335303030303030333630303030303033373030303030303338303030303030333130303030303033323030303030303333303030303030333430303030303033353030303030303336303030303030333730303030303033383030303030303431303030303030343230303030303034333030303030303434303030303030343530303030303034363030303030303437303030303030343830303030303034313030303030303432303030303030343330303030303034343030303030303435303030303030343630303030303034373030303030303438303030303030303530303030303030353030303030303031303030303030303130303030303030303030303030303030303030303030, response := 0x6f6b20303130303030303030303030303030303030303030303030}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7665726469637420303130303030303030313030303030303131303030303030313230303030303031333030303030303134303030303030313530303030303031363030303030303137303030303030313830303030303031313030303030303132303030303030313330303030303031343030303030303135303030303030313630303030303031373030303030303138303030303030323130303030303032323030303030303233303030303030323430303030303032353030303030303236303030303030323730303030303032383030303030303231303030303030323230303030303032333030303030303234303030303030323530303030303032363030303030303237303030303030323830303030303033313030303030303332303030303030333330303030303033343030303030303335303030303030333630303030303033373030303030303338303030303030333130303030303033323030303030303333303030303030333430303030303033353030303030303336303030303030333730303030303033383030303030303431303030303030343230303030303034333030303030303434303030303030343530303030303034363030303030303437303030303030343830303030303034313030303030303432303030303030343330303030303034343030303030303435303030303030343630303030303034373030303030303438303030303030303530303030303030353030303030303030303030303030303030303030303030313030303030303031303030303030, response := 0x6f6b20303130303030303030313030303030303031303030303030}) (cons (record Foundation.View.Text.V1.Model::AcceptanceVector {request := 0x7665726469637420303130303030303030313030303030303131303030303030313230303030303031333030303030303134303030303030313530303030303031363030303030303137303030303030313830303030303039313030303030303932303030303030393330303030303039343030303030303935303030303030393630303030303039373030303030303938303030303030323130303030303032323030303030303233303030303030323430303030303032353030303030303236303030303030323730303030303032383030303030303231303030303030323230303030303032333030303030303234303030303030323530303030303032363030303030303237303030303030323830303030303033313030303030303332303030303030333330303030303033343030303030303335303030303030333630303030303033373030303030303338303030303030333130303030303033323030303030303333303030303030333430303030303033353030303030303336303030303030333730303030303033383030303030303431303030303030343230303030303034333030303030303434303030303030343530303030303034363030303030303437303030303030343830303030303034313030303030303432303030303030343330303030303034343030303030303435303030303030343630303030303034373030303030303438303030303030303530303030303030353030303030303031303030303030303130303030303030303030303030303030303030303030, response := 0x6f6b20303130303030303030333030303030303033303030303030}) (previewAcceptance))))
+}
+
+definition{
   name: application,
   parameters: [],
   result: Foundation.View.Text.V1.Model::TextApplication,
-  body: (record Foundation.View.Text.V1.Model::TextApplication {profile := "prismpm/text-application/1", name := "Forge kernel", cargoName := "prism-forge-kernel", cargoVersion := "0.1.0", cargoDescription := "Decide the next build phase of a Hologram Forge app, whether an origin may use an effect, and the experience rules Forge is held to.", cargoRepository := "https://github.com/UOR-Foundation/PrismPM", cargoHomepage := "https://github.com/UOR-Foundation/PrismPM", libraryRoots := (cons "PrismForgeKernel.EventAdmission.admitEvent" (cons "PrismForgeKernel.FeatureComposition.admitComposition" (cons "PrismForgeKernel.ForgeKernel.dispatch" (cons "PrismForgeKernel.ProposalAdmission.admitProposal" (cons "PrismForgeKernel.WorkOwnership.initialize" (cons "PrismForgeKernel.WorkOwnership.transition" (nil String))))))), acceptanceVectors := (previewAcceptance), entryRoot := "PrismForgeKernel.ForgeKernel.dispatch", coreContract := "hologram:guest/core-wasm@1", requestMaximum := (32776 : UInt32), responseMaximum := (4096 : UInt32), guestAllocationMaximum := (32784 : UInt32), capabilitiesEmpty := true, fatArchive := true, primaryLayer := (0 : UInt8), viewLayer := (1 : UInt8), view := (record Foundation.View.Text.V1.Model::TextView {title := "Forge kernel", heading := "Forge kernel", inputLabel := "Request: phase event, or gate origin effect record granted denied", submitLabel := "Decide", outputLabel := "Answer", inputError := "Invalid request", responseError := "Invalid response"})})
+  body: (record Foundation.View.Text.V1.Model::TextApplication {profile := "prismpm/text-application/1", name := "Forge kernel", cargoName := "prism-forge-kernel", cargoVersion := "0.1.0", cargoDescription := "Decide the next build phase of a Hologram Forge app, whether an origin may use an effect, and the experience rules Forge is held to.", cargoRepository := "https://github.com/UOR-Foundation/PrismPM", cargoHomepage := "https://github.com/UOR-Foundation/PrismPM", libraryRoots := (cons "PrismForgeKernel.EventAdmission.admitEvent" (cons "PrismForgeKernel.FeatureComposition.admitComposition" (cons "PrismForgeKernel.ForgeKernel.dispatch" (cons "PrismForgeKernel.ProposalAdmission.admitProposal" (cons "PrismForgeKernel.WorkOwnership.initialize" (cons "PrismForgeKernel.WorkOwnership.transition" (nil String))))))), acceptanceVectors := (verdictAcceptance), entryRoot := "PrismForgeKernel.ForgeKernel.dispatch", coreContract := "hologram:guest/core-wasm@1", requestMaximum := (32776 : UInt32), responseMaximum := (4096 : UInt32), guestAllocationMaximum := (32784 : UInt32), capabilitiesEmpty := true, fatArchive := true, primaryLayer := (0 : UInt8), viewLayer := (1 : UInt8), view := (record Foundation.View.Text.V1.Model::TextView {title := "Forge kernel", heading := "Forge kernel", inputLabel := "Request: phase event, or gate origin effect record granted denied", submitLabel := "Decide", outputLabel := "Answer", inputError := "Invalid request", responseError := "Invalid response"})})
 }
 \end{semanticmodule}
 \end{lexlean}

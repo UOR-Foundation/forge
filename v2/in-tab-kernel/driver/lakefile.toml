@@ -1,0 +1,13 @@
+name = "checker"
+version = "0.1.0"
+defaultTargets = ["checker"]
+
+[[lean_exe]]
+name = "checker"
+root = "Checker"
+
+[[require]]
+name = "lean4export"
+git = "https://github.com/leanprover/lean4export"
+# The commit v2/serverless-prove/official pins (tag v4.32.2; there is no v4.32.1 tag), built with the 4.32.1 toolchain.
+rev = "86e4a339507466921dc8c5417c8cb1de1ce7df60"

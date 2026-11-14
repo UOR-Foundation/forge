@@ -1,0 +1,357 @@
+\begin{lexlean}{InTabKernelProofs}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\importmodule{InTabKernel}
+\title{Boolean}
+\begin{semanticmodule}
+definition{
+  name: breaksKernelGate,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: ((InTabKernel::accepted (InTabKernel::verdictCode e)) && (not ((((project e leanRan) =? 1) && ((project e leanAccepted) =? 1)) || (((project e secondRan) =? 1) && ((project e secondAccepted) =? 1)))))
+}
+
+theorem{
+  name: noAcceptanceWithoutAKernelInTheTab,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksKernelGate e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::accepted,
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksKernelGate
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksKernelIdentity,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: ((InTabKernel::accepted (InTabKernel::verdictCode e)) && (not ((project e kernelDerived) =? (project e kernelPinned))))
+}
+
+theorem{
+  name: noAcceptanceUnderAnotherKernel,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksKernelIdentity e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::accepted,
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksKernelIdentity
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAxiomsExact,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: ((InTabKernel::accepted (InTabKernel::verdictCode e)) && (not ((project e axiomsObserved) =? (project e axiomsDeclared))))
+}
+
+theorem{
+  name: noAcceptanceWithOtherAxioms,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksAxiomsExact e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::accepted,
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksAxiomsExact
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAxiomsAllowed,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: ((InTabKernel::accepted (InTabKernel::verdictCode e)) && (not ((project e axiomsObserved) <? (InTabKernel::allowedAxiomsBound))))
+}
+
+theorem{
+  name: noAcceptanceOutsideTheAllowedAxioms,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksAxiomsAllowed e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::accepted,
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksAxiomsAllowed
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAddressBeforeKernel,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: ((InTabKernel::mayRunKernel e) && (not (((project e libraryDerived) =? (project e libraryPinned)) && ((project e bundleDerived) =? (project e bundleNamed)))))
+}
+
+theorem{
+  name: kernelRunsOnlyOnAddressedBytes,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksAddressBeforeKernel e) = false),
+  proof: linear_arithmetic{definitions: [InTabKernel::mayRunKernel, breaksAddressBeforeKernel]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksAddress,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: ((InTabKernel::accepted (InTabKernel::verdictCode e)) && (not (((project e libraryDerived) =? (project e libraryPinned)) && ((project e bundleDerived) =? (project e bundleNamed)))))
+}
+
+theorem{
+  name: noAcceptanceOfAlteredBytes,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksAddress e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::accepted,
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksAddress
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksReuse,
+  parameters: [r : InTabKernel::Stored],
+  result: Bool,
+  body: ((InTabKernel::reuseAdmits r) && (not ((((project r storedKey) =? (project r computedKey)) && ((project r storedKernel) =? (project r kernelPinned))) && ((project r storedBytes) =? (project r derivedBytes)))))
+}
+
+theorem{
+  name: reuseOnlyUnderTheSameKeyKernelAndBytes,
+  parameters: [r : InTabKernel::Stored],
+  statement: ((breaksReuse r) = false),
+  proof: linear_arithmetic{definitions: [InTabKernel::reuseAdmits, breaksReuse]},
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksNothingStored,
+  parameters: [r : InTabKernel::Stored],
+  result: Bool,
+  body: ((not ((project r present) =? 1)) && (InTabKernel::reuseAdmits r))
+}
+
+theorem{
+  name: nothingStoredMeansChecking,
+  parameters: [r : InTabKernel::Stored],
+  statement: ((breaksNothingStored r) = false),
+  proof: linear_arithmetic{definitions: [InTabKernel::reuseAdmits, breaksNothingStored]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksProvedStatement,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: (((InTabKernel::verdictCode e) =? (InTabKernel::codeProved)) && (not ((project e checkedStatement) =? (project e specStatement))))
+}
+
+theorem{
+  name: provedOnlyForTheSpecStatement,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksProvedStatement e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksProvedStatement
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksProvedNeedsLean,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: (((InTabKernel::verdictCode e) =? (InTabKernel::codeProved)) && (not (((project e leanRan) =? 1) && ((project e leanAccepted) =? 1))))
+}
+
+theorem{
+  name: provedNeedsLeanInTheTab,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksProvedNeedsLean e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksProvedNeedsLean
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksFallback,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: ((not ((project e leanRan) =? 1)) && ((InTabKernel::verdictCode e) =? (InTabKernel::codeProved)))
+}
+
+theorem{
+  name: withoutLeanNeverProved,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksFallback e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksFallback
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksDisagreement,
+  parameters: [e : InTabKernel::Evidence],
+  result: Bool,
+  body: ((InTabKernel::accepted (InTabKernel::verdictCode e)) && ((((project e leanRan) =? 1) && ((project e secondRan) =? 1)) && (not ((project e leanAccepted) =? (project e secondAccepted)))))
+}
+
+theorem{
+  name: kernelsThatDisagreeRefuse,
+  parameters: [e : InTabKernel::Evidence],
+  statement: ((breaksDisagreement e) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::accepted,
+      InTabKernel::allowedAxiomsBound,
+      InTabKernel::axiomsAdmitted,
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::mayRunKernel,
+      InTabKernel::verdictCode,
+      breaksDisagreement
+    ]
+  },
+  axioms: [Classical.choice, Quot.sound, propext]
+}
+
+definition{
+  name: breaksWord,
+  parameters: [code : Nat],
+  result: Bool,
+  body: (((InTabKernel::wordOf code) =? (InTabKernel::wordProved)) && (not (code =? (InTabKernel::codeProved))))
+}
+
+theorem{
+  name: onlyProvedReadsProved,
+  parameters: [code : Nat],
+  statement: ((breaksWord code) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::wordChecking,
+      InTabKernel::wordKernelChecked,
+      InTabKernel::wordOf,
+      InTabKernel::wordProved,
+      InTabKernel::wordRefused,
+      breaksWord
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksWeaker,
+  parameters: [code : Nat],
+  result: Bool,
+  body: ((code =? (InTabKernel::codeKernelChecked)) && ((InTabKernel::wordOf code) =? (InTabKernel::wordProved)))
+}
+
+theorem{
+  name: kernelCheckedNeverReadsProved,
+  parameters: [code : Nat],
+  statement: ((breaksWeaker code) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      InTabKernel::codeKernelChecked,
+      InTabKernel::codePending,
+      InTabKernel::codeProved,
+      InTabKernel::codeRefused,
+      InTabKernel::wordChecking,
+      InTabKernel::wordKernelChecked,
+      InTabKernel::wordOf,
+      InTabKernel::wordProved,
+      InTabKernel::wordRefused,
+      breaksWeaker
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+\end{semanticmodule}
+\end{lexlean}
