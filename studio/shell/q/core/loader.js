@@ -63,7 +63,7 @@ export const MODELS = [
   // spec:true (WARP W0.2): qk-norm lifted from the spec head (QKNORMK batched per-head RMSNorm rides
   // the verify window) + q1 batched GEMM + f32-KV window save — n-gram drafting ON, greedy batched
   // verify keeps output BYTE-IDENTICAL (bonsai8-spec.html gate). ?spec=0/1 A/B as everywhere.
-  { fam: "Bonsai", name: "Bonsai-8B · 1-bit", spec: true, kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main", holoUrl: "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main/q-bonsai-8b.v1.holo", manifestKappa: "did:holo:sha256:a0dc81f26ec5ce98b28ee9c1fab620e91c20720f777e1de6bc416317f54d27e2", size: "1.16 GB", fmt: "q1 1-bit κ", cap: 900, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, qwen: true, rep: 1.05, kappa: true },
+  { fam: "Bonsai", name: "Bonsai-8B · 1-bit", spec: true, kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main", holoUrl: "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main/q-bonsai-8b.v1.holo", manifestKappa: "did:holo:sha256:a0dc81f26ec5ce98b28ee9c1fab620e91c20720f777e1de6bc416317f54d27e2", size: "1.16 GB", fmt: "q1 1-bit κ", cap: 900, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, qwen: true, qwen3: true, rep: 1.05, kappa: true },
   // TERNARY BONSAI (PrismML Ternary-Bonsai-1.7B, Apache-2.0): Qwen3-1.7B in {-1,0,+1} with one f16 scale per 128
   // weights, passed through untouched (no re-quant) from the group-128 GGUF. Rides the q1 path with a second,
   // nonzero bit plane (manifest.tern) and YaRN rotary scaling (manifest.yarn, as the GGUF declares it).
