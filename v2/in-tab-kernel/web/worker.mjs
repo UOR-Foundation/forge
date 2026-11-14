@@ -13,7 +13,13 @@
 //                                                      then { op: "kept" } once the image is stored, or not
 //   { op: "check", id, suffix, sha256, fresh? }     -> { id, accepted, exit, ms, axioms, output, reused } | { id, refusal }
 //   { op: "whole", id, bytes }                      -> every declaration judged, in a fresh instance; never reused
+//   { op: "prove", id, app }                        -> { id, guarantees: [{ accepted, kernelMs, axioms }], ... } | { id, refusal }
+//       An app's guarantees proved here, with no server and no elaborator (live/prove.mjs). The library must be the
+//       proved checker's (live/build.sh). The worker writes each statement from `app`; the kernel judges it. The
+//       facts it judges on the way stay resident, so an edited app costs what the edit changed.
 //   { op: "forget" }                                -> { op: "forget", ok }: empties the store
+import { prover } from "../live/prove.mjs";
+
 const now = () => performance.now();
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 const sha256 = async (bytes) => hex(await crypto.subtle.digest("SHA-256", bytes));
@@ -22,6 +28,8 @@ let factory = null, wasmBinary = null, resident = null;
 let addresses = null;                 // { kernel, library } once open
 const memo = new Map();               // verdicts met in this worker, by key
 const lines = [];
+let libraryBytes = null;              // the library as read, for the tables an app's proof is written over
+let proving = null;                   // live/prove.mjs's prover, once an app has been proved here
 
 // ---- the store: the origin's private file system, one file per name. It saves time and decides nothing: a failure
 // to read is a miss and a failure to write is dropped.
@@ -127,10 +135,11 @@ async function open({ manifest, glue, wasm, library }) {
   try { factory = (await import(url)).default; } finally { URL.revokeObjectURL(url); }
   wasmBinary = wasm;
   let m, via;
+  libraryBytes = library ? new Uint8Array(library) : null; proving = null;
   if (library) {
     m = await instance();
     timings.readyMs = now() - t;
-    const load = run(m, "load_library", new Uint8Array(library));
+    const load = run(m, "load_library", libraryBytes);
     timings.libraryMs = load.ms;
     if (!load.accepted) return { ok: false, refusal: "the kernel refused the pinned library: " + load.output };
     via = "library";
@@ -148,6 +157,9 @@ async function open({ manifest, glue, wasm, library }) {
 // suffix it was asked for; `fresh` asks the kernel whatever is kept.
 async function check({ id, suffix, sha256: named, fresh }) {
   if (!resident) return { id, refusal: "no library is resident" };
+  // A suffix continues the resident file. Once facts are kept the file has moved on, and a suffix of the library
+  // alone no longer continues it.
+  if (proving && proving.resident.size) return { id, refusal: "this kernel holds kept facts; a library suffix needs a kernel that holds the library alone" };
   const bytes = new Uint8Array(suffix), t0 = now();
   const derived = await sha256(bytes);
   if (derived !== named) return { id, refusal: "the bundle is not the one named" };
@@ -169,16 +181,40 @@ async function check({ id, suffix, sha256: named, fresh }) {
   return { id, ...r, reused: false, heapMB: heapMB(resident) };
 }
 
+// An app's guarantees, proved in this kernel. The proof is written over the library's tables, so the library's bytes
+// are needed once: those handed over at open, or the copy kept under the library's address, re-derived before use.
+async function prove({ id, app }) {
+  if (!resident) return { id, refusal: "no library is resident" };
+  const timings = {};
+  if (!proving) {
+    let t = now();
+    if (!libraryBytes) {
+      const kept = await storeGet("l-" + addresses.library + ".ndjson");
+      if (!kept || (await sha256(kept)) !== addresses.library) return { id, need: "library" };
+      libraryBytes = kept;
+    }
+    timings.libraryBytesMs = now() - t; t = now();
+    const call = (entry, suffix) => { const r = run(resident, entry, suffix); return { exit: r.exit, ms: r.ms, axioms: r.axioms, output: r.output }; };
+    proving = prover(call, untext.decode(libraryBytes));
+    libraryBytes = null;
+    timings.tablesMs = now() - t;
+  }
+  const t = now(), r = proving.prove(app);
+  return { id, ...r, timings, ms: now() - t, residentFacts: proving.resident.size, heapMB: heapMB(resident) };
+}
+
 self.onmessage = async ({ data }) => {
   try {
     if (data.op === "open") {
       const answer = await open(data);
       self.postMessage({ op: "open", ...answer });
       // After answering, so keeping the image never delays the open that made it.
-      if (answer.ok) self.postMessage({ op: "kept", ok: answer.via === "library" ? await keepImage(resident, addresses.kernel, addresses.library) : true });
+      // The library's bytes are kept beside the image: a later visit that proves an app needs them for its tables.
+      if (answer.ok) self.postMessage({ op: "kept", ok: answer.via === "library" ? (await keepImage(resident, addresses.kernel, addresses.library)) && (await storePut("l-" + addresses.library + ".ndjson", new Uint8Array(data.library))) : true });
       return;
     }
     if (data.op === "check") return self.postMessage(await check(data));
+    if (data.op === "prove") return self.postMessage(await prove(data));
     if (data.op === "forget") { memo.clear(); return self.postMessage({ op: "forget", ok: await storeForget() }); }
     if (data.op === "whole") {
       const m = await instance();

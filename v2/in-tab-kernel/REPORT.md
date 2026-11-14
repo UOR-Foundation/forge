@@ -235,6 +235,31 @@ Verdant, 35 rules and 15 guarantees, one kernel for the whole run (`live/linked.
   doing both evaluations. Nothing false gets through that way; it is slower, not unsound.
 - **Kept facts are never dropped.** 490 were resident at the end of the run. A long session grows.
 
+### The same, in a browser tab
+
+The worker has it as `prove`: the page hands over the app as data, the worker writes each statement and its proof
+(`live/prove.mjs`, the code Node runs), and the kernel judges. No server and no elaborator take part; the worker's
+network is closed. `web/live.html` through Playwright, one run each, one desktop (`evidence/live-browser.json`):
+
+| Verdant, 15 guarantees | Edge 157 (Chromium) | Firefox 153 | WebKit 26.5 | WebKit as an iPhone 15 |
+| --- | --- | --- | --- | --- |
+| Open, reading the library | 485 ms | 1540 ms | 537 ms | 528 ms |
+| First proof | 1.09 s | 3.64 s | 1.21 s | 1.14 s |
+| The same again | 174 ms | 486 ms | 170 ms | 202 ms |
+| One rule edited (5 edits) | 156 to 229 ms | 538 to 763 ms | 190 to 264 ms | 182 to 262 ms |
+| Later visit: open from the image | 228 ms | 205 ms | 405 ms | 459 ms |
+| Later visit: first proof | 1.12 s | 3.82 s | 1.34 s | 1.19 s |
+| Parking, 1 guarantee | 13 ms | 54 ms | 14 ms | 15 ms |
+
+- **Every engine accepts all 15 guarantees**, on `propext` and `Quot.sound`, refuses the guarantee the rules break,
+  and refuses the one edit of six that breaks a guarantee. Memory is 64 MB. No page is cross-origin isolated.
+- **The download is 1.57 MB**: the kernel 0.42 MB and the library 1.15 MB, gzip.
+- **A later visit judges the facts again.** The kernel's image is kept by address, and the library's bytes beside
+  it for the proof's tables (150 to 300 ms to read into tables); the facts are not kept across visits.
+- **The first proof includes those tables**, read once per worker.
+- **A kernel that holds facts no longer judges a plain library suffix**: the file has moved on. `check` says so.
+- **The phone column is WebKit on this desktop's CPU** with a phone's viewport and user agent. It is not a phone.
+
 ## Work done once per address
 
 Hologram's rule, applied to checking: work is named by the address of what it reads, and done once. The worker keeps
@@ -313,7 +338,8 @@ verifier. The guest has not been built from them locally: `prismpm verify` timed
 
 ## Not established
 
-- The assembled proofs (`live/`) in a browser: they have run under Node only, and the studio does not use them.
+- The studio using `prove`: it still calls the hosted verifier. The kernel and library are not published.
+- Facts kept across visits, and a bound on how many a long session keeps.
 - That what `live/` proves is what the app's rule module runs. The statement is about the rules as data.
 - Safari itself, and any phone. Memory of 77 to 92 MB has not been tried in iOS Safari.
 - Why Firefox is three times slower.

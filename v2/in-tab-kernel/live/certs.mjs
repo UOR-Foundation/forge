@@ -7,7 +7,29 @@
 // there is nothing to cover. A fact is the obligation by meaning: the same region and boxes give the same key,
 // whichever app, guarantee or edit they come from.
 // app is live/emit.mjs's: { bounds, rules: [{ when, outcome }], otherwise, properties: [{ always, when, outcome }] }
-import { createHash } from "node:crypto";
+// SHA-256 of a string, at once: the same in a worker and under Node, where the platform's own is asynchronous.
+const KS = new Uint32Array(64);
+{ let n = 2, i = 0; while (i < 64) { let prime = true; for (let k = 2; k * k <= n; k++) if (n % k === 0) { prime = false; break; } if (prime) KS[i++] = (Math.cbrt(n) % 1) * 4294967296; n++; } }
+const encoder = new TextEncoder();
+export function sha256Hex(string) {
+  const bytes = encoder.encode(string), bits = bytes.length * 8, padded = new Uint8Array(((bytes.length + 8) >> 6 << 6) + 64);
+  padded.set(bytes); padded[bytes.length] = 0x80;
+  const view = new DataView(padded.buffer); view.setUint32(padded.length - 8, Math.floor(bits / 4294967296)); view.setUint32(padded.length - 4, bits >>> 0);
+  const h = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]), w = new Uint32Array(64);
+  const rot = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let at = 0; at < padded.length; at += 64) {
+    for (let i = 0; i < 16; i++) w[i] = view.getUint32(at + i * 4);
+    for (let i = 16; i < 64; i++) w[i] = (w[i - 16] + (rot(w[i - 15], 7) ^ rot(w[i - 15], 18) ^ (w[i - 15] >>> 3)) + w[i - 7] + (rot(w[i - 2], 17) ^ rot(w[i - 2], 19) ^ (w[i - 2] >>> 10))) | 0;
+    let [a, b, c, d, e, f, g, k] = h;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (k + (rot(e, 6) ^ rot(e, 11) ^ rot(e, 25)) + ((e & f) ^ (~e & g)) + KS[i] + w[i]) | 0;
+      const t2 = ((rot(a, 2) ^ rot(a, 13) ^ rot(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      k = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    h[0] += a; h[1] += b; h[2] += c; h[3] += d; h[4] += e; h[5] += f; h[6] += g; h[7] += k;
+  }
+  return [...h].map((x) => x.toString(16).padStart(8, "0")).join("");
+}
 
 // PrismLive.Kernel's boxOf, meet and nonEmpty, on numbers. `!=` does not narrow.
 export function boxOf(bounds, when) {
@@ -24,7 +46,7 @@ export function boxOf(bounds, when) {
 export const meet = (a, b) => a.map(([l, h], i) => [Math.max(l, b[i][0]), Math.min(h, b[i][1])]);
 export const nonEmpty = (b) => b.every(([l, h]) => l <= h);
 /** The address of an obligation's meaning: its region, and the boxes subtracted from it, in order. */
-export const factKey = (region, boxes) => createHash("sha256").update(JSON.stringify([region, boxes])).digest("hex");
+export const factKey = (region, boxes) => sha256Hex(JSON.stringify([region, boxes]));
 
 export function certsOf(app) {
   const ruleBoxes = app.rules.map((r) => boxOf(app.bounds, r.when));
@@ -48,7 +70,7 @@ export function certsOf(app) {
 }
 
 /** The address of a fact: its kind and the plain data it states. */
-export const linkKey = (kind, ...data) => createHash("sha256").update(JSON.stringify([kind, ...data])).digest("hex");
+export const linkKey = (kind, ...data) => sha256Hex(JSON.stringify([kind, ...data]));
 
 /**
  * What live/Linked.lean's proof of an app is assembled from: every evaluation as a fact of its own, and for each
