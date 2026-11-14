@@ -180,13 +180,16 @@ same kernel has already judged whole with `checkWhole`: the caller admits the li
 is recorded with the kernel's when the library is checked at build time.
 -/
 def loadLibrary (path : String) : IO String := do
+  let t0 ← IO.monoMsNow
   let handle ← IO.FS.Handle.mk path .read
   let (_, reader) ← Export.Parse.M.run Export.Parse.parseFile (.ofHandle handle)
+  let t1 ← IO.monoMsNow
   let env := (← Lean.mkEmptyEnvironment).toKernelEnv
   let (env, _) ← replay (withoutQuotParts reader.constMap) env (check := false)
+  let t2 ← IO.monoMsNow
   resident.set (some { reader, env })
   axiomCache.set {}
-  return s!"Library resident: {reader.constMap.size} declarations."
+  return s!"Library resident: {reader.constMap.size} declarations (read {t1 - t0} ms, entered {t2 - t1} ms)."
 
 /--
 Every axiom a constant rests on, through everything it refers to, read from the kernel's environment after the
