@@ -2,13 +2,13 @@
   "spec": "prism/frame-lock/1",
   "source": {
     "repository": "UOR-Foundation/template",
-    "commit": "d65a5ff543bf98fc4bbfb4a4e81789767529ab1d",
-    "raw": "https://raw.githubusercontent.com/UOR-Foundation/template/d65a5ff543bf98fc4bbfb4a4e81789767529ab1d/"
+    "commit": "0b7c323035b2bbb3729f4afad75820cac228cb09",
+    "raw": "https://raw.githubusercontent.com/UOR-Foundation/template/0b7c323035b2bbb3729f4afad75820cac228cb09/"
   },
   "files": [
     {
       "path": "bootstrap/frame-sync.mjs",
-      "sha256": "5d874908a8f5813b6f7c1004ec0e73ec03584139bf7ac8ffabb2ad5c0eeee7af"
+      "sha256": "c82b0a057aeccd601ec817ea71d7211b10083d884a1267f8bdf310f11199062b"
     },
     {
       "path": "bootstrap/icons.py",
@@ -20,7 +20,7 @@
     },
     {
       "path": "bootstrap/page.mjs",
-      "sha256": "8eee238bce9206ca58fc9be5471c28c0bdab82e2350ed78f1972da2a1da6581f"
+      "sha256": "2df4ef057d37e778b04f67e4f63d862c7da6a77c301d0862b2bb8681fc8ec9d4"
     },
     {
       "path": "bootstrap/precache.mjs",
@@ -35,16 +35,12 @@
       "sha256": "c9787ebf5ad8e8b649034ec3e43f8812ba51777ba59eb11f1f51ca084a395b67"
     },
     {
-      "path": "bootstrap/weight.mjs",
-      "sha256": "de432422e9931b4adf0f422a2030d7b38097a60a4d8fc9ed62fd20fe0c468373"
-    },
-    {
       "path": "bootstrap/worker-runtime.mjs",
       "sha256": "0f9fbb6ec4db48fb7f7c4b779a0494e95d5411e868b36e1e163e5173fcc34557"
     },
     {
       "path": "lighthouserc.json",
-      "sha256": "85aa0f6219cb8396b34f5b461c1d4d7b149e4cc1674cbd2f0100c5b5e16636d9"
+      "sha256": "0145d04da93193801b0d8736ceba7e0df94b9b15f183b07a16e6feda16d72082"
     },
     {
       "path": "site/app.mjs",
@@ -56,7 +52,7 @@
     },
     {
       "path": "site/page.template.html",
-      "sha256": "b48b9d18e23e959c9e96b4bec58e2e7d80b7b977e981d8a7b0fd369293819b08"
+      "sha256": "d7df0bc4d5190ca38ee768bdbd54cbc665ede811608de846068c8a92bd02c14d"
     },
     {
       "path": "site/prism-page.css",
@@ -72,7 +68,7 @@
     },
     {
       "path": "site/sw.js",
-      "sha256": "baf0fbd7da2fa0b33124951bbd1218aa6658c342340fb24415c636f220c9ea74"
+      "sha256": "b4d4eb5c8314f5abed013ea9d172e7352dbdfa5aa2b503901df364ebcfbf11f7"
     },
     {
       "path": "site/theme.js",
