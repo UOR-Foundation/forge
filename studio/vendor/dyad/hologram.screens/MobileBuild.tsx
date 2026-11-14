@@ -3,7 +3,6 @@
 // Chat / Preview / Publish as the kit's Tabs, and a slot the shell's appearance switch takes. Built only from
 // the kit's shadcn/ui components. Both panes stay mounted, so the running app and the chat keep their state
 // when the bar switches. Preview and Publish set the preview panel's own mode, the one its toolbar sets.
-// `onPane` tells the page which pane was chosen: a Chat or Plan chat mounts its preview only when asked for.
 import { useEffect, useState, type ReactNode } from "react";
 import { useSetAtom } from "jotai";
 import { useNavigate } from "@tanstack/react-router";
@@ -20,7 +19,7 @@ const PANES: { value: Pane; label: string }[] = [
   { value: "publish", label: "Publish" },
 ];
 
-export function MobileBuild({ chat, preview, onPane }: { chat: ReactNode; preview: ReactNode; onPane?: (pane: Pane) => void }) {
+export function MobileBuild({ chat, preview }: { chat: ReactNode; preview: ReactNode }) {
   const [pane, setPane] = useState<Pane>("chat");
   const setPreviewMode = useSetAtom(previewModeAtom);
   const navigate = useNavigate();
@@ -37,7 +36,6 @@ export function MobileBuild({ chat, preview, onPane }: { chat: ReactNode; previe
   const choose = (value: string) => {
     const next = value as Pane;
     if (next !== "chat") setPreviewMode(next === "publish" ? "publish" : "preview");
-    onPane?.(next);
     setPane(next);
   };
 
