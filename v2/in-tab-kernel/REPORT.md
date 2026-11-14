@@ -163,9 +163,34 @@ Measured on Verdant with native Lean (`live/variants.sh`, `live/obligations.mjs`
   that cut a region into pieces.
 
 So the gain from an address is in not doing an obligation twice: 34 obligations of about 20 ms each, each named by
-its region and the boxes that touch it, as `studio/shell/live/obligations.mjs` already names them. An edit then
-re-proves the obligations it changed and no others. That needs a soundness theorem that takes the touching boxes as
-given, which `regionCheck_sound` does not; it is not written.
+its region and the boxes that touch it, as `studio/shell/live/obligations.mjs` already names them.
+
+### The theorem that takes its obligations as named
+
+`live/Certified.lean` proves it: `certCheck_sound`. For one guarantee, the proof says which earlier rules to subtract
+at each rule, and may point at a fact already proved. Neither is trusted. A rule named that is not earlier is
+dropped, which can only make the check harder to pass; a fact is used only if it is exactly this obligation's region
+and boxes, and every fact is a hypothesis of the theorem, to be discharged by a proof of its own
+(`allKnown_cons`). It rests on `propext` and `Quot.sound`, as `regionCheck_sound` does, and leaves that file as it
+is: it is built beside it, in the probe.
+
+Verdant, one guarantee at a time, both ways in one run (WebAssembly kernel under Node; `evidence/live.json`):
+
+| | `regionCheck_sound` | `certCheck_sound` |
+| --- | --- | --- |
+| Each guarantee, median | 96 to 977 ms | 61 to 394 ms |
+| All 15 | 5.1 s | 2.5 s |
+| Memory | 111 MB | 77 MB |
+| Verdicts | 15 of 15 accepted | 15 of 15 accepted |
+
+- **A guarantee the rules break is refused**, and so is a true one whose proof leaves out a rule it needs.
+- **Parking** is accepted in 12 ms. The library is 7.1 MB, 1.13 MB gzip, with both theorems.
+- **The facts are not used yet.** Every proof here passes an empty list, so each still does its own subtracting.
+  Taking an obligation from an earlier proof needs the earlier proof's theorem to be in the kernel's environment
+  when the later one is judged, which the driver does not keep. That is where an edit would cost only what it
+  changed.
+- **A guarantee with nothing to cover still costs about 60 ms** on Verdant: the kernel walks all 35 rules to find
+  that each region is empty.
 
 ## Work done once per address
 

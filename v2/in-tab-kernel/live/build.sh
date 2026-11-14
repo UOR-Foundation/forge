@@ -3,7 +3,7 @@
 # suffix of it.
 #   bash live/build.sh        (WSL; needs lean4export built by ../native.sh's toolchain, and the 4.32.1 toolchain)
 #
-#   $TLK/live/library.ndjson   regionCheck_sound with all it rests on, and the few constants an app's proof names
+#   $TLK/live/library.ndjson   regionCheck_sound and certCheck_sound with all they rest on
 #   $TLK/live/verdant.ndjson   what VerdantR.all_hold adds: its rules, its guarantees, and the two theorems
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -15,10 +15,17 @@ cp -r "$here/../../../studio/proof/." "$work/proof"
 cd "$work/proof"
 time lake build 2>&1 | tail -3
 export LEAN_PATH="$work/proof/.lake/build/lib/lean:$(lean --print-prefix)/lib/lean"
+# The per-guarantee theorem that takes its obligations as named (Certified.lean). It is built beside the proved
+# checker here and is not one of studio/proof's own roots.
+sed 's/\r$//' "$here/Certified.lean" > PrismLive/Certified.lean
+lean PrismLive/Certified.lean -o .lake/build/lib/lean/PrismLive/Certified.olean
+printf 'import PrismLive.VerdantRegions\nimport PrismLive.Certified\n' > All.lean
+lean All.lean -o .lake/build/lib/lean/All.olean
+certified="PrismLive.Kernel.certCheck_sound PrismLive.Kernel.allKnown_nil PrismLive.Kernel.allKnown_cons"
 # The library's roots: the soundness theorem, then every constant Verdant's proof names that is not Verdant's own,
 # so an app's suffix holds the app and nothing else.
-"$exporter" PrismLive.VerdantRegions -- PrismLive.Kernel.regionCheck_sound > "$work/core.ndjson"
-"$exporter" PrismLive.VerdantRegions -- PrismLive.Kernel.regionCheck_sound VerdantR.all_hold > "$work/first.ndjson"
+"$exporter" All -- PrismLive.Kernel.regionCheck_sound $certified > "$work/core.ndjson"
+"$exporter" All -- PrismLive.Kernel.regionCheck_sound $certified VerdantR.all_hold > "$work/first.ndjson"
 python3 - "$work" <<'PY'
 import json, sys
 work = sys.argv[1]
@@ -45,8 +52,8 @@ open(work + "/extra-roots.txt", "w").write("\n".join(extra))
 print("constants Verdant's proof names beyond the theorem's own closure:", extra)
 PY
 mapfile -t extra < "$work/extra-roots.txt"
-"$exporter" PrismLive.VerdantRegions -- PrismLive.Kernel.regionCheck_sound "${extra[@]}" > "$work/library.ndjson"
-"$exporter" PrismLive.VerdantRegions -- PrismLive.Kernel.regionCheck_sound "${extra[@]}" VerdantR.all_hold > "$work/whole.ndjson"
+"$exporter" All -- PrismLive.Kernel.regionCheck_sound $certified "${extra[@]}" > "$work/library.ndjson"
+"$exporter" All -- PrismLive.Kernel.regionCheck_sound $certified "${extra[@]}" VerdantR.all_hold > "$work/whole.ndjson"
 size=$(stat -c %s "$work/library.ndjson")
 cmp -s -n "$size" "$work/library.ndjson" "$work/whole.ndjson" || { echo "the library is not a prefix of Verdant's export"; exit 1; }
 tail -c +"$((size + 1))" "$work/whole.ndjson" > "$work/verdant.ndjson"

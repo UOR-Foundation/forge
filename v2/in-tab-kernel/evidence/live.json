@@ -149,5 +149,80 @@
    "boxesGivenAsLiterals": "no change",
    "onePassOverTheUncoveredRegion": "32 to 92 s: the uncovered region fragments"
   }
+ },
+ "certified": {
+  "what": "live/Certified.lean's certCheck_sound: one guarantee, the kernel subtracting only the earlier rules the proof names. Library rebuilt with it. WebAssembly kernel under Node, medians of 7, both ways in one run on one desktop.",
+  "theorem": {
+   "axioms": [
+    "propext",
+    "Quot.sound"
+   ],
+   "sameAsRegionCheckSound": true,
+   "compiledBy": "Lean 4.32.1, first attempt, no errors"
+  },
+  "library": {
+   "sha256": "4f34af685f7b28502845f2b0576253bddb0dceae6fa30c50ba2ba26afdf6bd87",
+   "bytes": 7109343,
+   "gzipBytes": 1133527,
+   "declarations": 1994,
+   "judgedWholeMs": 2220,
+   "madeResidentMs": 455
+  },
+  "verdant": {
+   "guarantees": 15,
+   "earlierRulesNamed": 98,
+   "bytesEach": [
+    21854,
+    24289
+   ],
+   "verdicts": "15 of 15 accepted",
+   "certifiedMedianMsEach": [
+    394,
+    276,
+    258,
+    77,
+    80,
+    75,
+    68,
+    239,
+    61,
+    72,
+    180,
+    184,
+    175,
+    181,
+    171
+   ],
+   "certifiedSumMs": 2491,
+   "certifiedHeapMB": 77,
+   "asBeforeMedianMsEach": [
+    977,
+    733,
+    487,
+    112,
+    123,
+    116,
+    135,
+    439,
+    96,
+    106,
+    348,
+    320,
+    376,
+    365,
+    376
+   ],
+   "asBeforeSumMs": 5109,
+   "asBeforeHeapMB": 111
+  },
+  "parking": {
+   "verdict": "accepted",
+   "medianMs": 11.7
+  },
+  "faults": {
+   "aGuaranteeTheRulesBreak": "refused",
+   "aNameTheProofNeedsLeftOut": "refused"
+  },
+  "notUsedYet": "the `known` facts: every proof here passes an empty list, so no obligation is taken from an earlier proof"
  }
 }

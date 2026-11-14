@@ -44,6 +44,36 @@ export function proofsOf(libraryText, spec, library = readLibrary(libraryText)) 
   return spec.properties.map((property, i) => proofOf(libraryText, { ...spec, name: spec.name + ".g" + i, properties: [property] }, library));
 }
 
+/**
+ * One suffix per guarantee, proved through live/Certified.lean: the kernel subtracts, for each rule, only the earlier
+ * rules the certificate names (live/certs.mjs names those whose boxes touch the region). What is named is not trusted:
+ * a missing name makes `checked` false, and the kernel refuses it.
+ *   <app>.checked : certCheck B rules [] d p cs co = true            := Eq.refl true
+ *   <app>.holds   : every request in the bounds keeps the guarantee := certCheck_sound ... checked
+ */
+export function certifiedProofsOf(libraryText, spec, certs, library = readLibrary(libraryText)) {
+  return spec.properties.map((property, i) => {
+    const e = writer(spec.name + ".g" + i, library);
+    const { define, prove, app, C, nat, list, listType, conds, pair, pairType, Nat, Bool, Rule, Property, K, one } = e;
+    const listNat = listType(Nat), optionNat = app(C("Option", [0]), Nat), certType = app(C("Prod", [0, 0]), listNat, optionNat);
+    const cert = (sel) => app(C("Prod.mk", [0, 0]), listNat, optionNat, list(Nat, sel.map(nat)), app(C("Option.none", [0]), Nat));
+    const boxType = listType(pairType), factType = app(C("Prod", [0, 0]), boxType, listType(boxType));
+    const rules = define("rules", listType(Rule), list(Rule, spec.rules.map((r) => app(C(K + "Rule.mk"), conds(r.when), nat(r.outcome)))));
+    const d = define("d", Nat, nat(spec.otherwise));
+    const B = define("B", boxType, list(pairType, spec.bounds.map(pair)));
+    const p = define("p", Property, app(C(K + "Property.mk"), C(property.always ? "Bool.true" : "Bool.false"), conds(property.when), nat(property.outcome)));
+    const cs = define("cs", listType(certType), list(certType, certs[i].rules.map(cert)));
+    const co = define("co", certType, cert(certs[i].other));
+    const known = app(C("List.nil", [0]), factType);
+    const run = app(C(K + "certCheck"), B, rules, known, d, p, cs, co);
+    const checked = prove("checked", app(C("Eq", [one]), Bool, run, C("Bool.true")), app(C("Eq.refl", [one]), Bool, C("Bool.true")));
+    const sound = e.lib.consts.get(e.known(K + "certCheck_sound"));
+    const args = [B, rules, known, d, p, cs, co, C(K + "allKnown_nil"), checked];
+    prove("holds", instantiate(e, sound.type, args), app(C(K + "certCheck_sound"), ...args));
+    return e.text();
+  });
+}
+
 function writer(name, library) {
   const lib = library, out = [];
   let nextName = lib.nextName, nextExpr = lib.nextExpr, nextLevel = lib.nextLevel;
