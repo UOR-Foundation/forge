@@ -99,7 +99,7 @@ export const keyFor = async model => {const route=await inferenceRoute(model);re
 export function keySet(value) { return changeUserSettings(db(),{value},(s,captured)=>({...s,providerSettings:{...(s.providerSettings||{}),openrouter:{...(s.providerSettings?.openrouter||{}),apiKey:{value:captured.value}}}})); }
 // Who answers: local (the Q engine) or paid (an OpenRouter model). Read from and written to the same
 // selectedModel the renderer's settings page and composer use.
-export const MODEL_ID = "webgpu:BitNet";
+export const MODEL_ID = "webgpu:Bonsai";
 export const paidId = (model) => model.replace(/^(openrouter|featherless)\//, "");
 export async function readWho() {
   const s = await settingsGet();
@@ -149,14 +149,14 @@ export async function sealPaid(body, rec, key) {
 
 // ---- the engine: Hologram Q on WebGPU, resident across turns, warm KV as q-brain-fast does it.
 //
-// The ladder. A device that has never seen this page holds no weights, and the large model is 710 MB.
+// The ladder. A device that has never seen this page holds no weights, and the large model is 424 MB.
 // So the small one loads first and answers, the large one loads behind it, and the swap happens only
 // when the model's own `promote` rule says so: resident, and measured fast enough to be worth it. The
 // rule is verified (Object.promote, four theorems); nothing here decides it. A request that names the
 // large model directly is never laddered, so the homepage keeps answering with what it says it runs.
 export const LADDER_ID = "webgpu:Hologram";
 export const SEED_ID = "webgpu:SmolLM2";
-const idOf = (held) => (held && held.model && held.model.fam === "SmolLM2" ? SEED_ID : MODEL_ID);
+export const idOf = (held) => (held && held.model && held.model.fam === "SmolLM2" ? SEED_ID : MODEL_ID);
 const PROMOTE_TOKPS = 8;   // the floor the large model must beat; the rule takes the answer, not the number
 // The seed's address. Its bytes are interchangeable wherever they are served (the file is content
 // addressed and every block is verified before it binds), so a mirror on this origin is the same model.
@@ -204,7 +204,7 @@ function loadLarge(word) {
   engine.largeLoading = (async () => {
     const { L } = await mods();
     const V = await viewReady();
-    const entry = L.MODELS.find((m) => m.fam === "BitNet");
+    const entry = L.MODELS.find((m) => m.fam === "TernaryBonsai");   // Ternary Bonsai 1.7B, the device's model
     // Behind the seed it is the larger model arriving; without a seed it is the only model there is.
     const held = await residentModel(entry, word || V.largerLoadingLabel);
     engine.large = held;
@@ -238,18 +238,13 @@ async function measure(held) {
     return tokps;
   } catch { return 0; }
 }
-// The model that writes an app's rules on the device. Rules are a few hundred tokens of exact JSON, which
-// BitNet 2B gets wrong (measured 2026-11-10: 0 of 3 usable); the catalogue's Bonsai 8B is four times its
-// size in 1.16 GB. Loaded once, on the first rules turn, beside the chat ladder; BitNet if it fails.
-export function rulesModel() {
-  if (engine.rules) return Promise.resolve(engine.rules);
-  if (!engine.rulesLoading) engine.rulesLoading = (async () => {
-    const { L } = await mods();
-    const entry = L.MODELS.find((m) => m.fam === "Bonsai");
-    if (!entry) throw new Error("no rules model in the catalogue");
-    return (engine.rules = await residentModel(entry, "Loading the rules model"));
-  })().catch((error) => { engine.rulesLoading = null; console.warn("[inference] rules model", error); return heldFor(MODEL_ID); });
-  return engine.rulesLoading;
+// The model that writes an app's rules on the device: the device's one model, Ternary Bonsai 1.7B, the same
+// resident engine that answers chat, so a rules turn downloads and holds nothing more. Measured 2026-11-13 with
+// DEVICE_RULES on five requests: 1 of 5 passed checkSpec, at 85 to 114 tokens a second. The checker and the
+// approval card still stand between its rules and a proof.
+export async function rulesModel() {
+  if (!engine.rules) engine.rules = await heldFor(MODEL_ID);
+  return engine.rules;
 }
 // The engine a request is answered by. The ladder's id takes the tier; the large model's own id always
 // takes the large model, so a page that names it is never answered by something else.
