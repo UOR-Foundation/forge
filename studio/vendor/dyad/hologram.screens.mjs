@@ -13,6 +13,7 @@ import {PREVIEW_AUTO_START_PATCHES} from "./hologram.preview-auto-start.mjs";
 import {CHAT_MODE_PATCHES} from "./hologram.chat-mode-patches.mjs";
 import {INITIAL_THEME_PATCHES} from "./hologram.initial-theme.mjs";
 import {PLAIN_CHAT_PATCHES} from "./hologram.plain-chat-patches.mjs";
+import {PENDING_MESSAGE_PATCHES} from "./hologram.pending-message-patches.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const slash = (p) => p.replace(/\\/g, "/");
@@ -230,6 +231,8 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
   },
   // Chat and Plan: the same screen with its preview collapsed, and suggestions above the composer.
   ...PLAIN_CHAT_PATCHES,
+  // A sent prompt is on screen at once, before the host has stored it.
+  ...PENDING_MESSAGE_PATCHES,
   // Home's one entry point is the composer: importing an app is an item in its + menu, not a button above it.
   {
     file: "src/pages/home.tsx",
