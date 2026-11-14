@@ -11,8 +11,7 @@ test('explicit cloud selections retain provider and exact model identity',()=>{
 test('only absent chat selection uses defaults and device identity remains exact',()=>{
  for(const selection of [null,undefined])assert.deepEqual(chatModelRoute(selection,{provider:'local',name:'webgpu:Bonsai'}),{provider:'local',model:'webgpu:Bonsai',paid:false});
  assert.equal(chatModelRoute(null,{provider:'openrouter',name:'openrouter/free'}).model,'openrouter/openrouter/free');
-});
-test('the former local identifier resolves to the declared local model',()=>{
+ // The former local identifier resolves to the declared local model, as a chat selection and as the default.
  assert.deepEqual(chatModelRoute({provider:'local',name:'webgpu:BitNet'},{provider:'featherless',name:'zai-org/GLM-5.3-Flash'}),{provider:'local',model:'webgpu:Bonsai',paid:false});
  assert.deepEqual(chatModelRoute(null,{provider:'local',name:'webgpu:BitNet'}),{provider:'local',model:'webgpu:Bonsai',paid:false});
 });
