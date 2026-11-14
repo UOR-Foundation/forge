@@ -184,13 +184,56 @@ Verdant, one guarantee at a time, both ways in one run (WebAssembly kernel under
 | Verdicts | 15 of 15 accepted | 15 of 15 accepted |
 
 - **A guarantee the rules break is refused**, and so is a true one whose proof leaves out a rule it needs.
-- **Parking** is accepted in 12 ms. The library is 7.1 MB, 1.13 MB gzip, with both theorems.
-- **The facts are not used yet.** Every proof here passes an empty list, so each still does its own subtracting.
-  Taking an obligation from an earlier proof needs the earlier proof's theorem to be in the kernel's environment
-  when the later one is judged, which the driver does not keep. That is where an edit would cost only what it
-  changed.
+- **Parking** is accepted in 12 ms. The library is 7.2 MB, 1.15 MB gzip, with all three theorems.
 - **A guarantee with nothing to cover still costs about 60 ms** on Verdant: the kernel walks all 35 rules to find
   that each region is empty.
+
+### Keeping an obligation, and why that was not enough
+
+The driver now has `check_keep`: an accepted suffix stays resident, so a later proof can name its theorems. Nothing
+refused is kept. `live/reuse.mjs` makes each obligation a theorem named by the address of its region and boxes,
+keeps it, and has the guarantee point at it.
+
+It works and it does not help. All 34 obligations are judged once, in 612 ms, and are reused after an edit;
+the 15 guarantees still cost 1.9 s with every fact resident. Timing the pieces says why: the kernel takes
+milliseconds over each small evaluation (a rule's box 7 ms, a rule's bounds check 2 ms, picking the named rules
+3 to 6 ms), and `certCheck` has it redo all of them for every guarantee.
+
+### A proof that evaluates nothing
+
+`live/Linked.lean` proves `linked_sound`. Every evaluation is a fact of its own, a statement about plain data that
+names neither the app nor the guarantee: a rule's conditions and their box, a guarantee's conditions and their box,
+that an outcome does not break a kind of guarantee, that two boxes share nothing, what two boxes meet in, that boxes
+cover a region. A fact is proved once, by the kernel doing the evaluation, kept, and named by the address of what it
+states. A guarantee is then assembled from named facts by applying lemmas, from the last rule to the first; the
+kernel checks that the pieces fit and evaluates nothing. It rests on `propext` and `Quot.sound`.
+
+Verdant, 35 rules and 15 guarantees, one kernel for the whole run (`live/linked.mjs`, one run, Node;
+`evidence/live.json`):
+
+| | Facts judged | Kernel, facts | Kernel, assembling | Writing (JS) | Total |
+| --- | --- | --- | --- | --- | --- |
+| First proof | 422 | 972 ms | 256 ms | 428 ms | 1.66 s |
+| The same again | 0 | 0 | 209 ms | 146 ms | 354 ms |
+| Rule 34 edited | 18 | 79 ms | 139 ms | 93 ms | 311 ms |
+| Rule 33 edited | 9 | 18 ms | 151 ms | 92 ms | 261 ms |
+| Rule 32 edited | 10 | 14 ms | 155 ms | 108 ms | 276 ms |
+| Rule 30 edited | 10 | 16 ms | 142 ms | 81 ms | 238 ms |
+| Rule 29 edited | 10 | 17 ms | 145 ms | 96 ms | 259 ms |
+
+- **An edit costs what it changed.** 9 to 18 facts of 422 are new after moving one number in one rule; the
+  rest are named, not redone. Against `certCheck_sound`, an edit goes from about 2 s to about 0.3 s, and the first
+  proof from 2.5 s to 1.7 s. Memory is 64 MB.
+- **All 15 guarantees are accepted** each time, and an edit that breaks a guarantee is refused
+  (1 of the 6 tried).
+- **What is left is fixed cost.** Assembling is about 10 ms a guarantee, and writing the terms in JavaScript is as
+  much again; neither depends on what changed. A guarantee's proof is 40 KB.
+- **Faults, none accepted:** a covering that is false; a proof that leaves out a rule it needs; a breaking answer
+  said to be harmless; a step answered by a true fact about another answer; a fact the kernel never judged; a
+  guarantee the rules break.
+- **A true fact named in place of another true fact is accepted** (seen in `reuse.mjs`). The kernel finds the two statements equal by
+  doing both evaluations. Nothing false gets through that way; it is slower, not unsound.
+- **Kept facts are never dropped.** 490 were resident at the end of the run. A long session grows.
 
 ## Work done once per address
 
@@ -270,6 +313,8 @@ verifier. The guest has not been built from them locally: `prismpm verify` timed
 
 ## Not established
 
+- The assembled proofs (`live/`) in a browser: they have run under Node only, and the studio does not use them.
+- That what `live/` proves is what the app's rule module runs. The statement is about the rules as data.
 - Safari itself, and any phone. Memory of 77 to 92 MB has not been tried in iOS Safari.
 - Why Firefox is three times slower.
 - The prover's workflow on a GitHub runner, and how the studio fetches its artifact. Today the studio still calls

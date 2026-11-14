@@ -1,85 +1,52 @@
-// Writes an app's proof as kernel terms, with no Lean and no proof search: a suffix of the proved checker's library
-// (live/build.sh) that Lean's kernel then judges.
+// Writes an app's proofs as kernel terms, with no Lean and no proof search: suffixes of the proved checker's library
+// (live/build.sh) that Lean's kernel then judges. What is written is data (rules, guarantees, bounds, and what the
+// proof names) and a few fixed terms. If the data states a guarantee the rules break, the checker the kernel
+// evaluates comes out `false`, and the kernel refuses the proof.
 //
-// The proof is always the same two steps, for any app:
-//   <app>.checked  : regionCheck B rules props d = true    := Eq.refl true
-//       The kernel accepts this only by evaluating the checker on the app's own rules to `true`.
-//   <app>.all_hold : every guarantee holds on every request in the bounds
-//                                                           := regionCheck_sound B rules props d checked
-//       regionCheck_sound is in the library, proved once for every app (studio/proof/PrismLive/Regions.lean).
-// What is written here is data (the rules, the guarantees, the bounds) and those two fixed terms. If the data states
-// a guarantee the rules break, the checker evaluates to `false` and the kernel refuses `checked`.
+// Three ways to prove, each sound by a theorem in the library:
+//   proofOf / proofsOf       through regionCheck_sound (studio/proof/PrismLive/Regions.lean): the kernel subtracts,
+//                            at every rule, every earlier rule's box.
+//   certifiedProofsOf        through certCheck_sound (live/Certified.lean): only the earlier rules the proof names.
+//   factProof + reusedProof  through certCheck_sound with facts: each obligation is a theorem of its own, named by
+//                            the address of its meaning and proved once; a guarantee's proof points at them.
+//   linkFacts + linkedProof  through linked_sound (live/Linked.lean): every evaluation is a fact of its own, and a
+//                            guarantee's proof applies lemmas to facts and has the kernel evaluate nothing.
 //
-//   proofOf(libraryText, app) -> suffix text
-//   app = { name, bounds: [[lo, hi], ...], rules: [{ when: [[field, op, value], ...], outcome }], otherwise,
-//           properties: [{ always, when: [[field, op, value], ...], outcome }] }
+// app = { name, bounds: [[lo, hi], ...], rules: [{ when: [[field, op, value], ...], outcome }], otherwise,
+//         properties: [{ always, when: [[field, op, value], ...], outcome }] }
 // Operators and encoding are PrismLive.Kernel's: 0 <, 1 <=, 2 >, 3 >=, 4 =, anything else !=; a request is a list of
 // numbers in field order.
 
-/** The library, read once: its names and terms by index, and the next free index of each kind. */
+/** A resident file, read: its names and terms by index, and the next free index of each kind. */
 export function readLibrary(text) {
-  const names = [""], nameIndex = new Map([["", 0]]), exprs = [], exprIndex = new Map(), levels = new Map(), consts = new Map();
-  let nextName = 1, nextExpr = 0, nextLevel = 1;
+  const lib = { names: [""], nameIndex: new Map([["", 0]]), exprs: [], exprIndex: new Map(), levels: new Map(), consts: new Map(), nextName: 1, nextExpr: 0, nextLevel: 1 };
+  return extendLibrary(lib, text);
+}
+/** The same tables after a suffix the kernel accepted and kept: what the next suffix continues from. */
+export function extendLibrary(lib, text) {
   for (const line of text.split("\n")) {
     if (!line) continue;
     const o = JSON.parse(line);
     if ("in" in o) {
-      const full = "str" in o ? (names[o.str.pre] ? names[o.str.pre] + "." : "") + o.str.str : (names[o.num.pre] ? names[o.num.pre] + "." : "") + o.num.i;
-      names[o.in] = full; nameIndex.set(full, o.in); nextName = Math.max(nextName, o.in + 1);
+      const full = "str" in o ? (lib.names[o.str.pre] ? lib.names[o.str.pre] + "." : "") + o.str.str : (lib.names[o.num.pre] ? lib.names[o.num.pre] + "." : "") + o.num.i;
+      lib.names[o.in] = full; lib.nameIndex.set(full, o.in); lib.nextName = Math.max(lib.nextName, o.in + 1);
     } else if ("il" in o) {
-      const { il, ...node } = o; levels.set(JSON.stringify(node), il); nextLevel = Math.max(nextLevel, il + 1);
+      const { il, ...node } = o; lib.levels.set(JSON.stringify(node), il); lib.nextLevel = Math.max(lib.nextLevel, il + 1);
     } else if ("ie" in o) {
-      const { ie, ...node } = o; exprs[ie] = node; exprIndex.set(JSON.stringify(node), ie); nextExpr = Math.max(nextExpr, ie + 1);
-    } else if ("thm" in o || "def" in o) { const d = o.thm ?? o.def; consts.set(d.name, d); }
+      const { ie, ...node } = o; lib.exprs[ie] = node; lib.exprIndex.set(JSON.stringify(node), ie); lib.nextExpr = Math.max(lib.nextExpr, ie + 1);
+    } else if ("thm" in o || "def" in o) { const d = o.thm ?? o.def; lib.consts.set(d.name, d); }
   }
-  return { names, nameIndex, exprs, exprIndex, levels, consts, nextName, nextExpr, nextLevel };
+  return lib;
 }
 
-/**
- * One suffix per guarantee, each whole in itself: the app's rules and bounds, that one guarantee, and its two proofs.
- * regionCheck_sound holds for any list of guarantees, so it holds for a list of one. The kernel then evaluates one
- * guarantee's obligations at a time, and a guarantee's proof depends only on the rules, the bounds and itself.
- */
-export function proofsOf(libraryText, spec, library = readLibrary(libraryText)) {
-  return spec.properties.map((property, i) => proofOf(libraryText, { ...spec, name: spec.name + ".g" + i, properties: [property] }, library));
-}
+const K = "PrismLive.Kernel.";
 
-/**
- * One suffix per guarantee, proved through live/Certified.lean: the kernel subtracts, for each rule, only the earlier
- * rules the certificate names (live/certs.mjs names those whose boxes touch the region). What is named is not trusted:
- * a missing name makes `checked` false, and the kernel refuses it.
- *   <app>.checked : certCheck B rules [] d p cs co = true            := Eq.refl true
- *   <app>.holds   : every request in the bounds keeps the guarantee := certCheck_sound ... checked
- */
-export function certifiedProofsOf(libraryText, spec, certs, library = readLibrary(libraryText)) {
-  return spec.properties.map((property, i) => {
-    const e = writer(spec.name + ".g" + i, library);
-    const { define, prove, app, C, nat, list, listType, conds, pair, pairType, Nat, Bool, Rule, Property, K, one } = e;
-    const listNat = listType(Nat), optionNat = app(C("Option", [0]), Nat), certType = app(C("Prod", [0, 0]), listNat, optionNat);
-    const cert = (sel) => app(C("Prod.mk", [0, 0]), listNat, optionNat, list(Nat, sel.map(nat)), app(C("Option.none", [0]), Nat));
-    const boxType = listType(pairType), factType = app(C("Prod", [0, 0]), boxType, listType(boxType));
-    const rules = define("rules", listType(Rule), list(Rule, spec.rules.map((r) => app(C(K + "Rule.mk"), conds(r.when), nat(r.outcome)))));
-    const d = define("d", Nat, nat(spec.otherwise));
-    const B = define("B", boxType, list(pairType, spec.bounds.map(pair)));
-    const p = define("p", Property, app(C(K + "Property.mk"), C(property.always ? "Bool.true" : "Bool.false"), conds(property.when), nat(property.outcome)));
-    const cs = define("cs", listType(certType), list(certType, certs[i].rules.map(cert)));
-    const co = define("co", certType, cert(certs[i].other));
-    const known = app(C("List.nil", [0]), factType);
-    const run = app(C(K + "certCheck"), B, rules, known, d, p, cs, co);
-    const checked = prove("checked", app(C("Eq", [one]), Bool, run, C("Bool.true")), app(C("Eq.refl", [one]), Bool, C("Bool.true")));
-    const sound = e.lib.consts.get(e.known(K + "certCheck_sound"));
-    const args = [B, rules, known, d, p, cs, co, C(K + "allKnown_nil"), checked];
-    prove("holds", instantiate(e, sound.type, args), app(C(K + "certCheck_sound"), ...args));
-    return e.text();
-  });
-}
-
-function writer(name, library) {
-  const lib = library, out = [];
+/** One suffix being written over `lib`. Nothing here changes `lib`. */
+export function writer(lib) {
+  const out = [], exprs = [], exprIndex = new Map(), ownNames = new Map(), ownLevels = new Map(), nameOf = [];
   let nextName = lib.nextName, nextExpr = lib.nextExpr, nextLevel = lib.nextLevel;
-  const exprs = [], exprIndex = new Map(), ownNames = new Map(), ownLevels = new Map();
   const nodeOf = (i) => lib.exprs[i] ?? exprs[i];
-  // A term is written once: one the library already holds is named by the library's index.
+  // A term is written once: one the resident file already holds is named by its index there.
   const term = (node) => {
     const key = JSON.stringify(node);
     const have = lib.exprIndex.get(key) ?? exprIndex.get(key);
@@ -94,76 +61,223 @@ function writer(name, library) {
     const i = nextLevel++; ownLevels.set(key, i); out.push(JSON.stringify({ il: i, ...node }));
     return i;
   };
-  const known = (full) => { const i = lib.nameIndex.get(full); if (i === undefined) throw new Error("the library does not hold " + full); return i; };
-  const fresh = (pre, str) => {
-    const full = (pre ? (lib.names[pre] ?? [...ownNames].find(([, v]) => v === pre)[0]) + "." : "") + str;
-    if (lib.nameIndex.has(full) || ownNames.has(full)) throw new Error("the name is taken: " + full);
-    const i = nextName++; ownNames.set(full, i); out.push(JSON.stringify({ in: i, str: { pre, str } }));
-    return i;
+  const known = (full) => { const i = lib.nameIndex.get(full); if (i === undefined) throw new Error("the resident file does not hold " + full); return i; };
+  const has = (full) => lib.nameIndex.has(full) && lib.consts.has(lib.nameIndex.get(full));
+  // A dotted name, part by part. A part the resident file already has is used; only what is new is written.
+  const name = (full) => {
+    let pre = 0, path = "";
+    for (const part of full.split(".")) {
+      path = path ? path + "." + part : part;
+      const have = lib.nameIndex.get(path) ?? ownNames.get(path);
+      if (have !== undefined) { pre = have; continue; }
+      const i = nextName++; ownNames.set(path, i); out.push(JSON.stringify({ in: i, str: { pre, str: part } }));
+      pre = i;
+    }
+    return pre;
+  };
+  const declare = (kind, full, type, value) => {
+    if (has(full)) throw new Error("already declared: " + full);
+    const n = name(full);
+    out.push(JSON.stringify(kind === "def" ? { def: { all: [n], hints: { regular: 1 }, levelParams: [], name: n, safety: "safe", type, value } } : { thm: { all: [n], levelParams: [], name: n, type, value } }));
+    nameOf.push(full);
+    return term({ const: { name: n, us: [] } });
   };
   const one = level({ succ: 0 });
   const C = (full, us = []) => term({ const: { name: known(full), us } });
   const app = (fn, ...args) => args.reduce((f, arg) => term({ app: { arg, fn: f } }), fn);
   const nat = (n) => { if (!Number.isInteger(n) || n < 0) throw new Error("not a natural number: " + n); return term({ natVal: String(n) }); };
-  const K = "PrismLive.Kernel.";
-  const Nat = C("Nat"), Bool = C("Bool"), Cond = C(K + "Cond"), Rule = C(K + "Rule"), Property = C(K + "Property");
+  const Nat = C("Nat"), Bool = C("Bool");
   const listType = (T) => app(C("List", [0]), T);
-  const list = (T, items) => items.reduceRight((tail, head) => app(C("List.cons", [0]), T, head, tail), app(C("List.nil", [0]), T));
-  const cond = ([field, op, value]) => app(C(K + "Cond.mk"), nat(field), nat(op), nat(value));
-  const conds = (when) => list(Cond, when.map(cond));
-  const pairType = app(C("Prod", [0, 0]), Nat, Nat);
-  const pair = ([lo, hi]) => app(C("Prod.mk", [0, 0]), Nat, Nat, nat(lo), nat(hi));
-
-  const root = name.split(".").reduce((pre, part) => fresh(pre, part), 0);
-  const define = (short, type, value) => {
-    const name = fresh(root, short);
-    out.push(JSON.stringify({ def: { all: [name], hints: { regular: 1 }, levelParams: [], name, safety: "safe", type, value } }));
-    return term({ const: { name, us: [] } });
+  const nil = (T) => app(C("List.nil", [0]), T);
+  const cons = (T, head, tail) => app(C("List.cons", [0]), T, head, tail);
+  const list = (T, items) => items.reduceRight((tail, head) => cons(T, head, tail), nil(T));
+  const prodType = (A, B) => app(C("Prod", [0, 0]), A, B);
+  const prod = (A, B, a, b) => app(C("Prod.mk", [0, 0]), A, B, a, b);
+  const pairType = prodType(Nat, Nat), boxType = listType(pairType), boxesType = listType(boxType), factType = prodType(boxType, boxesType);
+  const box = (b) => list(pairType, b.map(([lo, hi]) => prod(Nat, Nat, nat(lo), nat(hi))));
+  const boxes = (bs) => list(boxType, bs.map(box));
+  const Cond = C(K + "Cond"), Rule = C(K + "Rule"), Property = C(K + "Property");
+  const conds = (when) => list(Cond, when.map(([field, op, value]) => app(C(K + "Cond.mk"), nat(field), nat(op), nat(value))));
+  const rules = (rs) => list(Rule, rs.map((r) => app(C(K + "Rule.mk"), conds(r.when), nat(r.outcome))));
+  const property = (p) => app(C(K + "Property.mk"), C(p.always ? "Bool.true" : "Bool.false"), conds(p.when), nat(p.outcome));
+  const eq = (T, a, b) => app(C("Eq", [one]), T, a, b);
+  const refl = (T, a) => app(C("Eq.refl", [one]), T, a);
+  const isTrue = (run) => [eq(Bool, run, C("Bool.true")), refl(Bool, C("Bool.true"))];
+  // The body of a statement `∀ a b c ..., T` with its first binders replaced by closed terms.
+  const instantiate = (type, args) => {
+    let body = type;
+    for (let i = 0; i < args.length; i++) { const n = nodeOf(body); if (!n.forallE) throw new Error("the statement has fewer binders than arguments"); body = n.forallE.body; }
+    const n = args.length, memo = new Map();
+    const go = (i, depth) => {
+      const key = i + ":" + depth;
+      if (memo.has(key)) return memo.get(key);
+      const node = nodeOf(i);
+      let r;
+      if ("bvar" in node) r = node.bvar < depth ? i : node.bvar - depth < n ? args[n - 1 - (node.bvar - depth)] : term({ bvar: node.bvar - n });
+      else if (node.app) r = term({ app: { arg: go(node.app.arg, depth), fn: go(node.app.fn, depth) } });
+      else if (node.forallE) r = term({ forallE: { ...node.forallE, type: go(node.forallE.type, depth), body: go(node.forallE.body, depth + 1) } });
+      else if (node.lam) r = term({ lam: { ...node.lam, type: go(node.lam.type, depth), body: go(node.lam.body, depth + 1) } });
+      else if (node.letE) r = term({ letE: { ...node.letE, type: go(node.letE.type, depth), value: go(node.letE.value, depth), body: go(node.letE.body, depth + 1) } });
+      else if (node.proj) r = term({ proj: { ...node.proj, struct: go(node.proj.struct, depth) } });
+      else r = i;   // a constant, a sort or a literal holds no variable
+      memo.set(key, r);
+      return r;
+    };
+    return go(body, 0);
   };
-  const prove = (short, type, value) => {
-    const name = fresh(root, short);
-    out.push(JSON.stringify({ thm: { all: [name], levelParams: [], name, type, value } }));
-    return term({ const: { name, us: [] } });
-  };
-  return { define, prove, app, C, nat, list, listType, conds, pair, pairType, Nat, Bool, Cond, Rule, Property, K, one, term, nodeOf, lib, known, text: () => out.join("\n") + "\n" };
+  // A theorem of the resident file applied to closed terms, under the type its statement takes for them.
+  const applied = (full, args) => [instantiate(lib.consts.get(known(full)).type, args), app(C(full), ...args)];
+  return { declare, term, name, instantiate, C, app, nat, list, listType, nil, cons, prodType, prod, box, boxes, boxType, boxesType, factType, rules, property, conds, eq, refl, isTrue, applied, has, Nat, Bool, Rule, Property, text: () => out.join("\n") + "\n" };
 }
 
-/** The whole suffix for one app. */
+/** The whole proof of an app in one suffix, through regionCheck_sound. */
 export function proofOf(libraryText, spec, library = readLibrary(libraryText)) {
-  const e = writer(spec.name, library);
-  const { define, prove, app, C, nat, list, listType, conds, pair, pairType, Nat, Bool, Rule, Property, K, one } = e;
-  const rules = define("rules", listType(Rule), list(Rule, spec.rules.map((r) => app(C(K + "Rule.mk"), conds(r.when), nat(r.outcome)))));
-  const props = define("props", listType(Property), list(Property, spec.properties.map((p) => app(C(K + "Property.mk"), C(p.always ? "Bool.true" : "Bool.false"), conds(p.when), nat(p.outcome)))));
-  const d = define("d", Nat, nat(spec.otherwise));
-  const B = define("B", listType(pairType), list(pairType, spec.bounds.map(pair)));
-  // checked : @Eq Bool (regionCheck B rules props d) true := @Eq.refl Bool true
-  const run = app(C(K + "regionCheck"), B, rules, props, d);
-  const checked = prove("checked", app(C("Eq", [one]), Bool, run, C("Bool.true")), app(C("Eq.refl", [one]), Bool, C("Bool.true")));
-  // all_hold: regionCheck_sound applied to this app, under the type its statement takes for this app.
-  const sound = e.lib.consts.get(e.known(K + "regionCheck_sound"));
-  prove("all_hold", instantiate(e, sound.type, [B, rules, props, d, checked]), app(C(K + "regionCheck_sound"), B, rules, props, d, checked));
-  return e.text();
+  const w = writer(library), n = spec.name + ".";
+  const rules = w.declare("def", n + "rules", w.listType(w.Rule), w.rules(spec.rules));
+  const props = w.declare("def", n + "props", w.listType(w.Property), w.list(w.Property, spec.properties.map(w.property)));
+  const d = w.declare("def", n + "d", w.Nat, w.nat(spec.otherwise));
+  const B = w.declare("def", n + "B", w.boxType, w.box(spec.bounds));
+  // checked : regionCheck B rules props d = true := Eq.refl true
+  const checked = w.declare("thm", n + "checked", ...w.isTrue(w.app(w.C(K + "regionCheck"), B, rules, props, d)));
+  w.declare("thm", n + "all_hold", ...w.applied(K + "regionCheck_sound", [B, rules, props, d, checked]));
+  return w.text();
 }
 
-// The body of a statement `∀ a b c ..., T` with its first binders replaced by closed terms.
-function instantiate(e, type, args) {
-  let body = type;
-  for (let i = 0; i < args.length; i++) { const n = e.nodeOf(body); if (!n.forallE) throw new Error("the statement has fewer binders than arguments"); body = n.forallE.body; }
-  const n = args.length, memo = new Map();
-  const go = (i, depth) => {
-    const key = i + ":" + depth;
-    if (memo.has(key)) return memo.get(key);
-    const node = e.nodeOf(i);
-    let r;
-    if ("bvar" in node) r = node.bvar < depth ? i : node.bvar - depth < n ? args[n - 1 - (node.bvar - depth)] : e.term({ bvar: node.bvar - n });
-    else if (node.app) r = e.term({ app: { arg: go(node.app.arg, depth), fn: go(node.app.fn, depth) } });
-    else if (node.forallE) r = e.term({ forallE: { ...node.forallE, type: go(node.forallE.type, depth), body: go(node.forallE.body, depth + 1) } });
-    else if (node.lam) r = e.term({ lam: { ...node.lam, type: go(node.lam.type, depth), body: go(node.lam.body, depth + 1) } });
-    else if (node.letE) r = e.term({ letE: { ...node.letE, type: go(node.letE.type, depth), value: go(node.letE.value, depth), body: go(node.letE.body, depth + 1) } });
-    else if (node.proj) r = e.term({ proj: { ...node.proj, struct: go(node.proj.struct, depth) } });
-    else r = i;   // a constant, a sort or a literal holds no variable
-    memo.set(key, r);
-    return r;
+/** One suffix per guarantee, each whole in itself; regionCheck_sound holds for a list of one. */
+export function proofsOf(libraryText, spec, library = readLibrary(libraryText)) {
+  return spec.properties.map((property, i) => proofOf(libraryText, { ...spec, name: spec.name + ".g" + i, properties: [property] }, library));
+}
+
+// The parts every certified proof of one guarantee shares.
+function certified(w, n, spec, property, cert, known, allKnown) {
+  const listNat = w.listType(w.Nat), optionNat = w.app(w.C("Option", [0]), w.Nat), certType = w.prodType(listNat, optionNat);
+  const certTerm = (c) => w.prod(listNat, optionNat, w.list(w.Nat, c.sel.map(w.nat)), c.memo === null ? w.app(w.C("Option.none", [0]), w.Nat) : w.app(w.C("Option.some", [0]), w.Nat, w.nat(c.memo)));
+  const rules = w.declare("def", n + "rules", w.listType(w.Rule), w.rules(spec.rules));
+  const d = w.declare("def", n + "d", w.Nat, w.nat(spec.otherwise));
+  const B = w.declare("def", n + "B", w.boxType, w.box(spec.bounds));
+  const p = w.declare("def", n + "p", w.Property, w.property(property));
+  const cs = w.declare("def", n + "cs", w.listType(certType), w.list(certType, cert.rules.map(certTerm)));
+  const co = w.declare("def", n + "co", certType, certTerm(cert.other));
+  const checked = w.declare("thm", n + "checked", ...w.isTrue(w.app(w.C(K + "certCheck"), B, rules, known, d, p, cs, co)));
+  w.declare("thm", n + "holds", ...w.applied(K + "certCheck_sound", [B, rules, known, d, p, cs, co, allKnown, checked]));
+}
+
+/**
+ * One suffix per guarantee through certCheck_sound, with no facts: the kernel subtracts, for each rule, only the
+ * earlier rules the certificate names. certs is live/certs.mjs's certsOf(spec).
+ */
+export function certifiedProofsOf(libraryText, spec, certs, library = readLibrary(libraryText)) {
+  return spec.properties.map((property, i) => {
+    const w = writer(library);
+    const plain = { rules: certs[i].rules.map((c) => ({ sel: c.sel, memo: null })), other: { sel: certs[i].other.sel, memo: null } };
+    certified(w, spec.name + ".g" + i + ".", spec, property, plain, w.nil(w.factType), w.C(K + "allKnown_nil"));
+    return w.text();
+  });
+}
+
+/** The name a fact's theorem is declared under: the address of the obligation's meaning. */
+export const factName = (key) => "Fact.k" + key;
+
+/**
+ * One obligation as a theorem of its own: the boxes cover the region.
+ *   Fact.k<address> : subAll region boxes = [] := Eq.refl []
+ * The kernel accepts it only by doing the subtraction and finding nothing left. To be kept resident once accepted.
+ */
+export function factProof(library, fact) {
+  const w = writer(library);
+  const empty = w.nil(w.boxType);
+  w.declare("thm", factName(fact.key), w.eq(w.boxesType, w.app(w.C(K + "subAll"), w.box(fact.region), w.boxes(fact.boxes)), empty), w.refl(w.boxesType, empty));
+  return w.text();
+}
+
+/**
+ * One guarantee, proved from facts that are resident: the kernel compares each obligation's region and boxes with
+ * the fact pointed at, and subtracts nothing. Every fact named must have been accepted and kept (factProof).
+ */
+export function reusedProof(library, spec, i, cert) {
+  const w = writer(library);
+  for (const f of cert.facts) if (!w.has(factName(f.key))) throw new Error("the fact is not resident: " + f.key);
+  // known = [f0, f1, ...], and AllKnown known from each fact's own theorem.
+  const fact = (f) => w.prod(w.boxType, w.boxesType, w.box(f.region), w.boxes(f.boxes));
+  let known = w.nil(w.factType), allKnown = w.C(K + "allKnown_nil");
+  for (const f of [...cert.facts].reverse()) {
+    const head = fact(f);
+    allKnown = w.app(w.C(K + "allKnown_cons"), head, known, w.C(factName(f.key)), allKnown);
+    known = w.cons(w.factType, head, known);
+  }
+  certified(w, spec.name + ".g" + i + ".", spec, spec.properties[i], cert, known, allKnown);
+  return w.text();
+}
+
+/** The name a Linked.lean fact's theorem is declared under. */
+export const linkName = (key) => "Link.k" + key;
+
+/**
+ * Facts of live/Linked.lean, each a theorem named by its address, in one suffix to be kept once accepted. The
+ * kernel accepts a fact only by doing its evaluation. If any one is false the whole suffix is refused.
+ */
+export function linkFacts(library, facts) {
+  const w = writer(library), tru = w.C("Bool.true"), fls = w.C("Bool.false"), L = (n) => w.C(K + n);
+  const bool = (b) => (b ? tru : fls);
+  for (const f of facts) {
+    let type, value;
+    if (f.kind === "rule" || f.kind === "prop") {
+      // RuleBox B c Q := ruleBox_intro B c Q (Eq.refl true) (Eq.refl Q), and the same for a guarantee's conditions.
+      const [B, c, Q] = [w.box(f.B), w.conds(f.when), w.box(f.kind === "rule" ? f.Q : f.W)];
+      type = w.app(L(f.kind === "rule" ? "RuleBox" : "PropBox"), B, c, Q);
+      value = w.app(L(f.kind === "rule" ? "ruleBox_intro" : "propBox_intro"), B, c, Q, w.refl(w.Bool, tru), w.refl(w.boxType, Q));
+    } else if (f.kind === "notbad") {
+      const args = [bool(f.always), w.nat(f.outcome), w.nat(f.o)];
+      type = w.app(L("NotBad"), ...args); value = w.app(L("notBad_intro"), ...args, w.refl(w.Bool, fls));
+    } else if (f.kind === "apart") {
+      const args = [w.box(f.Q), w.box(f.W)];
+      type = w.app(L("Apart"), ...args); value = w.app(L("apart_intro"), ...args, w.refl(w.Bool, fls));
+    } else if (f.kind === "meets") {
+      const args = [w.box(f.Q), w.box(f.W), w.box(f.M)];
+      type = w.app(L("Meets"), ...args); value = w.app(L("meets_intro"), ...args, w.refl(w.boxType, args[2]));
+    } else if (f.kind === "covers") {
+      const args = [w.box(f.M), w.boxes(f.Bs)];
+      type = w.app(L("CoveredBy"), ...args); value = w.app(L("coveredBy_intro"), ...args, w.refl(w.boxesType, w.nil(w.boxType)));
+    } else throw new Error("not a kind of fact: " + f.kind);
+    w.declare("thm", linkName(f.key), type, value);
+  }
+  return w.text();
+}
+
+/**
+ * One guarantee assembled from resident facts, from the last rule to the first: lemma applications only. links is
+ * live/certs.mjs's linksOf(app). Every fact named must be resident.
+ */
+export function linkedProof(library, spec, i, links) {
+  const w = writer(library), L = (n) => w.C(K + n), g = links.guarantees[i], p = spec.properties[i], n = spec.rules.length;
+  const fact = (key) => { if (!w.has(linkName(key))) throw new Error("the fact is not resident: " + key); return w.C(linkName(key)); };
+  const B = w.box(spec.bounds), a = w.C(p.always ? "Bool.true" : "Bool.false"), pw = w.conds(p.when), po = w.nat(p.outcome), d = w.nat(spec.otherwise);
+  const W = w.box(g.W), Q = links.boxes.map(w.box), prop = fact(g.prop);
+  const head = [B, a, pw, po];
+  // pre[k]: the boxes of the first k rules, the latest first. rest[k]: the rules from k on.
+  const pre = [w.nil(w.boxType)]; for (let k = 0; k < n; k++) pre.push(w.cons(w.boxType, Q[k], pre[k]));
+  const ruleTerm = (r) => w.app(L("Rule.mk"), w.conds(r.when), w.nat(r.outcome));
+  const rest = []; rest[n] = w.nil(w.Rule); for (let k = n - 1; k >= 0; k--) rest[k] = w.cons(w.Rule, ruleTerm(spec.rules[k]), rest[k + 1]);
+  // Q[j] is one of pre[k], for j < k.
+  const memo = new Map();
+  const isIn = (j, k) => {
+    const key = j + ":" + k; let m = memo.get(key);
+    if (m === undefined) { m = j === k - 1 ? w.app(L("inHere"), Q[j], pre[j]) : w.app(L("inThere"), Q[j], Q[k - 1], pre[k - 1], isIn(j, k - 1)); memo.set(key, m); }
+    return m;
   };
-  return go(body, 0);
+  const never = (step, k, box, o) => {
+    const at = [...head, pre[k], box, o];
+    if (step.how === "ok") return w.app(L("never_ok"), ...at, fact(step.fact));
+    if (step.how === "apart") return w.app(L("never_apart"), ...at, W, prop, fact(step.fact));
+    let Bs = w.nil(w.boxType), allIn = w.app(L("allIn_nil"), pre[k]);
+    for (const j of [...step.sel].reverse()) { allIn = w.app(L("allIn_cons"), Q[j], Bs, pre[k], isIn(j, k), allIn); Bs = w.cons(w.boxType, Q[j], Bs); }
+    return w.app(L("never_cover"), ...at, W, w.box(step.M), Bs, prop, fact(step.meets), fact(step.covers), allIn);
+  };
+  let safe = w.app(L("safe_nil"), ...head, d, pre[n], never(g.steps[n], n, B, d));
+  for (let k = n - 1; k >= 0; k--) {
+    const r = spec.rules[k], o = w.nat(r.outcome);
+    safe = w.app(L("safe_cons"), ...head, d, pre[k], w.conds(r.when), o, rest[k + 1], Q[k], fact(links.rules[k]), never(g.steps[k], k, Q[k], o), safe);
+  }
+  w.declare("thm", spec.name + ".g" + i + ".holds", ...w.applied(K + "linked_sound", [...head, d, rest[0], safe]));
+  return w.text();
 }

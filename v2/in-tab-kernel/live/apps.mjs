@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { readLibrary, proofOf, proofsOf, certifiedProofsOf } from "./emit.mjs";
 import { certsOf } from "./certs.mjs";
+import { appOf } from "./read-app.mjs";
 
 const [libraryPath, verdantPath, out] = process.argv.slice(2);
 const text = fs.readFileSync(libraryPath, "utf8");
@@ -25,18 +26,8 @@ const apps = {
   parking,
   "parking-false": { ...parking, name: "ParkingFalse", properties: [{ always: false, when: [[1, 4, 2]], outcome: 2 }] },   // never premium for a truck: false
   "parking-edited": { ...parking, name: "ParkingEdited", rules: [{ when: [[1, 4, 2]], outcome: 2 }, ...parking.rules.filter((r) => r.outcome !== 2 || r.when[0][0] !== 1)] },   // the truck rule first: a truck at 0 hours is premium
-  verdant: verdant(fs.readFileSync(verdantPath, "utf8")),
+  verdant: appOf(fs.readFileSync(verdantPath, "utf8"), "VerdantTab"),
 };
-
-// The data of VerdantRegions.lean, read as written there.
-function verdant(lean) {
-  const block = (name) => { const m = new RegExp(`def ${name} : [^\\n]* := \\[([\\s\\S]*?)\\]\\n\\n`).exec(lean); if (!m) throw new Error("no " + name); return m[1]; };
-  const conds = (s) => [...s.matchAll(/⟨(\d+), (\d+), (\d+)⟩/g)].map((m) => m.slice(1).map(Number));
-  const rules = [...block("rules").matchAll(/⟨\[(.*?)\], (\d+)⟩/g)].map((m) => ({ when: conds(m[1]), outcome: Number(m[2]) }));
-  const properties = [...block("props").matchAll(/⟨(true|false), \[(.*?)\], (\d+)⟩/g)].map((m) => ({ always: m[1] === "true", when: conds(m[2]), outcome: Number(m[3]) }));
-  const bounds = [.../def B : Box := \[(.*)\]/.exec(lean)[1].matchAll(/\((\d+), (\d+)\)/g)].map((m) => [Number(m[1]), Number(m[2])]);
-  return { name: "VerdantTab", bounds, rules, properties, otherwise: Number(/def d : Nat := (\d+)/.exec(lean)[1]) };
-}
 
 fs.mkdirSync(out, { recursive: true });
 const report = { readLibraryMs: Math.round(readMs), apps: {} };
@@ -57,11 +48,11 @@ if (library.nameIndex.has("PrismLive.Kernel.certCheck_sound")) {
   const verdantC = { ...apps.verdant, name: "VerdantCert" };
   t = performance.now();
   const certs = certsOf(verdantC), proofs = certifiedProofsOf(text, verdantC, certs, library);
-  report.verdantCertified = { suffixes: proofs.length, writeMs: Math.round((performance.now() - t) * 10) / 10, bytes: [Math.min(...proofs.map((x) => x.length)), Math.max(...proofs.map((x) => x.length))], named: certs.reduce((n, c) => n + c.rules.reduce((k, x) => k + x.length, 0) + c.other.length, 0) };
+  report.verdantCertified = { suffixes: proofs.length, writeMs: Math.round((performance.now() - t) * 10) / 10, bytes: [Math.min(...proofs.map((x) => x.length)), Math.max(...proofs.map((x) => x.length))], named: certs.reduce((n, c) => n + c.rules.reduce((k, x) => k + x.sel.length, 0) + c.other.sel.length, 0) };
   proofs.forEach((suffix, i) => fs.writeFileSync(path.join(out, "verdant-c" + String(i).padStart(2, "0") + ".ndjson"), suffix));
   // Faults: a name the proof needs is left out; and a guarantee the rules break, with honest names.
-  const first = certs.findIndex((c) => c.rules.some((x) => x.length));
-  const dropped = certs.map((c, i) => (i !== first ? c : { ...c, rules: c.rules.map((x, k) => (k === c.rules.findIndex((y) => y.length) ? x.slice(1) : x)) }));
+  const first = certs.findIndex((c) => c.rules.some((x) => x.sel.length));
+  const dropped = certs.map((c, i) => (i !== first ? c : { ...c, rules: c.rules.map((x, k) => (k === c.rules.findIndex((y) => y.sel.length) ? { ...x, sel: x.sel.slice(1) } : x)) }));
   fs.writeFileSync(path.join(out, "verdant-c-dropped.ndjson"), certifiedProofsOf(text, { ...verdantC, name: "VerdantDropped" }, dropped, library)[first]);
   const falseApp = { ...apps["parking-false"], name: "ParkingCertFalse" };
   fs.writeFileSync(path.join(out, "parking-c-false.ndjson"), certifiedProofsOf(text, falseApp, certsOf(falseApp), library)[0]);
