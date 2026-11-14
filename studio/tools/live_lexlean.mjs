@@ -169,6 +169,108 @@ try { const c = prism.checkSpec(JSON.parse(jsonExample[1])); jsonExampleChecks =
 let exampleReads = false;
 try { exampleReads = !!example && lex.readDraftLexLean(example[1]).rules.length > 0 && !/theorem\{/.test(example[1]); } catch (e) {}
 claim("prompt: the model is asked for one JSON spec, never LexLean, and the prompt's example checks and renders the example module", /You write the app's spec as JSON, and nothing else/.test(SPEC_RULES) && /You never write LexLean/.test(SPEC_RULES) && SPEC_RULES.includes("<dyad-spec>{") && !/Write one <prism-lexlean> block holding the module/.test(SPEC_RULES) && jsonExampleChecks && exampleReads);
+// Measured on the live site with GLM 5.3 Flash, one request, the same sentence: 145 s to a checked app
+// without this line, 55 s with it (42 s of reasoning, 11 s writing the spec). The checker is what makes
+// it safe to ask: a conflict the model does not think through is found here, at once.
+claim("prompt: the model is told to write the spec at once, since Forge checks it", /Write the spec at once. Do not deliberate, and do not draft the spec or try examples in your reasoning/.test(SPEC_RULES));
+// A spec a model writes without a name: the checker names it, the stored spec carries the name, the
+// module is rendered from it, and the address the seal carries is the same with or without the name.
+const { readSpecFile } = await import(new URL("../shell/prism/spec-file.mjs", import.meta.url));
+let namedSpec = false;
+try {
+  const unnamed = JSON.parse(prism.SPEC_EXAMPLE); delete unnamed.name;
+  const checkedName = prism.checkSpec(structuredClone(unnamed)).spec.name, stored = { name: checkedName, ...unnamed };
+  let unnamedRenders = true; try { lex.canonicalSource(unnamed); } catch (e) { unnamedRenders = false; }
+  namedSpec = !unnamedRenders && typeof checkedName === "string" && lex.canonicalSource(stored).source.length > 0
+    && readSpecFile(unnamed).specAddress === readSpecFile(stored).specAddress
+    && prism.checkSpec(structuredClone(stored)).spec.name === checkedName
+    && hostSource.includes("if (named.ok && typeof named.spec?.name === \"string\") tag.spec = { name: named.spec.name, ...tag.spec };");
+} catch (e) {}
+claim("name: a spec written without a name is stored with the checker's name, renders its module, and keeps its address", namedSpec);
+// The fast spec turn: what Forge asks of the provider, and what it reads back.
+let fastTurn = {};
+try {
+  const bare = JSON.parse(prism.SPEC_EXAMPLE); delete bare.examples; delete bare.name;
+  const text = JSON.stringify(bare), tagged = prism.asSpecTurn(text), given = prism.withExamples(bare), again = prism.withExamples(JSON.parse(JSON.stringify(bare)));
+  const inferenceSource = fs.readFileSync(path.join(root, "shell/inference.js"), "utf8");
+  const shapeOk = (schema, v) => {
+    if (schema.enum) return schema.enum.includes(v);
+    if (schema.anyOf) return schema.anyOf.some((x) => shapeOk(x, v));
+    if (schema.type === "integer") return Number.isInteger(v) && (schema.minimum === undefined || v >= schema.minimum);
+    if (schema.type === "string") return typeof v === "string" && (!schema.pattern || new RegExp(schema.pattern).test(v));
+    if (schema.type === "array") return Array.isArray(v) && v.length >= (schema.minItems || 0) && v.length <= (schema.maxItems ?? Infinity) && v.every((x) => shapeOk(schema.items, x));
+    if (schema.type === "object") return !!v && typeof v === "object" && !Array.isArray(v) && (schema.required || []).every((k) => k in v) && Object.keys(v).every((k) => k in schema.properties && shapeOk(schema.properties[k], v[k]));
+    return false;
+  };
+  fastTurn = {
+    schema: shapeOk(prism.SPEC_SCHEMA, bare) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, files: [] }) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, rules: [] }) && !shapeOk(prism.SPEC_SCHEMA, { ...bare, fields: [{ name: "t", kind: "number", min: -5, max: 40 }] }) && JSON.stringify(prism.SPEC_SCHEMA).length <= 8192 && prism.SPEC_FORMAT.json_schema.schema === prism.SPEC_SCHEMA,
+    bare: tagged === "<dyad-spec>" + text + "</dyad-spec>" && prism.parseSpecTag(tagged).spec.title === bare.title && prism.asSpecTurn(text.slice(0, 40)) === "<dyad-spec>" + text.slice(0, 40) && prism.asSpecTurn("Here it is.\n<dyad-spec>{}</dyad-spec>") === "Here it is.\n<dyad-spec>{}</dyad-spec>" && prism.asSpecTurn("I cannot.") === "I cannot.",
+    examples: given.examples.length >= 2 && given.examples.length <= 6 && JSON.stringify(given) === JSON.stringify(again) && prism.checkSpec(JSON.parse(JSON.stringify(given))).ok && prism.checkSpec(JSON.parse(JSON.stringify(given))).notes.every((n) => !/Set aside example/.test(n)) && new Set(given.examples.map((e) => e.response)).size >= 2 && prism.withExamples(JSON.parse(prism.SPEC_EXAMPLE)).examples.length === JSON.parse(prism.SPEC_EXAMPLE).examples.length,
+    prompt: /Write no "examples": Forge adds them from the rules\./.test(SPEC_RULES),
+    beside: inferenceSource.includes('request: body, stream: true }).bytes;') && inferenceSource.includes('body[Symbol.for("forge.specAsk")] = ask;') && JSON.stringify(Object.assign({ a: 1 }, { [Symbol.for("forge.specAsk")]: { format: {} } })) === '{"a":1}' && inferenceSource.includes('if (format && format.type === "json_schema") j.response_format = format;') && !/enable_thinking/.test(inferenceSource) && hostSource.includes("inference.specAsk(body, { format: prism.SPEC_FORMAT });") && hostSource.includes("t = prism.asSpecTurn(t);") && hostSource.includes("if (options.draft && tag && tag.spec) tag.spec = prism.withExamples(tag.spec);"),
+  };
+} catch (e) { fastTurn = { error: String(e) }; }
+claim("fast turn: the spec's schema admits a spec and nothing else, within the relay's bound", fastTurn.schema === true);
+claim("fast turn: one bare JSON object is read as the spec, whole or still streaming, and prose is left alone", fastTurn.bare === true);
+claim("fast turn: a spec written without examples gets Forge's own, the same every time, and they pass", fastTurn.examples === true && fastTurn.prompt === true);
+// What Qwen3 30B wrote for the shipping sentence on 2026-11-13, through the site relay: `invalid` listed and
+// never answered, two guarantees about weights that cannot be asked, and one its own rules break.
+let draftRepair = {};
+try {
+  const qwen = { title: "Shipping Tier", purpose: "Decide the shipping tier for an order from its weight in kilograms and its destination.",
+    fields: [{ name: "weight", kind: "number", min: 0, max: 100 }, { name: "destination", kind: "choice", values: ["domestic", "europe", "worldwide"] }],
+    outcomes: ["standard", "express", "premium", "invalid"],
+    rules: [{ when: [{ field: "weight", op: ">=", value: 10 }], then: "premium" }, { when: [{ field: "destination", op: "is", value: "worldwide" }], then: "express" }, { when: [{ field: "destination", op: "is", value: "europe" }, { field: "weight", op: ">", value: 5 }], then: "express" }, { when: [{ field: "destination", op: "is", value: "domestic" }, { field: "weight", op: ">", value: 2 }], then: "express" }],
+    otherwise: "standard",
+    properties: [{ kind: "never", when: [{ field: "weight", op: "<", value: 0 }], then: "standard" }, { kind: "never", when: [{ field: "weight", op: ">", value: 100 }], then: "standard" }, { kind: "always", when: [{ field: "weight", op: "=", value: 0 }], then: "standard" }] };
+  const copy = (v) => JSON.parse(JSON.stringify(v));
+  const first = prism.checkSpec(copy(qwen)), ask = prism.specRepairPrompt(first.issues, first.broken);
+  const mended = copy(qwen); mended.properties[2] = { kind: "always", when: [{ field: "weight", op: "=", value: 0 }, { field: "destination", op: "is", value: "domestic" }], then: "standard" };
+  const second = prism.checkSpec(copy(mended)), third = prism.checkSpec(copy(second.authored));
+  const used = copy(qwen); used.rules[0].then = "invalid";
+  const { readSpecFile: read } = await import(new URL("../shell/prism/spec-file.mjs", import.meta.url));
+  draftRepair = {
+    cleaned: first.notes.some((n) => /Dropped `invalid` from the answers/.test(n)) && first.notes.some((n) => /Dropped 2 guarantees about requests that cannot happen/.test(n)),
+    refused: first.ok === false && first.issues.length === 1 && /always standard when weight equals 0/.test(first.issues[0]) && first.issues[0].includes("`0 worldwide` answers express"),
+    asked: first.broken.length === 1 && ask.includes('The guarantee {"kind":"always","when":[{"field":"weight","op":"=","value":0}],"then":"standard"} is false: the request `0 worldwide` answers express, by the rule {"when":[{"field":"destination","op":"is","value":"worldwide"}],"then":"express"}.') && /delete that guarantee from "properties", or change the rules/.test(ask) && /write the whole spec again with nothing else changed/.test(ask) && prism.specRepairPrompt(["a field is missing"]).includes("- a field is missing"),
+    accepted: second.ok === true && !second.authored.outcomes.includes("invalid") && second.authored.properties.length === 1 && second.authored.rules.length === 4,
+    sealed: read(second.authored).specAddress === read(second.spec).specAddress && third.ok === true && third.notes.length === 0 && JSON.stringify(third.authored) === JSON.stringify(second.authored),
+    answeredInvalid: prism.checkSpec(used).ok === false,
+    host: hostSource.includes("if (accepted && accepted.ok && accepted.authored) tag.spec = accepted.authored;") && hostSource.includes("const repairedSpec = async (genBody) => {") && hostSource.includes("for (let round = 0; round < 2; round++) {") && (hostSource.match(/await repairedSpec\(/g) || []).length === 2 && hostSource.includes("{ role: \"user\", content: prism.specRepairPrompt(verdict.issues, verdict.broken) }] }, { format: prism.SPEC_FORMAT });"),
+  };
+} catch (e) { draftRepair = { error: String(e) }; }
+claim("draft: an unused `invalid` and guarantees about requests that cannot happen are dropped and named", draftRepair.cleaned === true && draftRepair.answeredInvalid === true);
+claim("draft: a guarantee the rules break is refused in its own words, with the request that shows it", draftRepair.refused === true && draftRepair.asked === true);
+claim("draft: the mended spec is accepted, stored as accepted, and its address is the seal's", draftRepair.accepted === true && draftRepair.sealed === true);
+claim("draft: a refused spec gets up to two repair turns, held to the schema, and what is stored is what was accepted", draftRepair.host === true);
+// A draft as DeepSeek V3.2 wrote them in the benchmark: sound rules, and no guarantee at all.
+let proposed = {};
+try {
+  const bare = { title: "Shipping Tier", purpose: "Decide the shipping tier for an order from its weight in kilograms and its destination.",
+    fields: [{ name: "weight", kind: "number", min: 0, max: 100 }, { name: "destination", kind: "choice", values: ["domestic", "europe", "worldwide"] }],
+    outcomes: ["standard", "express", "freight"],
+    rules: [{ when: [{ field: "weight", op: ">", value: 30 }], then: "freight" }, { when: [{ field: "destination", op: "is", value: "worldwide" }], then: "express" }, { when: [{ field: "weight", op: ">", value: 10 }], then: "express" }],
+    otherwise: "standard", properties: [] };
+  const copy = (v) => JSON.parse(JSON.stringify(v));
+  const given = prism.withGuarantees(copy(bare)), again = prism.withGuarantees(copy(bare)), check = prism.checkSpec(copy(given));
+  const one = prism.withGuarantees({ ...copy(bare), properties: [{ kind: "always", when: [{ field: "weight", op: ">", value: 30 }], then: "freight" }] });
+  const full = { ...copy(bare), properties: [1, 2, 3].map((n) => ({ kind: "never", when: [{ field: "weight", op: "=", value: n }], then: "freight" })) };
+  const broken = { ...copy(bare), properties: [{ kind: "always", when: [{ field: "weight", op: "=", value: 0 }], then: "freight" }] };
+  proposed = {
+    count: given.properties.length === 2 && given.properties.length <= prism.GUARANTEES_WANTED && JSON.stringify(given) === JSON.stringify(again),
+    first: given.properties[0].kind === "always" && given.properties[0].then === "freight" && /^Proposed by Forge from rule 1/.test(given.properties[0].why),
+    // rule 2 (worldwide is express) is not proposed: rule 1 overrides it for a heavy parcel
+    sound: check.ok === true && check.issues.length === 0 && !given.properties.some((p) => p.kind === "always" && p.then === "express" && JSON.stringify(p.when) === JSON.stringify(bare.rules[1].when)),
+    card: prism.card({ phase: "checked", spec: check.spec, issues: [], notes: [], vectors: check.vectors }).includes("Proposed by Forge from rule 1"),
+    tops: one.properties.length === 2 && !one.properties[0].why && /^Proposed by Forge:/.test(one.properties[1].why) && new Set(one.properties.map((p) => p.kind + JSON.stringify(p.when) + p.then)).size === 2,
+    leaves: prism.withGuarantees(full) === full && prism.withGuarantees(broken) === broken,
+    host: hostSource.includes('if (options.draft && tag && tag.spec && !files.get("prism/spec.json")) tag.spec = prism.withGuarantees(tag.spec);') && hostSource.includes("source: applied.source, onCommit, draft: true });"),
+  };
+} catch (e) { proposed = { error: String(e) }; }
+claim("proposed: a first draft with too few guarantees gets Forge's own from its rules, up to three in all, the same every time, each one true", proposed.count === true && proposed.first === true && proposed.sound === true && proposed.tops === true);
+claim("proposed: each is marked as proposed on the card, and a draft with enough, or one the checker refuses, is left as written", proposed.card === true && proposed.leaves === true && proposed.host === true);
+claim("fast turn: the one cloud model does not reason first, is the default, and leads the relay's list", (() => { const toml = fs.readFileSync(path.join(root, "relay/featherless/wrangler.toml"), "utf8"); const offered = [...hostSource.matchAll(/apiName: "([^"]+)", displayName: "[^"]+", description: "[^"]+ on Featherless/g)].map((m) => m[1]); const listed = (/^MODELS = "([^"]+)"$/m.exec(toml) || ["", ""])[1].split(","); return offered.length === 1 && offered[0] === "Qwen/Qwen3-30B-A3B-Instruct-2507" && listed[0] === "Qwen/Qwen3-30B-A3B-Instruct-2507" && hostSource.includes('selectedModel: { name: "Qwen/Qwen3-30B-A3B-Instruct-2507", provider: "featherless" }') && fs.readFileSync(path.join(root, "shell/chat-model-route.mjs"), "utf8").includes("export const FEATHERLESS_MODEL='Qwen/Qwen3-30B-A3B-Instruct-2507';") && /^FORWARD_RESPONSE_FORMAT = "1"$/m.test(toml); })());
+claim("fast turn: the schema rides beside the core's request, never in it, and thinking is never asked off", fastTurn.beside === true);
 claim("boundary: LexLean a model writes is dropped before the turn is applied, closed or open, and no model is told a second notation", prism.wroteLexLean("a <prism-lexlean>x") && !prism.wroteLexLean("<dyad-spec>{}</dyad-spec>") && prism.withoutLexLean("a<prism-lexlean>m</prism-lexlean>b<prism-lexlean>open") === "ab" && !SPEC_RULES.includes("app notation") && !SPEC_RULES.includes("<prism-lexlean>") && hostSource.includes("const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);") && hostSource.includes("appAfterTurn(appId, turn,") && !hostSource.includes("lexlean.partialFromTurn(full)"));
 const bare = source.replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "");
 let bareSpec = null;

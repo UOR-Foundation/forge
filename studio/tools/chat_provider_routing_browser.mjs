@@ -47,7 +47,7 @@ try {
     return window.electron.ipcRenderer.invoke('distributed-machine:dispatch',{protocolVersion:1,machineId:'chat_stream',encodedKey:{chatId},messageId:crypto.randomUUID(),encodedEvent:{type:'SUBMIT',intent,observedStopPolicyVersion:0}});
   },{id,chatId,appId});
   const settled=async id=>{const deadline=Date.now()+30000;while(Date.now()<deadline){const q=await get('refs',`chat-queue:${chatId}`),r=q?.receipts.find(r=>r.intentId===id);if(r&&!q.state.active)return r;await new Promise(r=>setTimeout(r,20));}console.log(JSON.stringify({id,journal:await get('refs',`chat-queue:${chatId}`),chat:await get('chats',chatId)}));throw Error('queue did not settle '+id);};
-  for(const [provider,name,windowSize,url] of [['openrouter','openrouter/free',128000,'https://openrouter.ai/api/v1/chat/completions'],['featherless','zai-org/GLM-5.3-Flash',262144,'https://api.featherless.ai/v1/chat/completions']]){
+  for(const [provider,name,windowSize,url] of [['openrouter','openrouter/free',128000,'https://openrouter.ai/api/v1/chat/completions'],['featherless','Qwen/Qwen3-30B-A3B-Instruct-2507',262144,'https://api.featherless.ai/v1/chat/completions']]){
     await call('update-chat',{chatId,modelSelection:{provider,name,effortLevel:'medium'}});
     assert.equal((await call('chat:count-tokens',{chatId,input:'Explain this application'})).contextWindow,windowSize);
     const count=sent.length;await submit(provider);

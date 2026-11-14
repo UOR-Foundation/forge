@@ -1,5 +1,5 @@
 // dyad-prism (ours, not upstream's; see VENDORED.md): the model picker, replacing upstream's at build time
-// through `resolveId` in vite.shell.config.mts. Two models answer here (shell/host.js): GLM 5.3 Flash in the
+// through `resolveId` in vite.shell.config.mts. Two models answer here (shell/host.js): Qwen3 30B in the
 // cloud (Featherless) and Bonsai 1.7B on this device. The menu is those two, each on two lines: its name over
 // a few words on what choosing it means, and at the right, in one column, a tag saying where it runs. Nothing
 // else: no provider headers, no submenus, no recent section, no effort levels, no price badges, no trial
@@ -83,7 +83,12 @@ export function ModelPicker() {
     // The product's default is the device, so a selection upstream left as "auto" reads as the device's model.
     (selected.provider === providerId ||
       (selected.provider === "auto" && providerId === "local")) &&
-    (selected.name === model.apiName || selected.provider === "auto");
+    (selected.name === model.apiName ||
+      selected.provider === "auto" ||
+      // A selection stored while the provider offered another model: it answers on the provider's one
+      // model now (shell/chat-model-route.mjs), so it reads as that model.
+      (modelsOf(providerId).length === 1 &&
+        !modelsOf(providerId).some((m) => m.apiName === selected.name)));
 
   const options = listed.flatMap((provider) =>
     modelsOf(provider.id).map((model) => ({ provider: provider.id, model })),

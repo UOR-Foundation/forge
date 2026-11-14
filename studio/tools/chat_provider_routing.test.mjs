@@ -1,12 +1,20 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {test} from 'node:test';
-import {chatModelRoute} from '../shell/chat-model-route.mjs';
+import {chatModelRoute,FEATHERLESS_MODEL} from '../shell/chat-model-route.mjs';
 test('explicit cloud selections retain provider and exact model identity',()=>{
- for(const provider of ['openrouter','featherless'])for(const name of ['zai-org/GLM-5.3-Flash','openrouter/free']){
+ for(const provider of ['openrouter','featherless'])for(const name of ['Qwen/Qwen3-30B-A3B-Instruct-2507','some-org/another-model','openrouter/free']){
   const route=chatModelRoute({provider,name},{provider:'local',name:'webgpu:Bonsai'});
   assert.deepEqual(route,{provider,model:provider+'/'+name,paid:true});assert.ok(Object.isFrozen(route));
  }
+});
+test('the models the site offered before resolve to the one it offers now, for Featherless only',()=>{
+ for(const former of ['zai-org/GLM-5.3-Flash','deepseek-ai/DeepSeek-V3.2']){
+  assert.deepEqual(chatModelRoute({provider:'featherless',name:former},{provider:'local',name:'webgpu:Bonsai'}),{provider:'featherless',model:'featherless/'+FEATHERLESS_MODEL,paid:true});
+  assert.deepEqual(chatModelRoute(null,{provider:'featherless',name:former}),{provider:'featherless',model:'featherless/'+FEATHERLESS_MODEL,paid:true});
+  assert.equal(chatModelRoute({provider:'openrouter',name:former},null).model,'openrouter/'+former);
+ }
+ assert.equal(FEATHERLESS_MODEL,'Qwen/Qwen3-30B-A3B-Instruct-2507');
 });
 test('only absent chat selection uses defaults and device identity remains exact',()=>{
  for(const selection of [null,undefined])assert.deepEqual(chatModelRoute(selection,{provider:'local',name:'webgpu:Bonsai'}),{provider:'local',model:'webgpu:Bonsai',paid:false});

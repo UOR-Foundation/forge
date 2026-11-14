@@ -44,7 +44,7 @@ try {
   await page.evaluate(({appId,fixture})=>window.__prism.rulesAfterTurn(appId,'<dyad-spec>'+JSON.stringify(fixture)+'</dyad-spec>'),{appId,fixture});
   await call('edit-app-file',{appId,filePath:'notes.txt',content:'PRIVATE-IMPLEMENTATION-FIXTURE'});
   const theme=await call('create-custom-theme',{name:'Generation fixture',prompt:'THEME-CAPTURED-BEFORE-APPROVAL'});await call('set-app-theme',{appId,themeId:'custom:'+theme.id});
-  await call('set-user-settings',{selectedModel:{provider:'featherless',name:'zai-org/GLM-5.3-Flash'},providerSettings:{featherless:{apiKey:{value:'integration-local-fixture'}}}});
+  await call('set-user-settings',{selectedModel:{provider:'featherless',name:'Qwen/Qwen3-30B-A3B-Instruct-2507'},providerSettings:{featherless:{apiKey:{value:'integration-local-fixture'}}}});
   const moduleOf=()=>page.evaluate(async({base,appId})=>{const {captureProjectSource}=await import(base+'project-edit.mjs'),inference=await import(base+'inference.js');const source=await captureProjectSource(await inference.db(),appId);return source.files.find(([p])=>/^prism\/[A-Z]\w*\.lex\.tex$/.test(p))[1];},{base,appId});
   const specOf=()=>page.evaluate(appId=>window.__host.get('files',appId+':prism/spec.json'),appId);
   const before=await specOf();

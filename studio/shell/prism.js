@@ -5,7 +5,7 @@
 // verifier, the same call `prism_prove` makes. It also writes the app's rule module,
 // src/lib/prism.ts: the spec as data and one small interpreter, replayed against every acceptance
 // vector before it is written. What Lean proves is the rules; the module is tested against them.
-import { SpecError, validateSpec, unreachableRules, counterexample, describeConditions, requestLimits, decodeRequest, respond } from "./prism/spec.mjs";
+import { SpecError, validateSpec, unreachableRules, counterexample, describeConditions, requestLimits, decodeRequest, respond, sampleRequests, holds } from "./prism/spec.mjs";
 import { names, renderModel, renderProofs, acceptanceVectors, renderSpecDocument } from "./prism/render.mjs";
 import { readSpecFile } from "./prism/spec-file.mjs";
 
@@ -58,13 +58,107 @@ export const SPEC_EXAMPLE = JSON.stringify(PARKING);
 export const MODULE_EXAMPLE = draftOf(toLexLean(PARKING)).replace(/\n\ntheorem\{[\s\S]*?\n\}(?=\n)/g, "").trim() + "\n";
 export const SPEC_RULES = `# You write the app's spec as JSON, and nothing else
 Every app here is one JSON spec: its inputs, its answers, its rules and its guarantees. Forge writes the app's LexLean module, its code and its screen from the spec, the same every time, and Lean proves the guarantees. You never write code, files or dependencies: Forge does not apply them. You never write LexLean. To build or change an app, write its spec; to change only one part, write a patch. If a request decides nothing, say in one sentence what the app could decide, and write that spec.
-- Write one <dyad-spec> block holding the whole spec as one JSON object, and no other text inside it. Keys: "title"; "purpose" (one sentence); "fields" (1 to 8, in the order a request gives them; each {"name": a lower-case word, "kind": "number" with whole "min" and "max", or "choice" with "values", two to 32 lower-case words}); "outcomes" (the answer words, lower case; "invalid" is reserved); "rules" (1 to 24, in order, the first that matches decides; each {"when": [{"field", "op", "value"}], "then": an outcome}); "otherwise" (the outcome when no rule matches); "properties" (what must never or always happen, each a guarantee Lean proves for every request: {"kind": "never" or "always", "when": [...], "then": an outcome}); "examples" (a few requests with their answers: {"request": "the field values separated by spaces", "response"}).
+- Write one <dyad-spec> block holding the whole spec as one JSON object, and no other text inside it. Keys: "title"; "purpose" (one sentence); "fields" (1 to 8, in the order a request gives them; each {"name": a lower-case word, "kind": "number" with whole "min" and "max", or "choice" with "values", two to 32 lower-case words}); "outcomes" (the answer words, lower case; never list "invalid", which Forge itself answers for a malformed request); "rules" (1 to 24, in order, the first that matches decides; each {"when": [{"field", "op", "value"}], "then": an outcome}); "otherwise" (the outcome when no rule matches); "properties" (what must never or always happen, each a guarantee Lean proves for every request: {"kind": "never" or "always", "when": [...], "then": an outcome}). Write no "examples": Forge adds them from the rules.
 - A condition's "op" is "is" or "is not" for a choice field, with one of its values; and "<", "<=", ">", ">=", "=" or "!=" for a number field, with a whole number or another number field as {"field": "<name>"}. All of a rule's conditions must hold. Numbers are whole, never fractions.
-- Think about which rules and guarantees the app needs, not about syntax. State the guarantees the request implies: what must never be answered, and what must always be.
+- Write the spec at once. Do not deliberate, and do not draft the spec or try examples in your reasoning: Forge checks the spec the moment it is written, against every request, and reports any conflict.
+- State the guarantees the request implies: what must never be answered, and what must always be.
 - To change one part (a word, an answer, one rule), or to set the screen's words or order, write a patch on the spec: <dyad-spec-patch>[{"op":"set","path":["rules",2,"then"],"value":"none"}]</dyad-spec-patch>. Ops are set, insert and remove; \`view\` ({"blocks":[...]}, each one of {"kind":"heading","text"}, {"kind":"text","text"}, {"kind":"input","field","label"}, {"kind":"answer","label"}, {"kind":"guarantees"}, {"kind":"rules"}, {"kind":"examples"}), \`purpose\` (one sentence) and \`meanings\` ({"<answer>": "what it tells the user"}, one key per answer; fields have no meanings) are set this way. When the user points at something on the screen, its paths are given with the request.
 - To change the rules, write the whole spec again in a new <dyad-spec> block, starting from the current spec when one is given.
 - An app that must keep what it is given between requests (a list that grows, entries that are kept) cannot be written yet. Say so in one sentence, and write the spec of what it could decide.
 Example: <dyad-spec>${SPEC_EXAMPLE}</dyad-spec>` + PROMPT_RULES;
+
+// ---- the shape a model's first spec is held to, where the provider can hold it
+// prism/spec/1 as a JSON schema, for a provider that constrains its answer to one: the answer is then one
+// JSON object of this shape, with no tag around it and nothing to repair. What a schema cannot say (a
+// rule naming a field that exists, an answer among the outcomes) the checker still checks.
+const WORD = { type: "string", pattern: "^[a-z][a-z0-9_]*$" };
+const CONDITION = { type: "object", properties: { field: WORD, op: { enum: ["is", "is not", "<", "<=", ">", ">=", "=", "!="] }, value: { anyOf: [{ type: "integer" }, { type: "string" }, { type: "object", properties: { field: WORD }, required: ["field"], additionalProperties: false }] } }, required: ["field", "op", "value"], additionalProperties: false };
+export const SPEC_SCHEMA = { type: "object", properties: {
+  title: { type: "string" }, purpose: { type: "string" },
+  fields: { type: "array", minItems: 1, maxItems: 8, items: { type: "object", properties: { name: WORD, kind: { enum: ["number", "choice"] }, min: { type: "integer", minimum: 0 }, max: { type: "integer", minimum: 0 }, values: { type: "array", minItems: 2, maxItems: 32, items: WORD } }, required: ["name", "kind"], additionalProperties: false } },
+  outcomes: { type: "array", minItems: 1, items: WORD },
+  rules: { type: "array", minItems: 1, maxItems: 24, items: { type: "object", properties: { when: { type: "array", minItems: 1, items: CONDITION }, then: WORD }, required: ["when", "then"], additionalProperties: false } },
+  otherwise: WORD,
+  properties: { type: "array", items: { type: "object", properties: { kind: { enum: ["never", "always"] }, when: { type: "array", minItems: 1, items: CONDITION }, then: WORD }, required: ["kind", "when", "then"], additionalProperties: false } },
+}, required: ["title", "purpose", "fields", "outcomes", "rules", "otherwise", "properties"], additionalProperties: false };
+export const SPEC_FORMAT = { type: "json_schema", json_schema: { name: "prism_spec_1", schema: SPEC_SCHEMA, strict: true } };
+/**
+ * A turn as the rest of Forge reads it: an answer that is one bare JSON object, which is what a
+ * provider holding the schema returns, is the spec, so it is given its tag, closed once it is whole.
+ */
+export function asSpecTurn(text) {
+  const t = String(text || ""), body = t.trimStart();
+  if (!body.startsWith("{") || t.includes("<dyad-spec")) return t;
+  let whole = false; try { const v = JSON.parse(body); whole = !!v && typeof v === "object" && !Array.isArray(v); } catch {}
+  return "<dyad-spec>" + body.trimEnd() + (whole ? "</dyad-spec>" : "");
+}
+/**
+ * A model's spec with Forge's own examples, when it wrote none: the first request each rule decides, and
+ * one that falls to otherwise, at most six. The same spec always gets the same examples, and they are
+ * stored with it, so they are part of what its address names.
+ */
+export function withExamples(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || (Array.isArray(raw.examples) && raw.examples.length)) return raw;
+  let checked; try { checked = checkSpec(JSON.parse(JSON.stringify(raw))); } catch { return raw; }
+  if (!checked || !checked.ok || !checked.spec) return raw;
+  const seen = new Set(), examples = [];
+  for (const v of acceptanceVectors(checked.spec)) {
+    if (!/^decided by /.test(v.why || "") || v.response === "invalid" || seen.has(v.why)) continue;
+    seen.add(v.why); examples.push({ request: v.request, response: v.response });
+    if (examples.length >= 6) break;
+  }
+  return examples.length ? { ...raw, examples } : raw;
+}
+
+/**
+ * A first draft with too few guarantees gets Forge's own, up to three in all. Each is read off the rules
+ * and holds of every request, so it costs nothing to check; what it adds is something for Lean to prove
+ * and for the user to agree to or strike. Each carries why it was proposed, which the card shows.
+ *   1. A rule nothing earlier overrides: its conditions always give its answer.
+ *   2. An answer one choice never gets.
+ * The same spec always gets the same proposals, in the same order. Measured on 2026-11-13 over ten
+ * sentences and three runs: DeepSeek V3.2 wrote 1.6 guarantees a spec and none at all in five of
+ * nineteen; GLM 5.3 Flash wrote 3.8.
+ */
+export const GUARANTEES_WANTED = 3;
+export function withGuarantees(raw, wanted = GUARANTEES_WANTED) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  let checked; try { checked = checkSpec(JSON.parse(JSON.stringify(raw))); } catch { return raw; }
+  if (!checked || !checked.ok || !checked.spec || !checked.authored) return raw;
+  const base = checked.authored, spec = checked.spec, kept = Array.isArray(base.properties) ? base.properties : [];
+  if (spec.properties.length >= wanted) return raw;
+  const key = (p) => p.kind + "|" + p.then + "|" + describeConditions(p.when);
+  const have = new Set(spec.properties.map(key));
+  const candidates = [];
+  (Array.isArray(base.rules) ? base.rules : []).forEach((r, i) => candidates.push({ kind: "always", when: r.when, then: r.then, why: `Proposed by Forge from rule ${i + 1}: no earlier rule overrides it.` }));
+  for (const f of spec.fields) if (f.kind === "choice") for (const v of f.values) for (const o of spec.outcomes) candidates.push({ kind: "never", when: [{ field: f.name, op: "is", value: v }], then: o, why: `Proposed by Forge: no request with ${f.name} ${v} is answered ${o}.` });
+  const added = [];
+  for (const candidate of candidates) {
+    if (spec.properties.length + added.length >= wanted) break;
+    let trial; try { trial = validateSpec({ ...base, properties: [...kept, ...added, candidate] }); } catch (e) { if (e instanceof SpecError) continue; throw e; }
+    const last = trial.properties[trial.properties.length - 1];
+    if (have.has(key(last)) || counterexample(trial, last).request !== null) continue;
+    have.add(key(last)); added.push(candidate);
+  }
+  return added.length ? { ...base, properties: [...kept, ...added] } : raw;
+}
+
+/**
+ * What a model is told when the checker refuses its spec: the checker's own words, each with the request
+ * that shows the conflict, and what to write back.
+ */
+// Measured with Qwen3 30B on 2026-11-13: told only that a guarantee "does not hold", it wrote the spec back
+// with the guarantee still in it; shown the guarantee and the rule as it wrote them, and the two ways out,
+// it fixed the spec in one turn.
+export function specRepairPrompt(issues, broken = []) {
+  const lines = broken.length
+    ? broken.slice(0, 6).map((b) => `- The guarantee ${JSON.stringify(b.guarantee)} is false: the request \`${b.request}\` answers ${b.answer}, ${b.rule ? "by the rule " + JSON.stringify(b.rule) : "because no rule matches and the otherwise answer is " + b.answer}.`)
+    : issues.slice(0, 8).map((i) => "- " + i);
+  const how = broken.length
+    ? "For each one, fix it in one of two ways: delete that guarantee from \"properties\", or change the rules so that request gets the answer the guarantee names."
+    : "Fix exactly that.";
+  return "Forge checked your spec and refused it:\n" + lines.join("\n") + "\n" + how + " Then write the whole spec again with nothing else changed. Never list \"invalid\" among the outcomes.";
+}
 
 // ---- the one thing a model may write
 // Every model, on the device or in the cloud, writes the app's JSON spec and nothing else. LexLean a
@@ -392,6 +486,12 @@ export function checkSpec(raw) {
   if (Array.isArray(input.rules) && input.rules.length > PROVE_RULES_MAX) return checkLarge(input, notes);
   const words = [...lowered.respelled].filter(([a, b]) => b && a !== b);
   if (words.length) notes.push("Forge respelled " + words.map(([a, b]) => `\`${a}\` as \`${b}\``).join(", ") + ", the form Prism words take.");
+  // `invalid` is the answer Forge itself gives a malformed request. A model that lists it among the answers
+  // and never answers it meant that, so it is dropped; one that answers it by a rule is still refused.
+  if (Array.isArray(input.outcomes) && input.outcomes.includes("invalid")) {
+    const answered = [...(Array.isArray(input.rules) ? input.rules : []), ...(Array.isArray(input.properties) ? input.properties : [])].some((x) => x && x.then === "invalid") || input.otherwise === "invalid" || (Array.isArray(input.examples) ? input.examples : []).some((e) => e && e.response === "invalid");
+    if (!answered && input.outcomes.length > 1) { input = { ...input, outcomes: input.outcomes.filter((o) => o !== "invalid") }; notes.push("Dropped `invalid` from the answers: Forge already answers it for a malformed request."); }
+  }
   // `limits` is a list; a model that writes one sentence means a list of one.
   if (typeof input.limits === "string") { input.limits = [input.limits]; notes.push("Forge made `limits` a list."); }
   // A model may write the otherwise answer as the last rule ({"otherwise": "standard"}); it means the otherwise.
@@ -413,6 +513,8 @@ export function checkSpec(raw) {
     }
     input = { ...input, examples: kept };
   } catch (e) { if (!(e instanceof SpecError)) throw e; }
+  // The spec as it is to be stored: what was written, with only what Forge says it changed.
+  let authored = input;
   let spec;
   try { spec = validateSpec(input); } catch (e) { if (e instanceof SpecError) return { ok: false, issues: [e.message] }; throw e; }
   // A rule no request reaches never decides anything, so dropping it changes no answer; prism-code refuses
@@ -420,13 +522,31 @@ export function checkSpec(raw) {
   const dead = unreachableRules(validateSpec({ ...spec, properties: [], examples: [] }));
   if (dead.length) {
     const deadSet = new Set(dead);
-    try { spec = validateSpec({ ...input, rules: spec.rules.filter((r) => !deadSet.has(r.id)).map(({ id, says, ...r }) => r) }); }
+    authored = { ...input, rules: spec.rules.filter((r) => !deadSet.has(r.id)).map(({ id, says, ...r }) => r) };
+    try { spec = validateSpec(authored); }
     catch (e) { if (e instanceof SpecError) return { ok: false, issues: [e.message] }; throw e; }
     notes.push(`Dropped ${dead.length} rule${dead.length === 1 ? "" : "s"} no request reaches: an earlier rule always decides first.`);
   }
+  // A guarantee about requests that cannot happen (a weight below the least weight) holds of nothing, so it
+  // says nothing and Lean would prove nothing by it. It is dropped and named, as a rule no request reaches
+  // is: only when every request was tried and none met its conditions.
+  if (spec.properties.length && Array.isArray(authored.properties) && authored.properties.length === spec.properties.length) {
+    const met = spec.properties.map(() => false);
+    let tried = 0;
+    for (const request of sampleRequests(spec)) { tried++; spec.properties.forEach((p, i) => { if (!met[i] && p.when.every((c) => holds(c, request))) met[i] = true; }); }
+    const idle = tried > 0 && tried < 200000 ? met.map((m, i) => (m ? -1 : i)).filter((i) => i >= 0) : [];
+    if (idle.length) {
+      const next = { ...authored, properties: authored.properties.filter((_, i) => !idle.includes(i)) };
+      try { spec = validateSpec(next); authored = next; notes.push(`Dropped ${idle.length} guarantee${idle.length === 1 ? "" : "s"} about requests that cannot happen.`); }
+      catch (e) { if (!(e instanceof SpecError)) throw e; }
+    }
+  }
+  const broken = [];
+  const written = ({ id, says, ...x }) => x;
   for (const p of spec.properties) {
     const found = counterexample(spec, p);
-    if (found.request !== null) issues.push(`${p.id} does not hold: \`${found.request}\` answers ${found.outcome}${found.rule ? ` by ${found.rule}` : " by otherwise"}.`);
+    if (found.request !== null) broken.push({ guarantee: written(p), request: found.request, answer: found.outcome, rule: found.rule ? written(spec.rules.find((r) => r.id === found.rule) || {}) : null });
+    if (found.request !== null) issues.push(`${p.id} (${p.kind} ${p.then} when ${describeConditions(p.when)}) does not hold: \`${found.request}\` answers ${found.outcome}${found.rule ? ` by ${found.rule}` : " by otherwise"}.`);
   }
   const vectors = acceptanceVectors(spec);
   let failed = 0;
@@ -436,7 +556,8 @@ export function checkSpec(raw) {
     if (prismAnswer(spec, text) !== v.response) failed++;
   }
   if (failed) issues.push(`The rule module disagrees with ${failed} of ${vectors.length} acceptance vectors. This is a Forge bug.`);
-  return { ok: issues.length === 0, spec, issues, notes, vectors: vectors.length, module: issues.length ? null : moduleSource(spec, vectors.length) };
+  if (raw && typeof raw === "object" && !("examples" in raw) && Array.isArray(authored.examples) && !authored.examples.length) { const { examples, ...rest } = authored; authored = rest; }
+  return { ok: issues.length === 0, spec, authored, issues, broken, notes, vectors: vectors.length, module: issues.length ? null : moduleSource(spec, vectors.length) };
 }
 
 // ---- the proof: the LexLean project prism-code sends, proved on the hosted verifier

@@ -81,7 +81,7 @@ try {
   await page.getByRole('button',{name:"Don't allow",exact:true}).click();
   await page.getByTestId('auxiliary-actions-menu').focus();await page.keyboard.press('Enter');await page.getByRole('menuitem',{name:'Themes',exact:true}).hover();await page.getByTestId('theme-option-custom:'+ui.id).click();
   assert.equal(await call(page,'get-app-theme',{appId:app.app.id}),'custom:'+ui.id);
-  await call(page,'set-user-settings',{selectedModel:{provider:'featherless',name:'zai-org/GLM-5.3-Flash'},providerSettings:{featherless:{apiKey:{value:'theme-local-fixture'}}}});
+  await call(page,'set-user-settings',{selectedModel:{provider:'featherless',name:'Qwen/Qwen3-30B-A3B-Instruct-2507'},providerSettings:{featherless:{apiKey:{value:'theme-local-fixture'}}}});
   await page.getByRole('textbox').first().fill('Describe a small useful application');
   await page.getByRole('textbox').first().press('Enter');
   const disclosure=page.getByRole('dialog',{name:'Review cloud request'});

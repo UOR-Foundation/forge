@@ -39,7 +39,7 @@ try {
   const get=(tab,store,key)=>tab.evaluate(({store,key})=>window.__host.get(store,key),{store,key});
   const created=await call(page,'create-app',{name:'preferences',initialChatMode:'build'}),chatId=created.chatId;
   const peer=await context.newPage();await peer.goto(base);await peer.waitForFunction(()=>!!window.__host&&!!window.electron);
-  const modelSelection={provider:'featherless',name:'zai-org/GLM-5.3-Flash',effortLevel:'medium'};
+  const modelSelection={provider:'featherless',name:'Qwen/Qwen3-30B-A3B-Instruct-2507',effortLevel:'medium'};
   await call(page,'set-user-settings',{selectedModel:{provider:'openrouter',name:'moonshotai/kimi-k2.5'}});
   await Promise.all([call(page,'update-chat',{chatId,title:'',chatMode:'ask'}),call(peer,'update-chat',{chatId,modelSelection})]);
   const row=await get(page,'chats',chatId);assert.equal(row.title,'');assert.equal(row.chatMode,'ask');assert.deepEqual(row.modelSelection,modelSelection);

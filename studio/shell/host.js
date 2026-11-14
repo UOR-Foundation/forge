@@ -117,9 +117,9 @@ handlers.set("prompts:delete", input => promptLibrary("delete",input));
 
 // ---- settings
 const DEFAULT_SETTINGS = {
-  // A new visitor starts on GLM 5.3 Flash in the cloud (the site's shared Featherless key answers); Bonsai 1.7B
+  // A new visitor starts on Qwen3 30B in the cloud (the site's shared Featherless key answers); Bonsai 1.7B
   // on the device is one click away in the model picker.
-  selectedModel: { name: "zai-org/GLM-5.3-Flash", provider: "featherless" }, providerSettings: {}, telemetryConsent: "opted_out", telemetryUserId: "web",
+  selectedModel: { name: "Qwen/Qwen3-30B-A3B-Instruct-2507", provider: "featherless" }, providerSettings: {}, telemetryConsent: "opted_out", telemetryUserId: "web",
   hasRunBefore: true, experiments: {}, enableProLazyEditsMode: false, enableProSmartFilesContextMode: false, selectedChatMode: "build",
   enableAppBlueprint: false, enableTestingForNewApps: false, enableAutoUpdate: false, releaseChannel: "stable", isRunning: false,
   enableSandboxScriptExecution: false, enableMcpToolSearch: false, enableCodeExplorer: false, runTypeScriptForWholeProject: false,
@@ -192,8 +192,14 @@ const LOCAL_MODELS = [{ apiName: MODEL_ID, displayName: "Bonsai 1.7B", descripti
 // Featherless: open-weight models behind an OpenAI chat endpoint that admits this origin. The key is the
 // visitor's, entered on the provider's settings page and kept on this device; the site carries none.
 const FEATHERLESS = { id: "featherless", name: "Featherless", hasFreeTier: false, websiteUrl: "https://featherless.ai/account/api-keys", gatewayPrefix: "featherless/", type: "cloud" };
-const FEATHERLESS_MODELS = [{ apiName: "zai-org/GLM-5.3-Flash", displayName: "GLM 5.3 Flash", description: "Z.ai's GLM 5.3 Flash on Featherless", contextWindow: 262144 }];
-// Two models are offered: GLM 5.3 Flash in the cloud (Featherless) and Bonsai 1.7B on the device. OpenRouter is
+// One cloud model is offered. Qwen3 30B Instruct does not reason before it answers and starts writing within
+// a second. Measured through the site relay on 2026-11-13 over ten sentences and three runs each, with the
+// spec's schema: first token 0.8 s and 20 s in all, against 44 s and 56 s for GLM 5.3 Flash. On the full spec
+// its first draft passed the checker 13 times in 30, and 14 of the 17 failures were a guarantee its own rules
+// break, which is why it is paired with a draft the model only translates into, Forge's own guarantees and
+// the repair turn (relay/featherless/README.md).
+const FEATHERLESS_MODELS = [{ apiName: "Qwen/Qwen3-30B-A3B-Instruct-2507", displayName: "Qwen3 30B", description: "Qwen3 30B Instruct on Featherless", contextWindow: 262144 }];
+// Two models are offered: Qwen3 30B in the cloud (Featherless) and Bonsai 1.7B on the device. OpenRouter is
 // withdrawn from the picker and Settings for now; its models stay defined here, and the warm-up that answers
 // while the device model loads is unchanged.
 handlers.set("get-language-model-providers", () => [FEATHERLESS, LOCAL]);
@@ -1328,6 +1334,28 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   }
   const tag = prism.parseSpecTag(text);
   if (!tag?.spec && appShape.isAppShape(files.get(appShape.SOURCE_PATH))) return {changed:0,source,card:null};
+  // A spec a model writes need not name the app: the checker names it, the same name from the same spec,
+  // and the stored spec carries that name, so its canonical module can be rendered, stored and built. The
+  // name is part of the checker's normal form already, so the spec's address, and its seal, do not change.
+  if (tag && tag.spec && typeof tag.spec === "object" && !Array.isArray(tag.spec) && typeof tag.spec.name !== "string") {
+    const named = prism.checkSpec(JSON.parse(JSON.stringify(tag.spec)));
+    if (named.ok && typeof named.spec?.name === "string") tag.spec = { name: named.spec.name, ...tag.spec };
+  }
+  // An app's first draft with too few guarantees gets Forge's own, read off its rules, each marked as
+  // proposed on the card for the user to agree to or strike. Only the first draft: a guarantee the user
+  // has had struck is not proposed again.
+  // Both are for a model's draft only (options.draft, set by the chat turn): a spec that arrives any other
+  // way, an import or a module read back, is stored as it was given.
+  if (options.draft && tag && tag.spec && !files.get("prism/spec.json")) tag.spec = prism.withGuarantees(tag.spec);
+  // A spec written without examples gets Forge's own, the same from the same rules, stored with it.
+  if (options.draft && tag && tag.spec) tag.spec = prism.withExamples(tag.spec);
+  // What is stored is the spec as the checker accepted it (a rule no request reaches, an unused `invalid`
+  // and a guarantee about no request dropped, each named on the card), so the stored file is exactly what
+  // the module is rendered from and its address is the seal the app carries.
+  if (tag && tag.spec && typeof tag.spec === "object" && !Array.isArray(tag.spec)) {
+    let accepted = null; try { accepted = prism.checkSpec(JSON.parse(JSON.stringify(tag.spec))); } catch (e) {}
+    if (accepted && accepted.ok && accepted.authored) tag.spec = accepted.authored;
+  }
   if (tag && tag.spec) stage("prism/spec.json", JSON.stringify(tag.spec, null, 2) + "\n");
   // Every app's rules have a canonical LexLean source, whatever wrote them (a module, the on-device
   // model's JSON, a click or an agent's patch): the same meaning is always the same module bytes. It is
@@ -1796,6 +1824,10 @@ async function chatTurn(chatId, intent) {
     // Featherless's GLM reasons for some 14,000 tokens before it writes, inside the same budget, so it gets
     // the most Featherless allows (32,768); 16,384 left a page cut off mid file.
     const body = { model, messages: request, max_tokens: !paid ? 2048 : provider === "featherless" ? 32768 : 16384, temperature: "0.7" };
+    // A new decision app's first turn asks Featherless for an answer held to the spec's schema: one JSON
+    // object of that shape, with nothing to repair. The site relay forwards it only while its switch is on;
+    // until then the request is the one it was. Thinking is not asked off: GLM deliberates either way.
+    if (paid && provider === "featherless" && execution.sourceEffects && !moduleNow && !new Map(projectSource.files).get("prism/spec.json")) inference.specAsk(body, { format: prism.SPEC_FORMAT });
     const hit = await lookup(body);
     const route = await routeOf(hit, body);
     // The View's no-key word names OpenRouter; a Featherless model is told about its own key.
@@ -1804,6 +1836,8 @@ async function chatTurn(chatId, intent) {
     let lastSave = 0;
     const onText = async (t) => {
       assertGenerationActive(abort.signal);
+      // One bare JSON object is the spec, as a provider holding the schema returns it.
+      t = prism.asSpecTurn(t);
       full = t;
       if (tm.turn === chatId) {
         if (!tm.token && t && !t.startsWith("<think>")) tmOnce("token");
@@ -1875,6 +1909,24 @@ async function chatTurn(chatId, intent) {
       });
       if (next !== before) { if (tm.turn === chatId) { tm.repaired = true; tmMark("refused"); } await enqueueText(next); }
     };
+    // A spec the checker refuses gets up to two repair turns from the same model, with the checker's own
+    // words and the request that shows each conflict. The corrected spec replaces the draft in this answer,
+    // held to the spec's schema, so the user sees an app that checks rather than an error to relay.
+    const repairedSpec = async (genBody) => {
+      if (!execution.sourceEffects) return;
+      for (let round = 0; round < 2; round++) {
+        const draft = prism.parseSpecTag(full);
+        if (!draft || !draft.spec || typeof draft.spec !== "object" || Array.isArray(draft.spec)) return;
+        let verdict = null; try { verdict = prism.checkSpec(JSON.parse(JSON.stringify(draft.spec))); } catch (e) { return; }
+        if (!verdict || verdict.ok || !verdict.issues || !verdict.issues.length) return;
+        assertGenerationActive(abort.signal);
+        if (tm.turn === chatId) { tm.repaired = true; tmMark("refused"); }
+        const ask = inference.specAsk({ ...genBody, messages: [...genBody.messages, { role: "assistant", content: "<dyad-spec>" + JSON.stringify(draft.spec) + "</dyad-spec>" }, { role: "user", content: prism.specRepairPrompt(verdict.issues, verdict.broken) }] }, { format: prism.SPEC_FORMAT });
+        const { text } = await paidGenerate(ask, onTextSoon, abort.signal);
+        await settleText();
+        await enqueueText(text);
+      }
+    };
     // Warm up: the local model is chosen but not resident yet; a held key (the visitor's, or the
     // site's) answers through OpenRouter meanwhile, and the local model starts loading for the next turn.
     const warm = route === "Local" && !engine.instance && core.run({ op: "warmup", localReady: !!engine.instance, keyPresent: !!(await inference.keyGet()), online: navigator.onLine }).warmup;
@@ -1891,6 +1943,7 @@ async function chatTurn(chatId, intent) {
         await settleText();
         await enqueueText(text);
         if (!prism.wroteLexLean(full)) await repaired(warmBody);
+        await repairedSpec(warmBody);
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
@@ -1902,6 +1955,7 @@ async function chatTurn(chatId, intent) {
       await enqueueText(text);
       // No repair turn is spent on LexLean: a model does not write it, and it is not applied.
       if (!prism.wroteLexLean(full)) await repaired(body);
+      await repairedSpec(body);
       // An answer cut at the token limit is not sealed, so the same request is never served it again.
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
     } else {
@@ -1955,7 +2009,7 @@ async function chatTurn(chatId, intent) {
       // A model writes the app's JSON spec and nothing else: LexLean in its turn is dropped before the
       // turn is applied, whichever model wrote it, and the chat says so.
       const refusedLexLean = prism.wroteLexLean(full), turn = prism.withoutLexLean(full);
-      const spec = (await appAfterTurn(appId, turn, { signal: abort.signal, session: hostedSession, source: applied.source, onCommit })) || await rulesAfterTurn(appId, turn, [], { signal: abort.signal, source: applied.source, onCommit });
+      const spec = (await appAfterTurn(appId, turn, { signal: abort.signal, session: hostedSession, source: applied.source, onCommit })) || await rulesAfterTurn(appId, turn, [], { signal: abort.signal, source: applied.source, onCommit, draft: true });
       hostedSource = spec.source;
       const patchRefusals = [];
       for (const match of full.matchAll(/<dyad-spec-patch>([\s\S]*?)<\/dyad-spec-patch>/g)) {

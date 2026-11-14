@@ -33,7 +33,7 @@ try {
   const call=(channel,input)=>page.evaluate(({channel,input})=>window.electron.ipcRenderer.invoke(channel,input),{channel,input});
   const get=(store,key)=>page.evaluate(({store,key})=>window.__host.get(store,key),{store,key});
   const made=await call('create-app',{name:'preview-auto-start',initialChatMode:'ask'}),appId=made.app.id,chatId=made.chatId;
-  await call('set-user-settings',{selectedModel:{provider:'featherless',name:'zai-org/GLM-5.3-Flash'},providerSettings:{featherless:{apiKey:{value:'preview-start-fixture'}}}});
+  await call('set-user-settings',{selectedModel:{provider:'featherless',name:'Qwen/Qwen3-30B-A3B-Instruct-2507'},providerSettings:{featherless:{apiKey:{value:'preview-start-fixture'}}}});
   await page.goto(base+'chat?id='+chatId+'&appId='+appId);
   const mode=page.getByRole('combobox',{name:'Chat mode',exact:true}),preview=page.getByRole('dialog',{name:'Review preview permissions',exact:true});
   const state=async()=>(await call('distributed-machine:subscribe',{protocolVersion:1,machineId:'app_run',encodedKey:{appId}})).encodedState;

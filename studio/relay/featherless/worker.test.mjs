@@ -71,6 +71,13 @@ test("a request over 2 MiB is refused", async () => {
   assert.equal(calls.length, 0);
 });
 
+test("a second offered model is forwarded, and one not offered is refused", () => {
+  const two = env({ MODELS: "zai-org/GLM-5.3-Flash,deepseek-ai/DeepSeek-V3.2" });
+  assert.equal(shape(body({ model: "deepseek-ai/DeepSeek-V3.2" }), two).model, "deepseek-ai/DeepSeek-V3.2");
+  assert.throws(() => shape(body({ model: "deepseek-ai/DeepSeek-V3.2" }), env()), /not offered/);
+  assert.throws(() => shape(body({ model: "google/gemma-4-31B-it" }), two), /not offered/);
+});
+
 test("the answer's length is capped and unknown fields are dropped", () => {
   const out = shape(body({ max_tokens: 10_000_000, tools: [{}], provider: { x: 1 }, n: 5, temperature: "0.7", user: "someone" }), env());
   assert.equal(out.max_tokens, 32768);
@@ -79,8 +86,19 @@ test("the answer's length is capped and unknown fields are dropped", () => {
   assert.equal(shape(body({ max_tokens: undefined }), env()).max_tokens, 32768);
 });
 
-test("the thinking switch is never forwarded: with it Featherless returns the answer as reasoning", () => {
-  for (const kw of [{ enable_thinking: false }, { enable_thinking: true }]) assert.equal("chat_template_kwargs" in shape(body({ chat_template_kwargs: kw }), env()), false);
+test("the thinking switch is never forwarded: with it off GLM deliberates in the answer instead", () => {
+  for (const kw of [{ enable_thinking: false }, { enable_thinking: true }]) for (const e of [env(), env({ FORWARD_THINKING_OFF: "1" }), env({ FORWARD_RESPONSE_FORMAT: "1" })]) assert.equal("chat_template_kwargs" in shape(body({ chat_template_kwargs: kw }), e), false);
+});
+
+test("a response schema is not forwarded unless its switch is on, and then only one bounded JSON schema", () => {
+  const schema = { type: "object", properties: { title: { type: "string" } }, required: ["title"], additionalProperties: false };
+  const format = { type: "json_schema", json_schema: { name: "prism_spec_1", schema, strict: false, extra: 1 } };
+  assert.equal("response_format" in shape(body({ response_format: format }), env()), false);
+  const on = env({ FORWARD_RESPONSE_FORMAT: "1" });
+  assert.deepEqual(shape(body({ response_format: format }), on).response_format, { type: "json_schema", json_schema: { name: "prism_spec_1", schema, strict: true } });
+  const big = { type: "object", description: "x".repeat(9000) };
+  for (const bad of [{ type: "json_object" }, { type: "json_schema" }, { type: "json_schema", json_schema: { name: "has space", schema } }, { type: "json_schema", json_schema: { name: "s", schema: [] } }, { type: "json_schema", json_schema: { name: "s", schema: big } }, "json", null])
+    assert.equal("response_format" in shape(body({ response_format: bad }), on), false);
 });
 
 test("a visitor over the per-minute limit is refused before Featherless", async () => {
