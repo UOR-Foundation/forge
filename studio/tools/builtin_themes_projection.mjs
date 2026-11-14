@@ -5,7 +5,10 @@ import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url)),vendor=path.join(root,'vendor/dyad'),require=createRequire(path.join(vendor,'package.json')),esbuild=require('esbuild');
-const result=await esbuild.build({absWorkingDir:vendor,stdin:{contents:'export {themesData} from "./src/shared/themes";',resolveDir:vendor,sourcefile:'foundry-builtin-themes.ts',loader:'ts'},bundle:true,platform:'browser',target:'es2022',format:'esm',minify:true,legalComments:'inline',write:false,metafile:true,logLevel:'silent'});
+// The renderer's words as the shell's build writes them (vendor/dyad/vite.shell.config.mts): every standalone
+// "Dyad" in its sources is "Prism", so the model and theme text the page shows names this product.
+const prismWords={name:'prism-words',setup(b){b.onLoad({filter:/\.tsx?$/},a=>path.relative(path.join(vendor,'src'),a.path).startsWith('..')?undefined:{contents:fs.readFileSync(a.path,'utf8').replace(/\bDyad\b/g,'Prism'),loader:a.path.endsWith('x')?'tsx':'ts'});}};
+const result=await esbuild.build({absWorkingDir:vendor,stdin:{contents:'export {themesData} from "./src/shared/themes";',resolveDir:vendor,sourcefile:'foundry-builtin-themes.ts',loader:'ts'},bundle:true,platform:'browser',target:'es2022',format:'esm',minify:true,legalComments:'inline',write:false,metafile:true,logLevel:'silent',plugins:[prismWords],});
 const bytes=result.outputFiles[0].contents,hash=b=>createHash('sha256').update(b).digest('hex');
 const inputs=Object.keys(result.metafile.inputs).filter(p=>p!=='foundry-builtin-themes.ts').sort().map(p=>({path:p,sha256:hash(fs.readFileSync(path.resolve(vendor,p)))}));
 const record={profile:'foundry/imported-builtin-themes/1',compiler:esbuild.version,generatorSha256:hash(fs.readFileSync(fileURLToPath(import.meta.url))),packageLockSha256:hash(fs.readFileSync(path.join(vendor,'package-lock.json'))),licenseSha256:hash(fs.readFileSync(path.join(vendor,'LICENSE'))),inputs,output:{path:'builtin-themes.mjs',sha256:hash(bytes),bytes:bytes.length}};

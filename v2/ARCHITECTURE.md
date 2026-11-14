@@ -58,7 +58,7 @@ This is testing, not proof. A preservation proof per projector is future work an
 
 ## Removed
 
-Dyad, the `window.electron` host and its contract policing, Hollama, React and its libraries, Monaco, the Python authoring scripts, Electron-era panels, and the gates that only guard those bytes. About 540,000 lines (measured).
+The upstream renderer, the `window.electron` host and its contract policing, Hollama, React and its libraries, Monaco, the Python authoring scripts, Electron-era panels, and the gates that only guard those bytes. About 540,000 lines (measured).
 
 ## Decisions I need from you
 

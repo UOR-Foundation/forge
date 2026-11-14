@@ -1,6 +1,6 @@
-// hologram-forge (ours, not Dyad's; see VENDORED.md): Dyad's screens call shadcn on Base UI; the renderer's
+// hologram-forge (ours, not upstream's; see VENDORED.md): Upstream's screens call shadcn on Base UI; the renderer's
 // ui components are the brand kit's shadcn/ui new-york-v4, which is Radix (hologram.ui.mjs). This rewrites
-// each call to a ui component from Base UI's props to Radix's, at build time, so Dyad's files stay verbatim
+// each call to a ui component from Base UI's props to Radix's, at build time, so upstream's files stay verbatim
 // and an upstream update needs no hand edits. Only elements whose tag is imported from @/components/ui/*
 // are touched. The typecheck (hologram.typecheck.mjs) checks the rewritten sources, so a pattern this does
 // not know shows up as a type error, never as a silent difference.
@@ -186,7 +186,7 @@ function pass(code, file) {
   return { code: out, n: edits.length, problems };
 }
 
-/** Dyad's source rewritten for the kit's Radix components; `problems` lists what it could not rewrite. */
+/** Upstream's source rewritten for the kit's Radix components; `problems` lists what it could not rewrite. */
 export function toRadix(code, file) {
   // A screen that names a ui component by a relative path (`./ui/button`) names it as @/components/ui/button,
   // so one rule decides where every ui import resolves (hologram.ui.mjs) and which calls are rewritten here.

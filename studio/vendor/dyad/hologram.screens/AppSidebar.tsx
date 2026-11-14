@@ -1,8 +1,8 @@
-// hologram-forge (ours, not Dyad's; see VENDORED.md): the shell's sidebar and site header, in place of
+// hologram-forge (ours, not upstream's; see VENDORED.md): the shell's sidebar and site header, in place of
 // src/components/app-sidebar.tsx (hologram.screens.mjs; it is compiled at that path, so its imports
-// resolve as Dyad's did). The structure is shadcn's dashboard-01 block: an
+// resolve as upstream's did). The structure is shadcn's dashboard-01 block: an
 // inset sidebar that collapses to icons, a primary action, the main navigation, the user's apps, and
-// Settings and Help at the foot. Every part is the kit's shadcn/ui component; Dyad's hooks and atoms
+// Settings and Help at the foot. Every part is the kit's shadcn/ui component; upstream's hooks and atoms
 // supply the data and the navigation, so the screens behind it are unchanged.
 import {
   BookOpen,
@@ -58,9 +58,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// The product's name: the build's word transform (vite.shell.config.mts) writes the product's name for
-// Dyad's, here as on every Dyad screen, so the name has one source.
-const PRODUCT = "Dyad";
+// The product's name, the same word the build's word transform (vite.shell.config.mts) writes on every
+// upstream screen.
+const PRODUCT = "Prism";
 const TITLE = `${PRODUCT} AI Foundry`;
 
 // Prism's mark: a triangle split into three lit faces. It is drawn in the text colour at three

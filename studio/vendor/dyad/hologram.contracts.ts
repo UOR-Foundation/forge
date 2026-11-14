@@ -1,7 +1,7 @@
-// dyad-prism (ours, not Dyad's; see VENDORED.md): the contracts, published to the page so the host
+// dyad-prism (ours, not upstream's; see VENDORED.md): the contracts, published to the page so the host
 // can validate commands before effects and check its own answers.
 //
-// Dyad's renderer types every call it makes but validates no answer at runtime, so a handler that
+// Upstream's renderer types every call it makes but validates no answer at runtime, so a handler that
 // returns an object where the contract declares an array crashes a screen with "is not iterable" the
 // first time a user opens it, far from the cause. The whole contract set is small and already in the
 // bundle, so it is published here as {channel: output schema}: `shell/host.js` parses every answer

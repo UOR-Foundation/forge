@@ -228,7 +228,7 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
   let inv=1.0/sqrt(sh[0]/f32(d)+1e-9);
   var j=t; loop{ if(j>=d){break;} o[b+j]=x[b+j]*inv*gamma[j]; j=j+256u; }
 }`;
-const ROPEK = (theta) => `
+const ROPEK = (theta, Y = null) => `
 @group(0) @binding(0) var<storage,read_write> x: array<f32>;     // [k][stride] in place
 @group(0) @binding(1) var<uniform> P: vec4<u32>;                 // nh, hd, basePos, stride (wg.y = row)
 @compute @workgroup_size(64)
@@ -236,8 +236,8 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
   let nh=P.x; let hd=P.y; let pos=f32(P.z+wg.y); let half=hd/2u;
   let id=wg.x*64u+lid.x; if(id>=nh*half){return;}
   let head=id/half; let i=id%half; let base=wg.y*P.w+head*hd;
-  let freq=pow(${theta}, -2.0*f32(i)/f32(hd));
-  let ang=pos*freq; let c=cos(ang); let s=sin(ang);
+  let freq=pow(${theta}, -2.0*f32(i)/f32(hd))${Y ? `*(1.0-clamp((f32(i)-${Y.low})/${Y.span},0.0,1.0)*${Y.cut})` : ``};
+  let ang=pos*freq; let c=cos(ang)${Y ? `*${Y.mag}` : ``}; let s=sin(ang)${Y ? `*${Y.mag}` : ``};
   let a=x[base+i]; let b=x[base+i+half];
   x[base+i]=a*c-b*s;
   x[base+i+half]=b*c+a*s;
@@ -376,7 +376,7 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
 // q1 batched (fmt q1 — Bonsai 1-bit): weights+scales read ONCE for all KX window rows. Same dot32
 // select-on-bit unpack and per-row L=64 lane geometry as mmQ1Kernel's small tile (identical per-row
 // f32 sum order), one f32 scale per 128 weights (per 4 u32 words). Binding order: x,qw,sc,(r),o,P.
-const mmQ1KK = (add, KX) => `
+const mmQ1KK = (add, KX, T = false) => `
 @group(0) @binding(0) var<storage,read> x: array<vec4<f32>>;     // [KX][K/4]
 @group(0) @binding(1) var<storage,read> qw: array<u32>;
 @group(0) @binding(2) var<storage,read> sc: array<f32>;
@@ -384,14 +384,21 @@ ${add
     ? "@group(0) @binding(3) var<storage,read> r: array<f32>;\n@group(0) @binding(4) var<storage,read_write> o: array<f32>;\n@group(0) @binding(5) var<uniform> P: vec4<u32>;"
     : "@group(0) @binding(3) var<storage,read_write> o: array<f32>;\n@group(0) @binding(4) var<uniform> P: vec4<u32>;"}
 var<workgroup> red: array<f32, 256>;
-fn dot32(w:u32, xo:u32)->f32{
+${T ? `fn dot32(w:u32, m:u32, xo:u32)->f32{
+  var s=0.0;
+  for(var j=0u;j<8u;j=j+1u){
+    let v=x[xo+j]; let b=w>>(j*4u); let z=m>>(j*4u);
+    s=s+select(0.0,select(-v.x,v.x,(b&1u)!=0u),(z&1u)!=0u)+select(0.0,select(-v.y,v.y,(b&2u)!=0u),(z&2u)!=0u)+select(0.0,select(-v.z,v.z,(b&4u)!=0u),(z&4u)!=0u)+select(0.0,select(-v.w,v.w,(b&8u)!=0u),(z&8u)!=0u);
+  }
+  return s;
+}` : `fn dot32(w:u32, xo:u32)->f32{
   var s=0.0;
   for(var j=0u;j<8u;j=j+1u){
     let v=x[xo+j]; let b=w>>(j*4u);
     s=s+select(-v.x,v.x,(b&1u)!=0u)+select(-v.y,v.y,(b&2u)!=0u)+select(-v.z,v.z,(b&4u)!=0u)+select(-v.w,v.w,(b&8u)!=0u);
   }
   return s;
-}
+}`}
 @compute @workgroup_size(256)
 fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:vec3<u32>){
   let K=P.x; let nw=K>>5u; let rr=lid.x/64u; let t=lid.x%64u;
@@ -400,8 +407,8 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
   for(var c=0u;c<${KX}u;c++){ acc[c]=0.0; }
   var w=t;
   loop{ if(w>=nw){break;}
-    let word=qw[rowW+w]; let s=sc[rowB+(w>>2u)];
-    ${Array.from({ length: KX }, (_, c) => `acc[${c}]=acc[${c}]+dot32(word, ${c}u*(K>>2u)+(w<<3u))*s;`).join("\n    ")}
+    let word=qw[rowW+w]; let s=sc[rowB+(w>>2u)];${T ? ` let mk=qw[P.w+rowW+w];` : ``}
+    ${Array.from({ length: KX }, (_, c) => `acc[${c}]=acc[${c}]+dot32(word, ${T ? `mk, ` : ``}${c}u*(K>>2u)+(w<<3u))*s;`).join("\n    ")}
     w=w+64u; }
   for(var c=0u;c<${KX}u;c++){
     red[lid.x]=acc[c]; workgroupBarrier();
@@ -469,7 +476,7 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
   }
 }`;
 
-const ROPE = (theta) => `
+const ROPE = (theta, Y = null) => `
 @group(0) @binding(0) var<storage,read_write> x: array<f32>;     // [nh*hd] in place
 @group(0) @binding(1) var<uniform> P: vec4<u32>;                 // nh, hd, pos, _
 @compute @workgroup_size(64)
@@ -477,8 +484,8 @@ fn main(@builtin(global_invocation_id) g:vec3<u32>){
   let nh=P.x; let hd=P.y; let pos=f32(P.z); let half=hd/2u;
   let id=g.x; if(id>=nh*half){return;}
   let head=id/half; let i=id%half; let base=head*hd;
-  let freq=pow(${theta}, -2.0*f32(i)/f32(hd));
-  let ang=pos*freq; let c=cos(ang); let s=sin(ang);
+  let freq=pow(${theta}, -2.0*f32(i)/f32(hd))${Y ? `*(1.0-clamp((f32(i)-${Y.low})/${Y.span},0.0,1.0)*${Y.cut})` : ``};
+  let ang=pos*freq; let c=cos(ang)${Y ? `*${Y.mag}` : ``}; let s=sin(ang)${Y ? `*${Y.mag}` : ``};
   let a=x[base+i]; let b=x[base+i+half];
   x[base+i]=a*c-b*s;
   x[base+i+half]=b*c+a*s;
@@ -941,7 +948,7 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
 // scale per 128 weights = per 4 u32 words). Same V2 shape as mmT2RKernel: R rows × L lanes × U
 // unroll over 32-weight u32 words, vec4 input reads, ONE scale read per word. 1.125 bpw traffic —
 // the leanest kernel in the family: unpack is a bare select on each bit.
-const mmQ1Kernel = (add, R = 4, L = 64, U = 1) => `
+const mmQ1Kernel = (add, R = 4, L = 64, U = 1, T = false) => `
 @group(0) @binding(0) var<storage,read> x: array<vec4<f32>>;
 @group(0) @binding(1) var<storage,read> qw: array<u32>;
 @group(0) @binding(2) var<storage,read> sc: array<f32>;
@@ -949,21 +956,28 @@ ${add
     ? "@group(0) @binding(3) var<storage,read> r: array<f32>;\n@group(0) @binding(4) var<storage,read_write> o: array<f32>;\n@group(0) @binding(5) var<uniform> P: vec4<u32>;"
     : "@group(0) @binding(3) var<storage,read_write> o: array<f32>;\n@group(0) @binding(4) var<uniform> P: vec4<u32>;"}
 var<workgroup> red: array<f32, 256>;
-fn dot32(w:u32, xo:u32)->f32{
+${T ? `fn dot32(w:u32, m:u32, xo:u32)->f32{
+  var s=0.0;
+  for(var j=0u;j<8u;j=j+1u){
+    let v=x[xo+j]; let b=w>>(j*4u); let z=m>>(j*4u);
+    s=s+select(0.0,select(-v.x,v.x,(b&1u)!=0u),(z&1u)!=0u)+select(0.0,select(-v.y,v.y,(b&2u)!=0u),(z&2u)!=0u)+select(0.0,select(-v.z,v.z,(b&4u)!=0u),(z&4u)!=0u)+select(0.0,select(-v.w,v.w,(b&8u)!=0u),(z&8u)!=0u);
+  }
+  return s;
+}` : `fn dot32(w:u32, xo:u32)->f32{
   var s=0.0;
   for(var j=0u;j<8u;j=j+1u){
     let v=x[xo+j]; let b=w>>(j*4u);
     s=s+select(-v.x,v.x,(b&1u)!=0u)+select(-v.y,v.y,(b&2u)!=0u)+select(-v.z,v.z,(b&4u)!=0u)+select(-v.w,v.w,(b&8u)!=0u);
   }
   return s;
-}
+}`}
 @compute @workgroup_size(256)
 fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:vec3<u32>){
   let K=P.x; let nw=K>>5u; let rr=lid.x/${L}u; let t=lid.x%${L}u;
   let n0=(wg.y*65535u+wg.x)*${R}u+rr; let n=min(n0, P.y-1u);
   let rowW=n*nw; let rowB=n*(K>>7u); var acc=0.0; var w=t*${U}u;
   loop{ if(w>=nw){break;}
-    ${Array.from({ length: U }, (_, u) => `if(w+${u}u<nw){ acc=acc+dot32(qw[rowW+w+${u}u], (w+${u}u)<<3u)*sc[rowB+((w+${u}u)>>2u)]; }`).join("\n    ")}
+    ${Array.from({ length: U }, (_, u) => `if(w+${u}u<nw){ acc=acc+dot32(qw[rowW+w+${u}u], ${T ? `qw[P.w+rowW+w+${u}u], ` : ``}(w+${u}u)<<3u)*sc[rowB+((w+${u}u)>>2u)]; }`).join("\n    ")}
     w=w+${L * U}u; }
   red[lid.x]=acc; workgroupBarrier();
   var s=${L >> 1}u; loop{ if(s==0u){break;} if(t<s){ red[rr*${L}u+t]=red[rr*${L}u+t]+red[rr*${L}u+t+s]; } workgroupBarrier(); s=s/2u; }
@@ -1031,7 +1045,7 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
 }`;
 
 // Fused RoPE: q and k rotated in ONE pass (k heads tail the grid).
-const ROPE2 = (theta) => `
+const ROPE2 = (theta, Y = null) => `
 @group(0) @binding(0) var<storage,read_write> q: array<f32>;
 @group(0) @binding(1) var<storage,read_write> k: array<f32>;
 @group(0) @binding(2) var<uniform> P: vec4<u32>;                 // nh, hd, pos, nkv
@@ -1040,8 +1054,8 @@ fn main(@builtin(global_invocation_id) g:vec3<u32>){
   let nh=P.x; let hd=P.y; let pos=f32(P.z); let nkv=P.w; let half=hd/2u;
   let id=g.x; if(id>=(nh+nkv)*half){return;}
   let head=id/half; let i=id%half;
-  let freq=pow(${theta}, -2.0*f32(i)/f32(hd));
-  let ang=pos*freq; let c=cos(ang); let s=sin(ang);
+  let freq=pow(${theta}, -2.0*f32(i)/f32(hd))${Y ? `*(1.0-clamp((f32(i)-${Y.low})/${Y.span},0.0,1.0)*${Y.cut})` : ``};
+  let ang=pos*freq; let c=cos(ang)${Y ? `*${Y.mag}` : ``}; let s=sin(ang)${Y ? `*${Y.mag}` : ``};
   if(head<nh){
     let base=head*hd;
     let a=q[base+i]; let b=q[base+i+half];
@@ -1089,7 +1103,7 @@ fn main(@builtin(global_invocation_id) g:vec3<u32>){
 }`;
 
 // batched decode: embed lookup ON the GPU (token id read from the seq ring) → B.x, no CPU per token
-const EMBED = (bits, q3f) => `
+const EMBED = (bits, q3f, T = false) => `
 @group(0) @binding(0) var<storage,read> ring: array<u32>;
 @group(0) @binding(1) var<storage,read> eq: array<u32>;
 @group(0) @binding(2) var<storage,read> es: array<f32>;
@@ -1103,7 +1117,8 @@ ${bits === 3 && q3f ? `  let bp=sb*3u; let j=i&31u; var q:u32;
   else { let sp=(eq[bp]>>30u)|((eq[bp+1u]>>30u)<<2u)|((eq[bp+2u]>>30u)<<4u); if(j==30u){ q=sp&7u; } else { q=(sp>>3u)&7u; } }
   x[i]=f32(i32(q)-3)*es[sb];`
   : bits === 4 ? `  let gg=tok*d+i; let nib=(eq[gg>>3u]>>((gg&7u)*4u))&0xfu; x[i]=f32(i32(nib)-8)*es[sb];`
-  : bits === 1 ? `  let gg=tok*d+i; let bit=(eq[gg>>5u]>>(gg&31u))&1u; x[i]=select(-1.0,1.0,bit==1u)*es[gg>>7u];`
+  : bits === 1 ? (T ? `  let gg=tok*d+i; let bit=(eq[gg>>5u]>>(gg&31u))&1u; let nz=(eq[P.w+(gg>>5u)]>>(gg&31u))&1u; x[i]=select(0.0,select(-1.0,1.0,bit==1u)*es[gg>>7u],nz==1u);`
+  : `  let gg=tok*d+i; let bit=(eq[gg>>5u]>>(gg&31u))&1u; x[i]=select(-1.0,1.0,bit==1u)*es[gg>>7u];`)
   : `  let gg=tok*d+i; let b=(eq[gg>>2u]>>((gg&3u)*8u))&0xffu; x[i]=f32(i32(b<<24u)>>24u)*es[sb];`}
 }`;
 // dedup-aware repetition penalty over the ring's last-64 window (exact Set semantics: first occurrence only)
@@ -1191,6 +1206,16 @@ fn main(@builtin(workgroup_id) wg:vec3<u32>, @builtin(local_invocation_id) lid:v
   o[wg.y*P.x+i]=o[wg.y*P.x+i]+bias[i];
 }`;
 const fbits = (f) => new Uint32Array(new Float32Array([f]).buffer)[0];
+// YaRN (as transformers and llama.cpp compute it): rotary pairs below `low` keep their frequency, pairs above
+// `high` run at 1/factor, a linear ramp between; the rotated vector is scaled by 0.1*ln(factor)+1.
+const yarnOf = (manifest) => {
+  const y = manifest.yarn; if (!y || !(y.factor > 1)) return null;
+  const hd = manifest.hd, base = manifest.rope_base || 10000, bf = y.beta_fast || 32, bs = y.beta_slow || 1;
+  const corr = (rot) => (hd * Math.log(y.orig / (rot * 2 * Math.PI))) / (2 * Math.log(base));
+  const low = Math.max(0, Math.floor(corr(bf))), high = Math.min(hd - 1, Math.ceil(corr(bs)));
+  const lit = (v) => (Number.isInteger(v) ? v + ".0" : "" + v);
+  return { low: lit(low), span: lit(Math.max(0.001, high - low)), cut: lit(1 - 1 / y.factor), mag: lit(y.mag || 0.1 * Math.log(y.factor) + 1) };
+};
 const s8 = (b) => (b << 24) >> 24;
 
 // STREAMING constructor: `manifest` is the parsed dims+tensor list; `fetchTensor(name)`
@@ -1230,6 +1255,8 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   const tmap = {}; for (const t of manifest.tensors) tmap[t.name] = t;
   const { d, n_heads, n_kv_heads, ff, vocab, n_layers, hd } = manifest;
   const bits = manifest.bits || 8;
+  const tern = !!manifest.tern;                                    // ternary Bonsai: fmt q1 + a nonzero bit plane after the sign plane
+  const YARN = yarnOf(manifest);                                   // YaRN rotary scaling, when the model declares it
   const q3f = bits === 3 && manifest.layout === "q3f";             // Q3 FIELD layout (10×3-bit/u32 + spare stubs): ~½ the unpack ALU of bit-planes, same 12 B/block
   const kv_dim = n_kv_heads * hd;
   const ropeBase = manifest.rope_base || 10000;                    // Llama 10000, Qwen2/3 1e6
@@ -1253,7 +1280,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   const preQuant = twoBit && !!manifest.preQuantized;        // load-direct: weights arrive ALREADY 2-bit (compiled offline) — no re-quant at load
   const nextP2 = (n) => { let p = 1; while (p < n) p <<= 1; return p; };
   const maxKp = rotate ? nextP2(Math.max(d, ff, kv_dim, n_heads * hd)) : 0;
-  const qlenOf = (t) => bits === 1 ? (t.N * t.K) / 8 : bits === 3 ? (t.N * (t.K / 32)) * 12 : bits === 4 ? (t.N * t.K) / 2 : t.N * t.K;   // Q3 = 3 u32 (12 bytes) per 32-block; q1 = 1 sign bit/weight
+  const qlenOf = (t) => bits === 1 ? (t.N * t.K) / 8 * (tern ? 2 : 1) : bits === 3 ? (t.N * (t.K / 32)) * 12 : bits === 4 ? (t.N * t.K) / 2 : t.N * t.K;   // Q3 = 3 u32 (12 bytes) per 32-block; q1 = 1 sign bit/weight
   const slenOf = (t) => bits === 1 ? t.N * (t.K / 128) * 4 : t.N * (t.K / 32) * 4;   // q1: one f32 scale per 128-weight block
 
   const adapter = await navigator.gpu.requestAdapter();
@@ -1279,7 +1306,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   const pipe = (code, name) => { const p = dev.createComputePipeline({ layout: "auto", compute: { module: dev.createShaderModule({ code }), entryPoint: "main" } }); p._id = ++pid; p._name = name || "p" + pid; return p; };
   if (cap > 4000) throw new Error("cap " + cap + " exceeds the attention score tile (workgroup storage)");
   const kv4 = !!manifest.kv4 && !stream && !moe && !frameGran;     // int4 KV cache for layers 1+ (E6)
-  const P_mm = pipe(mmKernel(twoBit ? 2 : bits, false, q3f), "mm"), P_mmadd = pipe(mmKernel(twoBit ? 2 : bits, true, q3f), "mmadd"), P_rms = pipe(RMS, "rms"), P_rope = pipe(ROPE(ropeLit), "rope"), P_attn = pipe(ATTN(cap), "attn"), P_sm = pipe(relu2 ? RELU2MUL : SILUMUL, relu2 ? "relu2" : "silu"), P_qkn = pipe(QKNORM, "qkn");
+  const P_mm = pipe(mmKernel(twoBit ? 2 : bits, false, q3f), "mm"), P_mmadd = pipe(mmKernel(twoBit ? 2 : bits, true, q3f), "mmadd"), P_rms = pipe(RMS, "rms"), P_rope = pipe(ROPE(ropeLit, YARN), "rope"), P_attn = pipe(ATTN(cap), "attn"), P_sm = pipe(relu2 ? RELU2MUL : SILUMUL, relu2 ? "relu2" : "silu"), P_qkn = pipe(QKNORM, "qkn");
   const P_attnQ = kv4 ? pipe(ATTNQ(cap, kv_dim), "attnQ") : null, P_kvq = kv4 ? pipe(KVQ(kv_dim), "kvq") : null;
   const P_fwL = twoBit ? pipe(FWHT_LOAD, "fwht") : null, P_fwB = twoBit ? pipe(FWHT_BFLY, "fwht") : null, P_fwN = twoBit ? pipe(FWHT_NORM, "fwht") : null;
   const P_axpy = moe ? pipe(AXPY, "axpy") : null;
@@ -1295,13 +1322,13 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   const P_mmT2R = hasT2R ? pipe(mmT2RKernel(false), "mmT2R") : null, P_mmT2Radd = hasT2R ? pipe(mmT2RKernel(true), "mmT2Radd") : null;
   // Bonsai binary tensors (fmt q1): own pipelines; per-128-block f32 scale buffer
   const hasQ1 = manifest.tensors.some((t) => t.fmt === "q1");
-  const P_mmQ1 = hasQ1 ? pipe(mmQ1Kernel(false), "mmQ1") : null, P_mmQ1add = hasQ1 ? pipe(mmQ1Kernel(true), "mmQ1add") : null;
+  const P_mmQ1 = hasQ1 ? pipe(mmQ1Kernel(false, 4, 64, 1, tern), "mmQ1") : null, P_mmQ1add = hasQ1 ? pipe(mmQ1Kernel(true, 4, 64, 1, tern), "mmQ1add") : null;
   // big-tensor geometry (≥16M weights): 16 rows × 16 lanes × unroll-4 — measured 1.6-2× on FFN shapes
   const T2BIG = 16e6;
   const P_mmQ3B = bits === 3 && q3f ? pipe(mmQ3BigKernel(), "mmQ3B") : null;   // big q3f (lm_head)
   const P_mmT2B = hasT2 ? pipe(mmT2Kernel(false, 16, 16, 4), "mmT2B") : null, P_mmT2Badd = hasT2 ? pipe(mmT2Kernel(true, 16, 16, 4), "mmT2Badd") : null;
   const P_mmT2RB = hasT2R ? pipe(mmT2RKernel(false, 16, 16, 4), "mmT2RB") : null, P_mmT2RBadd = hasT2R ? pipe(mmT2RKernel(true, 16, 16, 4), "mmT2RBadd") : null;
-  const P_mmQ1B = hasQ1 ? pipe(mmQ1Kernel(false, 16, 16, 4), "mmQ1B") : null, P_mmQ1Badd = hasQ1 ? pipe(mmQ1Kernel(true, 16, 16, 4), "mmQ1Badd") : null;
+  const P_mmQ1B = hasQ1 ? pipe(mmQ1Kernel(false, 16, 16, 4, tern), "mmQ1B") : null, P_mmQ1Badd = hasQ1 ? pipe(mmQ1Kernel(true, 16, 16, 4, tern), "mmQ1Badd") : null;
   // DRAFT: dense sub-norm (BitNet) STREAMING is enabled — the unfused layerBody applies attn/ffn sub-norm
   // (rms over the resident Nrm weights) with ws(role) from R[role], and mmW dispatches t2 (Falcon-E proves it);
   // combined with the t2 stream packing (t2stream), dense sub-norm streams. MoE sub-norm stays resident-only.
@@ -1313,7 +1340,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   const fusedT2 = !globalThis.__noFuse && hasT2 && subNorm && !stream && !moe && !frameGran;
   const P_t2f = fusedT2 ? pipe(mmT2FusedKernel(), "t2f") : null;
   const P_t2fB = fusedT2 ? pipe(mmT2FusedKernel(16, 16, 4), "t2fB") : null;   // big-geometry for the gate/up fusion
-  const P_rope2 = fusedT2 ? pipe(ROPE2(ropeLit), "rope2") : null;
+  const P_rope2 = fusedT2 ? pipe(ROPE2(ropeLit, YARN), "rope2") : null;
   const P_actn = fusedT2 && subNorm ? pipe(ACTNORM(relu2), "actn") : null;
   const P_t2ad = fusedT2 && !subNorm ? pipe(mmT2ActAddKernel(relu2), "t2ad") : null;
   let lutBuf = null;
@@ -1354,7 +1381,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       return { q: bytes.subarray(0, ql), sRaw: bytes.subarray(ql).slice(), N: t.N, K: t.K, t2r: true };
     }
     if (t.fmt === "q1") {                                   // binary ±1 (Bonsai Q1_0): blob = [signs N·K/8 B][f32 scales N·K/128·4 B]
-      const ql = t.N * t.K / 8;
+      const ql = t.N * t.K / 8 * (tern ? 2 : 1);
       return { q: bytes.subarray(0, ql), sRaw: bytes.subarray(ql).slice(), N: t.N, K: t.K, q1: true };
     }
     if (t.fmt === "t2") {                                   // ternary: blob = codes only; scale lives in the manifest rec
@@ -1391,7 +1418,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     if (p.q1) {                                             // binary + per-128-block scale buffer
       const qbuf = dev.createBuffer({ size: p.q.byteLength, usage: U.STORAGE | U.COPY_DST }); dev.queue.writeBuffer(qbuf, 0, p.q);
       const sb = dev.createBuffer({ size: Math.max(16, p.sRaw.byteLength), usage: U.STORAGE | U.COPY_DST }); dev.queue.writeBuffer(sb, 0, p.sRaw);
-      W[name] = { qbuf, sbuf: sb, uni: ubuf(new Uint32Array([p.K, p.N, p.K / 128, 0])), N: p.N, K: p.K, Kp: p.K, q1: true };
+      W[name] = { qbuf, sbuf: sb, uni: ubuf(new Uint32Array([p.K, p.N, p.K / 128, tern ? p.N * p.K / 32 : 0])), N: p.N, K: p.K, Kp: p.K, q1: true };
       return;
     }
     const sBytes = p.sRaw || p.s;                           // e8q scales stay raw f16 bytes; others are f32 arrays
@@ -1905,7 +1932,8 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     const x = new Float32Array(d);
     const o = token * d, sb = token * (d / 32);
     if (bits === 1) {                                         // q1 binary embed lookup (Bonsai: the embed row IS the trained sign row)
-      for (let i = 0; i < d; i++) { const g = o + i; x[i] = ((embedQ[g >> 3] >> (g & 7)) & 1 ? 1 : -1) * embedS[g >> 7]; }
+      if (tern) { const mb = vocab * d / 8; for (let i = 0; i < d; i++) { const g = o + i; x[i] = (embedQ[mb + (g >> 3)] >> (g & 7)) & 1 ? ((embedQ[g >> 3] >> (g & 7)) & 1 ? 1 : -1) * embedS[g >> 7] : 0; } }
+      else for (let i = 0; i < d; i++) { const g = o + i; x[i] = ((embedQ[g >> 3] >> (g & 7)) & 1 ? 1 : -1) * embedS[g >> 7]; }
     } else if (bits === 4) {
       for (let i = 0; i < d; i++) { const gg = o + i; const nib = (embedQ[gg >> 1] >> ((gg & 1) * 4)) & 0xf; x[i] = (nib - 8) * embedS[sb + (i >> 5)]; }
     } else if (bits === 3 && q3f) {                           // Q3 FIELD embed lookup (mirrors the q3f kernel unpack)
@@ -2269,7 +2297,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     dev.queue.writeBuffer(esB, 0, embedS.buffer, embedS.byteOffset, embedS.byteLength);
     DEC = {
       pen2: pipe(PENALTY2, "pen2"), a1: pipe(ARGMAX1, "amax1"), a2: pipe(ARGMAX2, "amax2"),
-      app: pipe(APPEND, "append"), emb: pipe(EMBED(bits, q3f), "embed"),
+      app: pipe(APPEND, "append"), emb: pipe(EMBED(bits, q3f, tern), "embed"),
       eqB, esB, ring: dev.createBuffer({ size: Math.max(cap, 1024) * 4, usage: U.STORAGE | U.COPY_DST | U.COPY_SRC }),
       uA1: ubuf(new Uint32Array([vocab, 0, 0, 0])), tmp: sbuf(512),
       out: dev.createBuffer({ size: 16, usage: U.STORAGE | U.COPY_SRC }),
@@ -2293,7 +2321,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       const base = base0 + off, pos0 = pos + off;
       const uE = DEC.uE[par], uRQ = DEC.uRQ[par], uRK = DEC.uRK[par], uA = DEC.uA[par];
       for (let k = 0; k < n; k++) {
-        dev.queue.writeBuffer(uE[k], 0, new Uint32Array([base + k, d, 0, 0]));
+        dev.queue.writeBuffer(uE[k], 0, new Uint32Array([base + k, d, 0, tern ? vocab * d / 32 : 0]));
         dev.queue.writeBuffer(uRQ[k], 0, new Uint32Array([n_heads, hd, pos0 + k, n_kv_heads]));
         dev.queue.writeBuffer(uRK[k], 0, new Uint32Array([n_kv_heads, hd, pos0 + k, 0]));
         dev.queue.writeBuffer(uA[k], 0, new Uint32Array([n_heads, n_kv_heads, hd, pos0 + k]));
@@ -2353,7 +2381,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       const uP = DEC.uP[par], uE = DEC.uE[par], uRQ = DEC.uRQ[par], uRK = DEC.uRK[par], uA = DEC.uA[par];
       for (let k = 0; k < n; k++) {                                // prewritten per-step uniforms (queued writes, no fence)
         dev.queue.writeBuffer(uP[k], 0, new Uint32Array([base + k, fbits(repPenalty), 0, 0]));
-        dev.queue.writeBuffer(uE[k], 0, new Uint32Array([base + k, d, 0, 0]));
+        dev.queue.writeBuffer(uE[k], 0, new Uint32Array([base + k, d, 0, tern ? vocab * d / 32 : 0]));
         dev.queue.writeBuffer(uRQ[k], 0, new Uint32Array([n_heads, hd, pos0 + k, n_kv_heads]));   // .w = nkv (fused ROPE2)
         dev.queue.writeBuffer(uRK[k], 0, new Uint32Array([n_kv_heads, hd, pos0 + k, 0]));
         dev.queue.writeBuffer(uA[k], 0, new Uint32Array([n_heads, n_kv_heads, hd, pos0 + k]));
@@ -2424,7 +2452,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       hid: sb8(KX * ff), cur: sb8(KX * d), logits: sb8(KX * vocab), amax: sb8(KX), amaxStg: dev.createBuffer({ size: KX * 4, usage: U.MAP_READ | U.COPY_DST }),
       attn2: sb8(KX * q_dim), hid2: sb8(KX * ff), nb1: sb8(KX * d), nb2: sb8(KX * d),   // BitNet sub-norm + BitLinear input-norm outputs (batched; RMS must not run in place)
       tmp: sbuf(65536 * 2),
-      P_rmsk: pipe(RMSK, "rmsk"), P_ropek: pipe(ROPEK(ropeLit), "ropek"), P_kvqk: pipe(KVQK(kv_dim), "kvqk"),
+      P_rmsk: pipe(RMSK, "rmsk"), P_ropek: pipe(ROPEK(ropeLit, YARN), "ropek"), P_kvqk: pipe(KVQK(kv_dim), "kvqk"),
       P_attnqk: pipe(ATTNQK(cap, kv_dim), "attnqk"), P_attnk: pipe(ATTNK(cap), "attnk"),
       P_t2k: pipe(mmT2KK(false, KX), "t2k"), P_t2ka: pipe(mmT2KK(true, KX), "t2ka"),
       P_t2k2: pipe(mmT2KK(false, 2), "t2k2"), P_t2ka2: pipe(mmT2KK(true, 2), "t2ka2"), P_q3k2: pipe(mmQ3KK(2), "q3k2"),
@@ -2439,7 +2467,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
       cold: 0, stats: { windows: 0, drafted: 0, accepted: 0 },
     };
     if (hasT2R) { SP.P_t2rk = pipe(mmT2RKK(false, KX), "t2rk"); SP.P_t2rka = pipe(mmT2RKK(true, KX), "t2rka"); SP.P_t2rk2 = pipe(mmT2RKK(false, 2), "t2rk2"); SP.P_t2rka2 = pipe(mmT2RKK(true, 2), "t2rka2"); }
-    if (hasQ1) { SP.P_q1k = pipe(mmQ1KK(false, KX), "q1k"); SP.P_q1ka = pipe(mmQ1KK(true, KX), "q1ka"); SP.P_q1k2 = pipe(mmQ1KK(false, 2), "q1k2"); SP.P_q1ka2 = pipe(mmQ1KK(true, 2), "q1ka2"); }
+    if (hasQ1) { SP.P_q1k = pipe(mmQ1KK(false, KX, tern), "q1k"); SP.P_q1ka = pipe(mmQ1KK(true, KX, tern), "q1ka"); SP.P_q1k2 = pipe(mmQ1KK(false, 2, tern), "q1k2"); SP.P_q1ka2 = pipe(mmQ1KK(true, 2, tern), "q1ka2"); }
     if (qkNorm) { SP.P_qknk = pipe(QKNORMK, "qknk"); SP.uQknQ = ubuf(new Uint32Array([n_heads, hd, q_dim, 0])); SP.uQknK = ubuf(new Uint32Array([n_kv_heads, hd, kv_dim, 0])); }
     if (!kv4) { SP.P_kvsK = pipe(KVSAVEK(kv_dim), "kvsavek"); SP.uKVS = ubuf(new Uint32Array(4)); }
     // DP4a integer-dot path (opt-in via window.__dp4a; t2 weights only). dot4I8Packed is core WGSL here;
@@ -2456,7 +2484,8 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
   const embedRowF32 = (token, out, off) => {                      // routes by embed format — mirrors step()'s branches exactly
     const o = token * d, sb = token * (d / 32);
     if (bits === 1) {                                             // q1 binary embed (Bonsai): sign bit → ±scale (per 128)
-      for (let i = 0; i < d; i++) { const g = o + i; out[off + i] = ((embedQ[g >> 3] >> (g & 7)) & 1 ? 1 : -1) * embedS[g >> 7]; }
+      if (tern) { const mb = vocab * d / 8; for (let i = 0; i < d; i++) { const g = o + i; out[off + i] = (embedQ[mb + (g >> 3)] >> (g & 7)) & 1 ? ((embedQ[g >> 3] >> (g & 7)) & 1 ? 1 : -1) * embedS[g >> 7] : 0; } }
+      else for (let i = 0; i < d; i++) { const g = o + i; out[off + i] = ((embedQ[g >> 3] >> (g & 7)) & 1 ? 1 : -1) * embedS[g >> 7]; }
       return;
     }
     if (bits === 4) {
@@ -2638,7 +2667,7 @@ export async function createQvacGPU(manifest, fetchTensor, cap = 64, eos = 2, st
     const q2 = n_heads * hd, kv2 = n_kv_heads * hd;
     DF = {
       P_g32: pipe(mmQ3KK(DF_DK), "dq3k32"), P_attnB: pipe(ATTNB(DF_NMAX), "attnB"), P_bias: pipe(BIASK, "biasK"),
-      P_rms: pipe(RMSK, "drms"), P_rope: pipe(ROPEK(ropeLit), "drope"), P_add: pipe(ADD, "dadd"), P_sm: pipe(SILUMUL, "dsm"),
+      P_rms: pipe(RMSK, "drms"), P_rope: pipe(ROPEK(ropeLit, YARN), "drope"), P_add: pipe(ADD, "dadd"), P_sm: pipe(SILUMUL, "dsm"),
       P_a1: pipe(ARGMAX1, "da1"), P_a2: pipe(ARGMAX2C, "da2c"),
       x: sbuf((DF_NMAX + DF_DK) * d), normed: sbuf((DF_NMAX + DF_DK) * d), q: sbuf((DF_NMAX + DF_DK) * q2), k: sbuf((DF_NMAX + DF_DK) * kv2), v: sbuf((DF_NMAX + DF_DK) * kv2),
       attn: sbuf((DF_NMAX + DF_DK) * q2), h: sbuf((DF_NMAX + DF_DK) * d), normed2: sbuf((DF_NMAX + DF_DK) * d),

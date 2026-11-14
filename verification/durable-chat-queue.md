@@ -1,6 +1,6 @@
 # FA-51 — Durable chat queue adapter
 
-Authority: `FoundrySpecification.durableChatQueueBoundary`, with state transitions owned by `ChatQueue.transitionQueue` and `ChatQueueProtocol.dispatchQueue`. Imported renderer schemas and payload serialization come from the locked Dyad source through a reproducible browser bundle. This projection is not a Prism compiler.
+Authority: `FoundrySpecification.durableChatQueueBoundary`, with state transitions owned by `ChatQueue.transitionQueue` and `ChatQueueProtocol.dispatchQueue`. Imported renderer schemas and payload serialization come from the locked upstream source through a reproducible browser bundle. This projection is not a Prism compiler.
 
 The adapter persists captured intents and guest state together, acknowledges only after transaction completion, checks compare-and-swap and chat/app existence, bounds recent duplicate receipts to 128, and removes journals atomically with chat/project deletion. Separate origin Web Locks protect short mutations and active execution. Busy submission queues rather than disappearing. Stop binds the current invocation, changes durable policy before signalling cancellation, and retains pending work paused. Recovery retains an abandoned head paused for explicit resumption.
 

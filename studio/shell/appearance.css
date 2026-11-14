@@ -168,7 +168,7 @@
 /* Glass for every pop-up: dialogs, alert dialogs, menus, popovers, selects, context menus, sheets and this
    theme panel. One surface, from the brand's own tokens, readable over any photo in any look: the popover
    colour at 82% (so a busy background reads as a soft field, never as detail behind the words), a 28 px blur
-   with extra saturation, a hairline edge and a soft shadow. Dyad's dialogs paint with --background, which the
+   with extra saturation, a hairline edge and a soft shadow. Upstream's dialogs paint with --background, which the
    Immersive look makes fully transparent; this gives them a ground of their own. Overlays dim and blur the
    page behind a dialog, so the dialog is the one thing in focus. */
 :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"],
@@ -186,7 +186,7 @@
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
-/* Hints (tooltips): the same glass, as a small pill. Dyad paints them in the foreground colour with the words
+/* Hints (tooltips): the same glass, as a small pill. Upstream paints them in the foreground colour with the words
    in --background, which Immersive makes fully transparent, so the hint was a blank white pill there and an
    inverted one elsewhere. Here every hint is the popover glass with the popover's own words: legible over any
    photo in every look, 12 px medium, a hairline edge, no arrow, and it settles in quickly. */

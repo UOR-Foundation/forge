@@ -43,7 +43,7 @@ test("the host binds generation source signal and committed results", () => {
   assert.ok(!host.includes('content: "This is my codebase. "'));
   assert.ok(host.includes("prism.deviceRequest(intent.prompt, capturedSpec)"));
   assert.ok(host.includes("current?.specKappa === await kappa(enc.encode(capturedSpec))"));
-  assert.ok(host.includes("applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit })"));
+  assert.ok(host.includes("applyPrismTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit })"));
   // Code a model writes is never applied; the rules are read against the applied source.
   assert.ok(host.includes("const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };"));
   // What is applied is the turn without any LexLean the model wrote: a model writes the JSON spec only.

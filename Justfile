@@ -59,6 +59,9 @@ deny:
 app:
     #!/usr/bin/env bash
     set -euo pipefail
+    # Foundry's facets are projected from app/product.json and the kernel (R1): a stale one fails here,
+    # before anything is proved.
+    node studio/tools/foundry_model.mjs --check
     (cd app && lexlean fmt --check && lexlean lock --check)
     case "${PRISM_PROOF_EVENT:-}" in
       pull_request|merge_group)
@@ -81,9 +84,10 @@ bdd:
 fmt:
     cargo fmt --all
 
-# Regenerate everything the model owns: CONFORMANCE.md.
+# Regenerate everything the model owns: CONFORMANCE.md, and Foundry's facet modules in app/src.
 model-write:
     cargo run -q --locked -p xtask -- check-model --write
+    node studio/tools/foundry_model.mjs
 
 # R3's first step in one command: a register row, its scenario, a failing test
 # named for the ID, and the regenerated CONFORMANCE.md.

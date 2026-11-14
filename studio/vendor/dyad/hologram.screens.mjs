@@ -1,8 +1,8 @@
-// hologram-forge (ours, not Dyad's; see VENDORED.md): the screens the shell draws its own way, built only
+// hologram-forge (ours, not upstream's; see VENDORED.md): the screens the shell draws its own way, built only
 // from the kit's shadcn/ui components after shadcn's blocks (dashboard-01: an inset sidebar, a site header,
-// section cards, tables). SCREENS swaps a Dyad file for ours whole; PATCHES replace one exact passage of a
-// Dyad file and refuse the build when the passage is not found, so an upstream change is seen, not missed.
-// Dyad's files stay verbatim. The vite config and the typecheck both apply this module.
+// section cards, tables). SCREENS swaps an upstream file for ours whole; PATCHES replace one exact passage of an
+// upstream file and refuse the build when the passage is not found, so an upstream change is seen, not missed.
+// Upstream's files stay verbatim. The vite config and the typecheck both apply this module.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -331,8 +331,8 @@ import { MobileBuild } from "../../hologram.screens/MobileBuild";`,
     to: `              Build your ideas with <span data-slot="home-name">Prism</span>
             </h1>
             <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
-              <span data-slot="home-wide">Describe your idea. Dyad will turn it into a working app.</span>
-              <span data-slot="home-narrow">Describe it. Dyad makes it real.</span>
+              <span data-slot="home-wide">Describe your idea. Prism will turn it into a working app.</span>
+              <span data-slot="home-narrow">Describe it. Prism makes it real.</span>
             </p>`,
   },
   {
@@ -462,6 +462,234 @@ import { ImportAppDialog } from "@/components/ImportAppDialog";`,
   );
 }`,
   },
+  // Vercel, Coolify, Supabase and Neon are hosted accounts this product does not use (their screens resolve to
+  // hologram.removed-integrations.tsx); the places that named them, and their settings, go with them.
+  {
+    file: "src/pages/settings.tsx",
+    from: `            description="Link Dyad to the services you deploy and store data with."
+          >
+            <div id={SETTING_IDS.github}>
+              <GitHubIntegration />
+            </div>
+            <div id={SETTING_IDS.vercel}>
+              <VercelIntegration />
+            </div>
+            <div id={SETTING_IDS.supabase}>
+              <SupabaseIntegration />
+            </div>
+            <div id={SETTING_IDS.neon}>
+              <NeonIntegration />
+            </div>`,
+    to: `            description="Link Prism to GitHub, where your apps can be published."
+          >
+            <div id={SETTING_IDS.github}>
+              <GitHubIntegration />
+            </div>`,
+  },
+  {
+    file: "src/pages/settings.tsx",
+    from: `            <div
+              id={SETTING_IDS.enableOwnServerDeployment}
+              className="space-y-1.5"
+            >
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="enable-own-server-deployment"
+                  aria-label="Allow deployment to your own server"
+                  checked={!!settings?.enableOwnServerDeployment}
+                  onCheckedChange={(checked) => {
+                    updateSettings({ enableOwnServerDeployment: checked });
+                  }}
+                />
+                <Label htmlFor="enable-own-server-deployment">
+                  Allow deployment to your own server
+                </Label>
+              </div>
+              <p className={hint}>
+                Integrates with Coolify so you can deploy an app to a server you
+                run yourself. This is in early development: it is undocumented,
+                unstable, and may change or break without notice.
+              </p>
+            </div>
+
+`,
+    to: ``,
+  },
+  {
+    file: "src/lib/settingsSearchIndex.ts",
+    from: `  {
+    id: SETTING_IDS.vercel,
+    label: "Vercel Integration",
+    description: "Connect your Vercel account for deployments",
+    keywords: ["vercel", "deploy", "integration", "hosting", "connect"],
+    sectionId: SECTION_IDS.integrations,
+    sectionLabel: "Integrations",
+  },
+  {
+    id: SETTING_IDS.supabase,
+    label: "Supabase Integration",
+    description: "Connect your Supabase project",
+    keywords: [
+      "supabase",
+      "database",
+      "integration",
+      "backend",
+      "connect",
+      "postgres",
+    ],
+    sectionId: SECTION_IDS.integrations,
+    sectionLabel: "Integrations",
+  },
+  {
+    id: SETTING_IDS.neon,
+    label: "Neon Integration",
+    description: "Connect your Neon database",
+    keywords: [
+      "neon",
+      "database",
+      "integration",
+      "postgres",
+      "connect",
+      "serverless",
+    ],
+    sectionId: SECTION_IDS.integrations,
+    sectionLabel: "Integrations",
+  },
+`,
+    to: ``,
+  },
+  {
+    file: "src/lib/settingsSearchIndex.ts",
+    from: `  {
+    id: SETTING_IDS.enableOwnServerDeployment,
+    label: "Allow deployment to your own server",
+    description:
+      "Integrates with Coolify so you can deploy an app to a server you run yourself",
+    keywords: [
+      "deploy",
+      "deployment",
+      "self-hosted",
+      "self hosted",
+      "own server",
+      "coolify",
+      "vps",
+      "publish",
+      "experiment",
+    ],
+    sectionId: SECTION_IDS.experiments,
+    sectionLabel: "Experiments",
+  },
+`,
+    to: ``,
+  },
+  {
+    file: "src/pages/app-details.tsx",
+    from: `          {/* When providerFilter is set, show the selected connector only if the other provider isn't already active */}
+          {providerFilter === "supabase" &&
+            appId &&
+            !selectedApp?.neonProjectId && <SupabaseConnector appId={appId} />}
+          {providerFilter === "supabase" &&
+            appId &&
+            selectedApp?.neonProjectId && (
+              <UnavailableIntegrationCard provider="supabase" />
+            )}
+          {providerFilter === "neon" &&
+            appId &&
+            !selectedApp?.supabaseProjectId && <NeonConnector appId={appId} />}
+          {providerFilter === "neon" &&
+            appId &&
+            selectedApp?.supabaseProjectId && (
+              <UnavailableIntegrationCard provider="neon" />
+            )}
+          {/* When no providerFilter, show both with existing mutual exclusion */}
+          {!providerFilter && (
+            <>
+              {appId &&
+                !selectedApp?.neonProjectId &&
+                !selectedApp?.supabaseProjectId && (
+                  <div className="flex items-start gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                    <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>{t("integrations.mutualExclusion.chooseOne")}</span>
+                  </div>
+                )}
+              {appId && !selectedApp?.neonProjectId && (
+                <SupabaseConnector appId={appId} />
+              )}
+              {appId && selectedApp?.neonProjectId && (
+                <UnavailableIntegrationCard provider="supabase" />
+              )}
+              {appId && !selectedApp?.supabaseProjectId && (
+                <NeonConnector appId={appId} />
+              )}
+              {appId && selectedApp?.supabaseProjectId && (
+                <UnavailableIntegrationCard provider="neon" />
+              )}
+            </>
+          )}
+`,
+    to: ``,
+  },
+  {
+    file: "src/components/preview_panel/ConfigurePanel.tsx",
+    from: `          To modify environment variables for Supabase or production,`,
+    to: `          To modify environment variables for production,`,
+  },
+  // The chat log upload sent the visitor's chat and code to upstream's own server (upload-logs.dyad.sh). The card
+  // that started it is gone, the crash dialog opens Help without it, and the request itself is not in the bundle.
+  {
+    file: "src/components/HelpDialog.tsx",
+    from: `          {/* Upload Chat Session */}
+          <div className="border rounded-lg p-4 space-y-3 relative">
+            <div className="flex items-center gap-2">
+              <MessageSquareIcon className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">
+                AI / Dyad Pro issues
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Best for AI quality issues. Uploads your chat session and code for
+              the team to reproduce and fix the problem.
+            </p>
+            <Button
+              variant="outline"
+              onClick={handleUploadChatSession}
+              disabled={isUploading || !selectedChatId}
+              className="w-full bg-(--background-lightest)"
+            >
+              <UploadIcon className="mr-2 h-4 w-4" />{" "}
+              {isUploading ? "Preparing Upload..." : "Upload Chat Session"}
+            </Button>
+            {!selectedChatId && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <AlertCircleIcon className="h-3 w-3 shrink-0" />
+                Open a chat first to upload a session.
+              </p>
+            )}
+          </div>
+
+`,
+    to: ``,
+  },
+  {
+    file: "src/components/HelpDialog.tsx",
+    from: `      const response = await fetch(
+        "https://upload-logs.dyad.sh/generate-upload-url",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            extension: "json",
+            contentType: "application/json",
+          }),
+        },
+      );`,
+    to: `      const response = { ok: false, statusText: "Uploading chat logs is not offered", json: async () => ({ uploadUrl: "", filename: "" }) };`,
+  },
+  {
+    file: "src/components/ForceCloseDialog.tsx",
+    from: `    setHelpDialog({ open: true, uploadChatId: activeChatId });`,
+    to: `    setHelpDialog({ open: true });`,
+  },
 ];
 
 // The screens' patches, then the ones that keep the first load lean (hologram.lean.mjs).
@@ -484,13 +712,13 @@ function retag(code, rel, p) {
   return p.imports ? p.imports + "\n" + out : out;
 }
 
-/** Our file for a Dyad file the shell replaces whole (absolute paths), or null. */
+/** Our file for an upstream file the shell replaces whole (absolute paths), or null. */
 export function screenFor(file) {
   const rel = slash(path.relative(here, file));
   return SCREENS[rel] ? path.join(here, SCREENS[rel]) : null;
 }
 
-/** A Dyad file's source as the shell builds it: ours if replaced, else with its patches applied. */
+/** An upstream file's source as the shell builds it: ours if replaced, else with its patches applied. */
 export function screenSource(file, code) {
   const ours = screenFor(file);
   if (ours) return fs.readFileSync(ours, "utf8");
