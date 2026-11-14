@@ -24,7 +24,7 @@ function bind(project, data) {
   const names = data.declarations.filter((d) => d.kind === "definition" && d.parameters.length === 0).map((d) => d.name);
   const constant = (name) => num(call(name));
   const table = (prefix) => Object.fromEntries(names.filter((n) => n.startsWith(prefix) && /^[A-Z]/.test(n.slice(prefix.length))).map((n) => [n.slice(prefix.length, prefix.length + 1).toLowerCase() + n.slice(prefix.length + 1), constant(n)]));
-  const KIND = table("kind"), KPI = table("kpi"), LEVER = table("lever"), LOOP = table("loop");
+  const KIND = table("kind"), KPI = table("kpi"), LEVER = table("lever"), LOOP = table("loop"), NET = table("net"), STANDING = table("standing");
   delete KPI.count;
   const event = ([kind, at, value, model]) => ({ kind: big(kind), at: big(at), value: big(value), model: big(model) });
   const observation = (o) => ({ kpi: num(o.kpi), turns: num(o.turns), over: num(o.over), worst: num(o.worst), total: num(o.total), last: num(o.last) });
@@ -33,8 +33,14 @@ function bind(project, data) {
   const stat = (s) => ({ model: big(s.model), reads: big(s.reads), firstTry: big(s.firstTry) });
   const loop = (l) => ({ applied: big(l.applied), pending: big(l.pending), baseline: big(l.baseline) });
   const kpiCount = constant("kpiCount");
+  const decision = ({ kind, at, value = 0 }) => ({ kind: BigInt(kind), at: big(at), value: big(value) });
+  const appNet = (a) => ({ opened: num(a.opened), notOpened: num(a.notOpened), allowed: num(a.allowed), blocked: num(a.blocked), size: num(a.size), last: num(a.last) });
+  const toAppNet = (a) => ({ opened: big(a.opened), notOpened: big(a.notOpened), allowed: big(a.allowed), blocked: big(a.blocked), size: big(a.size), last: big(a.last) });
+  const reach = (r) => ({ allowed: num(r.allowed), blocked: num(r.blocked), last: num(r.last) });
+  const toReach = (r) => ({ allowed: big(r.allowed), blocked: big(r.blocked), last: big(r.last) });
   return {
-    KIND, KPI, LEVER, LOOP, kpiCount,
+    KIND, KPI, LEVER, LOOP, NET, STANDING, kpiCount,
+    appKeepLimit: constant("appKeepLimit"), siteKeepLimit: constant("siteKeepLimit"),
     keepLimit: constant("keepLimit"), reloadBudget: constant("reloadBudget"),
     // One turn's KPIs: { code: microseconds or a count, or null when the turn has no such journey }.
     // Events from the page, the frame and the worker arrive out of order; the fold reads them in time
@@ -72,6 +78,15 @@ function bind(project, data) {
     kept: (count) => num(call("kept", BigInt(count))),
     evicted: (count) => num(call("evicted", BigInt(count))),
     bucketMicros: (budget, index) => num(call("bucketMicros", BigInt(budget), BigInt(index))),
+    // One app's network decisions, folded in time order into its totals, and the same for one site.
+    appEmpty: () => appNet(call("appEmpty")),
+    appStep: (a, d) => appNet(call("appStep", toAppNet(a), decision(d))),
+    reachEmpty: () => reach(call("reachEmpty")),
+    reachStep: (r, d) => reach(call("reachStep", toReach(r), decision(d))),
+    standing: (a) => num(call("standing", toAppNet(a))),
+    reachStanding: (r) => num(call("reachStanding", toReach(r))),
+    appsEvicted: (count) => num(call("appsEvicted", BigInt(count))),
+    sitesEvicted: (count) => num(call("sitesEvicted", BigInt(count))),
     theorems: project.theorems,
   };
 }

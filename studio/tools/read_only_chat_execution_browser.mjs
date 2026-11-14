@@ -40,7 +40,7 @@ try {
   const call=(tab,channel,input)=>tab.evaluate(({channel,input})=>window.electron.ipcRenderer.invoke(channel,input),{channel,input});
   const get=(tab,store,key)=>tab.evaluate(({store,key})=>window.__host.get(store,key),{store,key});
   const made=await call(page,'create-app',{name:'readonly-mode',initialChatMode:'build'}),chatId=made.chatId,appId=made.app.id;
-  await call(page,'set-user-settings',{selectedModel:{provider:'featherless',name:'zai-org/GLM-5.3-Flash'},providerSettings:{featherless:{apiKey:{value:'readonly-fixture'}}}});
+  await call(page,'set-user-settings',{selectedModel:{provider:'featherless',name:'Qwen/Qwen3-30B-A3B-Instruct-2507'},providerSettings:{featherless:{apiKey:{value:'readonly-fixture'}}}});
   await page.evaluate(({appId,spec})=>window.__prism.rulesAfterTurn(appId,'<dyad-spec>'+JSON.stringify(spec)+'</dyad-spec>'),{appId,spec:fixture('rsvp')});
   const snapshot=()=>page.evaluate(async appId=>{
     const {captureProjectSource}=await import('./project-edit.mjs'),{db}=await import('./inference.js');

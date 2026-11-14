@@ -91,7 +91,7 @@ def tab(tab_id, token, stop):
         job = json.loads(raw)
         post = lambda action, payload: http("POST", "/tab/%s/%s" % (job["id"], action), payload, headers=hdr, origin=PAGE)
         if job["op"] == "models":
-            post("result", {"bytes": '{"object":"list","data":[{"id":"webgpu:BitNet","object":"model","created":0,"owned_by":"browser"}]}', "headers": {}})
+            post("result", {"bytes": '{"object":"list","data":[{"id":"webgpu:Bonsai","object":"model","created":0,"owned_by":"browser"}]}', "headers": {}})
             continue
         request = job["request"]
         text = "echo: " + request["messages"][-1]["content"]
@@ -146,11 +146,11 @@ try:
     t = threading.Thread(target=tab, args=("tabA1234", token, stop), daemon=True); t.start()
     time.sleep(0.5)
     s, _, raw = http("GET", "/v1/models", headers=auth)
-    check("/v1/models comes from the tab", s == 200 and json.loads(raw)["data"][0]["id"] == "webgpu:BitNet", str(s))
-    s, h, raw = http("POST", "/v1/chat/completions", {"model": "webgpu:BitNet", "messages": [{"role": "user", "content": "hello"}]}, headers=auth)
+    check("/v1/models comes from the tab", s == 200 and json.loads(raw)["data"][0]["id"] == "webgpu:Bonsai", str(s))
+    s, h, raw = http("POST", "/v1/chat/completions", {"model": "webgpu:Bonsai", "messages": [{"role": "user", "content": "hello"}]}, headers=auth)
     body = json.loads(raw) if s == 200 else {}
     check("plain completion through the tab with its headers", s == 200 and body["choices"][0]["message"]["content"] == "echo: hello" and h.get("x-hologram-receipt") == "blake3:plain" and h.get("x-hologram-reuse") == "1", "%s %s" % (s, raw[:120]))
-    s, h, frames = stream("POST", "/v1/chat/completions", {"model": "webgpu:BitNet", "messages": [{"role": "user", "content": "hi"}], "stream": True}, auth)
+    s, h, frames = stream("POST", "/v1/chat/completions", {"model": "webgpu:Bonsai", "messages": [{"role": "user", "content": "hi"}], "stream": True}, auth)
     check("streamed completion: event stream, head headers, frames, [DONE]", s == 200 and h.get("Content-Type", "").startswith("text/event-stream") and h.get("x-hologram-receipt") == "blake3:stream" and len(frames) == 4 and frames[-1] == "[DONE]" and "echo: hi" in frames[1], "%s %s" % (s, frames))
     # A second tab is told who serves.
     s, _, raw = http("GET", "/tab/next", headers={"X-Freeinference-Tab": token, "X-Freeinference-Tab-Id": "tabB9999"}, origin=PAGE)

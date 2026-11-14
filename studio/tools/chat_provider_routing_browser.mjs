@@ -40,21 +40,21 @@ try {
   const call=(channel,input)=>page.evaluate(({channel,input})=>window.electron.ipcRenderer.invoke(channel,input),{channel,input});
   const get=(store,key)=>page.evaluate(({store,key})=>window.__host.get(store,key),{store,key});
   const made=await call('create-app',{name:'provider-routing',initialChatMode:'ask'}),appId=made.app.id;let chatId=made.chatId;
-  await call('set-user-settings',{selectedModel:{provider:'local',name:'webgpu:BitNet'},providerSettings:{openrouter:{apiKey:{value:'openrouter-route-fixture'}},featherless:{apiKey:{value:'featherless-route-fixture'}}}});
+  await call('set-user-settings',{selectedModel:{provider:'local',name:'webgpu:Bonsai'},providerSettings:{openrouter:{apiKey:{value:'openrouter-route-fixture'}},featherless:{apiKey:{value:'featherless-route-fixture'}}}});
   const submit=id=>page.evaluate(async({id,chatId,appId})=>{
     const {bindQueuePayload}=await import('./chat-queue-store.mjs'),{serializeImmutableChatTurnPayload}=await import('./chat-contracts.mjs');
     const intent=await bindQueuePayload({schemaVersion:1,intentId:id,chatId,appId,invocationRef:{kind:'chat-stream',entityKey:chatId,operationId:id},prompt:'Explain this application',requestedChatMode:'ask'},serializeImmutableChatTurnPayload);
     return window.electron.ipcRenderer.invoke('distributed-machine:dispatch',{protocolVersion:1,machineId:'chat_stream',encodedKey:{chatId},messageId:crypto.randomUUID(),encodedEvent:{type:'SUBMIT',intent,observedStopPolicyVersion:0}});
   },{id,chatId,appId});
   const settled=async id=>{const deadline=Date.now()+30000;while(Date.now()<deadline){const q=await get('refs',`chat-queue:${chatId}`),r=q?.receipts.find(r=>r.intentId===id);if(r&&!q.state.active)return r;await new Promise(r=>setTimeout(r,20));}console.log(JSON.stringify({id,journal:await get('refs',`chat-queue:${chatId}`),chat:await get('chats',chatId)}));throw Error('queue did not settle '+id);};
-  for(const [provider,name,windowSize,url] of [['openrouter','openrouter/free',128000,'https://openrouter.ai/api/v1/chat/completions'],['featherless','zai-org/GLM-5.3-Flash',262144,'https://api.featherless.ai/v1/chat/completions']]){
+  for(const [provider,name,windowSize,url] of [['openrouter','openrouter/free',128000,'https://openrouter.ai/api/v1/chat/completions'],['featherless','Qwen/Qwen3-30B-A3B-Instruct-2507',262144,'https://api.featherless.ai/v1/chat/completions']]){
     await call('update-chat',{chatId,modelSelection:{provider,name,effortLevel:'medium'}});
     assert.equal((await call('chat:count-tokens',{chatId,input:'Explain this application'})).contextWindow,windowSize);
     const count=sent.length;await submit(provider);
     const dialog=page.getByRole('dialog',{name:'Review cloud request',exact:true});await dialog.waitFor();
     const disclosed=await dialog.locator('pre').textContent();assert.equal(JSON.parse(disclosed).model,name,'disclosure must retain the exact selected model');assert.equal(sent.length,count);
     assert.ok(!(await dialog.textContent()).includes(provider+'-route-fixture'));
-    await call('update-chat',{chatId,modelSelection:{provider:'local',name:'webgpu:BitNet',effortLevel:'medium'}});
+    await call('update-chat',{chatId,modelSelection:{provider:'local',name:'webgpu:Bonsai',effortLevel:'medium'}});
     assert.equal(await dialog.locator('pre').textContent(),disclosed);
     await page.getByRole('button',{name:'Send this request',exact:true}).click();
     assert.equal((await settled(provider)).outcome,'completed');assert.equal(sent.length,count+1);

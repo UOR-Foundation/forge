@@ -1,0 +1,131 @@
+{
+ "summary": {
+  "inputs": 14,
+  "accepted": 7,
+  "refused": 7,
+  "disagreements": 0,
+  "nanodaCompared": 0
+ },
+ "checker": {
+  "wasm": "c1300379601e2dba5a1697768da2e398d12cd0a37b961b448c504f216b753736",
+  "bytes": 2234399
+ },
+ "library": {
+  "sha256": "48cc5e5427248794605c59353bbfb6362b0202c6e88b5a38e6ddfac42e03409e",
+  "bytes": 25745953
+ },
+ "rows": [
+  {
+   "sha256": "0ab57041dd4b0bcfa732c9ac75104be8659eef0aea299f977c69b22eab4269ab",
+   "official": true,
+   "native": true,
+   "wasmWhole": true,
+   "wasmResident": true,
+   "agree": true
+  },
+  {
+   "sha256": "0f1e7bcf60d5fd6b633c01d6cc824fa8f5464aeb235d33ee1eef2e16ccaa4e9d",
+   "official": true,
+   "native": true,
+   "wasmWhole": true,
+   "wasmResident": true,
+   "agree": true
+  },
+  {
+   "sha256": "0fa4c25f2849a4a58a490616d8253cb0777ae23b46657027ecdd332f5907685f",
+   "official": false,
+   "native": false,
+   "wasmWhole": false,
+   "wasmResident": false,
+   "agree": true
+  },
+  {
+   "sha256": "16991bab249449d0a4370fb97e79b735761f3b2e010e7abc14a0efa4a2d15763",
+   "official": false,
+   "native": false,
+   "wasmWhole": false,
+   "wasmResident": false,
+   "agree": true
+  },
+  {
+   "sha256": "249285135c95d0a81179b83fb062d0c8e3283ef76bcda1719614ece49c2087f1",
+   "official": true,
+   "native": true,
+   "wasmWhole": true,
+   "wasmResident": true,
+   "agree": true
+  },
+  {
+   "sha256": "29cbfe10c4210e352a36cfd1c1e0d4ace1f2d67152c73bf238fd5758960a84cf",
+   "official": false,
+   "native": false,
+   "wasmWhole": false,
+   "wasmResident": false,
+   "agree": true
+  },
+  {
+   "sha256": "5e5456347e66af9fa0720458f11385f43c5ab9f2219dead24fa0f1543076dd98",
+   "official": true,
+   "native": true,
+   "wasmWhole": true,
+   "wasmResident": true,
+   "agree": true
+  },
+  {
+   "sha256": "6c49e6fd0cc8df83a8621fb50b809f3cacc7b0775410c59654fc46d7b8d0d60f",
+   "official": false,
+   "native": false,
+   "wasmWhole": false,
+   "wasmResident": false,
+   "agree": true
+  },
+  {
+   "sha256": "6e24671252397248927e8d8a73fabcab60878c0b33fe6b74c93a1e932d608a1f",
+   "official": true,
+   "native": true,
+   "wasmWhole": true,
+   "wasmResident": true,
+   "agree": true
+  },
+  {
+   "sha256": "6f0d8362c008a298a4495376991b1fabdd18cdb017570d83eb00fca4655aced2",
+   "official": false,
+   "native": false,
+   "wasmWhole": false,
+   "wasmResident": false,
+   "agree": true
+  },
+  {
+   "sha256": "710cdad12471f150f90c6aee4736ad7ab657aa41e7db4a2fc728616c158ee744",
+   "official": false,
+   "native": false,
+   "wasmWhole": false,
+   "wasmResident": false,
+   "agree": true
+  },
+  {
+   "sha256": "87611c914075edd8854062aa8d611562f5bab001e9cb7a4c3ee312461df0f631",
+   "official": false,
+   "native": false,
+   "wasmWhole": false,
+   "wasmResident": false,
+   "agree": true
+  },
+  {
+   "sha256": "c32d55141f9078186171dafe3eceba8017382c497900451e1db3d2efe75bf4b6",
+   "official": true,
+   "native": true,
+   "wasmWhole": true,
+   "wasmResident": true,
+   "agree": true
+  },
+  {
+   "sha256": "e10e9c73fc0fc49f14942ec1509ee8742ad8b00ad90ff9c2c2839706c0ad0391",
+   "official": true,
+   "native": true,
+   "wasmWhole": true,
+   "wasmResident": true,
+   "agree": true
+  }
+ ]
+}

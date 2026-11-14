@@ -1,7 +1,7 @@
 {
   "profile": "foundry/imported-chat-contracts/1",
   "compiler": "0.25.9",
-  "generatorSha256": "c1f90dedfdc2b68014b58d844d14a5e5df39e210fce6b560864c5470151910c9",
+  "generatorSha256": "fc4b608dad5e3c68699673be8d4e9481e4f1730a3eb3bf647dec05a4354c8b7e",
   "packageLockSha256": "8cf7dcd27fd83fd4871f455a1becb280d1c0eab105c3f3f669d091537d712ed8",
   "licenseSha256": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
   "inputs": [
@@ -376,7 +376,7 @@
   ],
   "output": {
     "path": "chat-contracts.mjs",
-    "sha256": "3c26b6b256df9982b42738ccd1220eefa2cf1351146aa2ea349f91d16a00f3f6",
-    "bytes": 359054
+    "sha256": "ccdacbc4adafdb7ebda815630a084a3acd42c77274996120a562ba5d04b42a20",
+    "bytes": 359057
   }
 }

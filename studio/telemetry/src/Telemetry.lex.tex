@@ -491,5 +491,135 @@ definition{
   result: Nat,
   body: (if (index =? 0) then (prim multiply (budget + 1) 250 : Nat) else (if (index =? 1) then (prim multiply (budget + 1) 500 : Nat) else (if (index =? 2) then (prim multiply (budget + 1) 1000 : Nat) else (if (index =? 3) then (prim multiply (budget + 1) 2000 : Nat) else (if (index =? 4) then (prim multiply (budget + 1) 4000 : Nat) else 0)))))
 }
+
+definition{name: netOpened, parameters: [], result: Nat, body: 0}
+
+definition{name: netNotOpened, parameters: [], result: Nat, body: 1}
+
+definition{name: netAllowed, parameters: [], result: Nat, body: 2}
+
+definition{name: netBlocked, parameters: [], result: Nat, body: 3}
+
+definition{name: standingQuiet, parameters: [], result: Nat, body: 0}
+
+definition{name: standingReaches, parameters: [], result: Nat, body: 1}
+
+definition{name: standingBlocked, parameters: [], result: Nat, body: 2}
+
+definition{name: appKeepLimit, parameters: [], result: Nat, body: 256}
+
+definition{name: siteKeepLimit, parameters: [], result: Nat, body: 34}
+
+structure{
+  name: Decision,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: kind, type: Nat}, {name: at, type: Nat}, {name: value, type: Nat}]
+}
+
+structure{
+  name: AppNet,
+  type_parameters: [],
+  parameters: [],
+  fields: [
+    {name: opened, type: Nat},
+    {name: notOpened, type: Nat},
+    {name: allowed, type: Nat},
+    {name: blocked, type: Nat},
+    {name: size, type: Nat},
+    {name: last, type: Nat}
+  ]
+}
+
+structure{
+  name: Reach,
+  type_parameters: [],
+  parameters: [],
+  fields: [{name: allowed, type: Nat}, {name: blocked, type: Nat}, {name: last, type: Nat}]
+}
+
+definition{
+  name: tally,
+  parameters: [count : Nat, decision : Decision, kind : Nat],
+  result: Nat,
+  body: (if ((project decision kind) =? kind) then (count + 1) else count)
+}
+
+definition{
+  name: latest,
+  parameters: [last : Nat, decision : Decision],
+  result: Nat,
+  body: (if (last <? (project decision at)) then (project decision at) else last)
+}
+
+definition{
+  name: nextSize,
+  parameters: [app : AppNet, decision : Decision],
+  result: Nat,
+  body: (if ((project decision kind) =? (netOpened)) then (project decision value) else (project app size))
+}
+
+definition{
+  name: appStep,
+  parameters: [app : AppNet, decision : Decision],
+  result: AppNet,
+  body: (record AppNet {opened := (tally (project app opened) decision (netOpened)), notOpened := (tally (project app notOpened) decision (netNotOpened)), allowed := (tally (project app allowed) decision (netAllowed)), blocked := (tally (project app blocked) decision (netBlocked)), size := (nextSize app decision), last := (latest (project app last) decision)})
+}
+
+definition{
+  name: appEmpty,
+  parameters: [],
+  result: AppNet,
+  body: (record AppNet {opened := 0, notOpened := 0, allowed := 0, blocked := 0, size := 0, last := 0})
+}
+
+definition{
+  name: reachStep,
+  parameters: [reach : Reach, decision : Decision],
+  result: Reach,
+  body: (record Reach {allowed := (tally (project reach allowed) decision (netAllowed)), blocked := (tally (project reach blocked) decision (netBlocked)), last := (latest (project reach last) decision)})
+}
+
+definition{
+  name: reachEmpty,
+  parameters: [],
+  result: Reach,
+  body: (record Reach {allowed := 0, blocked := 0, last := 0})
+}
+
+definition{
+  name: standing,
+  parameters: [app : AppNet],
+  result: Nat,
+  body: (if ((0 <? (project app blocked)) || (0 <? (project app notOpened))) then (standingBlocked) else (if (0 <? (project app allowed)) then (standingReaches) else (standingQuiet)))
+}
+
+definition{
+  name: reachStanding,
+  parameters: [reach : Reach],
+  result: Nat,
+  body: (if (0 <? (project reach blocked)) then (standingBlocked) else (standingReaches))
+}
+
+definition{
+  name: appsKept,
+  parameters: [count : Nat],
+  result: Nat,
+  body: (if ((appKeepLimit) <? count) then (appKeepLimit) else count)
+}
+
+definition{
+  name: appsEvicted,
+  parameters: [count : Nat],
+  result: Nat,
+  body: (prim subtract count (appKeepLimit) : Nat)
+}
+
+definition{
+  name: sitesEvicted,
+  parameters: [count : Nat],
+  result: Nat,
+  body: (prim subtract count (siteKeepLimit) : Nat)
+}
 \end{semanticmodule}
 \end{lexlean}

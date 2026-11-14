@@ -1,5 +1,5 @@
-// dyad-prism (ours, not Dyad's; see VENDORED.md): the home page's Import App dialog, replacing Dyad's at build
-// time through `resolveId` in vite.shell.config.mts. Dyad's imports a folder from disk or a GitHub repository
+// dyad-prism (ours, not upstream's; see VENDORED.md): the home page's Import App dialog, replacing upstream's at build
+// time through `resolveId` in vite.shell.config.mts. Upstream's imports a folder from disk or a GitHub repository
 // into its apps folder; a web page has neither. What a visitor brings here is a Forge export file: the site
 // Forge was served from before keeps each visitor's apps in its own browser storage, and its moved page writes
 // them to one file (schema hologram-forge/export/1). The host's `forge:import` (shell/host.js) writes the file's
@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { queryKeys } from "@/lib/queryKeys";
 import { showError, showSuccess } from "@/lib/toast";
 
-// Dyad's dialog exports this prompt and other modules may import it; it is kept so they still resolve.
+// Upstream's dialog exports this prompt and other modules may import it; it is kept so they still resolve.
 export const AI_RULES_PROMPT =
   "Generate an AI_RULES.md file for this app. Describe the tech stack in 5-10 bullet points and describe clear rules about what libraries to use for what.";
 

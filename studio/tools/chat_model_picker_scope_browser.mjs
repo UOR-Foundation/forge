@@ -38,7 +38,7 @@ try {
   const call=(tab,channel,input)=>tab.evaluate(({channel,input})=>window.electron.ipcRenderer.invoke(channel,input),{channel,input});
   const get=(tab,store,key)=>tab.evaluate(({store,key})=>window.__host.get(store,key),{store,key});
   const made=await call(page,'create-app',{name:'picker-scope',initialChatMode:'build'}),other=await call(page,'create-app',{name:'other-picker-chat',initialChatMode:'build'});
-  const globalModel={provider:'openrouter',name:'moonshotai/kimi-k2.5'},cloud={provider:'featherless',name:'zai-org/GLM-5.3-Flash',effortLevel:'medium'};
+  const globalModel={provider:'openrouter',name:'moonshotai/kimi-k2.5'},cloud={provider:'featherless',name:'Qwen/Qwen3-30B-A3B-Instruct-2507',effortLevel:'medium'};
   await call(page,'set-user-settings',{selectedModel:globalModel});await call(page,'update-chat',{chatId:made.chatId,modelSelection:cloud});await call(page,'update-chat',{chatId:other.chatId,modelSelection:cloud});
   const openChat=async()=>{
     await page.goto(base+'chat?id='+made.chatId+'&appId='+made.app.id);await page.waitForFunction(()=>!!window.__host&&!!window.electron);
@@ -47,14 +47,14 @@ try {
   };
   const choose=async label=>{const item=page.getByRole('menuitem',{name:new RegExp(label)});if(!await item.isVisible())await page.getByTestId('model-picker').click();await item.click();};
   const waitModel=async(chatId,provider)=>{const deadline=Date.now()+10000;while(Date.now()<deadline){const row=await get(page,'chats',chatId);if(row.modelSelection?.provider===provider)return row;await new Promise(r=>setTimeout(r,20));}throw Error('chat model did not commit');};
-  await openChat();assert.ok((await page.getByTestId('model-picker').textContent()).includes('GLM 5.3 Flash'),'mounted chat picker must show its committed model');
+  await openChat();assert.ok((await page.getByTestId('model-picker').textContent()).includes('Qwen3 30B'),'mounted chat picker must show its committed model');
   await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;window.__pickerAbort=0;IDBObjectStore.prototype.put=function(value,key){const request=put.call(this,value,key);if(this.name==='chats'){request.addEventListener('success',()=>{IDBObjectStore.prototype.put=put;window.__pickerAbort++;this.transaction.abort();},{once:true});}return request;};});
-  await choose('BitNet 2B');await page.getByRole('alert').filter({hasText:'The model selection could not be saved. Try again.'}).waitFor();
+  await choose('Bonsai 1.7B');await page.getByRole('alert').filter({hasText:'The model selection could not be saved. Try again.'}).waitFor();
   assert.equal(await page.evaluate(()=>window.__pickerAbort),1);assert.deepEqual((await get(page,'chats',made.chatId)).modelSelection,cloud);assert.deepEqual((await get(page,'settings','user')).selectedModel,globalModel);
-  await choose('BitNet 2B');const changed=await waitModel(made.chatId,'local');assert.equal(changed.messages.length,0,'empty chat must persist selection');assert.deepEqual((await get(page,'settings','user')).selectedModel,globalModel);assert.deepEqual((await get(page,'chats',other.chatId)).modelSelection,cloud);
-  await page.goto(base);await page.getByTestId('model-picker').waitFor();await choose('GLM 5.3 Flash');
+  await choose('Bonsai 1.7B');const changed=await waitModel(made.chatId,'local');assert.equal(changed.messages.length,0,'empty chat must persist selection');assert.deepEqual((await get(page,'settings','user')).selectedModel,globalModel);assert.deepEqual((await get(page,'chats',other.chatId)).modelSelection,cloud);
+  await page.goto(base);await page.getByTestId('model-picker').waitFor();await choose('Qwen3 30B');
   const deadline=Date.now()+10000;while((await get(page,'settings','user')).selectedModel.provider!=='featherless'){assert.ok(Date.now()<deadline);await new Promise(r=>setTimeout(r,20));}
-  await openChat();assert.ok((await page.getByTestId('model-picker').textContent()).includes('BitNet 2B'));assert.equal((await get(page,'chats',made.chatId)).modelSelection.provider,'local');
-  await choose('GLM 5.3 Flash');await waitModel(made.chatId,'featherless');await call(page,'set-user-settings',{selectedModel:changed.modelSelection});await page.reload();await page.getByTestId('model-picker').waitFor();await page.waitForFunction(()=>!document.querySelector('[data-testid="model-picker"]')?.disabled);assert.ok((await page.getByTestId('model-picker').textContent()).includes('GLM 5.3 Flash'));
+  await openChat();assert.ok((await page.getByTestId('model-picker').textContent()).includes('Bonsai 1.7B'));assert.equal((await get(page,'chats',made.chatId)).modelSelection.provider,'local');
+  await choose('Qwen3 30B');await waitModel(made.chatId,'featherless');await call(page,'set-user-settings',{selectedModel:changed.modelSelection});await page.reload();await page.getByTestId('model-picker').waitFor();await page.waitForFunction(()=>!document.querySelector('[data-testid="model-picker"]')?.disabled);assert.ok((await page.getByTestId('model-picker').textContent()).includes('Qwen3 30B'));
   assert.equal(sent.length,0);assert.deepEqual(errors,[]);console.log(JSON.stringify({profile:'foundry/chat-model-picker-scope/1',mountedChatLabel:true,emptyChatPersistence:true,lateAbortVisible:true,homeDefaultIndependent:true,otherChatUnchanged:true,reload:true,pageErrors:errors}));
 } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}

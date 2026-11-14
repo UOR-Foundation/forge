@@ -412,5 +412,139 @@ theorem{
   proof: linear_arithmetic{definitions: [Telemetry::keepLimit, Telemetry::kept, breaksKept]},
   axioms: [Quot.sound, propext]
 }
+
+definition{
+  name: breaksRefusalHidden,
+  parameters: [app : Telemetry::AppNet],
+  result: Bool,
+  body: (((0 <? (project app blocked)) || (0 <? (project app notOpened))) && (not ((Telemetry::standing app) =? (Telemetry::standingBlocked))))
+}
+
+theorem{
+  name: refusedIsShown,
+  parameters: [app : Telemetry::AppNet],
+  statement: ((breaksRefusalHidden app) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      Telemetry::standing,
+      Telemetry::standingBlocked,
+      Telemetry::standingQuiet,
+      Telemetry::standingReaches,
+      breaksRefusalHidden
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksReachUnallowed,
+  parameters: [app : Telemetry::AppNet],
+  result: Bool,
+  body: (((project app allowed) =? 0) && ((Telemetry::standing app) =? (Telemetry::standingReaches)))
+}
+
+theorem{
+  name: reachNeedsAllowance,
+  parameters: [app : Telemetry::AppNet],
+  statement: ((breaksReachUnallowed app) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      Telemetry::standing,
+      Telemetry::standingBlocked,
+      Telemetry::standingQuiet,
+      Telemetry::standingReaches,
+      breaksReachUnallowed
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksSiteRefusalHidden,
+  parameters: [reach : Telemetry::Reach],
+  result: Bool,
+  body: ((0 <? (project reach blocked)) && (not ((Telemetry::reachStanding reach) =? (Telemetry::standingBlocked))))
+}
+
+theorem{
+  name: refusedSiteIsShown,
+  parameters: [reach : Telemetry::Reach],
+  statement: ((breaksSiteRefusalHidden reach) = false),
+  proof: linear_arithmetic{
+    definitions: [
+      Telemetry::reachStanding,
+      Telemetry::standingBlocked,
+      Telemetry::standingReaches,
+      breaksSiteRefusalHidden
+    ]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksMiscounted,
+  parameters: [count : Nat, decision : Telemetry::Decision],
+  result: Bool,
+  body: ((((project decision kind) =? (Telemetry::netBlocked)) && (not ((Telemetry::tally count decision (Telemetry::netAllowed)) =? count))) || (((project decision kind) =? (Telemetry::netAllowed)) && (not ((Telemetry::tally count decision (Telemetry::netBlocked)) =? count))))
+}
+
+theorem{
+  name: refusalNeverAllowed,
+  parameters: [count : Nat, decision : Telemetry::Decision],
+  statement: ((breaksMiscounted count decision) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::netAllowed, Telemetry::netBlocked, Telemetry::tally, breaksMiscounted]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksUncounted,
+  parameters: [count : Nat, decision : Telemetry::Decision],
+  result: Bool,
+  body: ((((project decision kind) =? (Telemetry::netAllowed)) && (not ((Telemetry::tally count decision (Telemetry::netAllowed)) =? (count + 1)))) || (((project decision kind) =? (Telemetry::netBlocked)) && (not ((Telemetry::tally count decision (Telemetry::netBlocked)) =? (count + 1)))))
+}
+
+theorem{
+  name: decisionCountedOnce,
+  parameters: [count : Nat, decision : Telemetry::Decision],
+  statement: ((breaksUncounted count decision) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::netAllowed, Telemetry::netBlocked, Telemetry::tally, breaksUncounted]
+  },
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksLastBack,
+  parameters: [last : Nat, decision : Telemetry::Decision],
+  result: Bool,
+  body: ((Telemetry::latest last decision) <? last)
+}
+
+theorem{
+  name: lastNeverMovesBack,
+  parameters: [last : Nat, decision : Telemetry::Decision],
+  statement: ((breaksLastBack last decision) = false),
+  proof: linear_arithmetic{definitions: [Telemetry::latest, breaksLastBack]},
+  axioms: [Quot.sound, propext]
+}
+
+definition{
+  name: breaksAppsKept,
+  parameters: [count : Nat],
+  result: Bool,
+  body: ((Telemetry::appKeepLimit) <? (Telemetry::appsKept count))
+}
+
+theorem{
+  name: appsKeptIsBounded,
+  parameters: [count : Nat],
+  statement: ((breaksAppsKept count) = false),
+  proof: linear_arithmetic{
+    definitions: [Telemetry::appKeepLimit, Telemetry::appsKept, breaksAppsKept]
+  },
+  axioms: [Quot.sound, propext]
+}
 \end{semanticmodule}
 \end{lexlean}

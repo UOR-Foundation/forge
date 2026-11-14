@@ -58,7 +58,7 @@ import {updateChatPreferences} from "./chat-preferences.mjs";
 import { renameStoredProject, restoreStoredProject, deleteStoredProject, deleteStoredChat, updateStoredChat } from "./project-lifecycle.mjs";
 import { invokeHost, unwrapHost } from "./host-boundary.mjs";
 import * as inference from "./inference.js";
-import { viewReady, lookup, routeOf, refusalWord, seal as sealAnswer, sealPaid, paidGenerate, gpuReady, gpuIds, heldFor, rulesModel, rememberSession, withEngine, engine, readWho, MODEL_ID, paidId, deviceKeyGet } from "./inference.js";
+import { viewReady, lookup, routeOf, refusalWord, seal as sealAnswer, sealPaid, paidGenerate, gpuReady, gpuIds, heldFor, rulesModel, rememberSession, withEngine, engine, readWho, MODEL_ID, idOf, paidId, deviceKeyGet } from "./inference.js";
 import { install, installed, encodeView, b64, unb64, sha256 } from "./holo.js";
 import * as prism from "./prism.js";
 import * as live from "./live/project.mjs";
@@ -117,9 +117,9 @@ handlers.set("prompts:delete", input => promptLibrary("delete",input));
 
 // ---- settings
 const DEFAULT_SETTINGS = {
-  // A new visitor starts on GLM 5.3 Flash in the cloud (the site's shared Featherless key answers); BitNet 2B
+  // A new visitor starts on Qwen3 30B in the cloud (the site's shared Featherless key answers); Bonsai 1.7B
   // on the device is one click away in the model picker.
-  selectedModel: { name: "zai-org/GLM-5.3-Flash", provider: "featherless" }, providerSettings: {}, telemetryConsent: "opted_out", telemetryUserId: "web",
+  selectedModel: { name: "Qwen/Qwen3-30B-A3B-Instruct-2507", provider: "featherless" }, providerSettings: {}, telemetryConsent: "opted_out", telemetryUserId: "web",
   hasRunBefore: true, experiments: {}, enableProLazyEditsMode: false, enableProSmartFilesContextMode: false, selectedChatMode: "build",
   enableAppBlueprint: false, enableTestingForNewApps: false, enableAutoUpdate: false, releaseChannel: "stable", isRunning: false,
   enableSandboxScriptExecution: false, enableMcpToolSearch: false, enableCodeExplorer: false, runTypeScriptForWholeProject: false,
@@ -186,23 +186,20 @@ const OPENROUTER_MODELS = [
 // The device is a provider the renderer counts as set up (a custom provider whose "environment variable" is
 // the GPU), so a machine with WebGPU needs no key before its first prompt.
 const LOCAL = { id: "local", name: "On your device", type: "custom", hasFreeTier: true, envVarName: "HOLOGRAM_DEVICE" };
-// The window is the engine's own (q/core/loader.js: BitNet 2B, ctx 3000), not a round number: a build
+// The window is the engine's own (q/core/loader.js: Ternary Bonsai 1.7B, ctx 3000), not a round number: a build
 // turn carries the project's files, so the renderer must know what actually fits.
-const LOCAL_MODELS = [{ apiName: MODEL_ID, displayName: "BitNet 2B", description: "Runs on this browser's GPU; every answer is sealed on the device", contextWindow: 3000 }];
+const LOCAL_MODELS = [{ apiName: MODEL_ID, displayName: "Bonsai 1.7B", description: "Runs on this browser's GPU; every answer is sealed on the device", contextWindow: 3000 }];
 // Featherless: open-weight models behind an OpenAI chat endpoint that admits this origin. The key is the
 // visitor's, entered on the provider's settings page and kept on this device; the site carries none.
 const FEATHERLESS = { id: "featherless", name: "Featherless", hasFreeTier: false, websiteUrl: "https://featherless.ai/account/api-keys", gatewayPrefix: "featherless/", type: "cloud" };
-// The first is a new visitor's default. DeepSeek V3.2 does not reason before it answers: measured through
-// the site relay on 2026-11-13 with the spec's schema, one sentence, one run, it wrote a spec the checker
-// accepted in 24 s, against 47 s for GLM 5.3 Flash, 35 s of that reasoning (relay/featherless/README.md).
-const FEATHERLESS_MODELS = [
-  { apiName: "zai-org/GLM-5.3-Flash", displayName: "GLM 5.3 Flash", description: "Z.ai's GLM 5.3 Flash on Featherless", contextWindow: 262144 },
-  { apiName: "deepseek-ai/DeepSeek-V3.2", displayName: "DeepSeek V3.2", description: "DeepSeek V3.2 on Featherless: answers without reasoning first", contextWindow: 131072 },
-  // Starts writing within a second and finishes in about 17 s, but its first spec was refused by the checker
-  // in every measured run (a guarantee its own rules break): it relies on the repair turn below.
-  { apiName: "Qwen/Qwen3-30B-A3B-Instruct-2507", displayName: "Qwen3 30B", description: "Qwen3 30B Instruct on Featherless: starts at once, checked and repaired by Forge", contextWindow: 262144 },
-];
-// Four models are offered: GLM 5.3 Flash, DeepSeek V3.2 and Qwen3 30B in the cloud (Featherless) and BitNet 2B on the device. OpenRouter is
+// One cloud model is offered. Qwen3 30B Instruct does not reason before it answers and starts writing within
+// a second. Measured through the site relay on 2026-11-13 over ten sentences and three runs each, with the
+// spec's schema: first token 0.8 s and 20 s in all, against 44 s and 56 s for GLM 5.3 Flash. On the full spec
+// its first draft passed the checker 13 times in 30, and 14 of the 17 failures were a guarantee its own rules
+// break, which is why it is paired with a draft the model only translates into, Forge's own guarantees and
+// the repair turn (relay/featherless/README.md).
+const FEATHERLESS_MODELS = [{ apiName: "Qwen/Qwen3-30B-A3B-Instruct-2507", displayName: "Qwen3 30B", description: "Qwen3 30B Instruct on Featherless", contextWindow: 262144 }];
+// Two models are offered: Qwen3 30B in the cloud (Featherless) and Bonsai 1.7B on the device. OpenRouter is
 // withdrawn from the picker and Settings for now; its models stay defined here, and the warm-up that answers
 // while the device model loads is unchanged.
 handlers.set("get-language-model-providers", () => [FEATHERLESS, LOCAL]);
@@ -493,6 +490,17 @@ function tmFlush() {
   if (!events.length) return;
   tmIdle(() => telemetryOf().then(({ telemetry }) => telemetry.record({ events, dropped, model: modelName })).catch((e) => console.warn("[telemetry]", (e && e.code) || e)));
 }
+// What each app was let reach: the worker hands over the kernel's decisions as it serves an app
+// (sw.template.js, noteGate); they are recorded at idle like a turn. A preview's address changes with every
+// build, so the address is named here with the app it belongs to, and its builds count as one app.
+const tmApps = new Map();
+const tmNameApp = (address, appId, name) => tmApps.set(address, { key: "app:" + appId, name: name || null });
+if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", (e) => {
+  const d = e.data;
+  if (!d || d.type !== "telemetry/gate" || typeof d.id !== "string" || !Array.isArray(d.decisions)) return;
+  const named = tmApps.get(d.id) || {};
+  tmIdle(() => telemetryOf().then(({ telemetry }) => telemetry.noteApp({ id: d.id, key: named.key ?? null, name: named.name ?? null, installed: d.installed === true, decisions: d.decisions })).catch((err) => console.warn("[telemetry]", (err && err.code) || err)));
+});
 async function openTelemetry() {
   const [{ openPanel }, t] = await Promise.all([import("./telemetry/panel.mjs"), telemetryOf()]);
   openPanel(t);
@@ -642,6 +650,7 @@ async function buildPreview(appId) {
   const appUrl = new URL(path.slice(1), BASE);
   const owner = await get("apps", appId);
   const endpoints = Array.isArray(owner && owner.grants) ? owner.grants : PREVIEW_ENDPOINTS;
+  tmNameApp("p:" + previewId(appUrl.pathname), appId, owner && owner.name);
   const previousPermission = await get("refs", "capabilities:" + previewId(appUrl.pathname));
   const permission = endpoints.length ? await authorizePreview({ id: previewId(appUrl.pathname), source: source.reference, endpoints }) : null;
   const approvedEndpoints = permission ? permission.disclosure.endpoints : [];
@@ -1090,7 +1099,7 @@ window.__preview = buildPreview;
 // ---- the renderer's tags: what the model writes becomes files. The grammar is the renderer's: a block per
 // file, attributes path and description, content verbatim between the tags; delete and rename are
 // single tags; add-dependency names packages the import map must carry.
-function parseDyadTags(text) {
+function parsePrismTags(text) {
   const writes = [], deletes = [], renames = [], deps = [];
   const attr = (s, name) => { const m = s.match(new RegExp(name + '="([^"]*)"')); return m ? m[1] : null; };
   for (const m of text.matchAll(/<dyad-write\s+([^>]*)>([\s\S]*?)<\/dyad-write>/g)) {
@@ -1103,7 +1112,7 @@ function parseDyadTags(text) {
   for (const m of text.matchAll(/<dyad-add-dependency\s+([^>]*?)\s*\/?>/g)) { const p = attr(m[1], "packages") || attr(m[1], "package"); if (p) deps.push(...p.split(/\s+/).filter(Boolean)); }
   return { writes, deletes, renames, deps };
 }
-async function applyDyadTags(appId, tags, options = {}) {
+async function applyPrismTags(appId, tags, options = {}) {
   const copied = copyGenerationInput(tags, options.source), { signal, onCommit } = options;
   await coreReady;
   assertGenerationActive(signal);
@@ -1111,7 +1120,7 @@ async function applyDyadTags(appId, tags, options = {}) {
   assertCanonicalGeneration(source, copied.tags, lexlean);
   return applyStoredProjectPatch(await dbReady, appId, copied.tags, { core, derive: kappa, source, signal, onCommit });
 }
-window.__chat = { parseDyadTags, applyDyadTags };
+window.__chat = { parsePrismTags, applyPrismTags };
 
 // ---- the chat stream machine. the renderer submits a turn only here: SUBMIT on the chat_stream
 // machine, then it watches the snapshot (admitting, streaming, finalizing, idle) and applies the
@@ -1305,6 +1314,11 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
   let previousCanonicalPath = null;
   try { previousCanonicalPath = `prism/${lexlean.canonicalSource(JSON.parse(files.get("prism/spec.json"))).name}.lex.tex`; } catch {}
   const stage = (path, content) => { if (files.get(path) !== content) { files.set(path, content); writes.push({ path, content }); } };
+  // The rest of the app's prism/prompt/1, when the turn wrote it: the idea routed onto every facet
+  // (prism/builder/route.mjs). It lands with the rules in the one source transaction; a turn that
+  // writes none keeps the parts the app has.
+  const promptTag = prism.parsePromptTag(text);
+  if (promptTag && promptTag.parts) stage("prism/prompt.json", JSON.stringify(promptTag.parts, null, 2) + "\n");
   // A LexLean module, when the model wrote one, carries the rules: the spec is read from it, keeping the
   // screen's words only when their checked interface still belongs to the new module.
   const lex = lexlean.specFromTurn(text);
@@ -1378,7 +1392,12 @@ async function rulesAfterTurn(appId, text, written = [], options = {}) {
     if (!page.includes("@/lib/prism") && !written.some((p) => p && p.startsWith("src/pages/"))) stage("src/pages/Index.tsx", prism.screenSource());
   }
   const notes = [...(presentationReset ? ["The application interface changed or its previous presentation was invalid; the view and descriptions were reset to the new module."] : []), ...(tag && tag.repaired ? ["Forge repaired the JSON syntax the model wrote. Read the rules before you approve them."] : []), ...(checked.notes || [])];
-  const state = { ...(retained ? before : {}), phase, specKappa, logicKappa, spec: checked.spec || null, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: retained ? before.proof : null, updated: now() };
+  // The full model: the builder projects every facet from the parts and the checked spec, or says why not.
+  let parts = null;
+  try { parts = JSON.parse(files.get("prism/prompt.json") || "null"); } catch {}
+  if (promptTag && promptTag.error) notes.push(promptTag.error);
+  const facets = checked.ok ? await prism.facetsOf(parts, checked.spec) : null;
+  const state = { ...(retained ? before : {}), phase, specKappa, logicKappa, spec: checked.spec || null, prompt: parts, facets, issues: checked.issues, notes, vectors: checked.vectors || 0, proof: retained ? before.proof : null, updated: now() };
   // A semantic proof survives wording changes; a release still identifies the older bytes.
   if (retained && before.phase === "published" && before.specKappa !== specKappa) state.publicationCurrent = false;
   // Compare the captured lifecycle and install its successor in the source transaction.
@@ -1655,10 +1674,13 @@ handlers.set("prism:status", async ({ appId }) => (await rulesOf(appId)) || null
 const prismCode = () => import("./prism-code/src/index.mjs");
 // The commit, and beside it the app's own card (shell/live/card-files.mjs): the page the template builds then
 // draws the app with the preview's components, from the same spec, and answers through the verified guest.
-// templateCommit itself stays prism-code's, byte for byte (tools/prism_template.mjs); the card files are the
-// app's, which the template's page reads and pins nothing about.
-async function publishCommit(args) {
-  const commit = await prism.templateCommit(args);
+// templateCommit itself stays prism-code's, byte for byte (tools/prism_template.mjs); the builder
+// (prism/builder/commit.mjs) then writes the app as a full Prism model, every facet beside the behavior, so
+// the template's gate proves the whole model; the card files are the app's, which the template's page reads
+// and pins nothing about.
+async function publishCommit(args, parts = null) {
+  const { facetCommit } = await import("./prism/builder/commit.mjs");
+  const commit = await facetCommit(await prism.templateCommit(args), { ...args, parts });
   const { cardFiles } = await import("./live/card-files.mjs");
   const load = async (p) => { const r = await fetch(new URL(p, BASE)); if (!r.ok) throw new Error(p + " answered " + r.status); return r.text(); };
   const { files } = await cardFiles(args.spec, { load });
@@ -1682,6 +1704,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
   const token = settings.githubAccessToken && settings.githubAccessToken.value;
   const refusal = !rules || !rules.spec ? "This app has no rules to build yet. Tell me what it decides, approve the rules, then say publish."
     : rules.phase !== "proved" && rules.phase !== "published" ? (rules.phase === "checked" ? "Reply approve first: Lean proves the rules, then the Prism SDK builds them." : `The rules are ${rules.phase === "proving" ? "being proved by Lean; say publish when it is done" : "not checked yet; ask me to fix them"}.`)
+    : rules.facets && !rules.facets.ok ? `Publishing writes the whole model, and its facets are not projected yet: ${rules.facets.issue} Ask me to fix the app's prompt, then say publish.`
     : !token ? "Publishing builds the app with the Prism SDK on GitHub Actions, in a public repository in your account. Connect GitHub in Settings, under Integrations, then say publish."
     : null;
   if (refusal) { await show(refusal); return finish(); }
@@ -1699,7 +1722,7 @@ async function publishTurn(chatId, appId, messages, userId, ref, intentId) {
     const permission=await authorizeGitHubPublication(request,{signal:abort.signal});
     return bindPublicationSource(permission,rules,()=>rulesOf(appId));
   };
-  const build = buildOnGitHub({ token, spec, source:rules.specKappa, authorize, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: publishCommit, open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
+  const build = buildOnGitHub({ token, spec, source:rules.specKappa, authorize, axioms: rules.axioms || {}, attestation: rules.proof && rules.proof.attestation_id, templateCommit: (args) => publishCommit(args, rules.prompt || null), open: async (bytes) => (await prismCode()).loadArchive(bytes), step, signal: abort.signal })
     .catch((e) => ({ ok: false, error: String((e && e.message) || e) }));
   const result = await Promise.race([build, stopped]);
   observing = false;
@@ -1924,7 +1947,7 @@ async function chatTurn(chatId, intent) {
         provenance = { receipt: await sealPaid(warmBody, rec, warmHit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost, warm: true };
       }
     } else if (route === "Paid") {
-      // Until the answer starts, the model's reasoning shows in Dyad's open Thinking block; the answer
+      // Until the answer starts, the model's reasoning shows in upstream's open Thinking block; the answer
       // replaces it, so the saved message, the history and the rules read only what the model answered.
       const thinking = (r) => onTextSoon("<think>" + r.replace(/<(\/?)(dyad|think)/g, "＜$1$2"));
       const { text, rec } = await paidGenerate(body, onTextSoon, abort.signal, thinking);
@@ -1937,9 +1960,9 @@ async function chatTurn(chatId, intent) {
       provenance = rec.finish === "length" ? { cut: true } : { receipt: await sealPaid(body, rec, hit.key), fingerprint: `${rec.model};${rec.provider || ""}`, cost: rec.cost };
     } else {
       // The device. Its window is about 3,000 tokens and a build request is several times that, so the
-      // device is asked only for the app's rules, with a prompt that fits, by the rules model (the chat
-      // ladder's models cannot write them); Forge draws the screen from the rules after the turn.
-      if (!engine.rules) await enqueueText("Loading the on-device rules model…");
+      // device is asked only for the app's rules, with a prompt that fits, by the device's model; Forge
+      // draws the screen from the rules after the turn.
+      if (!engine.rules) await enqueueText("Loading the on-device model…");
       const held = await rulesModel();
       const inst = held.instance;
       // Rules that checked are the base of an edit. Rules that did not are left out: given them, the small
@@ -1962,7 +1985,7 @@ async function chatTurn(chatId, intent) {
       await settleText();
       const text = prism.withoutThinking(res.text);
       window.__prism.lastDevice = res.text || "";
-      messages[messages.length - 1].model = "webgpu:" + held.model.fam; // the model that wrote the rules
+      messages[messages.length - 1].model = idOf(held); // the model that wrote the rules
       rememberSession(deviceMessages, res, text, held.model);
       await enqueueText(!execution.sourceEffects || /<dyad-spec>/.test(text) ? text : text + "\n\nThe on-device model did not write rules for this app. Ask again with the inputs and the answers, or choose a paid model in the model picker.");
       const rec = await inst.buildReceipt({ promptText: intent.prompt, ctxIds: [], turnIds: ids, outIds: res.outIds, paramsPatch: { repetitionPenalty: 1, maxTokens: maxNew } });
@@ -1977,10 +2000,10 @@ async function chatTurn(chatId, intent) {
     if (summary && (!chat.title || chat.title === "New chat")) { await updateStoredChat(await dbReady, chatId, { title: summary }); }
     if (execution.sourceEffects) {
       // Code a model wrote is never applied: the app's code and screen are projections of its module.
-      const wrote = parseDyadTags(full);
+      const wrote = parsePrismTags(full);
       const refusedCode = wrote.writes.length + wrote.deletes.length + wrote.renames.length + wrote.deps.length;
       const tags = { ...wrote, writes: [], deletes: [], renames: [], deps: [] };
-      const applied = await applyDyadTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
+      const applied = await applyPrismTags(appId, tags, { signal: abort.signal, source: projectSource, onCommit });
       let changed = applied.changed;
       hostedSource = applied.source;
       // A model writes the app's JSON spec and nothing else: LexLean in its turn is dropped before the
@@ -2286,6 +2309,7 @@ handlers.set("holo:publish", async ({ appId }) => {
   if (address !== composed.identities.archive_kappa) throw new Error("the page's address of the archive differs from PrismPM's: " + address);
   await assertBuildSourceCurrent(await dbReady, appId, captured);
   const done = await install(bytes, { appId, application: app.name, version });
+  tmNameApp("holo:" + done.path.split("/").filter(Boolean).pop(), appId, app.name);
   await row("granted", address);
   const record = { application: app.name, version, closure, attestation, provenance: prov, identities: composed.identities, directory: composed.directory, byteLength: bytes.length, modelId, viewBytes: view.length, guestBytes: guest.length };
   lastPublish = { record, bytes, guest, view, model: modelBytes, source: sourceBytes, page };

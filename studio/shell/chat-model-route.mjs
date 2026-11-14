@@ -1,5 +1,12 @@
 // FoundrySpecification.chatProviderRoutingBoundary: no implicit engine substitution.
 import {LargeLanguageModelSchema} from './chat-contracts.mjs';
+// The device's one model. Its former identifier names the same route, so a selection stored before the rename still resolves.
+const LOCAL_MODEL='webgpu:Bonsai',FORMER_LOCAL_MODEL='webgpu:BitNet';
+// The site's one cloud model, on Featherless. The models it was before name the same route, so a selection
+// stored while one of them was offered still resolves, to the model that answers now. Any other name is
+// kept exactly: only these identifiers were ever the site's.
+export const FEATHERLESS_MODEL='Qwen/Qwen3-30B-A3B-Instruct-2507';
+const FORMER_FEATHERLESS_MODELS=['zai-org/GLM-5.3-Flash','deepseek-ai/DeepSeek-V3.2'];
 const fail=code=>Object.assign(new Error(code==='unsupportedChatProvider'?'The chat provider is unsupported':'The chat model selection is invalid'),{code});
 export function chatModelRoute(chatSelection,defaultSelection){
  const chosen=chatSelection??defaultSelection;
@@ -9,6 +16,7 @@ export function chatModelRoute(chatSelection,defaultSelection){
  }catch{throw fail('invalidChatModelSelection');}
  const {provider,name}=chosen;
  if(!['local','openrouter','featherless'].includes(provider))throw fail('unsupportedChatProvider');
- if(provider==='local'&&name!=='webgpu:BitNet')throw fail('invalidChatModelSelection');
- return Object.freeze({provider,model:provider==='local'?name:provider+'/'+name,paid:provider!=='local'});
+ if(provider==='local'&&name!==LOCAL_MODEL&&name!==FORMER_LOCAL_MODEL)throw fail('invalidChatModelSelection');
+ const cloud=provider==='featherless'&&FORMER_FEATHERLESS_MODELS.includes(name)?FEATHERLESS_MODEL:name;
+ return Object.freeze({provider,model:provider==='local'?LOCAL_MODEL:provider+'/'+cloud,paid:provider!=='local'});
 }

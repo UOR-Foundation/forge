@@ -128,7 +128,7 @@ fn openapi() -> String {
     let sample = Completion {
         id: "chatcmpl-3f1c9a2b7d40".to_owned(),
         created: "1757500000".to_owned(),
-        model: "webgpu:BitNet".to_owned(),
+        model: "webgpu:Bonsai".to_owned(),
         text: "Hello.".to_owned(),
         fingerprint: "blake3:e41292a4…;blake3:9c0d…".to_owned(),
         receipt: "did:holo:sha256:…".to_owned(),
@@ -148,11 +148,11 @@ fn openapi() -> String {
             { "url": "http://127.0.0.1:11435/v1", "description": "the local relay, freeinference-relay.py from this page, for native clients" }
         ],
         "paths": {
-            "/models": { "get": { "operationId": "listModels", "responses": { "200": { "description": "the resident model", "content": { "application/json": { "example": parse(encodeModels(&["webgpu:BitNet".to_owned()])) } } } } } },
+            "/models": { "get": { "operationId": "listModels", "responses": { "200": { "description": "the resident model", "content": { "application/json": { "example": parse(encodeModels(&["webgpu:Bonsai".to_owned()])) } } } } } },
             "/chat/completions": { "post": {
                 "operationId": "createChatCompletion",
                 "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatCompletionRequest" },
-                    "example": { "model": "webgpu:BitNet", "messages": [{ "role": "user", "content": "Hello" }], "max_tokens": 512, "temperature": 0.7, "stream": true } } } },
+                    "example": { "model": "webgpu:Bonsai", "messages": [{ "role": "user", "content": "Hello" }], "max_tokens": 512, "temperature": 0.7, "stream": true } } } },
                 "responses": {
                     "200": { "description": "the answer; with stream: true, chunks as text/event-stream ending in data: [DONE]",
                         "headers": {

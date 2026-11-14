@@ -390,7 +390,7 @@ jobs:
       - name: The renderer preserves typed host refusals and recovers
         if: steps.forge-reuse.outputs.cache-hit != 'true'
         run: node tools/renderer_boundary.mjs
-      - name: Every screen calls the kit's shadcn/ui components as Radix takes them (the build above refuses Base UI or a Dyad copy in the bundle)
+      - name: Every screen calls the kit's shadcn/ui components as Radix takes them (the build above refuses Base UI or an upstream copy in the bundle)
         if: steps.forge-reuse.outputs.cache-hit != 'true'
         run: cd vendor/dyad && node hologram.typecheck.mjs
       - name: The Experience gate, the stylesheet's hit area, durations and reduced-motion rule held to the kernel's answers

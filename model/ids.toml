@@ -515,6 +515,48 @@ suite = "telemetry"
 statement = "The device never keeps more than 512 turns"
 
 [[id]]
+id = "TL-22"
+level = "build"
+suite = "telemetry"
+statement = "An app the kernel refused anything is never shown as all clear"
+
+[[id]]
+id = "TL-23"
+level = "build"
+suite = "telemetry"
+statement = "An app is never shown as reaching a site it was never allowed to reach"
+
+[[id]]
+id = "TL-24"
+level = "build"
+suite = "telemetry"
+statement = "A refused site is never shown as only allowed"
+
+[[id]]
+id = "TL-25"
+level = "build"
+suite = "telemetry"
+statement = "A refusal is never counted as allowed, and an allowance never as a refusal"
+
+[[id]]
+id = "TL-26"
+level = "build"
+suite = "telemetry"
+statement = "Every allowance and every refusal is counted once"
+
+[[id]]
+id = "TL-27"
+level = "build"
+suite = "telemetry"
+statement = "The time an app or a site was last seen never moves back"
+
+[[id]]
+id = "TL-28"
+level = "build"
+suite = "telemetry"
+statement = "The device never keeps more than 256 apps"
+
+[[id]]
 id = "LL-01"
 level = "build"
 suite = "live-lexlean"
@@ -837,3 +879,15 @@ id = "FA-85"
 level = "build"
 suite = "proof-reuse"
 statement = "A theorem Lean proved on the same declarations is reused instead of proved again, and only changed theorems go to Lean"
+
+[[id]]
+id = "FA-86"
+level = "build"
+suite = "in-tab-kernel-verdict"
+statement = "A proof verdict is decided by the Prism guest from addresses the tab derived and the result of a kernel run in the tab, never from a server reply"
+
+[[id]]
+id = "PM-01"
+level = "build"
+suite = "product-model"
+statement = "Foundry is one Prism model whose architecture, design, features, security, quality and compliance facets are projected from app/product.json and the kernel, and whose quality thresholds are the kernel's own terms"

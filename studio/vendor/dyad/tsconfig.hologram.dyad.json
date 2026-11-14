@@ -1,5 +1,5 @@
 {
-  // hologram-forge (ours, see VENDORED.md): the same files as tsconfig.hologram.json with Dyad's own ui, the
+  // hologram-forge (ours, see VENDORED.md): the same files as tsconfig.hologram.json with upstream's own ui, the
   // baseline hologram.typecheck.mjs compares the shell's build against.
   "extends": "./tsconfig.app.json",
   "compilerOptions": {

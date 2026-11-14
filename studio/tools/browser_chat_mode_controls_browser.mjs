@@ -53,7 +53,7 @@ try {
   const explicit=await call(page,'create-app',{name:'explicit-build',initialChatMode:'build'});assert.equal((await get(page,'chats',explicit.chatId)).chatMode,'build');
   const beforeInvalid=await page.evaluate(()=>window.__host.all('apps'));
   const refused=await page.evaluate(async()=>{try{await window.electron.ipcRenderer.invoke('create-app',{name:'unsupported',initialChatMode:'local-agent'});}catch(e){return e.code;}});assert.equal(refused,'invalidChatExecutionMode');assert.deepEqual(await page.evaluate(()=>window.__host.all('apps')),beforeInvalid);
-  await call(page,'set-user-settings',{selectedChatMode:'build',defaultChatMode:'build',selectedModel:{provider:'featherless',name:'zai-org/GLM-5.3-Flash'},providerSettings:{featherless:{apiKey:{value:'mode-controls-fixture'}}}});
+  await call(page,'set-user-settings',{selectedChatMode:'build',defaultChatMode:'build',selectedModel:{provider:'featherless',name:'Qwen/Qwen3-30B-A3B-Instruct-2507'},providerSettings:{featherless:{apiKey:{value:'mode-controls-fixture'}}}});
   await page.evaluate(({appId,spec})=>window.__prism.rulesAfterTurn(appId,'<dyad-spec>'+JSON.stringify(spec)+'</dyad-spec>'),{appId,spec:JSON.parse(fs.readFileSync(new URL('./fixtures/live/rsvp.json',import.meta.url),'utf8'))});
   await page.goto(base+'chat?id='+chatId+'&appId='+appId);await mode.waitFor();await waitValue('ask');
   const chat=()=>get(page,'chats',chatId),waitChat=async value=>{const deadline=Date.now()+10000;while((await chat()).chatMode!==value){assert.ok(Date.now()<deadline);await new Promise(r=>setTimeout(r,20));}await waitValue(value);};

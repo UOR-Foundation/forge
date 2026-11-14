@@ -1,0 +1,84 @@
+{
+ "guests": {
+  "compared": 5,
+  "agree": 5,
+  "driverOnly": 13,
+  "rows": [
+   {
+    "theorem": "PrismTextRequest.App.clearEmpties",
+    "driver": [],
+    "attestation": [],
+    "agree": true
+   },
+   {
+    "theorem": "PrismTextRequest.App.emptyIgnored",
+    "driver": [
+     "Quot.sound",
+     "propext"
+    ],
+    "attestation": [
+     "Quot.sound",
+     "propext"
+    ],
+    "agree": true
+   },
+   {
+    "theorem": "PrismTextRequest.App.longIgnored",
+    "driver": [
+     "Quot.sound",
+     "propext"
+    ],
+    "attestation": [
+     "Quot.sound",
+     "propext"
+    ],
+    "agree": true
+   },
+   {
+    "theorem": "PrismTextRequest.App.staleIgnored",
+    "driver": [
+     "Quot.sound",
+     "propext"
+    ],
+    "attestation": [
+     "Quot.sound",
+     "propext"
+    ],
+    "agree": true
+   },
+   {
+    "theorem": "PrismTextRequest.App.startsEmpty",
+    "driver": [],
+    "attestation": [],
+    "agree": true
+   }
+  ]
+ },
+ "payment": {
+  "compared": 2,
+  "agree": 2,
+  "driverOnly": 0,
+  "rows": [
+   {
+    "theorem": "PrismTextRequest.Payment.clearAdvances",
+    "driver": [
+     "propext"
+    ],
+    "attestation": [
+     "propext"
+    ],
+    "agree": true
+   },
+   {
+    "theorem": "PrismTextRequest.Payment.viewKeepsRevision",
+    "driver": [
+     "propext"
+    ],
+    "attestation": [
+     "propext"
+    ],
+    "agree": true
+   }
+  ]
+ }
+}

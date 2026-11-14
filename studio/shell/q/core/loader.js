@@ -6,7 +6,7 @@
 // still exposed for the probe + system-monitor panels.)
 
 import init, { kappa, qvac_load_model, qvac_load_gpu, qvac_tokenize, qvac_continue, qvac_gpu_manifest, qvac_gpu_tensor, qvac_gpu_free, qvac_panic_hook } from "../pkg/holospaces_web.js";
-import { createQvacGPU } from "../qvac-gpu.js?v=72";   // v72 = q1 kernels + spec-head qk-norm lift (W0.2)
+import { createQvacGPU } from "../qvac-gpu.js?v=73";   // v73 = ternary Bonsai (q1 + nonzero plane) + YaRN; v72 = q1 kernels + spec-head qk-norm lift (W0.2)
 import { modelAsSource } from "./semantic.js";   // C2: a loaded model carries a W3C @type (schema:SoftwareSourceCode)
 
 // the model κ-object's W3C linked-data view — content-addressed identity (Law L1) + schema.org type.
@@ -64,6 +64,12 @@ export const MODELS = [
   // the verify window) + q1 batched GEMM + f32-KV window save — n-gram drafting ON, greedy batched
   // verify keeps output BYTE-IDENTICAL (bonsai8-spec.html gate). ?spec=0/1 A/B as everywhere.
   { fam: "Bonsai", name: "Bonsai-8B · 1-bit", spec: true, kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main", holoUrl: "https://huggingface.co/HOLOGRAMTECH/q-bonsai-8b/resolve/main/q-bonsai-8b.v1.holo", manifestKappa: "did:holo:sha256:a0dc81f26ec5ce98b28ee9c1fab620e91c20720f777e1de6bc416317f54d27e2", size: "1.16 GB", fmt: "q1 1-bit κ", cap: 900, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, qwen: true, rep: 1.05, kappa: true },
+  // TERNARY BONSAI (PrismML Ternary-Bonsai-1.7B, Apache-2.0): Qwen3-1.7B in {-1,0,+1} with one f16 scale per 128
+  // weights, passed through untouched (no re-quant) from the group-128 GGUF. Rides the q1 path with a second,
+  // nonzero bit plane (manifest.tern) and YaRN rotary scaling (manifest.yarn, as the GGUF declares it).
+  // Measured 2026-11-13 on a Radeon 8050S iGPU: 85-114 tok/s, greedy output byte-identical to llama.cpp on 4 of 5
+  // prompts. spec stays off: the n-gram drafter measured slower here (31% of drafted tokens accepted).
+  { fam: "TernaryBonsai", name: "Ternary-Bonsai-1.7B · ternary", kappaUrl: "https://huggingface.co/HOLOGRAMTECH/q-ternary-bonsai-1.7b/resolve/main", holoUrl: "https://huggingface.co/HOLOGRAMTECH/q-ternary-bonsai-1.7b/resolve/main/q-ternary-bonsai-1.7b.v1.holo", size: "0.42 GB", fmt: "q1+tern 2-bit κ", cap: 900, ctx: 3000, kv4: true, gpu: true, gpuOnly: true, chat: true, qwen: true, qwen3: true, rep: 1.05, kappa: true },
   // Qwen κ-objects (q3f/q4) were pruned from disk for space — re-derive via compile2bit, then re-list.
 ];
 const kvOf = (m) => Math.max(96, (m.ctx || m.cap) + 8);
@@ -154,7 +160,7 @@ export async function loadModel(m, { onStatus = noop, onProgress = noop } = {}) 
 async function loadKappa(m, onStatus, onProgress) {
   const _mk = (window.__loadMarks = { t0: performance.now() });   // W0: per-stage load marks
   onStatus("Loading κ-object manifest…");
-  const ld = await import("../holo-load2bit.mjs?v=2");
+  const ld = await import("../holo-load2bit.mjs?v=3");
   // Law L5: pin the manifest κ when the catalog supplies one (m.manifestKappa, or a string m.kappa).
   // Until every model carries a pin, unpinned entries load explicitly (allowUnpinned) — the gap is then
   // a visible data task (populate manifestKappa), not a silent trust of an unauthenticated root.

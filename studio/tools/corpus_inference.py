@@ -70,7 +70,7 @@ case("long transcript", [("user", f"turn {i}") if i % 2 == 0 else ("assistant", 
 case("odd role", [("tool", "result"), ("user", "and?")])
 case("whitespace content", [("user", "   "), ("assistant", "\t")])
 case("quotes and braces", [("user", 'say "hi" {now}')], 8, 8, "0.7")
-case("model like names in content", [("user", "webgpu:BitNet smollm2")], 100, 100, "0.1")
+case("model like names in content", [("user", "webgpu:Bonsai smollm2")], 100, 100, "0.1")
 
 # The wire vectors: what the encoders in the model must emit, byte for byte, restated once in
 # Python with json.dumps in the encoders' key order. Python escapes only what the model escapes
@@ -93,11 +93,11 @@ def vector(name, completion, delta="", error=("", ""), ids=()):
     wire.append({"name": name, "completion": completion, "delta": delta, "error": {"message": error[0], "type": error[1]}, "ids": list(ids),
                  "completion_bytes": completion_bytes(completion), "role_bytes": role_bytes(completion), "delta_bytes": delta_bytes(completion, delta),
                  "final_bytes": final_bytes(completion), "error_bytes": error_bytes(*error), "models_bytes": models_bytes(ids), "done_bytes": "[DONE]"})
-C = lambda **k: {"id": "chatcmpl-1", "created": "1789000000", "model": "webgpu:BitNet", "text": "", "fingerprint": "", "receipt": "", **k}
-vector("plain", C(text="One planet is Earth.", fingerprint="did:holo:sha256:aa;did:holo:sha256:bb", receipt="blake3:cc"), "Earth", ("messages must not be empty", "invalid_request_error"), ["webgpu:BitNet"])
+C = lambda **k: {"id": "chatcmpl-1", "created": "1789000000", "model": "webgpu:Bonsai", "text": "", "fingerprint": "", "receipt": "", **k}
+vector("plain", C(text="One planet is Earth.", fingerprint="did:holo:sha256:aa;did:holo:sha256:bb", receipt="blake3:cc"), "Earth", ("messages must not be empty", "invalid_request_error"), ["webgpu:Bonsai"])
 vector("empty", C(), "", ("", ""), [])
 vector("escapes", C(id='q"uote', text='back\\slash "quoted"\nnew line\r\ttab', fingerprint="f;g", receipt="r"), 'say "hi"\n', ('a "b" \\ c\n', "server_error"), ["a", "b\"c", "d"])
-vector("unicode", C(text="κ addressed, naïve café, 日本語, emoji 🙂", receipt="blake3:00"), "🙂", ("日本語", "invalid_request_error"), ["webgpu:BitNet", "webgpu:Qwen"])
+vector("unicode", C(text="κ addressed, naïve café, 日本語, emoji 🙂", receipt="blake3:00"), "🙂", ("日本語", "invalid_request_error"), ["webgpu:Bonsai", "webgpu:Qwen"])
 vector("long", C(text="x" * 4000, created="2147483647"), "y" * 1000, ("z" * 300, "server_error"), ["m%d" % i for i in range(12)])
 wire_path = root / "model" / "wire.json"
 wire_path.write_text(json.dumps(wire, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

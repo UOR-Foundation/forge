@@ -127,7 +127,7 @@ def theorem(name, statement, proof="reflexivity"): return {"axioms": AXIOMS.get(
 
 def message(role, content): return record("Message", role=s(role), content=s(content))
 def request(messages, max_tokens=None, seed=None, temperature=""):
-    return record("Request", model=s("webgpu:BitNet"), messages=messages,
+    return record("Request", model=s("webgpu:Bonsai"), messages=messages,
                   maxTokens=ctor("Option.none", targs=[U64]) if max_tokens is None else ctor("Option.some", u64(max_tokens), targs=[U64]),
                   seed=ctor("Option.none", targs=[U64]) if seed is None else ctor("Option.some", u64(seed), targs=[U64]),
                   temperature=s(temperature))
@@ -231,7 +231,7 @@ decls = [
         identicalLabel=s("Checked, identical"),
         noGpuLabel=s("This browser cannot run the model. Try Chrome or Edge on a computer."),
         offlineLabel=s("offline, working from your device"),
-        modelLabel=s("BitNet 2B, on your device"),
+        modelLabel=s("Bonsai 1.7B, on your device"),
         appearanceLabel=s("Appearance"),
         darkLabel=s("Dark"),
         lightLabel=s("Light"),
@@ -246,7 +246,7 @@ decls = [
         providerBusyLabel=s("That model is busy right now. Try again or pick another"), paidOfflineLabel=s("Paid models need the network"),
         # The ladder's words: the small model answers while the larger one loads, and the swap is announced once.
         ladderLabel=s("The best model your device has ready"), seedModelLabel=s("SmolLM2 360M, on your device"),
-        largerLoadingLabel=s("getting BitNet 2B behind it"), promotedLabel=s("Now answering with BitNet 2B"),
+        largerLoadingLabel=s("getting Bonsai 1.7B behind it"), promotedLabel=s("Now answering with Bonsai 1.7B"),
         warmupLabel=s("Answered by OpenRouter while your model loads"), siteKeyLabel=s("Included, paid by this site"),
         paidModels=cons(record("PaidModel", id=s("qwen/qwen3.8-flash"), label=s("Qwen 3.8 Flash")),
                    cons(record("PaidModel", id=s("deepseek/deepseek-v4.1-flash"), label=s("DeepSeek V4.1 Flash")),
@@ -514,10 +514,10 @@ decls = [
     theorem("decide_execute", eq(call("decide", b(False), b(True)), ctor("Decision.Execute"))),
     theorem("decide_refuse", eq(call("decide", b(False), b(False)), ctor("Decision.Refuse"))),
     theorem("memoMatches_ownKey",
-        eq(call("memoMatches", memo("webgpu:BitNet"), strings(s("webgpu:BitNet")), s("p"), s("q")), b(True)), proof="decide"),
+        eq(call("memoMatches", memo("webgpu:Bonsai"), strings(s("webgpu:Bonsai")), s("p"), s("q")), b(True)), proof="decide"),
     theorem("memoMatches_otherPrompt",
-        eq(call("memoMatches", memo("webgpu:BitNet"), strings(s("webgpu:BitNet")), s("x"), s("q")), b(False)), proof="decide"),
+        eq(call("memoMatches", memo("webgpu:Bonsai"), strings(s("webgpu:Bonsai")), s("x"), s("q")), b(False)), proof="decide"),
     theorem("memoMatches_otherModel",
-        eq(call("memoMatches", memo("webgpu:BitNet"), strings(s("smollm2")), s("p"), s("q")), b(False)), proof="decide"),
+        eq(call("memoMatches", memo("webgpu:Bonsai"), strings(s("smollm2")), s("p"), s("q")), b(False)), proof="decide"),
 ]
 

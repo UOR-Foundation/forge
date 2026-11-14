@@ -1,0 +1,10 @@
+{
+ "schema": "prism/in-tab-library-binding/1",
+ "lean": "f054605aea4b840552cca2e725580bffd1e1b704",
+ "kernel": "c1300379601e2dba5a1697768da2e398d12cd0a37b961b448c504f216b753736",
+ "loader": "2be78d536a150ee95eea5f84aa8fb4e10ff6c04ff40b93b11ad93c7df2242425",
+ "library": "48cc5e5427248794605c59353bbfb6362b0202c6e88b5a38e6ddfac42e03409e",
+ "declarations": 5038,
+ "sentToTheKernel": 4684,
+ "judgedBy": "check_whole, every declaration, in this kernel"
+}

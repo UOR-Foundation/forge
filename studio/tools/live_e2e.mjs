@@ -1,7 +1,7 @@
 // The End-to-end gate: the live preview in the real Forge (the built renderer, core, worker and kernel)
 // in Chromium, against the budgets. A chat turn's stream is replayed through the host's own live
 // functions in the order the turn calls them (showLive on the first spec token, pushLive per projection,
-// rulesAfterTurn at the end), so everything but the model's network call is the real path: Dyad's preview
+// rulesAfterTurn at the end), so everything but the model's network call is the real path: Upstream's preview
 // panel, the service worker's sandboxed route, the frame, the table worker, click to edit, the checker,
 // the kernel.
 //
@@ -159,7 +159,7 @@ if (lex) {
   log("canonical source stored", stored === want.source ? `prism/${want.name}.lex.tex, ${want.source.length} bytes, byte for byte` : "NO: " + String(stored).slice(0, 120));
 }
 
-// the live frame inside Dyad's preview panel
+// the live frame inside upstream's preview panel
 const previewElement = await page.getByTestId("preview-iframe-element").elementHandle();
 const frame = await previewElement.contentFrame();
 log("live frame in preview", frame ? "yes" : "NO");

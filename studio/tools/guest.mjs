@@ -39,7 +39,7 @@ for (const c of cases) {
   // A JS number cannot carry a u64 seed above 2^53; the page cannot send one either. The crate test
   // covers that case; the guest skips it and says so.
   if (c.seed != null && !Number.isSafeInteger(c.seed)) { console.log(`guest: ${c.name} skipped for OpenRouter bytes (seed above 2^53 is not a JS number)`); continue; }
-  const request = { model: "webgpu:BitNet", messages: c.messages, max_tokens: c.max_tokens, seed: c.seed, temperature: c.temperature == null ? "" : c.temperature };
+  const request = { model: "webgpu:Bonsai", messages: c.messages, max_tokens: c.max_tokens, seed: c.seed, temperature: c.temperature == null ? "" : c.temperature };
   for (const stream of [true, false]) {
     const got = run({ op: "encode-openrouter-request", model: c.openrouter_model, request, stream }).bytes;
     const want = stream ? c.openrouter_stream : c.openrouter_plain;
