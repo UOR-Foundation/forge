@@ -149,7 +149,7 @@ export async function sealPaid(body, rec, key) {
 
 // ---- the engine: Hologram Q on WebGPU, resident across turns, warm KV as q-brain-fast does it.
 //
-// The ladder. A device that has never seen this page holds no weights, and the large model is 424 MB.
+// The ladder. A device that has never seen this page holds no weights, and the large model is 1.16 GB.
 // So the small one loads first and answers, the large one loads behind it, and the swap happens only
 // when the model's own `promote` rule says so: resident, and measured fast enough to be worth it. The
 // rule is verified (Object.promote, four theorems); nothing here decides it. A request that names the
@@ -204,7 +204,7 @@ function loadLarge(word) {
   engine.largeLoading = (async () => {
     const { L } = await mods();
     const V = await viewReady();
-    const entry = L.MODELS.find((m) => m.fam === "TernaryBonsai");   // Ternary Bonsai 1.7B, the device's model
+    const entry = L.MODELS.find((m) => m.fam === "Bonsai");   // 1-bit Bonsai 8B, the device's model
     // Behind the seed it is the larger model arriving; without a seed it is the only model there is.
     const held = await residentModel(entry, word || V.largerLoadingLabel);
     engine.large = held;
@@ -238,10 +238,10 @@ async function measure(held) {
     return tokps;
   } catch { return 0; }
 }
-// The model that writes an app's rules on the device: the device's one model, Ternary Bonsai 1.7B, the same
-// resident engine that answers chat, so a rules turn downloads and holds nothing more. Measured 2026-11-13 with
-// DEVICE_RULES on five requests: 1 of 5 passed checkSpec, at 85 to 114 tokens a second. The checker and the
-// approval card still stand between its rules and a proof.
+// The model that writes an app's rules on the device: the device's one model, 1-bit Bonsai 8B, the same
+// resident engine that answers chat, so a rules turn downloads and holds nothing more. Measured 2026-11-14 with
+// DEVICE_RULES on the same ten requests: Ternary Bonsai 1.7B passed checkSpec on 1, Bonsai 8B on most, at 35 to
+// 75 s a spec. The checker and the approval card still stand between its rules and a proof.
 export async function rulesModel() {
   if (!engine.rules) engine.rules = await heldFor(MODEL_ID);
   return engine.rules;

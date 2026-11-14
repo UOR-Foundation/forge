@@ -231,7 +231,7 @@ decls = [
         identicalLabel=s("Checked, identical"),
         noGpuLabel=s("This browser cannot run the model. Try Chrome or Edge on a computer."),
         offlineLabel=s("offline, working from your device"),
-        modelLabel=s("Bonsai 1.7B, on your device"),
+        modelLabel=s("Bonsai 8B, on your device"),
         appearanceLabel=s("Appearance"),
         darkLabel=s("Dark"),
         lightLabel=s("Light"),
@@ -246,7 +246,7 @@ decls = [
         providerBusyLabel=s("That model is busy right now. Try again or pick another"), paidOfflineLabel=s("Paid models need the network"),
         # The ladder's words: the small model answers while the larger one loads, and the swap is announced once.
         ladderLabel=s("The best model your device has ready"), seedModelLabel=s("SmolLM2 360M, on your device"),
-        largerLoadingLabel=s("getting Bonsai 1.7B behind it"), promotedLabel=s("Now answering with Bonsai 1.7B"),
+        largerLoadingLabel=s("getting Bonsai 8B behind it"), promotedLabel=s("Now answering with Bonsai 8B"),
         warmupLabel=s("Answered by OpenRouter while your model loads"), siteKeyLabel=s("Included, paid by this site"),
         paidModels=cons(record("PaidModel", id=s("qwen/qwen3.8-flash"), label=s("Qwen 3.8 Flash")),
                    cons(record("PaidModel", id=s("deepseek/deepseek-v4.1-flash"), label=s("DeepSeek V4.1 Flash")),
