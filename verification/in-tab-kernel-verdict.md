@@ -10,7 +10,7 @@ The protocol has exactly 72 request words and three response words, in bounded l
 
 The FA-86 ID, scenario and failing test preceded the implementation (`just new-capability`; the test panicked "FA-86 is registered and not built").
 
-Lean proved the model and the protocol on the hosted verifier, profile `prism-app`: six modules, attestation `071f5c38f04bfaaa7c42b160df70f0316899c1b83386547af8746d97c2a183c3` (`in-tab-kernel-verdict-proof.json`). That covers the model's 15 theorems and nine wire theorems, each a corpus vector Lean evaluates. The hosted verifier is a diagnostic; it does not replace the locked SDK.
+Lean proved the model and the protocol on the hosted verifier, profile `prism-app`: six modules, attestation `071f5c38f04bfaaa7c42b160df70f0316899c1b83386547af8746d97c2a183c3` (`in-tab-kernel-verdict-proof.json`). That run covered the model's theorems and nine wire theorems, each a corpus vector Lean evaluates. The hosted verifier is a diagnostic; it does not replace the locked SDK.
 
 In the locked SDK image, `lexlean fmt --check --all` and `lexlean lock --check` pass on all 24 modules.
 
@@ -22,9 +22,13 @@ Five existing suites pinned the kernel's acceptance root as `previewAcceptance`;
 
 ## The Lean stage's limit
 
-The SDK builds the app's Lean within 600 seconds (`application-lean`). CI ran past it twice with this capability (`PP5007`, runs 43501078726 and 43506802819); embedding fewer vectors did not change that. Timed module by module in a 6 GB container here, the whole build is about 221 seconds, of which `EventProtocol` is 129, and `InTabKernel` was 24: 18 of them one theorem, `noVerdictFromTheServer`, stated over two arbitrary evidence records. It now states the same fact over one: replacing only what a server said leaves the verdict as it was (`withServerSaying`), which Lean proves by unfolding with no axiom. `InTabKernel` builds in 2.2 seconds.
+The SDK builds the application's Lean within 600 seconds (`application-lean`). With this capability CI ran past it four times (`PP5007`; runs 43501078726, 43506802819, 43523926, 43530074457). Three explanations were tried and were wrong or beside the point: too many embedded vectors, one slow theorem, and a longer dispatcher. Each change stays because it is measured to be cheaper, but none was the cause.
 
-That was not enough: CI ran past the limit a third time (run 43523926, `52fbbd4`). The longest chain is `EventProtocol`, `ForgeKernel`, `ForgeKernelProofs`, and this capability lengthened `ForgeKernel`: main's 21.7 seconds became 28.0. Wrapping the dispatcher's whole body in one more arm made Lean elaborate all of it again. The body now stays whole under the name `dispatchApplication`, and `dispatch` is a small definition in front of it; timed against main in the same container, that costs about a second, inside the run-to-run noise. The embedded vectors cost the rest, so the guest carries three. Main builds in about 131 seconds here and passes in CI, where the same build is about five times slower: main is already near the limit without this capability, and `EventProtocol` is 77 of those seconds.
+The cause, read from the SDK's own workspace after a local run of the stage: the application build stages only the runtime modules the application's modules import, and builds them from source. `InTabKernel` held its arithmetic theorems, so it imported LexLean's `Laws` runtime, which no other module of the application does (`ForgeKernelProofs` does, and it is not part of the application build). `Laws` then did not finish: its `.olean` was written in 20 seconds and its build was still running when the stage was stopped ten minutes later. `InTabKernel`, `InTabKernelProtocol` and `ForgeKernel` waited behind it.
+
+`InTabKernel` now holds the definitions and the one theorem Lean proves by unfolding, and imports no `Laws`. The 14 arithmetic theorems are in `InTabKernelProofs`, which `ForgeKernelProofs` imports, as `ForgeKernel` and `ForgeKernelProofs` are already divided.
+
+Measured on the way, module by module in a 6 GB container: main's modules build in about 131 seconds, `EventProtocol` 77 of them. `noVerdictFromTheServer`, first stated over two arbitrary evidence records, took 18 seconds; stated over one (`withServerSaying`) it is proved by unfolding with no axiom. Wrapping the dispatcher's whole body in one more arm took `ForgeKernel` from 21.7 to 28.0 seconds; the body now stays whole as `dispatchApplication` behind a small `dispatch`.
 
 ## Open qualification
 

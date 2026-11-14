@@ -68,7 +68,14 @@ test('malformed replies and a word that is not its code refuse', () => {
 
 test('the model, the protocol and the kernel name one authority, and the authored files have not drifted', () => {
   const model = read('../../app/src/InTabKernel.lex.tex'), protocol = read('../../app/src/InTabKernelProtocol.lex.tex'), kernel = read('../../app/src/ForgeKernel.lex.tex'), codec = read('../shell/in-tab-verdict-codec.mjs');
-  assert.equal((model.match(/theorem\{/g) || []).length, 15);
+  // The module the guest is built from holds the definitions and the one theorem Lean proves by unfolding. The
+  // arithmetic theorems sit apart: they need LexLean's Laws runtime, which the application build must not stage.
+  const proofs = read('../../app/src/InTabKernelProofs.lex.tex');
+  assert.equal((model.match(/theorem\{/g) || []).length, 1);
+  assert.ok(model.includes('name: noVerdictFromTheServer') && !model.includes('linear_arithmetic'));
+  assert.equal((proofs.match(/theorem\{/g) || []).length, 14);
+  assert.ok(proofs.includes('\\importmodule{InTabKernel}') && read('../../app/src/ForgeKernelProofs.lex.tex').includes('\\importmodule{InTabKernelProofs}'));
+  assert.ok(!protocol.includes('InTabKernelProofs') && !kernel.includes('InTabKernelProofs'));
   assert.equal((protocol.match(/theorem\{/g) || []).length, 9);
   assert.ok(protocol.includes('InTabKernel::verdictCode') && protocol.includes('serverSays := 0'));
   assert.ok(kernel.includes('\\importmodule{InTabKernelProtocol}') && kernel.includes('InTabKernelProtocol::dispatchVerdict') && kernel.includes('else (dispatchApplication value))') && kernel.includes('acceptanceVectors := (verdictAcceptance)'));
