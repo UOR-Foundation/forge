@@ -1,0 +1,480 @@
+\begin{lexlean}{Security}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\useglossary{prism.sec@1.0.0}
+\importmodule{Foundation.Sec}
+\importmodule{Production.ThreatModel}
+\importmodule{Architecture}
+\title{security threat}
+\begin{semanticmodule}
+definition{
+  name: assetKernelGuest,
+  parameters: [],
+  result: Foundation.Sec::Asset,
+  body: (record Foundation.Sec::Asset {index := 0, componentIndex := 1})
+}
+
+definition{
+  name: assetProjectSource,
+  parameters: [],
+  result: Foundation.Sec::Asset,
+  body: (record Foundation.Sec::Asset {index := 1, componentIndex := 7})
+}
+
+definition{
+  name: assetProofStatus,
+  parameters: [],
+  result: Foundation.Sec::Asset,
+  body: (record Foundation.Sec::Asset {index := 2, componentIndex := 8})
+}
+
+definition{
+  name: assetProviderKeys,
+  parameters: [],
+  result: Foundation.Sec::Asset,
+  body: (record Foundation.Sec::Asset {index := 3, componentIndex := 7})
+}
+
+definition{
+  name: assetPublishedHolo,
+  parameters: [],
+  result: Foundation.Sec::Asset,
+  body: (record Foundation.Sec::Asset {index := 4, componentIndex := 2})
+}
+
+definition{
+  name: threatDeniedGrantIgnored,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 0})
+}
+
+definition{
+  name: threatDraftSeenByTheHostedChecker,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 1})
+}
+
+definition{
+  name: threatInferenceWithoutConsent,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 2})
+}
+
+definition{
+  name: threatLeakedProviderKey,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 3})
+}
+
+definition{
+  name: threatStaleProofReused,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 4})
+}
+
+definition{
+  name: threatSubstitutedHolo,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 5})
+}
+
+definition{
+  name: threatSubstitutedHost,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 6})
+}
+
+definition{
+  name: threatSubstitutedKernelGuest,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 7})
+}
+
+definition{
+  name: threatUngrantedNetworkUse,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 8})
+}
+
+definition{
+  name: threatUnprovedAppShownAsProved,
+  parameters: [],
+  result: Foundation.Sec::Threat,
+  body: (record Foundation.Sec::Threat {index := 9})
+}
+
+definition{
+  name: riskDeniedGrantIgnored,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 0, assetIndex := 1, threatIndex := 0, likelihood := (ctor Foundation.Sec::Likelihood.low), impact := (ctor Foundation.Sec::Impact.major)})
+}
+
+definition{
+  name: riskDraftSeenByTheHostedChecker,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 1, assetIndex := 1, threatIndex := 1, likelihood := (ctor Foundation.Sec::Likelihood.high), impact := (ctor Foundation.Sec::Impact.minor)})
+}
+
+definition{
+  name: riskInferenceWithoutConsent,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 2, assetIndex := 1, threatIndex := 2, likelihood := (ctor Foundation.Sec::Likelihood.medium), impact := (ctor Foundation.Sec::Impact.major)})
+}
+
+definition{
+  name: riskLeakedProviderKey,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 3, assetIndex := 3, threatIndex := 3, likelihood := (ctor Foundation.Sec::Likelihood.medium), impact := (ctor Foundation.Sec::Impact.major)})
+}
+
+definition{
+  name: riskStaleProofReused,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 4, assetIndex := 2, threatIndex := 4, likelihood := (ctor Foundation.Sec::Likelihood.low), impact := (ctor Foundation.Sec::Impact.critical)})
+}
+
+definition{
+  name: riskSubstitutedHolo,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 5, assetIndex := 4, threatIndex := 5, likelihood := (ctor Foundation.Sec::Likelihood.low), impact := (ctor Foundation.Sec::Impact.critical)})
+}
+
+definition{
+  name: riskSubstitutedHost,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 6, assetIndex := 4, threatIndex := 6, likelihood := (ctor Foundation.Sec::Likelihood.low), impact := (ctor Foundation.Sec::Impact.critical)})
+}
+
+definition{
+  name: riskSubstitutedKernelGuest,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 7, assetIndex := 0, threatIndex := 7, likelihood := (ctor Foundation.Sec::Likelihood.low), impact := (ctor Foundation.Sec::Impact.critical)})
+}
+
+definition{
+  name: riskUngrantedNetworkUse,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 8, assetIndex := 1, threatIndex := 8, likelihood := (ctor Foundation.Sec::Likelihood.medium), impact := (ctor Foundation.Sec::Impact.major)})
+}
+
+definition{
+  name: riskUnprovedAppShownAsProved,
+  parameters: [],
+  result: Foundation.Sec::Risk,
+  body: (record Foundation.Sec::Risk {index := 9, assetIndex := 2, threatIndex := 9, likelihood := (ctor Foundation.Sec::Likelihood.medium), impact := (ctor Foundation.Sec::Impact.critical)})
+}
+
+definition{
+  name: controlContentAddressedPublication,
+  parameters: [],
+  result: Foundation.Sec::ApplicationSecurityControl,
+  body: (record Foundation.Sec::ApplicationSecurityControl {index := 0, riskIndex := 5})
+}
+
+definition{
+  name: controlDenialWins,
+  parameters: [],
+  result: Foundation.Sec::ApplicationSecurityControl,
+  body: (record Foundation.Sec::ApplicationSecurityControl {index := 1, riskIndex := 0})
+}
+
+definition{
+  name: controlKernelBuildPhase,
+  parameters: [],
+  result: Foundation.Sec::ApplicationSecurityControl,
+  body: (record Foundation.Sec::ApplicationSecurityControl {index := 2, riskIndex := 9})
+}
+
+definition{
+  name: controlKernelEffectGate,
+  parameters: [],
+  result: Foundation.Sec::ApplicationSecurityControl,
+  body: (record Foundation.Sec::ApplicationSecurityControl {index := 3, riskIndex := 8})
+}
+
+definition{
+  name: controlPerRequestInferenceConsent,
+  parameters: [],
+  result: Foundation.Sec::ApplicationSecurityControl,
+  body: (record Foundation.Sec::ApplicationSecurityControl {index := 4, riskIndex := 2})
+}
+
+definition{
+  name: controlPinnedKernel,
+  parameters: [],
+  result: Foundation.Sec::ApplicationSecurityControl,
+  body: (record Foundation.Sec::ApplicationSecurityControl {index := 5, riskIndex := 7})
+}
+
+definition{
+  name: controlPrivateProviderCredentials,
+  parameters: [],
+  result: Foundation.Sec::ApplicationSecurityControl,
+  body: (record Foundation.Sec::ApplicationSecurityControl {index := 6, riskIndex := 3})
+}
+
+definition{
+  name: controlProofReuseByExactInputs,
+  parameters: [],
+  result: Foundation.Sec::ApplicationSecurityControl,
+  body: (record Foundation.Sec::ApplicationSecurityControl {index := 7, riskIndex := 4})
+}
+
+definition{
+  name: controlSet,
+  parameters: [],
+  result: Production.ThreatModel::ControlSet,
+  body: (record Production.ThreatModel::ControlSet {title := "Prism AI Foundry security controls", text := "Prism AI Foundry asks its kernel guest before every phase change and every effect. Describe an app in a chat, have Lean prove its promises, and share it as one self-verifying file, all from a browser tab.", version := "0.1.0", lastModified := "2026-11-13T00:00:00Z"})
+}
+
+definition{
+  name: modeledAssetKernelGuest,
+  parameters: [],
+  result: Production.ThreatModel::ModeledAsset,
+  body: (record Production.ThreatModel::ModeledAsset {asset := "Security::assetKernelGuest", name := "Kernel guest", text := "The guest the studio asks before every phase change and effect."})
+}
+
+definition{
+  name: modeledAssetProjectSource,
+  parameters: [],
+  result: Production.ThreatModel::ModeledAsset,
+  body: (record Production.ThreatModel::ModeledAsset {asset := "Security::assetProjectSource", name := "Project source", text := "The chat, specs, modules and snapshots of each project."})
+}
+
+definition{
+  name: modeledAssetProofStatus,
+  parameters: [],
+  result: Production.ThreatModel::ModeledAsset,
+  body: (record Production.ThreatModel::ModeledAsset {asset := "Security::assetProofStatus", name := "Proof status", text := "The phase and attestation the studio shows for an app."})
+}
+
+definition{
+  name: modeledAssetProviderKeys,
+  parameters: [],
+  result: Production.ThreatModel::ModeledAsset,
+  body: (record Production.ThreatModel::ModeledAsset {asset := "Security::assetProviderKeys", name := "Provider keys", text := "The builder's inference provider credentials."})
+}
+
+definition{
+  name: modeledAssetPublishedHolo,
+  parameters: [],
+  result: Production.ThreatModel::ModeledAsset,
+  body: (record Production.ThreatModel::ModeledAsset {asset := "Security::assetPublishedHolo", name := "Published holo", text := "The app file a visitor opens, with its proofs and acceptance vectors."})
+}
+
+definition{
+  name: modeledThreatDeniedGrantIgnored,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatDeniedGrantIgnored", name := "Denied grant ignored", text := "An effect the builder denied is used because another record grants it.", category := (ctor Production.ThreatModel::Stride.elevationOfPrivilege)})
+}
+
+definition{
+  name: modeledThreatDraftSeenByTheHostedChecker,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatDraftSeenByTheHostedChecker", name := "Draft seen by the hosted checker", text := "Proving a draft sends its spec to the hosted checker.", category := (ctor Production.ThreatModel::Stride.informationDisclosure)})
+}
+
+definition{
+  name: modeledThreatInferenceWithoutConsent,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatInferenceWithoutConsent", name := "Inference without consent", text := "Chat text is sent to a cloud model the builder did not approve for this request.", category := (ctor Production.ThreatModel::Stride.informationDisclosure)})
+}
+
+definition{
+  name: modeledThreatLeakedProviderKey,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatLeakedProviderKey", name := "Leaked provider key", text := "A provider key is sent anywhere but its own provider, or read by an app.", category := (ctor Production.ThreatModel::Stride.informationDisclosure)})
+}
+
+definition{
+  name: modeledThreatStaleProofReused,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatStaleProofReused", name := "Stale proof reused", text := "A proof is reused for declarations or a toolchain other than the ones Lean checked.", category := (ctor Production.ThreatModel::Stride.tampering)})
+}
+
+definition{
+  name: modeledThreatSubstitutedHolo,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatSubstitutedHolo", name := "Substituted holo", text := "A file other than the published, proved app is served under its address.", category := (ctor Production.ThreatModel::Stride.spoofing)})
+}
+
+definition{
+  name: modeledThreatSubstitutedHost,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatSubstitutedHost", name := "Substituted host", text := "Something other than the repository's Pages serves the studio.", category := (ctor Production.ThreatModel::Stride.spoofing)})
+}
+
+definition{
+  name: modeledThreatSubstitutedKernelGuest,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatSubstitutedKernelGuest", name := "Substituted kernel guest", text := "The studio runs a kernel other than the one verified from app/src.", category := (ctor Production.ThreatModel::Stride.tampering)})
+}
+
+definition{
+  name: modeledThreatUngrantedNetworkUse,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatUngrantedNetworkUse", name := "Ungranted network use", text := "A preview or a published app fetches, infers or stores without a grant.", category := (ctor Production.ThreatModel::Stride.informationDisclosure)})
+}
+
+definition{
+  name: modeledThreatUnprovedAppShownAsProved,
+  parameters: [],
+  result: Production.ThreatModel::ModeledThreat,
+  body: (record Production.ThreatModel::ModeledThreat {threat := "Security::threatUnprovedAppShownAsProved", name := "Unproved app shown as proved", text := "The studio shows proved, or publishes, an app whose theorems Lean has not checked.", category := (ctor Production.ThreatModel::Stride.repudiation)})
+}
+
+definition{
+  name: modeledControlContentAddressedPublication,
+  parameters: [],
+  result: Production.ThreatModel::ModeledControl,
+  body: (record Production.ThreatModel::ModeledControl {control := "Security::controlContentAddressedPublication", name := "Content-addressed publication", text := "Publication needs the exact canonical archive identity and complete runtime acceptance.", evidence := (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.gate), reference := "FA-05 publication-identity, cargo test in just vv"}) (nil Production.ThreatModel::Evidence))})
+}
+
+definition{
+  name: modeledControlDenialWins,
+  parameters: [],
+  result: Production.ThreatModel::ModeledControl,
+  body: (record Production.ThreatModel::ModeledControl {control := "Security::controlDenialWins", name := "Denial wins", text := "A denied record is refused whatever else it grants.", evidence := (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.proof), reference := "ForgeKernelProofs::denyWinsHolds"}) (nil Production.ThreatModel::Evidence))})
+}
+
+definition{
+  name: modeledControlKernelBuildPhase,
+  parameters: [],
+  result: Production.ThreatModel::ModeledControl,
+  body: (record Production.ThreatModel::ModeledControl {control := "Security::controlKernelBuildPhase", name := "Kernel build phase", text := "Only an attestation in the proving phase answers proved, only a proved app publishes, and every edit returns to drafting.", evidence := (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.proof), reference := "ForgeKernelProofs::inv001Holds"}) (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.proof), reference := "ForgeKernelProofs::inv002Holds"}) (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.proof), reference := "ForgeKernelProofs::inv003Holds"}) (nil Production.ThreatModel::Evidence))))})
+}
+
+definition{
+  name: modeledControlKernelEffectGate,
+  parameters: [],
+  result: Production.ThreatModel::ModeledControl,
+  body: (record Production.ThreatModel::ModeledControl {control := "Security::controlKernelEffectGate", name := "Kernel effect gate", text := "The origin kernel worker asks the guest before every effect; no record admits only Forge without fetch, and outside Forge needs a grant.", evidence := (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.proof), reference := "ForgeKernelProofs::noRecordNoFetchHolds"}) (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.proof), reference := "ForgeKernelProofs::outsideForgeNeedsGrantHolds"}) (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.proof), reference := "ForgeKernelProofs::previewNoNetworkWithoutGrantHolds"}) (nil Production.ThreatModel::Evidence))))})
+}
+
+definition{
+  name: modeledControlPerRequestInferenceConsent,
+  parameters: [],
+  result: Production.ThreatModel::ModeledControl,
+  body: (record Production.ThreatModel::ModeledControl {control := "Security::controlPerRequestInferenceConsent", name := "Per-request inference consent", text := "Cloud inference needs disclosure and approval for each request, with cancellation before and after it is sent.", evidence := (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.gate), reference := "FA-34 inference-consent, cargo test in just vv"}) (nil Production.ThreatModel::Evidence))})
+}
+
+definition{
+  name: modeledControlPinnedKernel,
+  parameters: [],
+  result: Production.ThreatModel::ModeledControl,
+  body: (record Production.ThreatModel::ModeledControl {control := "Security::controlPinnedKernel", name := "Pinned kernel", text := "KERNEL_REV pins the verified guest, which replays every acceptance vector before it answers.", evidence := (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.gate), reference := "prismpm verify in the SDK image prismpm.lock pins"}) (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.gate), reference := "kernel-pin workflow"}) (nil Production.ThreatModel::Evidence)))})
+}
+
+definition{
+  name: modeledControlPrivateProviderCredentials,
+  parameters: [],
+  result: Production.ThreatModel::ModeledControl,
+  body: (record Production.ThreatModel::ModeledControl {control := "Security::controlPrivateProviderCredentials", name := "Private provider credentials", text := "Keys stay in the studio's own storage, are sent only to the provider they belong to, and are never in a preview or holo.", evidence := (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.gate), reference := "FA-47 private-provider-credentials, cargo test in just vv"}) (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.gate), reference := "FA-16 provider-key-validation, cargo test in just vv"}) (nil Production.ThreatModel::Evidence)))})
+}
+
+definition{
+  name: modeledControlProofReuseByExactInputs,
+  parameters: [],
+  result: Production.ThreatModel::ModeledControl,
+  body: (record Production.ThreatModel::ModeledControl {control := "Security::controlProofReuseByExactInputs", name := "Proof reuse by exact inputs", text := "A proof is reused only under an address covering the theorem, every declaration it reaches and the exact toolchain.", evidence := (cons (record Production.ThreatModel::Evidence {kind := (ctor Production.ThreatModel::EvidenceKind.gate), reference := "FA-85 proof-reuse, cargo test in just vv"}) (nil Production.ThreatModel::Evidence))})
+}
+
+definition{
+  name: mappingSubstitutedHolo,
+  parameters: [],
+  result: Production.ThreatModel::ThreatMapping,
+  body: (record Production.ThreatModel::ThreatMapping {threat := "Security::threatSubstitutedHolo", controls := (cons "Security::controlContentAddressedPublication" (nil String))})
+}
+
+definition{
+  name: mappingDeniedGrantIgnored,
+  parameters: [],
+  result: Production.ThreatModel::ThreatMapping,
+  body: (record Production.ThreatModel::ThreatMapping {threat := "Security::threatDeniedGrantIgnored", controls := (cons "Security::controlDenialWins" (nil String))})
+}
+
+definition{
+  name: mappingUnprovedAppShownAsProved,
+  parameters: [],
+  result: Production.ThreatModel::ThreatMapping,
+  body: (record Production.ThreatModel::ThreatMapping {threat := "Security::threatUnprovedAppShownAsProved", controls := (cons "Security::controlKernelBuildPhase" (nil String))})
+}
+
+definition{
+  name: mappingUngrantedNetworkUse,
+  parameters: [],
+  result: Production.ThreatModel::ThreatMapping,
+  body: (record Production.ThreatModel::ThreatMapping {threat := "Security::threatUngrantedNetworkUse", controls := (cons "Security::controlKernelEffectGate" (nil String))})
+}
+
+definition{
+  name: mappingInferenceWithoutConsent,
+  parameters: [],
+  result: Production.ThreatModel::ThreatMapping,
+  body: (record Production.ThreatModel::ThreatMapping {threat := "Security::threatInferenceWithoutConsent", controls := (cons "Security::controlPerRequestInferenceConsent" (nil String))})
+}
+
+definition{
+  name: mappingSubstitutedKernelGuest,
+  parameters: [],
+  result: Production.ThreatModel::ThreatMapping,
+  body: (record Production.ThreatModel::ThreatMapping {threat := "Security::threatSubstitutedKernelGuest", controls := (cons "Security::controlPinnedKernel" (nil String))})
+}
+
+definition{
+  name: mappingLeakedProviderKey,
+  parameters: [],
+  result: Production.ThreatModel::ThreatMapping,
+  body: (record Production.ThreatModel::ThreatMapping {threat := "Security::threatLeakedProviderKey", controls := (cons "Security::controlPrivateProviderCredentials" (nil String))})
+}
+
+definition{
+  name: mappingStaleProofReused,
+  parameters: [],
+  result: Production.ThreatModel::ThreatMapping,
+  body: (record Production.ThreatModel::ThreatMapping {threat := "Security::threatStaleProofReused", controls := (cons "Security::controlProofReuseByExactInputs" (nil String))})
+}
+
+definition{
+  name: acceptedDraftSeenByTheHostedChecker,
+  parameters: [],
+  result: Production.ThreatModel::AcceptedRisk,
+  body: (record Production.ThreatModel::AcceptedRisk {threat := "Security::threatDraftSeenByTheHostedChecker", rationale := "Lean does not run in the tab yet; the checker sees only the spec being proved, and in-tab checking (PR 155) removes the exposure."})
+}
+
+definition{
+  name: acceptedSubstitutedHost,
+  parameters: [],
+  result: Production.ThreatModel::AcceptedRisk,
+  body: (record Production.ThreatModel::AcceptedRisk {threat := "Security::threatSubstitutedHost", rationale := "A page cannot defend against its own host; the holo carries its address and acceptance vectors, so a visitor can replay it elsewhere."})
+}
+\end{semanticmodule}
+\end{lexlean}

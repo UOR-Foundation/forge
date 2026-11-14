@@ -20,6 +20,9 @@ import { TEMPLATE_EXAMPLE, appJson, conformanceText, featureText, idsToml, lexle
 import { toLexLean, draftOf } from "./live/lexlean.mjs";
 import { checkObligations } from "./live/obligations.mjs";
 import { tableKernel } from "./live/table.mjs";
+import { PROMPT_RULES, facetLine, parsePromptTag, facetsOf } from "./prism/builder/route.mjs";
+// The app's prompt parts, read and projected where the rules are (host.js rulesAfterTurn).
+export { parsePromptTag, facetsOf };
 import { KEY_PREFIX, REFUSAL, trustDescriptor, sameVerifier, attests, reuseSentence, addresses, admit, headersOf, record as reuseRecord, theoremsOf, without } from "./prism/proof-reuse.mjs";
 
 // prism-code's checker (prism/spec.mjs, byte for byte) keeps a spec to 24 rules, because its proofs are one
@@ -61,7 +64,7 @@ Every app here is one JSON spec: its inputs, its answers, its rules and its guar
 - To change one part (a word, an answer, one rule), or to set the screen's words or order, write a patch on the spec: <dyad-spec-patch>[{"op":"set","path":["rules",2,"then"],"value":"none"}]</dyad-spec-patch>. Ops are set, insert and remove; \`view\` ({"blocks":[...]}, each one of {"kind":"heading","text"}, {"kind":"text","text"}, {"kind":"input","field","label"}, {"kind":"answer","label"}, {"kind":"guarantees"}, {"kind":"rules"}, {"kind":"examples"}), \`purpose\` (one sentence) and \`meanings\` ({"<answer>": "what it tells the user"}, one key per answer; fields have no meanings) are set this way. When the user points at something on the screen, its paths are given with the request.
 - To change the rules, write the whole spec again in a new <dyad-spec> block, starting from the current spec when one is given.
 - An app that must keep what it is given between requests (a list that grows, entries that are kept) cannot be written yet. Say so in one sentence, and write the spec of what it could decide.
-Example: <dyad-spec>${SPEC_EXAMPLE}</dyad-spec>`;
+Example: <dyad-spec>${SPEC_EXAMPLE}</dyad-spec>` + PROMPT_RULES;
 
 // ---- the one thing a model may write
 // Every model, on the device or in the cloud, writes the app's JSON spec and nothing else. LexLean a
@@ -230,10 +233,11 @@ export function shownText(text, card = null) {
   // The spec is the app's source, not something to read in the chat: one line while it streams, and the
   // card (or one line) in its place once it is whole.
   out = out.replace(/<dyad-spec>[\s\S]*?<\/dyad-spec>/g, card ? "\n\n" + card + "\n\n" : "\n\n_The app's spec, written as JSON._\n\n").replace(/<dyad-spec>[\s\S]*$/, "\n\n_Writing the app's spec…_\n\n");
-  out = out.replace(/<dyad-spec-patch>[\s\S]*?(<\/dyad-spec-patch>|$)/g, "").replace(/\n{3,}/g, "\n\n");
+  // The app's prompt parts are shown through the card's full-model line, not as JSON.
+  out = out.replace(/<dyad-spec-patch>[\s\S]*?(<\/dyad-spec-patch>|$)/g, "").replace(/<prism-prompt>[\s\S]*?(<\/prism-prompt>|$)/g, "").replace(/\n{3,}/g, "\n\n");
   // A tag still arriving (`<pri…`) is not shown until it is whole.
   const tail = /<[a-z-]*$/.exec(out);
-  return tail && ("<prism-lexlean>".startsWith(tail[0]) || "<dyad-spec-patch>".startsWith(tail[0]) || "<dyad-spec>".startsWith(tail[0])) ? out.slice(0, tail.index) : out;
+  return tail && ("<prism-lexlean>".startsWith(tail[0]) || "<dyad-spec-patch>".startsWith(tail[0]) || "<dyad-spec>".startsWith(tail[0]) || "<prism-prompt>".startsWith(tail[0])) ? out.slice(0, tail.index) : out;
 }
 // The card stands in its own paragraphs, whatever the model wrote around the tag or the module.
 export const withCard = (text, card) => {
@@ -687,6 +691,8 @@ export function card(state) {
   lines.push(`- Otherwise: **${spec.otherwise}**${spec.otherwiseWhy ? ` *${spec.otherwiseWhy}*` : ""}`, "");
   lines.push(`Request: \`${spec.fields.map((f) => f.name).join(" ")}\` · answers: ${spec.outcomes.join(", ")}, or invalid`);
   if (spec.examples.length) lines.push("", `Examples: ${spec.examples.map((e) => `\`${e.request}\` → ${e.response}`).join(" · ")}`);
+  const facets = facetLine(state.facets);
+  if (facets) lines.push("", facets);
   if (state.notes && state.notes.length) lines.push("", ...state.notes.map((n) => "*" + n + "*"));
   if (state.issues && state.issues.length) lines.push("", "Not checked:", ...state.issues.map((i) => "- " + i), "", "Ask me to fix the rules.");
   else if (state.phase === "checked" && spec.rules.length > PROVE_RULES_MAX) lines.push("", `Checked on every request: ${(state.notes || []).find((n) => /checked by/.test(n)) || ""}`, "", `Lean proving waits: it proves at most ${PROVE_RULES_MAX} rules until LexLean proves them locally (UOR-Foundation/PrismPM#605).`);

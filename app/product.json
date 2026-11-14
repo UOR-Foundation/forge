@@ -1,0 +1,826 @@
+{
+  "schema": "prism/product/1",
+  "lastModified": "2026-11-13T00:00:00Z",
+  "goal": "Describe an app in a chat, have Lean prove its promises, and share it as one self-verifying file, all from a browser tab.",
+  "title": "Prism AI Foundry",
+  "repository": "UOR-Foundation/foundry",
+  "license": "MIT OR Apache-2.0",
+  "stakeholders": [
+    {
+      "name": "App builder",
+      "text": "Describes an app in the chat, previews it live, asks for proofs and publishes the result.",
+      "concerns": [
+        "Honest proof status",
+        "Consent before effects",
+        "Responsive studio",
+        "Private drafts and keys"
+      ]
+    },
+    {
+      "name": "App visitor",
+      "text": "Opens a published app by its address and uses it, trusting what its badge says.",
+      "concerns": [
+        "Integrity of published apps",
+        "Honest proof status"
+      ]
+    },
+    {
+      "name": "Verifier",
+      "text": "Replays a published holo and its proofs before trusting an answer.",
+      "concerns": [
+        "Integrity of published apps",
+        "Honest proof status"
+      ]
+    },
+    {
+      "name": "Maintainer",
+      "text": "Changes Foundry itself, a person or an agent, and needs every change checked once and only where it reaches.",
+      "concerns": [
+        "Only what changed is redone",
+        "Consent before effects",
+        "Responsive studio"
+      ]
+    }
+  ],
+  "concerns": [
+    {
+      "name": "Honest proof status",
+      "model": "quality",
+      "text": "An app is never shown as proved without a Lean proof, never published unproved, and every edit returns it to drafting."
+    },
+    {
+      "name": "Consent before effects",
+      "model": "security",
+      "text": "No origin reaches the network, a model or storage without a grant, and a denial always wins."
+    },
+    {
+      "name": "Responsive studio",
+      "model": "quality",
+      "text": "Every journey the kernel budgets stays within its budget on a phone."
+    },
+    {
+      "name": "Private drafts and keys",
+      "model": "security",
+      "text": "Provider keys and draft specs leave the tab only to the service the builder approved."
+    },
+    {
+      "name": "Integrity of published apps",
+      "model": "security",
+      "text": "What a visitor runs is the exact holo whose proofs were checked, named by the address of its contents."
+    },
+    {
+      "name": "Only what changed is redone",
+      "model": "component",
+      "text": "A proof, a build or a check is reused for identical inputs and redone in full for anything else."
+    }
+  ],
+  "components": [
+    {
+      "key": "browser",
+      "name": "Browser",
+      "kind": "externalSystem",
+      "text": "The builder's or visitor's web browser, which runs the studio and every app in a tab."
+    },
+    {
+      "key": "studio",
+      "name": "Studio shell",
+      "kind": "staticSite",
+      "text": "The chat, editor, preview and publish views, served as static files."
+    },
+    {
+      "key": "worker",
+      "name": "Origin kernel worker",
+      "kind": "service",
+      "text": "The service worker that asks the kernel before any origin uses an effect."
+    },
+    {
+      "key": "kernel",
+      "name": "Foundry kernel guest",
+      "kind": "service",
+      "text": "The Core-Wasm guest built from app/src: build phase, effect gate, budgets and the admission protocols."
+    },
+    {
+      "key": "store",
+      "name": "Project store",
+      "kind": "database",
+      "text": "The browser's storage of projects, snapshots, settings and keys."
+    },
+    {
+      "key": "provider",
+      "name": "Inference provider",
+      "kind": "externalSystem",
+      "text": "The model service the builder chose and granted, which drafts specs from the chat."
+    },
+    {
+      "key": "checker",
+      "name": "Hosted checker",
+      "kind": "externalSystem",
+      "text": "The Lean checker service that proves a spec's theorems and returns an attestation."
+    },
+    {
+      "key": "sdk",
+      "name": "Prism SDK",
+      "kind": "cliAdapter",
+      "text": "prismpm and lexlean in the image prismpm.lock pins, which verify the kernel and build its guest."
+    },
+    {
+      "key": "host",
+      "name": "GitHub",
+      "kind": "externalSystem",
+      "text": "Holds the source and serves the studio and published apps from Pages."
+    }
+  ],
+  "edges": [
+    [
+      "host",
+      "browser"
+    ],
+    [
+      "browser",
+      "studio"
+    ],
+    [
+      "studio",
+      "worker"
+    ],
+    [
+      "worker",
+      "kernel"
+    ],
+    [
+      "kernel",
+      "worker"
+    ],
+    [
+      "studio",
+      "store"
+    ],
+    [
+      "store",
+      "studio"
+    ],
+    [
+      "studio",
+      "provider"
+    ],
+    [
+      "provider",
+      "studio"
+    ],
+    [
+      "studio",
+      "checker"
+    ],
+    [
+      "checker",
+      "studio"
+    ],
+    [
+      "sdk",
+      "kernel"
+    ],
+    [
+      "studio",
+      "host"
+    ],
+    [
+      "studio",
+      "kernel"
+    ],
+    [
+      "kernel",
+      "studio"
+    ]
+  ],
+  "features": [
+    {
+      "name": "Build phase",
+      "ids": [
+        "FK-01",
+        "FK-02",
+        "FK-03",
+        "FK-04",
+        "FK-10",
+        "FK-11"
+      ],
+      "calls": [
+        "ForgeKernel::judge"
+      ],
+      "acceptance": [
+        "ForgeKernelProofs::inv001Holds",
+        "ForgeKernelProofs::inv002Holds",
+        "ForgeKernelProofs::inv003Holds",
+        "ForgeKernelProofs::inv004Holds",
+        "ForgeKernelProofs::rewordKeepsProofHolds",
+        "ForgeKernelProofs::rewordKeepsPublishedHolds"
+      ]
+    },
+    {
+      "name": "Effect gate",
+      "ids": [
+        "FK-05",
+        "FK-06",
+        "FK-07",
+        "FK-08",
+        "FK-09"
+      ],
+      "calls": [
+        "ForgeKernel::gateAllows"
+      ],
+      "acceptance": [
+        "ForgeKernelProofs::noRecordOnlyForgeHolds",
+        "ForgeKernelProofs::noRecordNoFetchHolds",
+        "ForgeKernelProofs::denyWinsHolds",
+        "ForgeKernelProofs::outsideForgeNeedsGrantHolds",
+        "ForgeKernelProofs::previewNoNetworkWithoutGrantHolds"
+      ]
+    },
+    {
+      "name": "Experience budgets",
+      "ids": [
+        "FK-12",
+        "FK-13",
+        "FK-14",
+        "FK-15",
+        "FK-23",
+        "FK-24"
+      ],
+      "calls": [
+        "ForgeKernel::budgetWithin"
+      ],
+      "acceptance": [
+        "ForgeKernelProofs::budgetOverWithinHolds",
+        "ForgeKernelProofs::budgetWithinOverHolds",
+        "ForgeKernelProofs::inpBudgetBoundHolds",
+        "ForgeKernelProofs::routeBelowFirstLoadHolds",
+        "ForgeKernelProofs::builtBudgetBoundHolds",
+        "ForgeKernelProofs::editBudgetBoundHolds"
+      ]
+    },
+    {
+      "name": "Experience rules",
+      "ids": [
+        "FK-16",
+        "FK-17",
+        "FK-18",
+        "FK-19",
+        "FK-20",
+        "FK-21",
+        "FK-22"
+      ],
+      "calls": [
+        "ForgeKernel::layoutTabs",
+        "ForgeKernel::motionAllows",
+        "ForgeKernel::targetOk",
+        "ForgeKernel::recentYes",
+        "ForgeKernel::thinkAllows"
+      ],
+      "acceptance": [
+        "ForgeKernelProofs::narrowSplitHolds",
+        "ForgeKernelProofs::wideTabsHolds",
+        "ForgeKernelProofs::reducedMotionHolds",
+        "ForgeKernelProofs::longMotionHolds",
+        "ForgeKernelProofs::smallTargetHolds",
+        "ForgeKernelProofs::oldRecentHolds",
+        "ForgeKernelProofs::firstThinkHolds"
+      ]
+    },
+    {
+      "name": "Application authority",
+      "ids": [
+        "FA-01"
+      ],
+      "calls": [
+        "FoundrySpecification::admitAuthority"
+      ],
+      "acceptance": [
+        "FoundrySpecification::oneProductOwner",
+        "FoundrySpecification::competingProductOwners"
+      ]
+    },
+    {
+      "name": "Feature composition",
+      "ids": [
+        "FA-06",
+        "FA-07"
+      ],
+      "calls": [
+        "FeatureComposition::admitComposition",
+        "CompositionProtocol::dispatchComposition"
+      ],
+      "acceptance": [
+        "FeatureComposition::singleAdmitted",
+        "FeatureComposition::dependencyAdmitted",
+        "FeatureComposition::emptyRefused"
+      ]
+    },
+    {
+      "name": "Proposal admission",
+      "ids": [
+        "FA-18"
+      ],
+      "calls": [
+        "ProposalAdmission::admitProposal"
+      ],
+      "acceptance": [
+        "ProposalAdmission::orderedDependenciesAdmitted",
+        "ProposalAdmission::duplicateRegistryRefused"
+      ]
+    },
+    {
+      "name": "Event admission",
+      "ids": [
+        "FA-19",
+        "FA-33"
+      ],
+      "calls": [
+        "EventAdmission::admitEvent",
+        "EventProtocol::dispatchEvent"
+      ],
+      "acceptance": [
+        "EventAdmission::naturalEventAdmitted",
+        "EventProtocol::wire_natural",
+        "EventProtocol::wire_staleGeneration"
+      ]
+    },
+    {
+      "name": "Work ownership",
+      "ids": [
+        "FA-13",
+        "FA-17"
+      ],
+      "calls": [
+        "WorkOwnership::transition",
+        "WorkProtocol::dispatchWork"
+      ],
+      "acceptance": [
+        "WorkOwnership::wrongOwnerRefused",
+        "WorkOwnership::staleRevisionRefused",
+        "WorkProtocol::wireRejectsWrongOwner"
+      ]
+    },
+    {
+      "name": "Semantic routing",
+      "ids": [
+        "FA-48"
+      ],
+      "calls": [
+        "SemanticRouter::routeValidated",
+        "RoutingProtocol::dispatchRouting"
+      ],
+      "acceptance": [
+        "SemanticRouter::router_exactGalleryClosure",
+        "RoutingProtocol::routingWords_ambiguity"
+      ]
+    },
+    {
+      "name": "Chat queue",
+      "ids": [
+        "FA-50"
+      ],
+      "calls": [
+        "ChatQueue::transitionQueue",
+        "ChatQueueProtocol::dispatchQueue"
+      ],
+      "acceptance": [
+        "ChatQueue::queue_enqueue",
+        "ChatQueue::queue_reorder",
+        "ChatQueueProtocol::wire_enqueue"
+      ]
+    },
+    {
+      "name": "Version preview",
+      "ids": [
+        "FA-53"
+      ],
+      "calls": [
+        "VersionPreview::transitionPreview",
+        "VersionPreviewProtocol::dispatchPreview"
+      ],
+      "acceptance": [
+        "VersionPreview::preview_select",
+        "VersionPreview::preview_staleRevision",
+        "VersionPreviewProtocol::previewWire_select"
+      ]
+    },
+    {
+      "name": "Interaction profile",
+      "ids": [
+        "FA-41"
+      ],
+      "calls": [
+        "InteractionModel::interactionStep",
+        "InteractionProtocol::dispatchInteraction"
+      ],
+      "acceptance": [
+        "InteractionModel::interactionSilentWithoutConsent",
+        "InteractionModel::interactionReducedMotionStatic",
+        "InteractionProtocol::interactionWords_gardenSilent"
+      ]
+    }
+  ],
+  "journeys": [
+    {
+      "stakeholder": "App builder",
+      "steps": [
+        "Semantic routing",
+        "Proposal admission",
+        "Feature composition",
+        "Effect gate",
+        "Build phase",
+        "Version preview",
+        "Chat queue"
+      ]
+    },
+    {
+      "stakeholder": "App visitor",
+      "steps": [
+        "Effect gate",
+        "Interaction profile",
+        "Event admission"
+      ]
+    },
+    {
+      "stakeholder": "Verifier",
+      "steps": [
+        "Build phase",
+        "Application authority"
+      ]
+    },
+    {
+      "stakeholder": "Maintainer",
+      "steps": [
+        "Application authority",
+        "Work ownership",
+        "Experience budgets",
+        "Experience rules"
+      ]
+    }
+  ],
+  "sequence": {
+    "title": "Building an app from one message",
+    "concern": "Honest proof status",
+    "messages": [
+      [
+        "browser",
+        "studio",
+        "synchronous",
+        "Handle message"
+      ],
+      [
+        "studio",
+        "provider",
+        "synchronous",
+        "Draft spec"
+      ],
+      [
+        "provider",
+        "studio",
+        "reply",
+        "Draft spec"
+      ],
+      [
+        "studio",
+        "kernel",
+        "synchronous",
+        "Ask the kernel"
+      ],
+      [
+        "kernel",
+        "studio",
+        "reply",
+        "Ask the kernel"
+      ],
+      [
+        "studio",
+        "checker",
+        "synchronous",
+        "Prove"
+      ],
+      [
+        "checker",
+        "studio",
+        "reply",
+        "Prove"
+      ],
+      [
+        "studio",
+        "browser",
+        "reply",
+        "Handle message"
+      ]
+    ]
+  },
+  "processes": [
+    {
+      "name": "Handle message",
+      "owner": "studio",
+      "text": "The studio takes one chat message and carries the app it describes to its next phase."
+    },
+    {
+      "name": "Draft spec",
+      "owner": "provider",
+      "text": "The granted provider drafts the app's spec from the chat."
+    },
+    {
+      "name": "Ask the kernel",
+      "owner": "kernel",
+      "text": "The guest decides the next build phase or whether an origin may use an effect."
+    },
+    {
+      "name": "Prove",
+      "owner": "checker",
+      "text": "Lean proves the spec's theorems and returns an attestation."
+    },
+    {
+      "name": "Publish",
+      "owner": "studio",
+      "text": "The proved app is written as a holo and published under its address."
+    }
+  ],
+  "assets": [
+    {
+      "key": "source",
+      "name": "Project source",
+      "component": "store",
+      "text": "The chat, specs, modules and snapshots of each project."
+    },
+    {
+      "key": "keys",
+      "name": "Provider keys",
+      "component": "store",
+      "text": "The builder's inference provider credentials."
+    },
+    {
+      "key": "holo",
+      "name": "Published holo",
+      "component": "host",
+      "text": "The app file a visitor opens, with its proofs and acceptance vectors."
+    },
+    {
+      "key": "kernel",
+      "name": "Kernel guest",
+      "component": "kernel",
+      "text": "The guest the studio asks before every phase change and effect."
+    },
+    {
+      "key": "proof",
+      "name": "Proof status",
+      "component": "studio",
+      "text": "The phase and attestation the studio shows for an app."
+    }
+  ],
+  "threats": [
+    {
+      "name": "Unproved app shown as proved",
+      "stride": "repudiation",
+      "asset": "proof",
+      "likelihood": "medium",
+      "impact": "critical",
+      "text": "The studio shows proved, or publishes, an app whose theorems Lean has not checked.",
+      "control": {
+        "name": "Kernel build phase",
+        "text": "Only an attestation in the proving phase answers proved, only a proved app publishes, and every edit returns to drafting.",
+        "evidence": [
+          {
+            "kind": "proof",
+            "reference": "ForgeKernelProofs::inv001Holds"
+          },
+          {
+            "kind": "proof",
+            "reference": "ForgeKernelProofs::inv002Holds"
+          },
+          {
+            "kind": "proof",
+            "reference": "ForgeKernelProofs::inv003Holds"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Ungranted network use",
+      "stride": "informationDisclosure",
+      "asset": "source",
+      "likelihood": "medium",
+      "impact": "major",
+      "text": "A preview or a published app fetches, infers or stores without a grant.",
+      "control": {
+        "name": "Kernel effect gate",
+        "text": "The origin kernel worker asks the guest before every effect; no record admits only Forge without fetch, and outside Forge needs a grant.",
+        "evidence": [
+          {
+            "kind": "proof",
+            "reference": "ForgeKernelProofs::noRecordNoFetchHolds"
+          },
+          {
+            "kind": "proof",
+            "reference": "ForgeKernelProofs::outsideForgeNeedsGrantHolds"
+          },
+          {
+            "kind": "proof",
+            "reference": "ForgeKernelProofs::previewNoNetworkWithoutGrantHolds"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Denied grant ignored",
+      "stride": "elevationOfPrivilege",
+      "asset": "source",
+      "likelihood": "low",
+      "impact": "major",
+      "text": "An effect the builder denied is used because another record grants it.",
+      "control": {
+        "name": "Denial wins",
+        "text": "A denied record is refused whatever else it grants.",
+        "evidence": [
+          {
+            "kind": "proof",
+            "reference": "ForgeKernelProofs::denyWinsHolds"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Leaked provider key",
+      "stride": "informationDisclosure",
+      "asset": "keys",
+      "likelihood": "medium",
+      "impact": "major",
+      "text": "A provider key is sent anywhere but its own provider, or read by an app.",
+      "control": {
+        "name": "Private provider credentials",
+        "text": "Keys stay in the studio's own storage, are sent only to the provider they belong to, and are never in a preview or holo.",
+        "evidence": [
+          {
+            "kind": "gate",
+            "reference": "FA-47 private-provider-credentials, cargo test in just vv"
+          },
+          {
+            "kind": "gate",
+            "reference": "FA-16 provider-key-validation, cargo test in just vv"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Inference without consent",
+      "stride": "informationDisclosure",
+      "asset": "source",
+      "likelihood": "medium",
+      "impact": "major",
+      "text": "Chat text is sent to a cloud model the builder did not approve for this request.",
+      "control": {
+        "name": "Per-request inference consent",
+        "text": "Cloud inference needs disclosure and approval for each request, with cancellation before and after it is sent.",
+        "evidence": [
+          {
+            "kind": "gate",
+            "reference": "FA-34 inference-consent, cargo test in just vv"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Draft seen by the hosted checker",
+      "stride": "informationDisclosure",
+      "asset": "source",
+      "likelihood": "high",
+      "impact": "minor",
+      "text": "Proving a draft sends its spec to the hosted checker.",
+      "accepted": "Lean does not run in the tab yet; the checker sees only the spec being proved, and in-tab checking (PR 155) removes the exposure."
+    },
+    {
+      "name": "Substituted kernel guest",
+      "stride": "tampering",
+      "asset": "kernel",
+      "likelihood": "low",
+      "impact": "critical",
+      "text": "The studio runs a kernel other than the one verified from app/src.",
+      "control": {
+        "name": "Pinned kernel",
+        "text": "KERNEL_REV pins the verified guest, which replays every acceptance vector before it answers.",
+        "evidence": [
+          {
+            "kind": "gate",
+            "reference": "prismpm verify in the SDK image prismpm.lock pins"
+          },
+          {
+            "kind": "gate",
+            "reference": "kernel-pin workflow"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Substituted holo",
+      "stride": "spoofing",
+      "asset": "holo",
+      "likelihood": "low",
+      "impact": "critical",
+      "text": "A file other than the published, proved app is served under its address.",
+      "control": {
+        "name": "Content-addressed publication",
+        "text": "Publication needs the exact canonical archive identity and complete runtime acceptance.",
+        "evidence": [
+          {
+            "kind": "gate",
+            "reference": "FA-05 publication-identity, cargo test in just vv"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Stale proof reused",
+      "stride": "tampering",
+      "asset": "proof",
+      "likelihood": "low",
+      "impact": "critical",
+      "text": "A proof is reused for declarations or a toolchain other than the ones Lean checked.",
+      "control": {
+        "name": "Proof reuse by exact inputs",
+        "text": "A proof is reused only under an address covering the theorem, every declaration it reaches and the exact toolchain.",
+        "evidence": [
+          {
+            "kind": "gate",
+            "reference": "FA-85 proof-reuse, cargo test in just vv"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Substituted host",
+      "stride": "spoofing",
+      "asset": "holo",
+      "likelihood": "low",
+      "impact": "critical",
+      "text": "Something other than the repository's Pages serves the studio.",
+      "accepted": "A page cannot defend against its own host; the holo carries its address and acceptance vectors, so a visitor can replay it elsewhere."
+    }
+  ],
+  "quality": [
+    {
+      "characteristic": "Functional suitability",
+      "subcharacteristic": "Functional correctness",
+      "requirement": "Every kernel vector replays",
+      "text": "Every acceptance vector of the kernel guest replays in the compiled guest.",
+      "measure": "Failed kernel vectors",
+      "measureText": "Acceptance vectors whose replay differs from the model.",
+      "threshold": 0
+    },
+    {
+      "characteristic": "Security",
+      "subcharacteristic": "Integrity",
+      "requirement": "Every kernel promise proved",
+      "text": "Every FK theorem is checked by the Lean kernel in prismpm verify.",
+      "measure": "Unproved kernel promises",
+      "measureText": "FK rows without a checked theorem.",
+      "threshold": 0
+    }
+  ],
+  "budgets": {
+    "characteristic": "Performance efficiency",
+    "subcharacteristic": "Time behaviour",
+    "function": "ForgeKernel::budgetOf",
+    "journeys": {
+      "journeyCold": "Mobile cold load LCP, ms",
+      "journeyWarm": "Mobile warm load LCP, ms",
+      "journeyInp": "Mobile INP, ms",
+      "journeyToken": "Enter to the first streamed token, ms",
+      "journeyHome": "First-load JS of Home, gzip KB",
+      "journeyChat": "First-load JS of Chat, gzip KB",
+      "journeySettings": "First-load JS of Settings, gzip KB",
+      "journeyDetails": "First-load JS of Details, gzip KB",
+      "journeyApps": "First-load JS of Apps, gzip KB",
+      "journeyCode": "First-load JS of Code, gzip KB",
+      "journeyPublish": "First-load JS of Publish, gzip KB",
+      "journeyPreview": "Enter to the preview frame, ms",
+      "journeyDeclaration": "Enter to the model's first declaration, ms",
+      "journeyPixel": "First declaration to first pixel, ms",
+      "journeyUpdate": "Work per preview update, ms",
+      "journeyEdit": "An edit to the screen, ms",
+      "journeyChecked": "The module complete to its check on screen, ms",
+      "journeyBuilt": "Enter to a checked app, ms"
+    }
+  },
+  "rules": {
+    "characteristic": "Interaction capability",
+    "constants": {
+      "narrowBreakpoint": [
+        "Inclusivity",
+        "Narrow layout",
+        "Chat and preview stack under this width, px"
+      ],
+      "motionMaximum": [
+        "Operability",
+        "Short motion",
+        "Longest motion allowed, ms"
+      ],
+      "tapMinimum": [
+        "Inclusivity",
+        "Tap targets",
+        "Smallest tap target, px"
+      ]
+    }
+  }
+}

@@ -1,0 +1,482 @@
+\begin{lexlean}{Features}
+\useglossary{lexlean.std.bool@1.2.0}
+\useglossary{lexlean.std.nat@1.2.0}
+\useglossary{prism.arch@1.0.0}
+\importmodule{ChatQueue}
+\importmodule{ChatQueueProtocol}
+\importmodule{CompositionProtocol}
+\importmodule{EventAdmission}
+\importmodule{EventProtocol}
+\importmodule{FeatureComposition}
+\importmodule{ForgeKernel}
+\importmodule{ForgeKernelProofs}
+\importmodule{FoundrySpecification}
+\importmodule{InteractionModel}
+\importmodule{InteractionProtocol}
+\importmodule{ProposalAdmission}
+\importmodule{RoutingProtocol}
+\importmodule{SemanticRouter}
+\importmodule{VersionPreview}
+\importmodule{VersionPreviewProtocol}
+\importmodule{WorkOwnership}
+\importmodule{WorkProtocol}
+\importmodule{Architecture}
+\importmodule{Foundation.Arch}
+\title{feature}
+\begin{semanticmodule}
+definition{
+  name: acceptForgeKernelProofsInv001Holds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::inv001Holds"
+}
+
+definition{
+  name: acceptForgeKernelProofsInv002Holds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::inv002Holds"
+}
+
+definition{
+  name: acceptForgeKernelProofsInv003Holds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::inv003Holds"
+}
+
+definition{
+  name: acceptForgeKernelProofsInv004Holds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::inv004Holds"
+}
+
+definition{
+  name: acceptForgeKernelProofsRewordKeepsProofHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::rewordKeepsProofHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsRewordKeepsPublishedHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::rewordKeepsPublishedHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsNoRecordOnlyForgeHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::noRecordOnlyForgeHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsNoRecordNoFetchHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::noRecordNoFetchHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsDenyWinsHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::denyWinsHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsOutsideForgeNeedsGrantHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::outsideForgeNeedsGrantHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsPreviewNoNetworkWithoutGrantHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::previewNoNetworkWithoutGrantHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsBudgetOverWithinHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::budgetOverWithinHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsBudgetWithinOverHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::budgetWithinOverHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsInpBudgetBoundHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::inpBudgetBoundHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsRouteBelowFirstLoadHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::routeBelowFirstLoadHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsBuiltBudgetBoundHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::builtBudgetBoundHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsEditBudgetBoundHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::editBudgetBoundHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsNarrowSplitHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::narrowSplitHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsWideTabsHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::wideTabsHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsReducedMotionHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::reducedMotionHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsLongMotionHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::longMotionHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsSmallTargetHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::smallTargetHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsOldRecentHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::oldRecentHolds"
+}
+
+definition{
+  name: acceptForgeKernelProofsFirstThinkHolds,
+  parameters: [],
+  result: String,
+  body: "ForgeKernelProofs::firstThinkHolds"
+}
+
+definition{
+  name: acceptFoundrySpecificationOneProductOwner,
+  parameters: [],
+  result: String,
+  body: "FoundrySpecification::oneProductOwner"
+}
+
+definition{
+  name: acceptFoundrySpecificationCompetingProductOwners,
+  parameters: [],
+  result: String,
+  body: "FoundrySpecification::competingProductOwners"
+}
+
+definition{
+  name: acceptFeatureCompositionSingleAdmitted,
+  parameters: [],
+  result: String,
+  body: "FeatureComposition::singleAdmitted"
+}
+
+definition{
+  name: acceptFeatureCompositionDependencyAdmitted,
+  parameters: [],
+  result: String,
+  body: "FeatureComposition::dependencyAdmitted"
+}
+
+definition{
+  name: acceptFeatureCompositionEmptyRefused,
+  parameters: [],
+  result: String,
+  body: "FeatureComposition::emptyRefused"
+}
+
+definition{
+  name: acceptProposalAdmissionOrderedDependenciesAdmitted,
+  parameters: [],
+  result: String,
+  body: "ProposalAdmission::orderedDependenciesAdmitted"
+}
+
+definition{
+  name: acceptProposalAdmissionDuplicateRegistryRefused,
+  parameters: [],
+  result: String,
+  body: "ProposalAdmission::duplicateRegistryRefused"
+}
+
+definition{
+  name: acceptEventAdmissionNaturalEventAdmitted,
+  parameters: [],
+  result: String,
+  body: "EventAdmission::naturalEventAdmitted"
+}
+
+definition{
+  name: acceptEventProtocolWireNatural,
+  parameters: [],
+  result: String,
+  body: "EventProtocol::wire_natural"
+}
+
+definition{
+  name: acceptEventProtocolWireStaleGeneration,
+  parameters: [],
+  result: String,
+  body: "EventProtocol::wire_staleGeneration"
+}
+
+definition{
+  name: acceptWorkOwnershipWrongOwnerRefused,
+  parameters: [],
+  result: String,
+  body: "WorkOwnership::wrongOwnerRefused"
+}
+
+definition{
+  name: acceptWorkOwnershipStaleRevisionRefused,
+  parameters: [],
+  result: String,
+  body: "WorkOwnership::staleRevisionRefused"
+}
+
+definition{
+  name: acceptWorkProtocolWireRejectsWrongOwner,
+  parameters: [],
+  result: String,
+  body: "WorkProtocol::wireRejectsWrongOwner"
+}
+
+definition{
+  name: acceptSemanticRouterRouterExactGalleryClosure,
+  parameters: [],
+  result: String,
+  body: "SemanticRouter::router_exactGalleryClosure"
+}
+
+definition{
+  name: acceptRoutingProtocolRoutingWordsAmbiguity,
+  parameters: [],
+  result: String,
+  body: "RoutingProtocol::routingWords_ambiguity"
+}
+
+definition{
+  name: acceptChatQueueQueueEnqueue,
+  parameters: [],
+  result: String,
+  body: "ChatQueue::queue_enqueue"
+}
+
+definition{
+  name: acceptChatQueueQueueReorder,
+  parameters: [],
+  result: String,
+  body: "ChatQueue::queue_reorder"
+}
+
+definition{
+  name: acceptChatQueueProtocolWireEnqueue,
+  parameters: [],
+  result: String,
+  body: "ChatQueueProtocol::wire_enqueue"
+}
+
+definition{
+  name: acceptVersionPreviewPreviewSelect,
+  parameters: [],
+  result: String,
+  body: "VersionPreview::preview_select"
+}
+
+definition{
+  name: acceptVersionPreviewPreviewStaleRevision,
+  parameters: [],
+  result: String,
+  body: "VersionPreview::preview_staleRevision"
+}
+
+definition{
+  name: acceptVersionPreviewProtocolPreviewWireSelect,
+  parameters: [],
+  result: String,
+  body: "VersionPreviewProtocol::previewWire_select"
+}
+
+definition{
+  name: acceptInteractionModelInteractionSilentWithoutConsent,
+  parameters: [],
+  result: String,
+  body: "InteractionModel::interactionSilentWithoutConsent"
+}
+
+definition{
+  name: acceptInteractionModelInteractionReducedMotionStatic,
+  parameters: [],
+  result: String,
+  body: "InteractionModel::interactionReducedMotionStatic"
+}
+
+definition{
+  name: acceptInteractionProtocolInteractionWordsGardenSilent,
+  parameters: [],
+  result: String,
+  body: "InteractionProtocol::interactionWords_gardenSilent"
+}
+
+definition{
+  name: featureBuildPhase,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Build phase (FK-01, FK-02, FK-03, FK-04, FK-10, FK-11): The app never answers proved when phase is not proved and event is not attest.", calls := (cons "ForgeKernel::judge" (nil String)), acceptance := (cons "Features::acceptForgeKernelProofsInv001Holds" (cons "Features::acceptForgeKernelProofsInv002Holds" (cons "Features::acceptForgeKernelProofsInv003Holds" (cons "Features::acceptForgeKernelProofsInv004Holds" (cons "Features::acceptForgeKernelProofsRewordKeepsProofHolds" (cons "Features::acceptForgeKernelProofsRewordKeepsPublishedHolds" (nil String)))))))})
+}
+
+definition{
+  name: featureEffectGate,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Effect gate (FK-05, FK-06, FK-07, FK-08, FK-09): The gate never admits an origin other than Forge when no grant record exists.", calls := (cons "ForgeKernel::gateAllows" (nil String)), acceptance := (cons "Features::acceptForgeKernelProofsNoRecordOnlyForgeHolds" (cons "Features::acceptForgeKernelProofsNoRecordNoFetchHolds" (cons "Features::acceptForgeKernelProofsDenyWinsHolds" (cons "Features::acceptForgeKernelProofsOutsideForgeNeedsGrantHolds" (cons "Features::acceptForgeKernelProofsPreviewNoNetworkWithoutGrantHolds" (nil String))))))})
+}
+
+definition{
+  name: featureExperienceBudgets,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Experience budgets (FK-12, FK-13, FK-14, FK-15, FK-23, FK-24): The kernel never answers within when a journey's measure is over its budget.", calls := (cons "ForgeKernel::budgetWithin" (nil String)), acceptance := (cons "Features::acceptForgeKernelProofsBudgetOverWithinHolds" (cons "Features::acceptForgeKernelProofsBudgetWithinOverHolds" (cons "Features::acceptForgeKernelProofsInpBudgetBoundHolds" (cons "Features::acceptForgeKernelProofsRouteBelowFirstLoadHolds" (cons "Features::acceptForgeKernelProofsBuiltBudgetBoundHolds" (cons "Features::acceptForgeKernelProofsEditBudgetBoundHolds" (nil String)))))))})
+}
+
+definition{
+  name: featureExperienceRules,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Experience rules (FK-16, FK-17, FK-18, FK-19, FK-20, FK-21, FK-22): The kernel never answers split when the width is under 768 px.", calls := (cons "ForgeKernel::layoutTabs" (cons "ForgeKernel::motionAllows" (cons "ForgeKernel::targetOk" (cons "ForgeKernel::recentYes" (cons "ForgeKernel::thinkAllows" (nil String)))))), acceptance := (cons "Features::acceptForgeKernelProofsNarrowSplitHolds" (cons "Features::acceptForgeKernelProofsWideTabsHolds" (cons "Features::acceptForgeKernelProofsReducedMotionHolds" (cons "Features::acceptForgeKernelProofsLongMotionHolds" (cons "Features::acceptForgeKernelProofsSmallTargetHolds" (cons "Features::acceptForgeKernelProofsOldRecentHolds" (cons "Features::acceptForgeKernelProofsFirstThinkHolds" (nil String))))))))})
+}
+
+definition{
+  name: featureApplicationAuthority,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Application authority (FA-01): The application authority model rejects missing or competing product authorities and unchecked external boundaries.", calls := (cons "FoundrySpecification::admitAuthority" (nil String)), acceptance := (cons "Features::acceptFoundrySpecificationOneProductOwner" (cons "Features::acceptFoundrySpecificationCompetingProductOwners" (nil String)))})
+}
+
+definition{
+  name: featureFeatureComposition,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Feature composition (FA-06, FA-07): The LexLean composition model rejects duplicate identity, missing dependencies, conflicts, incompatible inputs, ungranted effects and excess budgets.", calls := (cons "FeatureComposition::admitComposition" (cons "CompositionProtocol::dispatchComposition" (nil String))), acceptance := (cons "Features::acceptFeatureCompositionSingleAdmitted" (cons "Features::acceptFeatureCompositionDependencyAdmitted" (cons "Features::acceptFeatureCompositionEmptyRefused" (nil String))))})
+}
+
+definition{
+  name: featureProposalAdmission,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Proposal admission (FA-18): Router proposals resolve exact registered feature versions and cannot bypass ambiguity, registry revision or composition admission.", calls := (cons "ProposalAdmission::admitProposal" (nil String)), acceptance := (cons "Features::acceptProposalAdmissionOrderedDependenciesAdmitted" (cons "Features::acceptProposalAdmissionDuplicateRegistryRefused" (nil String)))})
+}
+
+definition{
+  name: featureEventAdmission,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Event admission (FA-19, FA-33): Typed event admission binds exact feature routes to current composition policy, generation, sequence and bounded payloads.", calls := (cons "EventAdmission::admitEvent" (cons "EventProtocol::dispatchEvent" (nil String))), acceptance := (cons "Features::acceptEventAdmissionNaturalEventAdmitted" (cons "Features::acceptEventProtocolWireNatural" (cons "Features::acceptEventProtocolWireStaleGeneration" (nil String))))})
+}
+
+definition{
+  name: featureWorkOwnership,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Work ownership (FA-13, FA-17): The Prism work model reserves capacity before execution and preserves spending and checkpoints across suspension with owner and revision checks.", calls := (cons "WorkOwnership::transition" (cons "WorkProtocol::dispatchWork" (nil String))), acceptance := (cons "Features::acceptWorkOwnershipWrongOwnerRefused" (cons "Features::acceptWorkOwnershipStaleRevisionRefused" (cons "Features::acceptWorkProtocolWireRejectsWrongOwner" (nil String))))})
+}
+
+definition{
+  name: featureSemanticRouting,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Semantic routing (FA-48): Typed semantic proposals rank explicit concept relations and close dependencies while Prism independently admits ambiguity constraints and effects.", calls := (cons "SemanticRouter::routeValidated" (cons "RoutingProtocol::dispatchRouting" (nil String))), acceptance := (cons "Features::acceptSemanticRouterRouterExactGalleryClosure" (cons "Features::acceptRoutingProtocolRoutingWordsAmbiguity" (nil String)))})
+}
+
+definition{
+  name: featureChatQueue,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Chat queue (FA-50): Bounded chat queues preserve unique pending work and reject stale revisions owners and stop policies through guest transitions.", calls := (cons "ChatQueue::transitionQueue" (cons "ChatQueueProtocol::dispatchQueue" (nil String))), acceptance := (cons "Features::acceptChatQueueQueueEnqueue" (cons "Features::acceptChatQueueQueueReorder" (cons "Features::acceptChatQueueProtocolWireEnqueue" (nil String))))})
+}
+
+definition{
+  name: featureVersionPreview,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Version preview (FA-53): Version preview transitions preserve exact origin identity and reject stale or conflicting ownership through the Prism guest.", calls := (cons "VersionPreview::transitionPreview" (cons "VersionPreviewProtocol::dispatchPreview" (nil String))), acceptance := (cons "Features::acceptVersionPreviewPreviewSelect" (cons "Features::acceptVersionPreviewPreviewStaleRevision" (cons "Features::acceptVersionPreviewProtocolPreviewWireSelect" (nil String))))})
+}
+
+definition{
+  name: featureInteractionProfile,
+  parameters: [],
+  result: Foundation.Arch::Feature,
+  body: (record Foundation.Arch::Feature {statement := "Interaction profile (FA-41): The generated interaction profile admits bounded state transitions and projects consent-sensitive visual audio and motion outputs.", calls := (cons "InteractionModel::interactionStep" (cons "InteractionProtocol::dispatchInteraction" (nil String))), acceptance := (cons "Features::acceptInteractionModelInteractionSilentWithoutConsent" (cons "Features::acceptInteractionModelInteractionReducedMotionStatic" (cons "Features::acceptInteractionProtocolInteractionWordsGardenSilent" (nil String))))})
+}
+
+definition{
+  name: journeyAppBuilder,
+  parameters: [],
+  result: Foundation.Arch::Journey,
+  body: (record Foundation.Arch::Journey {actor := "Architecture::stakeholderAppBuilder", steps := (cons "Features::featureSemanticRouting" (cons "Features::featureProposalAdmission" (cons "Features::featureFeatureComposition" (cons "Features::featureEffectGate" (cons "Features::featureBuildPhase" (cons "Features::featureVersionPreview" (cons "Features::featureChatQueue" (nil String))))))))})
+}
+
+definition{
+  name: journeyAppVisitor,
+  parameters: [],
+  result: Foundation.Arch::Journey,
+  body: (record Foundation.Arch::Journey {actor := "Architecture::stakeholderAppVisitor", steps := (cons "Features::featureEffectGate" (cons "Features::featureInteractionProfile" (cons "Features::featureEventAdmission" (nil String))))})
+}
+
+definition{
+  name: journeyVerifier,
+  parameters: [],
+  result: Foundation.Arch::Journey,
+  body: (record Foundation.Arch::Journey {actor := "Architecture::stakeholderVerifier", steps := (cons "Features::featureBuildPhase" (cons "Features::featureApplicationAuthority" (nil String)))})
+}
+
+definition{
+  name: journeyMaintainer,
+  parameters: [],
+  result: Foundation.Arch::Journey,
+  body: (record Foundation.Arch::Journey {actor := "Architecture::stakeholderMaintainer", steps := (cons "Features::featureApplicationAuthority" (cons "Features::featureWorkOwnership" (cons "Features::featureExperienceBudgets" (cons "Features::featureExperienceRules" (nil String)))))})
+}
+\end{semanticmodule}
+\end{lexlean}

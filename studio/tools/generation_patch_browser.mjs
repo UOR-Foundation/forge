@@ -46,7 +46,7 @@ try {
     check((await get("versions", first.app.id)).length === 2, "batch did not create one version");
     const firstBody = await get("objects", applied.oid); check(kappa(firstBody) === applied.oid, "snapshot identity wrong");
     const second = await seed(), source = await captureProjectSource(db, second.app.id);
-    const adapters = hostAdapters({ forgetApplicationFrames(){}, coreReady: Promise.resolve(), dbReady: Promise.resolve(db), core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, live: { logicOf: spec => spec, kappaOfValue: spec => JSON.stringify(spec) }, rulesOf: async () => null, rulesSnapshotOf: async () => ({ state: null, expected: undefined }), saveRules: async () => true, nextPhase: async () => "checked", now: () => new Date().toISOString(), enc: new TextEncoder(), prism: { parseSpecTag: () => ({ spec: { example: true } }), checkSpec: () => ({ ok: true, module: "checked module", spec: {}, issues: [], vectors: 1 }), screenSource: () => "screen", card: () => "checked" } });
+    const adapters = hostAdapters({ forgetApplicationFrames(){}, coreReady: Promise.resolve(), dbReady: Promise.resolve(db), core, kappa, applyStoredProjectPatch, assertGenerationActive, captureProjectSource, live: { logicOf: spec => spec, kappaOfValue: spec => JSON.stringify(spec) }, rulesOf: async () => null, rulesSnapshotOf: async () => ({ state: null, expected: undefined }), saveRules: async () => true, nextPhase: async () => "checked", now: () => new Date().toISOString(), enc: new TextEncoder(), prism: { parseSpecTag: () => ({ spec: { example: true } }), parsePromptTag: () => null, facetsOf: async () => null, checkSpec: () => ({ ok: true, module: "checked module", spec: {}, issues: [], vectors: 1 }), screenSource: () => "screen", card: () => "checked" } });
     const empty = await adapters.applyPrismTags(second.app.id, tags({}), { source });
     await put("files", `${second.app.id}:b`, "intervening"); const beforeStale = await snapshot();
     let refused = false; try { await adapters.rulesAfterTurn(second.app.id, "spec", [], { source: empty.source }); } catch (e) { refused = e.code === "projectEditConflict"; }
@@ -117,7 +117,7 @@ try {
       nextPhase: async (phase, event) => event === "reword" ? phase : event === "attest" ? "proved" : event === "check" ? "checked" : "drafting",
       now: () => "now", enc: new TextEncoder(), put: async () => {}, refreshLive: async () => {},
       prism: {
-        parseSpecTag: () => ({ spec: { name: "demo", title: "new" } }),
+        parseSpecTag: () => ({ spec: { name: "demo", title: "new" } }), parsePromptTag: () => null, facetsOf: async () => null,
         checkSpec: spec => ({ ok: true, module: "module", spec, issues: [] }), card: state => state.phase,
         prove: async () => ({ ok: true, record: { id: "settled" } }),
       }, ...overrides,
