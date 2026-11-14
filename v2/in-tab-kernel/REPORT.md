@@ -135,9 +135,12 @@ and those two fixed proofs, as a suffix of a library that holds the checker and 
 
 **What this does not establish.**
 
-- **Speed on a large app.** Verdant takes seconds and 191 MB, because the kernel evaluates every obligation of every
-  guarantee in one term. The obligations are separable, so they could be judged one at a time and kept by address;
-  that is not built.
+- **Speed on a large app.** Verdant takes seconds and 191 MB when the kernel evaluates every guarantee in one term.
+  `proofsOf` writes one suffix per guarantee instead, each whole in itself; `regionCheck_sound` holds for a list of
+  one. All 15 are accepted, each in 0.15 to 1.2 s, at 111 MB, in a run where the whole proof took 5.6 s: the work is
+  the same in total (7.0 s), but a guarantee's verdict then depends only on the rules, the bounds and itself, so it
+  can be shown as it lands and kept by address. A guarantee of a large app is still not instant: the kernel evaluates
+  the checker by unfolding definitions, and the checker was written to be proved, not to be evaluated quickly.
 - **What the app runs.** The theorem is about `PrismLive.Kernel.judge` on the data written here. That the data is
   what the app's rule module decides with is not proved; the hosted path proves its guarantees about the
   LexLean-rendered module instead. The two are not tied together here.

@@ -4,9 +4,10 @@
 // parking-false   the same rules with a guarantee they break; the kernel must refuse it
 // parking-edited  the rules changed so that the true guarantee breaks; the kernel must refuse it
 // verdant         Verdant, 35 rules and 15 guarantees, read from the Lean file the gate writes from its fixture
+// verdant-gNN     Verdant's guarantees one at a time, each a suffix whole in itself
 import fs from "node:fs";
 import path from "node:path";
-import { readLibrary, proofOf } from "./emit.mjs";
+import { readLibrary, proofOf, proofsOf } from "./emit.mjs";
 
 const [libraryPath, verdantPath, out] = process.argv.slice(2);
 const text = fs.readFileSync(libraryPath, "utf8");
@@ -45,4 +46,9 @@ for (const [name, app] of Object.entries(apps)) {
   fs.writeFileSync(path.join(out, name + ".ndjson"), suffix);
   report.apps[name] = { rules: app.rules.length, guarantees: app.properties.length, bytes: suffix.length, writeMs: Math.round(ms * 10) / 10 };
 }
+// Verdant again, one suffix per guarantee.
+t = performance.now();
+const parts = proofsOf(text, { ...apps.verdant, name: "VerdantParts" }, library);
+report.verdantPerGuarantee = { suffixes: parts.length, writeMs: Math.round((performance.now() - t) * 10) / 10, bytes: [Math.min(...parts.map((x) => x.length)), Math.max(...parts.map((x) => x.length))] };
+parts.forEach((suffix, i) => fs.writeFileSync(path.join(out, `verdant-g${String(i).padStart(2, "0")}.ndjson`), suffix));
 console.log(JSON.stringify(report, null, 1));

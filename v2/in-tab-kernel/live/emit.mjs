@@ -35,6 +35,15 @@ export function readLibrary(text) {
   return { names, nameIndex, exprs, exprIndex, levels, consts, nextName, nextExpr, nextLevel };
 }
 
+/**
+ * One suffix per guarantee, each whole in itself: the app's rules and bounds, that one guarantee, and its two proofs.
+ * regionCheck_sound holds for any list of guarantees, so it holds for a list of one. The kernel then evaluates one
+ * guarantee's obligations at a time, and a guarantee's proof depends only on the rules, the bounds and itself.
+ */
+export function proofsOf(libraryText, spec, library = readLibrary(libraryText)) {
+  return spec.properties.map((property, i) => proofOf(libraryText, { ...spec, name: spec.name + ".g" + i, properties: [property] }, library));
+}
+
 function writer(name, library) {
   const lib = library, out = [];
   let nextName = lib.nextName, nextExpr = lib.nextExpr, nextLevel = lib.nextLevel;
@@ -75,7 +84,7 @@ function writer(name, library) {
   const pairType = app(C("Prod", [0, 0]), Nat, Nat);
   const pair = ([lo, hi]) => app(C("Prod.mk", [0, 0]), Nat, Nat, nat(lo), nat(hi));
 
-  const root = fresh(0, name);
+  const root = name.split(".").reduce((pre, part) => fresh(pre, part), 0);
   const define = (short, type, value) => {
     const name = fresh(root, short);
     out.push(JSON.stringify({ def: { all: [name], hints: { regular: 1 }, levelParams: [], name, safety: "safe", type, value } }));

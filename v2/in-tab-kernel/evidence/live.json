@@ -1,15 +1,130 @@
 {
  "note": "Proofs of app guarantees written with no Lean (live/emit.mjs) and judged by Lean 4.32.1's kernel as WebAssembly, under Node 22 in WSL on one desktop that other builds were loading. No browser has run this. Times are the median and worst of 7.",
  "kernel": "52fa2174e9ea48485c9b5b58fb7f19c6ece195886035e99eb8e8317d7e3584c4",
- "library": { "what": "PrismLive.Kernel.regionCheck_sound and all it rests on (studio/proof/PrismLive)", "sha256": "29e666e8bf20945d04e251b60224ddd2d94978553376d0cb11f20b87e80b87e5", "bytes": 6573883, "gzipBytes": 1050273, "declarations": 1898, "judgedWholeMs": [1801, 2709], "madeResidentMs": [480, 912], "heapMB": 64 },
- "writer": { "readLibraryMs": 417, "writeMs": { "parking": 5.3, "verdant": 5.2 } },
+ "library": {
+  "what": "PrismLive.Kernel.regionCheck_sound and all it rests on (studio/proof/PrismLive)",
+  "sha256": "29e666e8bf20945d04e251b60224ddd2d94978553376d0cb11f20b87e80b87e5",
+  "bytes": 6573883,
+  "gzipBytes": 1050273,
+  "declarations": 1898,
+  "judgedWholeMs": [
+   1801,
+   2709
+  ],
+  "madeResidentMs": [
+   480,
+   912
+  ],
+  "heapMB": 64
+ },
+ "writer": {
+  "readLibraryMs": 417,
+  "writeMs": {
+   "parking": 5.3,
+   "verdant": 5.2
+  }
+ },
  "apps": [
-  { "app": "parking (3 rules, 1 guarantee)", "writtenBy": "live/emit.mjs", "bytes": 4494, "verdict": "accepted", "medianMs": 17.6, "worstMs": 79.8, "heapMB": 64, "axioms": ["Quot.sound", "propext"] },
-  { "app": "parking with a guarantee its rules break", "writtenBy": "live/emit.mjs", "bytes": 4496, "verdict": "refused: declaration type mismatch at checked", "medianMs": 12.7 },
-  { "app": "parking with its rules edited so the true guarantee breaks", "writtenBy": "live/emit.mjs", "bytes": 4497, "verdict": "refused: declaration type mismatch at checked", "medianMs": 9.1 },
-  { "app": "Verdant (35 rules, 15 guarantees)", "writtenBy": "live/emit.mjs", "bytes": 22151, "verdict": "accepted", "medianMs": 2626, "worstMs": 2911, "heapMB": 191, "axioms": ["Quot.sound", "propext"] },
-  { "app": "Verdant", "writtenBy": "Lean, `by decide +kernel`", "bytes": 25245, "verdict": "accepted", "medianMs": 3069, "worstMs": 6589, "heapMB": 191 },
-  { "app": "parking", "writtenBy": "Lean, `by decide +kernel`", "bytes": 5765, "verdict": "accepted", "medianMs": 15.8, "worstMs": 113.3 }
+  {
+   "app": "parking (3 rules, 1 guarantee)",
+   "writtenBy": "live/emit.mjs",
+   "bytes": 4494,
+   "verdict": "accepted",
+   "medianMs": 17.6,
+   "worstMs": 79.8,
+   "heapMB": 64,
+   "axioms": [
+    "Quot.sound",
+    "propext"
+   ]
+  },
+  {
+   "app": "parking with a guarantee its rules break",
+   "writtenBy": "live/emit.mjs",
+   "bytes": 4496,
+   "verdict": "refused: declaration type mismatch at checked",
+   "medianMs": 12.7
+  },
+  {
+   "app": "parking with its rules edited so the true guarantee breaks",
+   "writtenBy": "live/emit.mjs",
+   "bytes": 4497,
+   "verdict": "refused: declaration type mismatch at checked",
+   "medianMs": 9.1
+  },
+  {
+   "app": "Verdant (35 rules, 15 guarantees)",
+   "writtenBy": "live/emit.mjs",
+   "bytes": 22151,
+   "verdict": "accepted",
+   "medianMs": 2626,
+   "worstMs": 2911,
+   "heapMB": 191,
+   "axioms": [
+    "Quot.sound",
+    "propext"
+   ]
+  },
+  {
+   "app": "Verdant",
+   "writtenBy": "Lean, `by decide +kernel`",
+   "bytes": 25245,
+   "verdict": "accepted",
+   "medianMs": 3069,
+   "worstMs": 6589,
+   "heapMB": 191
+  },
+  {
+   "app": "parking",
+   "writtenBy": "Lean, `by decide +kernel`",
+   "bytes": 5765,
+   "verdict": "accepted",
+   "medianMs": 15.8,
+   "worstMs": 113.3
+  }
  ],
- "forScale": { "nativeKernelVerdantMs": [8615, 11235], "leanElaboratesVerdantMs": 24990, "hostedVerifierSays": "usually two to four minutes" }
+ "forScale": {
+  "nativeKernelVerdantMs": [
+   8615,
+   11235
+  ],
+  "leanElaboratesVerdantMs": 24990,
+  "hostedVerifierSays": "usually two to four minutes"
+ },
+ "verdantPerGuarantee": {
+  "what": "live/emit.mjs proofsOf: 15 suffixes, one guarantee each, every one whole in itself; same run and machine as the whole proof beside it, which was under heavier load than the run above",
+  "suffixes": 15,
+  "bytesEach": [
+   19185,
+   19374
+  ],
+  "writeAllMs": 103,
+  "verdicts": "15 of 15 accepted",
+  "medianMsEach": [
+   1170,
+   1030,
+   596,
+   181,
+   236,
+   180,
+   262,
+   826,
+   159,
+   145,
+   411,
+   479,
+   444,
+   465,
+   374
+  ],
+  "sumOfMediansMs": 6958,
+  "slowestMs": 1170,
+  "fastestMs": 145,
+  "heapMB": 111,
+  "wholeInTheSameRun": {
+   "medianMs": 5551,
+   "worstMs": 8222,
+   "heapMB": 191
+  }
+ }
 }
