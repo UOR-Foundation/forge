@@ -259,6 +259,9 @@ jobs:
       - name: One approval is asked at a time, and the chat counts an app's lines
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/approval_queue.test.mjs
+      - name: A stopped device turn ends at the engine's next step, frees the engine, and keeps no partial answer
+        if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
+        run: node --test tools/device_turn_cancel.test.mjs
       - name: Foundry's own dialogs, notices and sidebar tools take the app's look from one stylesheet
         if: ${{ !cancelled() && steps.shell_closure.conclusion == 'success' && steps.corpus.conclusion == 'success' }}
         run: node --test tools/shell_ui.test.mjs

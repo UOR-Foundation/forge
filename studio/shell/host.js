@@ -1579,6 +1579,17 @@ async function approveRules(appId, options = {}) {
     },
   };
 }
+// A device turn the visitor stops ends at the engine's next step, so it holds the one engine no longer than
+// that, and a turn that was waiting for the engine never starts. Its partial answer is not shown, kept as
+// the conversation or sealed: the stop is the turn's outcome, as it is for a paid model.
+async function deviceGenerate(inst, ids, { signal, onToken, ...options }) {
+  const res = await withEngine(() => {
+    assertGenerationActive(signal);
+    return inst.generate(ids, { ...options, signal, onToken: (step) => { if (!signal.aborted) onToken(step); } });
+  });
+  assertGenerationActive(signal);
+  return res;
+}
 // The approve turn stays open while Lean works, as a build turn stays open while the model writes:
 // the renderer shows it working, the message counts the seconds, and the result completes it.
 async function approveTurn(chatId, appId, messages, userId, ref, intentId) {
@@ -1927,7 +1938,7 @@ async function chatTurn(chatId, intent) {
       // No repetition penalty: rules are JSON, which repeats its keys by nature, and a penalty pushes a
       // small model off valid syntax. The receipt records the penalty used, so the answer stays re-derivable.
       const maxNew = Math.min(held.model.cap, room);
-      const res = await withEngine(() => inst.generate(ids, { maxNew, repPenalty: 1, onToken: ({ text }) => { if (!abort.signal.aborted) onTextSoon(text); } }));
+      const res = await deviceGenerate(inst, ids, { maxNew, repPenalty: 1, signal: abort.signal, onToken: ({ text }) => onTextSoon(text) });
       await settleText();
       const text = prism.withoutThinking(res.text);
       window.__prism.lastDevice = res.text || "";
