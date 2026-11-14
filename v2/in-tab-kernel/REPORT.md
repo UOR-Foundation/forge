@@ -148,6 +148,25 @@ and those two fixed proofs, as a suffix of a library that holds the checker and 
   narrowing. An app outside that still needs another proof.
 - **The definitions' unfolding hints** are written as a fixed value. They steer the kernel's speed, not its verdict.
 
+### Where a large app's time goes, and what an address removes
+
+Measured on Verdant with native Lean (`live/variants.sh`, `live/obligations.mjs`; `evidence/live.json`).
+
+- **Reshaping the checker did not help.** Computing each rule's box once, or giving the boxes as literals, changed
+  nothing: the kernel already shares that work. A one-pass checker that carries the uncovered region was far worse,
+  32 to 92 s against 1.6 s, because that region fragments. The checker's algorithm stays.
+- **Most of what it evaluates is redundant.** The proof today makes 312 obligations and 5,485 box subtractions. 278
+  obligations have an empty region, so there is nothing to cover. The other 34 are distinct, and only 98 subtractions
+  are of a box that touches its region; a box that does not touch a region cannot cover any of it.
+- **What is left is the real work.** The kernel judges those 34 obligations in 0.65 to 0.85 s, against 1.6 to 2.2 s
+  for the checker as it is: two to three times less, not fifty, because the subtractions that remain are the ones
+  that cut a region into pieces.
+
+So the gain from an address is in not doing an obligation twice: 34 obligations of about 20 ms each, each named by
+its region and the boxes that touch it, as `studio/shell/live/obligations.mjs` already names them. An edit then
+re-proves the obligations it changed and no others. That needs a soundness theorem that takes the touching boxes as
+given, which `regionCheck_sound` does not; it is not written.
+
 ## Work done once per address
 
 Hologram's rule, applied to checking: work is named by the address of what it reads, and done once. The worker keeps

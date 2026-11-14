@@ -126,5 +126,28 @@
    "worstMs": 8222,
    "heapMB": 191
   }
+ },
+ "redundancy": {
+  "what": "live/obligations.mjs on Verdant, and live/variants.sh: native Lean 4.32.1, `decide +kernel`, times less about 0.3 s of import; one desktop under varying load",
+  "obligations": 312,
+  "boxSubtractionsAsProvedToday": 5485,
+  "obligationsWithAnEmptyRegion": 278,
+  "distinctNonEmptyObligations": 34,
+  "boxSubtractionsThatTouchTheirRegion": 98,
+  "kernelMs": {
+   "checkerAsItIs": [
+    1600,
+    2200
+   ],
+   "distinctObligationsWithTouchingBoxesOnly": [
+    650,
+    850
+   ]
+  },
+  "shapesThatDidNotHelp": {
+   "ruleBoxesComputedOnce": "no change",
+   "boxesGivenAsLiterals": "no change",
+   "onePassOverTheUncoveredRegion": "32 to 92 s: the uncovered region fragments"
+  }
  }
 }
